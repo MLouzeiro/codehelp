@@ -171,6 +171,8 @@ model Ticket {
   dataInicioAtendimento DateTime?
   satisfacao          Int?
   resumoFinal         String?
+  tipo                String?
+  observacoes         String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @default(now())
 
@@ -310,6 +312,11 @@ model HelpdeskConfig {
   notificarEquipe Boolean @default(false)
   tempoInatividadeMin Int?
   mensagemFollowup String?
+  mensagemBoasVindas String?
+  mensagemForaHorario String?
+  horarioInicio String?
+  horarioFim String?
+  diasAtendimento String?
   ativo     Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())

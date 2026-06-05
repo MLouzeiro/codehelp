@@ -213,47 +213,56 @@ export async function updateTicket(req: AuthRequest, res: Response) {
   }
 }
 
-export async function triarTicketManualmente(req: AuthRequest, res: Response) {
+export async function abrirChamado(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { assunto, categoria } = req.body;
-    if (!assunto || !assunto.trim()) {
-      return res.status(400).json({ error: 'Assunto é obrigatório para triar o ticket' });
+    const { assunto, categoria, prioridade, tipo, observacoes } = req.body;
+    if (!req.user) return res.status(401).json({ error: 'Nao autenticado' });
+
+    const { abrirChamadoPorAtendente } = await import('../../helpdesk/triagem.service');
+    const result = await abrirChamadoPorAtendente(id, req.user.id, {
+      assunto,
+      categoria,
+      prioridade,
+      tipo,
+      observacoes,
+    });
+    if (!result.ok) {
+      const status = result.error === 'Ticket nao encontrado' ? 404
+        : result.error === 'Ticket ja triado' ? 409
+        : 400;
+      return res.status(status).json({ error: result.error, ticket: (result as any).ticket });
     }
-    const ticket = await prisma.ticket.findUnique({ where: { id } });
-    if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
-    if (ticket.protocolo) {
-      return res.status(409).json({ error: 'Ticket já triado', ticket });
+    return res.json(result.ticket);
+  } catch (error: any) {
+    console.error('[WhatsApp] Erro ao abrir chamado:', error?.message || error);
+    return res.status(500).json({ error: 'Erro ao abrir chamado' });
+  }
+}
+
+export async function transferirTicket(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { paraUsuarioId, motivo } = req.body;
+    if (!req.user) return res.status(401).json({ error: 'Nao autenticado' });
+    if (!paraUsuarioId) return res.status(400).json({ error: 'paraUsuarioId obrigatorio' });
+    if (paraUsuarioId === req.user.id) {
+      return res.status(400).json({ error: 'Voce ja e o responsavel atual' });
     }
 
-    const ws = await import('./whatsapp.service');
-    const { sendStageAutoMessage } = await import('../../helpdesk/helpdesk.service');
-    const protocolo = await ws.generateProtocolo();
-    const updated = await prisma.ticket.update({
-      where: { id },
-      data: {
-        protocolo,
-        assunto: assunto.trim(),
-        categoria: categoria || ticket.categoria,
-        etapa: 'fila',
-        status: 'aberto',
-      },
-    });
-    await prisma.ticketStageEvent.create({
-      data: {
-        ticketId: id,
-        etapaAnterior: ticket.etapa || 'triagem',
-        etapaNova: 'fila',
-        origem: 'manual',
-      },
-    });
-    sendStageAutoMessage(id, 'fila').catch((e: any) =>
-      console.warn('[WhatsApp] Falha ao enviar autoMessage da fila apos triagem manual:', e?.message || e)
-    );
-    return res.json(updated);
+    const target = await prisma.user.findUnique({ where: { id: paraUsuarioId } });
+    if (!target) return res.status(404).json({ error: 'Usuario destino nao encontrado' });
+
+    const { transferirTicket: doTransferir } = await import('../../helpdesk/triagem.service');
+    const result = await doTransferir(id, req.user.id, paraUsuarioId, motivo);
+    if (!result.ok) {
+      const status = result.error === 'Ticket nao encontrado' ? 404 : 400;
+      return res.status(status).json({ error: result.error });
+    }
+    return res.json(result.ticket);
   } catch (error: any) {
-    console.error('[WhatsApp] Erro ao triar manualmente:', error?.message || error);
-    return res.status(500).json({ error: 'Erro ao triar ticket' });
+    console.error('[WhatsApp] Erro ao transferir ticket:', error?.message || error);
+    return res.status(500).json({ error: 'Erro ao transferir ticket' });
   }
 }
 

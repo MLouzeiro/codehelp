@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X, FileText, Building2, Calendar, DollarSign, Tag } from 'lucide-react';
+import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X, FileText, Building2, Calendar, DollarSign, Tag, ArrowRightLeft, Bot, ClipboardList } from 'lucide-react';
 import QRCode from 'qrcode';
 
 export default function WhatsAppPage() {
@@ -22,12 +22,48 @@ export default function WhatsAppPage() {
   const [loading, setLoading] = useState(true);
   const [showNewTicket, setShowNewTicket] = useState(false);
   const [newTicket, setNewTicket] = useState({ contactName: '', contactPhone: '', assunto: '' });
-  const [showCreateTicketModal, setShowCreateTicketModal] = useState(false);
-  const [createTicketAssunto, setCreateTicketAssunto] = useState('');
-  const [createTicketSaving, setCreateTicketSaving] = useState(false);
+  const [showAbrirChamado, setShowAbrirChamado] = useState(false);
+  const [showTransferir, setShowTransferir] = useState(false);
+  const [usuarios, setUsuarios] = useState<any[]>([]);
+  const [abrirChamado, setAbrirChamado] = useState({
+    assunto: '',
+    categoria: '',
+    prioridade: 'media',
+    tipo: '',
+    observacoes: '',
+  });
+  const [abrirSaving, setAbrirSaving] = useState(false);
+  const [transferirPara, setTransferirPara] = useState('');
+  const [transferirMotivo, setTransferirMotivo] = useState('');
+  const [transferirSaving, setTransferirSaving] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const msgPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const CATEGORIAS = [
+    { value: 'suporte_tecnico', label: 'Suporte Tecnico' },
+    { value: 'duvida_faturamento', label: 'Duvida de Faturamento' },
+    { value: 'solicitacao_mudanca', label: 'Solicitacao de Mudanca' },
+    { value: 'treinamento', label: 'Treinamento' },
+    { value: 'reclamacao', label: 'Reclamacao' },
+    { value: 'orcamento', label: 'Orcamento / Comercial' },
+    { value: 'agendamento', label: 'Agendamento' },
+    { value: 'outro', label: 'Outro' },
+  ];
+
+  const TIPOS = [
+    { value: 'bug', label: 'Bug' },
+    { value: 'duvida', label: 'Duvida' },
+    { value: 'solicitacao', label: 'Solicitacao' },
+    { value: 'reclamacao', label: 'Reclamacao' },
+  ];
+
+  const PRIORIDADES = [
+    { value: 'baixa', label: 'Baixa' },
+    { value: 'media', label: 'Media' },
+    { value: 'alta', label: 'Alta' },
+    { value: 'urgente', label: 'Urgente' },
+  ];
 
   const statusStyles: Record<string, string> = {
     aberto: 'bg-blue-100 text-blue-700',
@@ -191,27 +227,69 @@ export default function WhatsAppPage() {
     navigate(`/orders/new?clientId=${selectedTicket.client?.id || ''}&ticketId=${selectedTicket.id}`);
   };
 
-  const abrirModalCriarTicket = () => {
-    setCreateTicketAssunto(selectedTicket?.assunto || '');
-    setShowCreateTicketModal(true);
+  const carregarUsuarios = useCallback(async () => {
+    try {
+      const { data } = await api.get('/users');
+      setUsuarios(Array.isArray(data) ? data : data?.items || data?.users || []);
+    } catch {}
+  }, []);
+
+  const abrirModalAbrirChamado = () => {
+    if (!selectedTicket) return;
+    setAbrirChamado({
+      assunto: selectedTicket.assunto || '',
+      categoria: selectedTicket.categoria || '',
+      prioridade: selectedTicket.prioridade || 'media',
+      tipo: selectedTicket.tipo || '',
+      observacoes: selectedTicket.observacoes || '',
+    });
+    setShowAbrirChamado(true);
   };
 
-  const criarTicketManualmente = async () => {
-    if (!selectedTicket || !createTicketAssunto.trim()) return;
-    setCreateTicketSaving(true);
+  const confirmarAbrirChamado = async () => {
+    if (!selectedTicket || !abrirChamado.assunto.trim()) return;
+    setAbrirSaving(true);
     try {
-      const { data } = await api.post(`/whatsapp/tickets/${selectedTicket.id}/triar`, {
-        assunto: createTicketAssunto.trim(),
+      const { data } = await api.post(`/whatsapp/tickets/${selectedTicket.id}/abrir`, {
+        assunto: abrirChamado.assunto.trim(),
+        categoria: abrirChamado.categoria || undefined,
+        prioridade: abrirChamado.prioridade,
+        tipo: abrirChamado.tipo || undefined,
+        observacoes: abrirChamado.observacoes.trim() || undefined,
       });
       setSelectedTicket((prev: any) => ({ ...prev, ...data }));
-      setShowCreateTicketModal(false);
-      setCreateTicketAssunto('');
+      setShowAbrirChamado(false);
       loadTickets();
       if (selectedTicketId) loadMessages(selectedTicketId);
     } catch (err: any) {
-      setSendError(err.response?.data?.error || 'Erro ao criar ticket');
+      setSendError(err.response?.data?.error || 'Erro ao abrir chamado');
     } finally {
-      setCreateTicketSaving(false);
+      setAbrirSaving(false);
+    }
+  };
+
+  const abrirModalTransferir = () => {
+    setTransferirPara('');
+    setTransferirMotivo('');
+    carregarUsuarios();
+    setShowTransferir(true);
+  };
+
+  const confirmarTransferir = async () => {
+    if (!selectedTicket || !transferirPara) return;
+    setTransferirSaving(true);
+    try {
+      const { data } = await api.post(`/whatsapp/tickets/${selectedTicket.id}/transferir`, {
+        paraUsuarioId: transferirPara,
+        motivo: transferirMotivo.trim() || undefined,
+      });
+      setSelectedTicket((prev: any) => ({ ...prev, ...data }));
+      setShowTransferir(false);
+      loadTickets();
+    } catch (err: any) {
+      setSendError(err.response?.data?.error || 'Erro ao transferir');
+    } finally {
+      setTransferirSaving(false);
     }
   };
 
@@ -354,9 +432,20 @@ export default function WhatsAppPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`badge text-xs ${statusStyles[selectedTicket.status] || ''}`}>{selectedTicket.status?.replace('_', ' ')}</span>
+                  {selectedTicket.etapa === 'triagem' && !selectedTicket.protocolo && (
+                    <span className="badge text-xs bg-purple-100 text-purple-700 flex items-center gap-1"><Bot size={10} /> Aguardando menu</span>
+                  )}
+                  {selectedTicket.etapa === 'aguardando_confirmacao' && !selectedTicket.protocolo && (
+                    <span className="badge text-xs bg-yellow-100 text-yellow-700 flex items-center gap-1"><ClipboardList size={10} /> Pronto p/ abrir</span>
+                  )}
                   {!selectedTicket.protocolo && (
-                    <button onClick={abrirModalCriarTicket} className="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-1" title="Forçar criação de ticket com assunto manual">
-                      <FileText size={12} /> Criar Ticket
+                    <button onClick={abrirModalAbrirChamado} className="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-1" title="Abrir chamado (gerar protocolo + atribuir a voce)">
+                      <ClipboardList size={12} /> Abrir Chamado
+                    </button>
+                  )}
+                  {selectedTicket.protocolo && selectedTicket.assigneeId && (
+                    <button onClick={abrirModalTransferir} className="bg-neutral-100 text-neutral-700 text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-colors font-medium flex items-center gap-1" title="Transferir atendimento para outro usuario">
+                      <ArrowRightLeft size={12} /> Transferir
                     </button>
                   )}
                   <button onClick={createOS} className="btn-primary text-xs flex items-center gap-1"><Plus size={12} /> OS</button>
@@ -456,31 +545,130 @@ export default function WhatsAppPage() {
         </div>
       )}
 
-      {showCreateTicketModal && selectedTicket && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => !createTicketSaving && setShowCreateTicketModal(false)}>
+      {showAbrirChamado && selectedTicket && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => !abrirSaving && setShowAbrirChamado(false)}>
+          <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-1">
+              <h3 className="font-semibold text-gray-900">Abrir Chamado</h3>
+              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              {selectedTicket.protocolo
+                ? 'Editando informacoes do chamado.'
+                : 'Defina os dados do chamado. Sera gerado protocolo e o ticket ira para "Em Atendimento" atribuido a voce.'}
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Assunto *</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Erro no modulo LIS, Duvida sobre boleto..."
+                  value={abrirChamado.assunto}
+                  onChange={(e) => setAbrirChamado({ ...abrirChamado, assunto: e.target.value })}
+                  autoFocus
+                  className="input w-full"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">Categoria</label>
+                  <select
+                    value={abrirChamado.categoria}
+                    onChange={(e) => setAbrirChamado({ ...abrirChamado, categoria: e.target.value })}
+                    className="input w-full"
+                  >
+                    <option value="">Selecione...</option>
+                    {CATEGORIAS.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">Prioridade</label>
+                  <select
+                    value={abrirChamado.prioridade}
+                    onChange={(e) => setAbrirChamado({ ...abrirChamado, prioridade: e.target.value })}
+                    className="input w-full"
+                  >
+                    {PRIORIDADES.map((p) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Tipo de solicitacao</label>
+                <select
+                  value={abrirChamado.tipo}
+                  onChange={(e) => setAbrirChamado({ ...abrirChamado, tipo: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="">Selecione...</option>
+                  {TIPOS.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Observacoes internas (auditoria)</label>
+                <textarea
+                  rows={3}
+                  placeholder="Anotacoes visiveis apenas para a equipe (nao enviadas ao cliente)..."
+                  value={abrirChamado.observacoes}
+                  onChange={(e) => setAbrirChamado({ ...abrirChamado, observacoes: e.target.value })}
+                  className="input w-full resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="flex-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
+              <button onClick={confirmarAbrirChamado} disabled={!abrirChamado.assunto.trim() || abrirSaving} className="flex-1 btn-primary disabled:opacity-50">
+                {abrirSaving ? 'Abrindo...' : selectedTicket.protocolo ? 'Salvar alteracoes' : 'Abrir Chamado'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTransferir && selectedTicket && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => !transferirSaving && setShowTransferir(false)}>
           <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-gray-900">Criar Ticket Manualmente</h3>
-              <button onClick={() => setShowCreateTicketModal(false)} disabled={createTicketSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>
+              <h3 className="font-semibold text-gray-900">Transferir Atendimento</h3>
+              <button onClick={() => setShowTransferir(false)} disabled={transferirSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>
             </div>
-            <p className="text-sm text-gray-600">
-              O robô não identificou o assunto. Defina manualmente o assunto para gerar o protocolo e mover para a fila de atendimento.
-            </p>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Assunto do ticket</label>
-              <input
-                type="text"
-                placeholder="Ex: Erro no módulo LIS, Dúvida sobre boleto, etc."
-                value={createTicketAssunto}
-                onChange={(e) => setCreateTicketAssunto(e.target.value)}
-                autoFocus
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Transferir para</label>
+              <select
+                value={transferirPara}
+                onChange={(e) => setTransferirPara(e.target.value)}
                 className="input w-full"
+              >
+                <option value="">Selecione o usuario...</option>
+                {usuarios.filter((u) => u.id !== selectedTicket.assigneeId).map((u) => (
+                  <option key={u.id} value={u.id}>{u.nome || u.name} ({u.role || 'user'})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Motivo (opcional)</label>
+              <textarea
+                rows={2}
+                placeholder="Ex: Especialista em modulo financeiro..."
+                value={transferirMotivo}
+                onChange={(e) => setTransferirMotivo(e.target.value)}
+                className="input w-full resize-none"
               />
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setShowCreateTicketModal(false)} disabled={createTicketSaving} className="flex-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
-              <button onClick={criarTicketManualmente} disabled={!createTicketAssunto.trim() || createTicketSaving} className="flex-1 btn-primary disabled:opacity-50">
-                {createTicketSaving ? 'Criando...' : 'Criar Ticket'}
+              <button onClick={() => setShowTransferir(false)} disabled={transferirSaving} className="flex-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
+              <button onClick={confirmarTransferir} disabled={!transferirPara || transferirSaving} className="flex-1 btn-primary disabled:opacity-50">
+                {transferirSaving ? 'Transferindo...' : 'Transferir'}
               </button>
             </div>
           </div>

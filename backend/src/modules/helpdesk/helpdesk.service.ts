@@ -3,11 +3,12 @@ import { sendWhatsAppMessage } from '../integrations/whatsapp/whatsapp.service';
 
 export const ETAPAS_PADRAO = [
   { slug: 'fila', nome: 'Fila de Espera', descricao: 'Tickets recém-chegados aguardando triagem', cor: '#f59e0b', icone: 'inbox', ordem: 0, enviarAuto: true, notificarEquipe: false },
-  { slug: 'triagem', nome: 'Em Triagem', descricao: 'Robô analisando e classificando o atendimento', cor: '#8b5cf6', icone: 'bot', ordem: 1, enviarAuto: false, notificarEquipe: false, tempoInatividadeMin: 5 },
-  { slug: 'em_atendimento', nome: 'Em Atendimento', descricao: 'Analista responsável conduzindo o atendimento', cor: '#10b981', icone: 'headphones', ordem: 2, enviarAuto: true, notificarEquipe: true },
-  { slug: 'aguardando_cliente', nome: 'Aguardando Cliente', descricao: 'Aguardando retorno do cliente', cor: '#0ea5e9', icone: 'clock', ordem: 3, enviarAuto: false, notificarEquipe: false },
-  { slug: 'aguardando_os', nome: 'Aguardando OS', descricao: 'Necessária geração de Ordem de Serviço', cor: '#ec4899', icone: 'file-text', ordem: 4, enviarAuto: true, notificarEquipe: false },
-  { slug: 'concluido', nome: 'Concluído', descricao: 'Atendimento finalizado', cor: '#64748b', icone: 'check-circle', ordem: 5, enviarAuto: true, notificarEquipe: false },
+  { slug: 'triagem', nome: 'Em Triagem', descricao: 'Cliente escolheu opção do menu, aguardando atendente humano abrir o chamado', cor: '#8b5cf6', icone: 'bot', ordem: 1, enviarAuto: false, notificarEquipe: false, tempoInatividadeMin: 5 },
+  { slug: 'aguardando_confirmacao', nome: 'Aguardando Confirmação', descricao: 'Cliente respondeu o menu, aguardando atendente abrir o chamado', cor: '#eab308', icone: 'user-check', ordem: 2, enviarAuto: false, notificarEquipe: true },
+  { slug: 'em_atendimento', nome: 'Em Atendimento', descricao: 'Analista responsável conduzindo o atendimento', cor: '#10b981', icone: 'headphones', ordem: 3, enviarAuto: true, notificarEquipe: true },
+  { slug: 'aguardando_cliente', nome: 'Aguardando Cliente', descricao: 'Aguardando retorno do cliente', cor: '#0ea5e9', icone: 'clock', ordem: 4, enviarAuto: false, notificarEquipe: false },
+  { slug: 'aguardando_os', nome: 'Aguardando OS', descricao: 'Necessária geração de Ordem de Serviço', cor: '#ec4899', icone: 'file-text', ordem: 5, enviarAuto: true, notificarEquipe: false },
+  { slug: 'concluido', nome: 'Concluído', descricao: 'Atendimento finalizado', cor: '#64748b', icone: 'check-circle', ordem: 6, enviarAuto: true, notificarEquipe: false },
 ];
 
 const MENSAGENS_PADRAO: Record<string, string> = {

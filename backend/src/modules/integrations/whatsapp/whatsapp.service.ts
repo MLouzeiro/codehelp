@@ -6,15 +6,24 @@ import prisma from '../../../config/database';
 import { env } from '../../../config/env';
 import {
   ensureHelpdeskConfigs,
-  sendStageAutoMessage,
+  getEtapaConfig,
   buildMessageVars,
   interpolate,
-  getEtapaConfig,
+  sendStageAutoMessage,
 } from '../../helpdesk/helpdesk.service';
 import {
   iniciarOuResetarTriagem,
   cancelarTriagem,
+  enviarMenuInicial,
+  processarOpcaoMenu,
+  reenviarMenuPorInvalido,
+  detectarOpcaoMenu,
 } from '../../helpdesk/triagem.service';
+import {
+  isHorarioAtendimento,
+  getHorarioConfig,
+} from '../../helpdesk/horario';
+import { montarForaHorario } from '../../helpdesk/menu';
 
 let whatsappClient: Client | null = null;
 let qrCodeData: string | null = null;
@@ -206,6 +215,8 @@ export async function initializeClient(): Promise<void> {
 async function handleIncomingMessage(message: any) {
   try {
     if (!message || !message.from) return;
+    const fromMe = !!message.fromMe;
+    if (fromMe) return;
     let contact: any = null;
     try { contact = await message.getContact(); } catch { /* fallback abaixo */ }
     const chatId = sanitizePhoneNumber(message.from);
@@ -217,6 +228,9 @@ async function handleIncomingMessage(message: any) {
     processingLocks.add(chatId);
 
     try {
+      const horarioCfg = await getHorarioConfig();
+      const horarioOk = isHorarioAtendimento(horarioCfg);
+
       let ticket = await prisma.ticket.findFirst({
         where: {
           OR: [
@@ -244,10 +258,16 @@ async function handleIncomingMessage(message: any) {
           sendStageAutoMessage(ticket.id, 'fila').catch((e) =>
             console.warn('Failed to send fila auto message:', e)
           );
-        } else if (ticket.protocolo && ticket.etapa === 'fila') {
-          // Ticket já triado, comportamento normal
         }
       } else {
+        if (!horarioOk) {
+          const contactName = (contact?.pushname || contact?.name || chatId) as string;
+          const msg = await montarForaHorario(contactName);
+          const phone = chatId.replace(/@c\.us$/i, '');
+          await sendWhatsAppMessage(phone, msg);
+          return;
+        }
+
         let client = phoneLookup
           ? await prisma.client.findFirst({
               where: { telefone: { contains: phoneLookup } },
@@ -300,9 +320,28 @@ async function handleIncomingMessage(message: any) {
       });
 
       if (ticket!.etapa === 'triagem' && !ticket!.protocolo) {
-        iniciarOuResetarTriagem(ticket!.id).catch((e) =>
-          console.error('[WhatsApp] Erro ao iniciar triagem:', e?.message || e)
-        );
+        const opcao = detectarOpcaoMenu(message.body || '');
+        if (opcao) {
+          processarOpcaoMenu(ticket!.id, opcao, message.body || '').catch((e) =>
+            console.error('[WhatsApp] Erro ao processar opcao do menu:', e?.message || e)
+          );
+        } else {
+          const temAlgumaMsgDoBot = await prisma.message.count({
+            where: { ticketId: ticket!.id, fromMe: true },
+          });
+          if (temAlgumaMsgDoBot === 0) {
+            enviarMenuInicial(ticket!.id).catch((e) =>
+              console.error('[WhatsApp] Erro ao enviar menu inicial:', e?.message || e)
+            );
+          } else {
+            reenviarMenuPorInvalido(ticket!.id).catch((e) =>
+              console.error('[WhatsApp] Erro ao reenviar menu:', e?.message || e)
+            );
+          }
+          iniciarOuResetarTriagem(ticket!.id).catch((e) =>
+            console.error('[WhatsApp] Erro ao iniciar triagem:', e?.message || e)
+          );
+        }
       }
     } finally {
       processingLocks.delete(chatId);
