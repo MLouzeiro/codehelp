@@ -58,6 +58,7 @@ export async function iniciarOuResetarTriagem(ticketId: string) {
   clearTimer(ticketId);
 
   const avaliacao = await tentarClassificar(ticket.messages);
+  console.log(`[Triagem] ticket=${ticketId} avaliacao=`, avaliacao);
   if (avaliacao?.categoria && avaliacao.categoria !== 'outro') {
     await moverParaFilaComProtocolo(ticketId, avaliacao.categoria, avaliacao.assunto);
     return;
@@ -68,6 +69,7 @@ export async function iniciarOuResetarTriagem(ticketId: string) {
     ? config.tempoInatividadeMin
     : 5;
   const ms = minutos * 60 * 1000;
+  console.log(`[Triagem] ticket=${ticketId} sem categoria, aguardando ${minutos}min para follow-up`);
 
   const handle = setTimeout(async () => {
     timersAtivos.delete(ticketId);
@@ -86,6 +88,7 @@ async function tentarClassificar(messages: { content: string | null; fromMe: boo
     .map((m) => m.content || '')
     .join(' ')
     .trim();
+  console.log(`[Triagem] tentarClassificar textoCliente="${textoCliente.slice(0, 100)}"`);
   if (!textoCliente) return null;
 
   const categoria = classifyLocal(textoCliente, [
@@ -97,6 +100,7 @@ async function tentarClassificar(messages: { content: string | null; fromMe: boo
     'orcamento',
     'agendamento',
   ]);
+  console.log(`[Triagem] classifyLocal retornou: ${categoria}`);
   if (categoria === 'outro') return null;
   return { categoria, assunto: textoCliente.slice(0, 80) };
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X } from 'lucide-react';
+import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X, FileText, Building2, Calendar, DollarSign, Tag } from 'lucide-react';
 import QRCode from 'qrcode';
 
 export default function WhatsAppPage() {
@@ -22,6 +22,9 @@ export default function WhatsAppPage() {
   const [loading, setLoading] = useState(true);
   const [showNewTicket, setShowNewTicket] = useState(false);
   const [newTicket, setNewTicket] = useState({ contactName: '', contactPhone: '', assunto: '' });
+  const [showCreateTicketModal, setShowCreateTicketModal] = useState(false);
+  const [createTicketAssunto, setCreateTicketAssunto] = useState('');
+  const [createTicketSaving, setCreateTicketSaving] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const msgPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -31,6 +34,24 @@ export default function WhatsAppPage() {
     em_andamento: 'bg-amber-100 text-amber-700',
     fechado: 'bg-green-100 text-green-700',
     pendente: 'bg-gray-100 text-gray-700',
+  };
+
+  const clientStatusStyles: Record<string, string> = {
+    ativo: 'bg-green-100 text-green-700',
+    suspenso: 'bg-amber-100 text-amber-700',
+    cancelado: 'bg-red-100 text-red-700',
+    prospecto: 'bg-blue-100 text-blue-700',
+    inativo: 'bg-gray-100 text-gray-700',
+  };
+
+  const formatCurrency = (v?: number) => {
+    if (v == null) return '—';
+    return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  const formatDate = (d?: string) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('pt-BR');
   };
 
   const loadStatus = useCallback(async () => {
@@ -168,6 +189,30 @@ export default function WhatsAppPage() {
   const createOS = () => {
     if (!selectedTicket) return;
     navigate(`/orders/new?clientId=${selectedTicket.client?.id || ''}&ticketId=${selectedTicket.id}`);
+  };
+
+  const abrirModalCriarTicket = () => {
+    setCreateTicketAssunto(selectedTicket?.assunto || '');
+    setShowCreateTicketModal(true);
+  };
+
+  const criarTicketManualmente = async () => {
+    if (!selectedTicket || !createTicketAssunto.trim()) return;
+    setCreateTicketSaving(true);
+    try {
+      const { data } = await api.post(`/whatsapp/tickets/${selectedTicket.id}/triar`, {
+        assunto: createTicketAssunto.trim(),
+      });
+      setSelectedTicket((prev: any) => ({ ...prev, ...data }));
+      setShowCreateTicketModal(false);
+      setCreateTicketAssunto('');
+      loadTickets();
+      if (selectedTicketId) loadMessages(selectedTicketId);
+    } catch (err: any) {
+      setSendError(err.response?.data?.error || 'Erro ao criar ticket');
+    } finally {
+      setCreateTicketSaving(false);
+    }
   };
 
   const filteredTickets = tickets.filter((t: any) => {
@@ -309,9 +354,48 @@ export default function WhatsAppPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`badge text-xs ${statusStyles[selectedTicket.status] || ''}`}>{selectedTicket.status?.replace('_', ' ')}</span>
+                  {!selectedTicket.protocolo && (
+                    <button onClick={abrirModalCriarTicket} className="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-1" title="Forçar criação de ticket com assunto manual">
+                      <FileText size={12} /> Criar Ticket
+                    </button>
+                  )}
                   <button onClick={createOS} className="btn-primary text-xs flex items-center gap-1"><Plus size={12} /> OS</button>
                 </div>
               </div>
+
+              {selectedTicket.client && (
+                <div className="px-5 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50/40 to-green-50/40 flex-shrink-0">
+                  <div className="flex items-start gap-2 mb-2">
+                    <Building2 size={14} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-gray-900">{selectedTicket.client.razaoSocial}</span>
+                        {selectedTicket.client.nomeFantasia && selectedTicket.client.nomeFantasia !== selectedTicket.client.razaoSocial && (
+                          <span className="text-xs text-gray-500">({selectedTicket.client.nomeFantasia})</span>
+                        )}
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${clientStatusStyles[selectedTicket.client.status] || 'bg-gray-100 text-gray-700'}`}>
+                          {selectedTicket.client.status || 'sem status'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-600 flex-wrap">
+                        {selectedTicket.client.cnpjCpf && <span>CNPJ/CPF: {selectedTicket.client.cnpjCpf}</span>}
+                        {selectedTicket.client.segmento && (
+                          <span className="flex items-center gap-1"><Tag size={10} /> {selectedTicket.client.segmento}</span>
+                        )}
+                        {(selectedTicket.client as any).tipoContrato && (
+                          <span className="flex items-center gap-1"><FileText size={10} /> {(selectedTicket.client as any).tipoContrato}</span>
+                        )}
+                        {(selectedTicket.client as any).valorMensalidade != null && (
+                          <span className="flex items-center gap-1"><DollarSign size={10} /> {formatCurrency((selectedTicket.client as any).valorMensalidade)}/mês</span>
+                        )}
+                        {(selectedTicket.client as any).dataFimContrato && (
+                          <span className="flex items-center gap-1"><Calendar size={10} /> até {formatDate((selectedTicket.client as any).dataFimContrato)}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2 bg-gray-50/30">
                 {messages.map((msg: any) => (
@@ -368,6 +452,37 @@ export default function WhatsAppPage() {
             <input type="text" placeholder="WhatsApp (5511999999999)" value={newTicket.contactPhone} onChange={(e) => setNewTicket({ ...newTicket, contactPhone: e.target.value })} className="input w-full" />
             <input type="text" placeholder="Assunto (obrigatório)" value={newTicket.assunto} onChange={(e) => setNewTicket({ ...newTicket, assunto: e.target.value })} className="input w-full" />
             <button onClick={createTicket} disabled={!newTicket.contactName || !newTicket.contactPhone || !newTicket.assunto} className="btn-primary w-full disabled:opacity-50">Criar Conversa</button>
+          </div>
+        </div>
+      )}
+
+      {showCreateTicketModal && selectedTicket && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => !createTicketSaving && setShowCreateTicketModal(false)}>
+          <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-gray-900">Criar Ticket Manualmente</h3>
+              <button onClick={() => setShowCreateTicketModal(false)} disabled={createTicketSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>
+            </div>
+            <p className="text-sm text-gray-600">
+              O robô não identificou o assunto. Defina manualmente o assunto para gerar o protocolo e mover para a fila de atendimento.
+            </p>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Assunto do ticket</label>
+              <input
+                type="text"
+                placeholder="Ex: Erro no módulo LIS, Dúvida sobre boleto, etc."
+                value={createTicketAssunto}
+                onChange={(e) => setCreateTicketAssunto(e.target.value)}
+                autoFocus
+                className="input w-full"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowCreateTicketModal(false)} disabled={createTicketSaving} className="flex-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
+              <button onClick={criarTicketManualmente} disabled={!createTicketAssunto.trim() || createTicketSaving} className="flex-1 btn-primary disabled:opacity-50">
+                {createTicketSaving ? 'Criando...' : 'Criar Ticket'}
+              </button>
+            </div>
           </div>
         </div>
       )}

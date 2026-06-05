@@ -213,6 +213,50 @@ export async function updateTicket(req: AuthRequest, res: Response) {
   }
 }
 
+export async function triarTicketManualmente(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { assunto, categoria } = req.body;
+    if (!assunto || !assunto.trim()) {
+      return res.status(400).json({ error: 'Assunto é obrigatório para triar o ticket' });
+    }
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
+    if (ticket.protocolo) {
+      return res.status(409).json({ error: 'Ticket já triado', ticket });
+    }
+
+    const ws = await import('./whatsapp.service');
+    const { sendStageAutoMessage } = await import('../../helpdesk/helpdesk.service');
+    const protocolo = await ws.generateProtocolo();
+    const updated = await prisma.ticket.update({
+      where: { id },
+      data: {
+        protocolo,
+        assunto: assunto.trim(),
+        categoria: categoria || ticket.categoria,
+        etapa: 'fila',
+        status: 'aberto',
+      },
+    });
+    await prisma.ticketStageEvent.create({
+      data: {
+        ticketId: id,
+        etapaAnterior: ticket.etapa || 'triagem',
+        etapaNova: 'fila',
+        origem: 'manual',
+      },
+    });
+    sendStageAutoMessage(id, 'fila').catch((e: any) =>
+      console.warn('[WhatsApp] Falha ao enviar autoMessage da fila apos triagem manual:', e?.message || e)
+    );
+    return res.json(updated);
+  } catch (error: any) {
+    console.error('[WhatsApp] Erro ao triar manualmente:', error?.message || error);
+    return res.status(500).json({ error: 'Erro ao triar ticket' });
+  }
+}
+
 export async function getSubjects(req: Request, res: Response) {
   return res.json(SUBJECTS);
 }

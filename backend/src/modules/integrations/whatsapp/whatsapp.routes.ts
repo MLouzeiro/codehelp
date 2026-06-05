@@ -4,7 +4,8 @@ import {
   getStatus, getQrCode, connect, disconnect,
   listTickets, getTicket, sendMessage,
   createTicketFromChat, listChats, getDebugStatus,
-  closeTicket, updateTicket, getSubjects, reconnectWhatsApp
+  closeTicket, updateTicket, getSubjects, reconnectWhatsApp,
+  triarTicketManualmente,
 } from './whatsapp.controller';
 
 const router = Router();
@@ -22,6 +23,7 @@ router.get('/tickets/:id', authenticate, getTicket);
 router.post('/tickets', authenticate, createTicketFromChat);
 router.post('/tickets/:id/close', authenticate, authorize('admin', 'gerente', 'tecnico'), closeTicket);
 router.patch('/tickets/:id', authenticate, authorize('admin', 'gerente', 'tecnico'), updateTicket);
+router.post('/tickets/:id/triar', authenticate, authorize('admin', 'gerente', 'tecnico'), triarTicketManualmente);
 router.get('/chats', authenticate, listChats);
 router.post('/send', authenticate, authorize('admin', 'gerente', 'tecnico'), sendMessage);
 
