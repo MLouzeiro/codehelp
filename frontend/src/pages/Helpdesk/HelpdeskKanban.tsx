@@ -5,7 +5,7 @@ import {
   RefreshCw, MessageSquare, User, Clock, Tag, FileText, Inbox, Bot,
   Headphones, CheckCircle, AlertTriangle, Phone, X, Send, ArrowRight,
   UserPlus, ClipboardList, History, Stethoscope, Building2, ArrowUpDown,
-  Search,
+  Search, Plus,
 } from 'lucide-react';
 import type { HelpdeskKanbanData, HelpdeskEtapa, EtapaSlug } from '../../types';
 
@@ -45,6 +45,15 @@ export default function HelpdeskKanban() {
   const [orderBy, setOrderBy] = useState('updatedAt_desc');
   const [search, setSearch] = useState('');
   const [autoMessage, setAutoMessage] = useState<{ sent: boolean; error?: string } | null>(null);
+  const [showAbrirChamado, setShowAbrirChamado] = useState(false);
+  const [abrirChamado, setAbrirChamado] = useState({
+    assunto: '',
+    categoria: '',
+    prioridade: 'media',
+    tipo: '',
+    observacoes: '',
+  });
+  const [abrirSaving, setAbrirSaving] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const detailPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -209,6 +218,40 @@ export default function HelpdeskKanban() {
       window.open(`/app/orders/${os.id}`, '_blank');
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao criar OS');
+    }
+  };
+
+  const abrirModalAbrirChamado = () => {
+    if (!ticketDetail?.ticket) return;
+    setAbrirChamado({
+      assunto: ticketDetail.ticket.assunto || '',
+      categoria: ticketDetail.ticket.categoria || '',
+      prioridade: ticketDetail.ticket.prioridade || 'media',
+      tipo: ticketDetail.ticket.tipo || '',
+      observacoes: ticketDetail.ticket.observacoes || '',
+    });
+    setShowAbrirChamado(true);
+  };
+
+  const confirmarAbrirChamado = async () => {
+    if (!ticketDetail?.ticket || !abrirChamado.assunto.trim()) return;
+    setAbrirSaving(true);
+    try {
+      await api.post(`/whatsapp/tickets/${ticketDetail.ticket.id}/abrir`, {
+        assunto: abrirChamado.assunto.trim(),
+        categoria: abrirChamado.categoria || undefined,
+        prioridade: abrirChamado.prioridade,
+        tipo: abrirChamado.tipo || undefined,
+        observacoes: abrirChamado.observacoes.trim() || undefined,
+      });
+      setShowAbrirChamado(false);
+      setAbrirChamado({ assunto: '', categoria: '', prioridade: 'media', tipo: '', observacoes: '' });
+      loadTicketDetail(ticketDetail.ticket.id);
+      loadKanban();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao abrir chamado');
+    } finally {
+      setAbrirSaving(false);
     }
   };
 
@@ -455,6 +498,11 @@ export default function HelpdeskKanban() {
                   <ClipboardList size={9} /> Gerar OS
                 </button>
               )}
+              {!ticketDetail.ticket.protocolo && (
+                <button onClick={abrirModalAbrirChamado} className="text-[10px] text-white bg-emerald-600 hover:bg-emerald-700 px-2 py-1 rounded font-medium flex items-center gap-0.5">
+                  <Plus size={9} /> Abrir Chamado
+                </button>
+              )}
             </div>
 
             <div className="px-4 py-2 border-b border-neutral-200 bg-neutral-50/30 flex items-center gap-2 text-[11px] text-neutral-500">
@@ -552,6 +600,92 @@ export default function HelpdeskKanban() {
               {agents.map((a) => <option key={a.id} value={a.id}>{a.name} — {a.role}</option>)}
             </select>
             <button onClick={handleAssign} disabled={!assignTo} className="btn-primary w-full disabled:opacity-50">Atribuir</button>
+          </div>
+        </div>
+      )}
+
+      {showAbrirChamado && ticketDetail?.ticket && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => !abrirSaving && setShowAbrirChamado(false)}>
+          <div className="bg-white rounded-xl p-5 w-full max-w-md mx-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-navy-900 flex items-center gap-2"><Plus size={16} className="text-emerald-600" /> Abrir Chamado</h3>
+              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="text-neutral-400 hover:text-neutral-600"><X size={18} /></button>
+            </div>
+            <p className="text-xs text-neutral-500">
+              Ticket #{ticketDetail.ticket.id.slice(0, 8)} • {ticketDetail.ticket.contactName} ({ticketDetail.ticket.contactPhone})
+            </p>
+            <div>
+              <label className="text-xs font-medium text-neutral-700 block mb-1">Assunto *</label>
+              <input
+                type="text"
+                value={abrirChamado.assunto}
+                onChange={(e) => setAbrirChamado({ ...abrirChamado, assunto: e.target.value })}
+                placeholder="Ex: Erro no sistema de notas fiscais"
+                className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs font-medium text-neutral-700 block mb-1">Categoria</label>
+                <select
+                  value={abrirChamado.categoria}
+                  onChange={(e) => setAbrirChamado({ ...abrirChamado, categoria: e.target.value })}
+                  className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2"
+                >
+                  <option value="">—</option>
+                  <option value="suporte_tecnico">Suporte técnico</option>
+                  <option value="financeiro">Financeiro</option>
+                  <option value="comercial">Comercial</option>
+                  <option value="cancelamento">Cancelamento</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-neutral-700 block mb-1">Prioridade</label>
+                <select
+                  value={abrirChamado.prioridade}
+                  onChange={(e) => setAbrirChamado({ ...abrirChamado, prioridade: e.target.value })}
+                  className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2"
+                >
+                  <option value="baixa">Baixa</option>
+                  <option value="media">Média</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-neutral-700 block mb-1">Tipo</label>
+              <input
+                type="text"
+                value={abrirChamado.tipo}
+                onChange={(e) => setAbrirChamado({ ...abrirChamado, tipo: e.target.value })}
+                placeholder="Ex: Suporte N1, Atendimento comercial"
+                className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-neutral-700 block mb-1">Observações</label>
+              <textarea
+                value={abrirChamado.observacoes}
+                onChange={(e) => setAbrirChamado({ ...abrirChamado, observacoes: e.target.value })}
+                rows={3}
+                placeholder="Notas internas para o atendente"
+                className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 resize-none"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="flex-1 px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarAbrirChamado}
+                disabled={abrirSaving || !abrirChamado.assunto.trim()}
+                className="flex-1 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {abrirSaving ? <><RefreshCw size={14} className="animate-spin" /> Abrindo...</> : 'Confirmar'}
+              </button>
+            </div>
           </div>
         </div>
       )}
