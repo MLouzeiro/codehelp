@@ -313,10 +313,14 @@ model HelpdeskConfig {
   tempoInatividadeMin Int?
   mensagemFollowup String?
   mensagemBoasVindas String?
+  mensagemAckSuporte String?
+  mensagemAckComercial String?
+  mensagemOpcaoInvalida String?
   mensagemForaHorario String?
   horarioInicio String?
   horarioFim String?
   diasAtendimento String?
+  ordenacaoFila String  @default("updatedAt_desc")
   ativo     Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())

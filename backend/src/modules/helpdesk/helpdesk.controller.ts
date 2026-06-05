@@ -13,6 +13,9 @@ export async function getKanban(req: AuthRequest, res: Response) {
   try {
     await ensureHelpdeskConfigs();
     const etapas = await listEtapas();
+    const configFila = etapas.find((e) => e.slug === 'fila') as any;
+    const ordenacaoFila = configFila?.ordenacaoFila || 'updatedAt_desc';
+
     const where: any = { status: { not: 'arquivado' } };
     if (req.user?.role === 'tecnico') {
       where.OR = [{ assigneeId: req.user.id }, { assigneeId: null }];
@@ -30,12 +33,26 @@ export async function getKanban(req: AuthRequest, res: Response) {
     const board: Record<string, any> = {};
     const contagemEtapas: Record<string, number> = {};
     for (const etapa of etapas) {
-      const items = tickets
+      let items = tickets
         .filter((t) => t.etapa === etapa.slug)
         .map((t) => ({
           ...t,
           lastMessage: t.messages?.[0] || null,
         }));
+      if (etapa.slug === 'fila') {
+        items = items.sort((a, b) => {
+          if (ordenacaoFila === 'dataAbertura_asc') {
+            return new Date(a.dataAbertura).getTime() - new Date(b.dataAbertura).getTime();
+          }
+          if (ordenacaoFila === 'dataAbertura_desc') {
+            return new Date(b.dataAbertura).getTime() - new Date(a.dataAbertura).getTime();
+          }
+          if (ordenacaoFila === 'updatedAt_asc') {
+            return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+          }
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        });
+      }
       board[etapa.slug] = {
         id: etapa.id,
         slug: etapa.slug,
@@ -69,7 +86,7 @@ export async function getEtapas(req: AuthRequest, res: Response) {
 export async function updateEtapaConfig(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { nome, descricao, cor, icone, autoMessage, enviarAuto, notificarEquipe, ativo, ordem } = req.body;
+    const { nome, descricao, cor, icone, autoMessage, enviarAuto, notificarEquipe, ativo, ordem, ordenacaoFila, mensagemBoasVindas, mensagemForaHorario, horarioInicio, horarioFim, diasAtendimento, mensagemFollowup, tempoInatividadeMin, mensagemAckSuporte, mensagemAckComercial, mensagemOpcaoInvalida } = req.body;
     const data: any = {};
     if (nome !== undefined) data.nome = nome;
     if (descricao !== undefined) data.descricao = descricao;
@@ -80,6 +97,17 @@ export async function updateEtapaConfig(req: AuthRequest, res: Response) {
     if (notificarEquipe !== undefined) data.notificarEquipe = notificarEquipe;
     if (ativo !== undefined) data.ativo = ativo;
     if (ordem !== undefined) data.ordem = ordem;
+    if (ordenacaoFila !== undefined) data.ordenacaoFila = ordenacaoFila;
+    if (mensagemBoasVindas !== undefined) data.mensagemBoasVindas = mensagemBoasVindas;
+    if (mensagemForaHorario !== undefined) data.mensagemForaHorario = mensagemForaHorario;
+    if (horarioInicio !== undefined) data.horarioInicio = horarioInicio;
+    if (horarioFim !== undefined) data.horarioFim = horarioFim;
+    if (diasAtendimento !== undefined) data.diasAtendimento = diasAtendimento;
+    if (mensagemFollowup !== undefined) data.mensagemFollowup = mensagemFollowup;
+    if (tempoInatividadeMin !== undefined) data.tempoInatividadeMin = tempoInatividadeMin;
+    if (mensagemAckSuporte !== undefined) data.mensagemAckSuporte = mensagemAckSuporte;
+    if (mensagemAckComercial !== undefined) data.mensagemAckComercial = mensagemAckComercial;
+    if (mensagemOpcaoInvalida !== undefined) data.mensagemOpcaoInvalida = mensagemOpcaoInvalida;
     data.updatedAt = new Date();
     const etapa = await prisma.helpdeskConfig.update({ where: { id }, data });
     return res.json(etapa);
