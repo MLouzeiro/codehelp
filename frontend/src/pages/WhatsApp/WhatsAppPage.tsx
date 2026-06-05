@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X, FileText, Building2, Calendar, DollarSign, Tag, ArrowRightLeft, Bot, ClipboardList, ArrowUpDown } from 'lucide-react';
+import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X, FileText, Building2, Calendar, DollarSign, Tag, ArrowRightLeft, Bot, ClipboardList, ArrowUpDown, XCircle } from 'lucide-react';
 import QRCode from 'qrcode';
 
 export default function WhatsAppPage() {
@@ -269,6 +269,19 @@ export default function WhatsAppPage() {
     }
   };
 
+  const handleDescartar = async () => {
+    if (!selectedTicket) return;
+    if (!window.confirm(`Descartar ticket de ${selectedTicket.contactName}?\n\nNenhuma mensagem sera enviada ao cliente. O ticket sera movido para "Descartados".`)) return;
+    try {
+      await api.post(`/whatsapp/tickets/${selectedTicket.id}/descartar`);
+      setSelectedTicket(null);
+      setMessages([]);
+      loadTickets();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao descartar ticket');
+    }
+  };
+
   const abrirModalTransferir = () => {
     setTransferirPara('');
     setTransferirMotivo('');
@@ -457,6 +470,11 @@ export default function WhatsAppPage() {
                   {!selectedTicket.protocolo && (
                     <button onClick={abrirModalAbrirChamado} className="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-1" title="Abrir chamado (gerar protocolo + atribuir a voce)">
                       <ClipboardList size={12} /> Abrir Chamado
+                    </button>
+                  )}
+                  {!selectedTicket.protocolo && (
+                    <button onClick={handleDescartar} className="bg-neutral-100 text-neutral-700 text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-colors font-medium flex items-center gap-1" title="Descartar (tira da fila sem mandar msg ao cliente)">
+                      <XCircle size={12} /> Descartar
                     </button>
                   )}
                   {selectedTicket.protocolo && selectedTicket.assigneeId && (

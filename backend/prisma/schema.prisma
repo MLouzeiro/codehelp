@@ -169,6 +169,7 @@ model Ticket {
   dataFechamento      DateTime?
   dataPrimeiraResposta DateTime?
   dataInicioAtendimento DateTime?
+  dataConclusao       DateTime?
   satisfacao          Int?
   resumoFinal         String?
   tipo                String?

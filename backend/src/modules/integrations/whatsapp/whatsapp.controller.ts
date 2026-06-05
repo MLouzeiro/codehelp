@@ -280,6 +280,45 @@ export async function abrirChamado(req: AuthRequest, res: Response) {
   }
 }
 
+export async function descartarTicket(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    if (!req.user) return res.status(401).json({ error: 'Nao autenticado' });
+
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) return res.status(404).json({ error: 'Ticket nao encontrado' });
+    if (ticket.etapa === 'descartado') {
+      return res.status(409).json({ error: 'Ticket ja foi descartado' });
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id },
+      data: {
+        etapa: 'descartado',
+        status: 'cancelado',
+        dataConclusao: new Date(),
+        usuarioId: req.user.id,
+      },
+    });
+
+    await prisma.ticketStageEvent.create({
+      data: {
+        ticketId: id,
+        etapaAnterior: ticket.etapa,
+        etapaNova: 'descartado',
+        origem: 'manual',
+        usuarioId: req.user.id,
+        mensagemAutomatica: 'nao_enviada',
+      },
+    });
+
+    return res.json({ ticket: updated, autoMessage: { sent: false, reason: 'ticket_descartado_sem_mensagem' } });
+  } catch (error: any) {
+    console.error('[WhatsApp] Erro ao descartar ticket:', error?.message || error);
+    return res.status(500).json({ error: 'Erro ao descartar ticket' });
+  }
+}
+
 export async function transferirTicket(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;

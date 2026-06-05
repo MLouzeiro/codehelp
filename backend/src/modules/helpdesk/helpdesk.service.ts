@@ -7,6 +7,7 @@ export const ETAPAS_PADRAO = [
   { slug: 'aguardando_cliente', nome: 'Aguardando Cliente', descricao: 'Aguardando retorno do cliente', cor: '#0ea5e9', icone: 'clock', ordem: 2, enviarAuto: false, notificarEquipe: false },
   { slug: 'aguardando_os', nome: 'Aguardando OS', descricao: 'Necessária geração de Ordem de Serviço', cor: '#ec4899', icone: 'file-text', ordem: 3, enviarAuto: true, notificarEquipe: false },
   { slug: 'concluido', nome: 'Concluído', descricao: 'Atendimento finalizado', cor: '#64748b', icone: 'check-circle', ordem: 4, enviarAuto: true, notificarEquipe: false },
+  { slug: 'descartado', nome: 'Descartados', descricao: 'Tickets que não são chamados (spam, fora de contexto, msg acidental)', cor: '#71717a', icone: 'x-circle', ordem: 5, enviarAuto: false, notificarEquipe: false },
 ];
 
 const MENSAGENS_PADRAO: Record<string, string> = {

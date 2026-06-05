@@ -162,7 +162,12 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
     }
     if (etapa === 'concluido') {
       updateData.dataFechamento = new Date();
+      updateData.dataConclusao = new Date();
       updateData.status = 'fechado';
+    }
+    if (etapa === 'descartado') {
+      updateData.dataConclusao = new Date();
+      updateData.status = 'cancelado';
     }
 
     const updated = await prisma.ticket.update({ where: { id }, data: updateData });

@@ -54,6 +54,7 @@ export default function HelpdeskKanban() {
     observacoes: '',
   });
   const [abrirSaving, setAbrirSaving] = useState(false);
+  const [descartarSaving, setDescartarSaving] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const detailPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -255,6 +256,21 @@ export default function HelpdeskKanban() {
     }
   };
 
+  const descartarTicket = async () => {
+    if (!ticketDetail?.ticket) return;
+    if (!window.confirm(`Descartar ticket de ${ticketDetail.ticket.contactName}?\n\nNenhuma mensagem sera enviada ao cliente. O ticket sera movido para "Descartados".`)) return;
+    setDescartarSaving(true);
+    try {
+      await api.post(`/whatsapp/tickets/${ticketDetail.ticket.id}/descartar`);
+      setSelectedTicketId(null);
+      loadKanban();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao descartar ticket');
+    } finally {
+      setDescartarSaving(false);
+    }
+  };
+
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -439,7 +455,13 @@ export default function HelpdeskKanban() {
                             )}
                             <span className="text-[10px] text-neutral-400 flex items-center gap-0.5">
                               <Clock size={9} />
-                              {Math.floor((Date.now() - new Date(ticket.updatedAt).getTime()) / 60000)}min
+                              {ticket.dataConclusao ? (
+                                <span title={`Concluído em ${new Date(ticket.dataConclusao).toLocaleString('pt-BR')}`}>
+                                  0min
+                                </span>
+                              ) : (
+                                `${Math.floor((Date.now() - new Date(ticket.updatedAt).getTime()) / 60000)}min`
+                              )}
                             </span>
                           </div>
                         </div>
@@ -499,9 +521,19 @@ export default function HelpdeskKanban() {
                 </button>
               )}
               {!ticketDetail.ticket.protocolo && (
-                <button onClick={abrirModalAbrirChamado} className="text-[10px] text-white bg-emerald-600 hover:bg-emerald-700 px-2 py-1 rounded font-medium flex items-center gap-0.5">
-                  <Plus size={9} /> Abrir Chamado
-                </button>
+                <>
+                  <button onClick={abrirModalAbrirChamado} className="text-[10px] text-white bg-emerald-600 hover:bg-emerald-700 px-2 py-1 rounded font-medium flex items-center gap-0.5">
+                    <Plus size={9} /> Abrir Chamado
+                  </button>
+                  <button
+                    onClick={descartarTicket}
+                    disabled={descartarSaving}
+                    className="text-[10px] text-zinc-700 bg-zinc-100 hover:bg-zinc-200 px-2 py-1 rounded font-medium flex items-center gap-0.5 disabled:opacity-50"
+                    title="Descartar ticket sem avisar o cliente"
+                  >
+                    {descartarSaving ? <RefreshCw size={9} className="animate-spin" /> : <X size={9} />} Descartar
+                  </button>
+                </>
               )}
             </div>
 
