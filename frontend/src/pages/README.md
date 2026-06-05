@@ -1,0 +1,1 @@
+# pages — Páginas da aplicação (Login, Dashboard, CRM, Kanban, Orders, WhatsApp, Settings)

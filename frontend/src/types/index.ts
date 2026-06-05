@@ -1,0 +1,152 @@
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'vendedor' | 'gerente' | 'comercial' | 'tecnico';
+  phone?: string;
+  active?: boolean;
+  online?: boolean;
+  lastSeenAt?: string;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  sellerId: string;
+  seller?: User;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'aberta' | 'em_andamento' | 'concluida' | 'cancelada';
+  priority: 'baixa' | 'media' | 'alta' | 'urgente';
+  order?: number;
+  project?: string;
+  dueDate?: string;
+  assigneeId?: string;
+  assignee?: User;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: User;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface DashboardData {
+  totalClients: number;
+  pendingTasks: number;
+  completedTasks: number;
+  tasksByStatus: { status: string; count: number }[];
+  tasksByPeriod: { month: string; count: string }[];
+}
+
+export type EtapaSlug =
+  | 'fila'
+  | 'triagem'
+  | 'em_atendimento'
+  | 'aguardando_cliente'
+  | 'aguardando_os'
+  | 'concluido';
+
+export interface HelpdeskEtapa {
+  id: string;
+  slug: EtapaSlug;
+  nome: string;
+  descricao?: string;
+  cor: string;
+  icone: string;
+  ordem: number;
+  enviarAuto: boolean;
+  notificarEquipe: boolean;
+  autoMessage?: string;
+  ativo: boolean;
+}
+
+export interface HelpdeskTicket {
+  id: string;
+  protocolo?: string;
+  contactName?: string;
+  contactPhone?: string;
+  assunto?: string;
+  categoria?: string;
+  etapa: EtapaSlug;
+  prioridade: string;
+  status: string;
+  client?: { id: string; razaoSocial?: string; nomeFantasia?: string; telefone?: string } | null;
+  assignee?: { id: string; name: string; email: string } | null;
+  dataAbertura: string;
+  dataInicioAtendimento?: string;
+  dataFechamento?: string;
+  lastMessage?: { content?: string; fromMe?: boolean; createdAt?: string } | null;
+  _count?: { messages: number; orders: number };
+  emAtendimentoDesde?: string;
+  tempoDecorridoMin?: number;
+}
+
+export interface HelpdeskKanbanData {
+  board: Record<EtapaSlug, {
+    id: string;
+    slug: EtapaSlug;
+    title: string;
+    descricao?: string;
+    cor: string;
+    icone: string;
+    enviarAuto: boolean;
+    items: HelpdeskTicket[];
+    total: number;
+  }>;
+  etapas: HelpdeskEtapa[];
+  contagemEtapas: Record<string, number>;
+}
+
+export interface HelpdeskDashboardData {
+  atualizadoEm: string;
+  etapas: (HelpdeskEtapa & { total: number })[];
+  contagemEtapas: Record<string, number>;
+  emAtendimento: Array<{
+    id: string;
+    protocolo?: string;
+    contactName?: string;
+    cliente?: string;
+    assignee?: { id: string; name: string; email: string } | null;
+    emAtendimentoDesde?: string;
+    tempoDecorridoMin: number;
+  }>;
+  filaEspera: number;
+  concluidosHoje: number;
+  totalAbertos: number;
+  tempoMedioAtendimentoMin: number;
+  ultimosMovimentos: Array<{
+    id: string;
+    etapaAnterior?: string;
+    etapaNova: string;
+    origem: string;
+    createdAt: string;
+    usuario?: { id: string; name: string } | null;
+    ticket: { id: string; protocolo?: string; contactName?: string; contactPhone?: string; client?: { razaoSocial?: string } | null };
+  }>;
+  agentes: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    online: boolean;
+    lastSeenAt?: string;
+    emAtendimento: number;
+  }>;
+}

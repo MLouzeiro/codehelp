@@ -1,0 +1,1 @@
+# src — Código fonte do backend (config, módulos, middleware e entry point)

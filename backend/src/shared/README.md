@@ -1,0 +1,1 @@
+# shared — Middleware compartilhado (auth, error, audit) e utilitários

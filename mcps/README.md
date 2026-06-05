@@ -1,0 +1,1 @@
+# mcps — Configurações de servidores MCP (Figma, GitHub, Linear, Notion, PostgreSQL, Sentry, Slack, Vercel)

@@ -1,0 +1,1 @@
+# config — Configurações de ambiente, banco de dados e Redis

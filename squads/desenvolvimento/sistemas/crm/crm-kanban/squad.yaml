@@ -1,0 +1,113 @@
+squad:
+  code: crm-kanban
+  setor: desenvolvimento
+  grupo: sistemas
+  sessao: crm
+  name: CRM com Kanban
+  description: Squad para desenvolver um CRM completo com Kanban, Dashboard e gestão de vendedores para software house
+  icon: kanban-square
+  version: "1.0.0"
+
+  company: "_expxagents/_memory/company.md"
+  preferences: "_expxagents/_memory/preferences.md"
+  memory: "_memory/memories.md"
+
+  target_audience: Vendedores, gestores e administradores internos da software house
+  platform: Web (React + Node.js)
+  format: fullstack-crm
+
+  schedule:
+    enabled: true
+
+  skills:
+    - web_search
+    - web_fetch
+
+  data: []
+
+  agents:
+    - id: analista-requisitos
+      name: "Ana Oliveira"
+      icon: clipboard-list
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Ana"
+      prompt: agents/analista-requisitos.md
+
+    - id: arquiteto
+      name: "Carlos Silva"
+      icon: blueprint
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Carlos"
+      prompt: agents/arquiteto.md
+
+    - id: ux-designer
+      name: "Julia Costa"
+      icon: palette
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Julia"
+      prompt: agents/ux-designer.md
+
+    - id: backend-dev
+      name: "Marcos Santos"
+      icon: server
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Marcos"
+      prompt: agents/backend-dev.md
+
+    - id: frontend-dev
+      name: "Fernanda Lima"
+      icon: layout
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Fernanda"
+      prompt: agents/frontend-dev.md
+
+    - id: revisor
+      name: "Thiago Alves"
+      icon: code
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Thiago"
+      prompt: agents/revisor.md
+
+    - id: qa
+      name: "Patrícia Souza"
+      icon: check-circle
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Patricia"
+      prompt: agents/qa.md
+
+  pipeline:
+    steps:
+      - id: step-01
+        agent: analista-requisitos
+        label: Levantar requisitos do CRM
+        execution: inline
+
+      - id: step-02
+        agent: arquiteto
+        label: Desenhar arquitetura do sistema
+        deliverFrom: analista-requisitos
+        execution: inline
+
+      - id: step-03
+        agent: ux-designer
+        label: Prototipar interface do usuário
+        deliverFrom: arquiteto
+        execution: inline
+
+      - id: step-04
+        agent: backend-dev
+        label: Desenvolver API e banco de dados
+        deliverFrom: ux-designer
+        execution: inline
+
+      - id: step-05
+        agent: frontend-dev
+        label: Desenvolver frontend React
+        deliverFrom: backend-dev
+        execution: inline
+
+      - id: step-06
+        agent: revisor
+        label: Revisar código e segurança
+        deliverFrom: frontend-dev
+        execution: inline
+
+      - id: step-07
+        agent: qa
+        label: Testar e validar o sistema
+        deliverFrom: revisor
+        execution: inline
+        produces_format: true

@@ -1,0 +1,8 @@
+id,name,icon,personality
+analista-requisitos,"Ana Oliveira",clipboard-list,"Curious and thorough, always asks the right questions to uncover real requirements"
+arquiteto,"Carlos Silva",blueprint,"Strategic and precise, designs systems that are simple yet robust"
+ux-designer,"Julia Costa",palette,"Creative and user-obsessed, crafts interfaces that feel effortless"
+backend-dev,"Marcos Santos",server,"Methodical and disciplined, writes clean APIs with security first"
+frontend-dev,"Fernanda Lima",layout,"Detail-oriented and pixel-perfect, brings designs to life with React"
+revisor,"Thiago Alves",code,"Analytical and critical, catches issues before they reach production"
+qa,"Patrícia Souza",check-circle,"Meticulous and relentless, breaks things so users don't have to"

@@ -1,0 +1,1 @@
+# src — Código fonte do frontend (components, pages, services, types)

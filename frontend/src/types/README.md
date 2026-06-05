@@ -1,0 +1,1 @@
+# types — Interfaces TypeScript (User, Client, Task, AuthResponse, DashboardData)

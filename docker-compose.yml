@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: codemed-postgres
+    environment:
+      POSTGRES_DB: codemed_hub
+      POSTGRES_USER: codemed
+      POSTGRES_PASSWORD: codemed123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: codemed-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: codemed-backend
+    environment:
+      DATABASE_URL: postgresql://codemed:codemed123@postgres:5432/codemed_hub
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: super_secret_jwt_key_change_in_production
+      JWT_REFRESH_SECRET: super_secret_refresh_key_change_in_production
+      APP_URL: http://localhost:3000
+      API_URL: http://localhost:3001
+      TIMEZONE: America/Fortaleza
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - whatsapp_session:/app/whatsapp-session
+      - pdf_storage:/app/storage/pdfs
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: codemed-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  whatsapp_session:
+  pdf_storage:

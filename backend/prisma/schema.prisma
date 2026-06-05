@@ -1,0 +1,336 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("tecnico")
+  phone     String?
+  avatar    String?
+  active    Boolean  @default(true)
+  online    Boolean  @default(false)
+  lastSeenAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  contacts         Contact[]
+  opportunities    Opportunity[]
+  tasks            Task[]
+  tickets          Ticket[]
+  ticketsAtendidos Ticket[]        @relation("TicketAssignee")
+  messages         Message[]
+  auditLogs        AuditLog[]
+  clientTechnician Client[]     @relation("ClientTechnician")
+  orderTechnician  ServiceOrder[] @relation("OrderTechnician")
+  orderCreator     ServiceOrder[] @relation("OrderCreator")
+  stageMovements   TicketStageEvent[]
+}
+
+model Client {
+  id                    String   @id @default(uuid())
+  razaoSocial           String
+  nomeFantasia          String?
+  cnpjCpf               String?
+  segmento              String   @default("laboratorio")
+  responsavelTecnicoId  String?
+  responsavelTecnico    User?    @relation("ClientTechnician", fields: [responsavelTecnicoId], references: [id])
+  telefone              String?
+  email                 String?
+  cidade                String?
+  estado                String?
+  status                String   @default("ativo")
+  origem                String   @default("manual")
+  whatsappContactId     String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @default(now())
+
+  contacts      Contact[]
+  opportunities Opportunity[]
+  serviceOrders ServiceOrder[]
+  tickets       Ticket[]
+}
+
+model Contact {
+  id            String   @id @default(uuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  tipo          String
+  descricao     String?
+  data          DateTime @default(now())
+  usuarioId     String
+  usuario       User     @relation(fields: [usuarioId], references: [id])
+  duracaoMinutos Int?
+  createdAt     DateTime @default(now())
+}
+
+model Opportunity {
+  id                      String   @id @default(uuid())
+  clientId                String
+  client                  Client   @relation(fields: [clientId], references: [id])
+  titulo                  String
+  valorEstimado           Float?
+  etapa                   String   @default("prospeccao")
+  probabilidade           Int?     @default(50)
+  dataFechamentoPrevista  DateTime?
+  responsavelId           String
+  responsavel             User     @relation(fields: [responsavelId], references: [id])
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @default(now())
+}
+
+model ServiceOrder {
+  id                   String   @id @default(uuid())
+  numeroOs             String   @unique
+  clientId             String
+  client               Client   @relation(fields: [clientId], references: [id])
+  tipoServico          String
+  descricaoServico     String?
+  sistemasEnvolvidos   String   @default("[]")
+  equipamentos         String?
+  tecnicoResponsavelId String
+  tecnicoResponsavel   User     @relation("OrderTechnician", fields: [tecnicoResponsavelId], references: [id])
+  valorServico         Float?
+  dataEmissao          DateTime @default(now())
+  dataPrevistaEntrega  DateTime?
+  status               String   @default("rascunho")
+  ticketId             String?
+  ticket               Ticket?  @relation("OrderTicket", fields: [ticketId], references: [id])
+  observacoes          String?
+  criadoPorId          String
+  criadoPor            User     @relation("OrderCreator", fields: [criadoPorId], references: [id])
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now())
+
+  signature   Signature?
+  attachments Attachment[]
+}
+
+model Signature {
+  id               String   @id @default(uuid())
+  orderId          String   @unique
+  order            ServiceOrder @relation(fields: [orderId], references: [id])
+  assinanteNome    String
+  assinanteCpf     String
+  assinanteCargo   String
+  assinaturaBase64 String
+  ipAssinante      String?
+  userAgent        String?
+  assinadoEm       DateTime @default(now())
+  tokenAssinatura  String   @unique
+  tokenExpiresAt   DateTime
+  pdfPath          String?
+  createdAt        DateTime @default(now())
+}
+
+model Attachment {
+  id           String   @id @default(uuid())
+  orderId      String
+  order        ServiceOrder @relation(fields: [orderId], references: [id])
+  filename     String
+  originalName String
+  mimetype     String
+  size         Int
+  path         String
+  uploadedAt   DateTime @default(now())
+}
+
+model Ticket {
+  id                  String   @id @default(uuid())
+  protocolo           String?  @unique
+  externalId          String?  @unique
+  clientId            String?
+  client              Client?  @relation(fields: [clientId], references: [id])
+  contactName         String?
+  contactPhone        String?
+  assunto             String?
+  categoria           String?
+  status              String   @default("aberto")
+  canal               String   @default("whatsapp")
+  etapa               String   @default("fila")
+  prioridade          String   @default("media")
+  assigneeId          String?
+  assignee            User?    @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  usuarioId           String?
+  usuario             User?    @relation(fields: [usuarioId], references: [id])
+  dataAbertura        DateTime @default(now())
+  dataFechamento      DateTime?
+  dataPrimeiraResposta DateTime?
+  dataInicioAtendimento DateTime?
+  satisfacao          Int?
+  resumoFinal         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now())
+
+  messages      Message[]
+  stageHistory  TicketStageEvent[]
+  snapshots     TicketHistory[]
+  orders        ServiceOrder[] @relation("OrderTicket")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  fromMe    Boolean  @default(false)
+  content   String?
+  mediaUrl  String?
+  usuarioId String?
+  usuario   User?    @relation(fields: [usuarioId], references: [id])
+  sentAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
+model Task {
+  id             String   @id @default(uuid())
+  titulo         String
+  descricao      String?
+  status         String   @default("aberta")
+  prioridade     String   @default("media")
+  responsavelId  String?
+  responsavel    User?    @relation(fields: [responsavelId], references: [id])
+  projeto        String?
+  sprint         String?
+  dataVencimento DateTime?
+  dataConclusao  DateTime?
+  ordem          Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+}
+
+model AlertRecipient {
+  id        String   @id @default(uuid())
+  nome      String
+  whatsapp  String
+  cargo     String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model AlertHistory {
+  id            String   @id @default(uuid())
+  tipo          String   @default("semanal")
+  destinatarios String?
+  conteudo      String?
+  status        String   @default("enviado")
+  enviadoEm     DateTime @default(now())
+  erro          String?
+  createdAt     DateTime @default(now())
+}
+
+model Robot {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  nome      String
+  descricao String
+  icone     String   @default("bot")
+  ativo     Boolean  @default(true)
+  inteligente Boolean @default(false)
+  ordem     Int      @default(0)
+  horarioAtivo Boolean @default(false)
+  diasSemana String  @default("1,2,3,4,5")
+  horaInicio String  @default("08:00")
+  horaFim   String   @default("18:00")
+  fusoHorario String @default("America/Fortaleza")
+  config    String   @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  rules     RobotRule[]
+}
+
+model RobotRule {
+  id        String   @id @default(uuid())
+  robotId   String
+  robot     Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  nome      String
+  descricao String?
+  ativo     Boolean  @default(true)
+  ordem     Int      @default(0)
+  trigger   String   @default("{\"type\":\"new_ticket\"}")
+  conditions String  @default("[]")
+  actions   String   @default("[]")
+  logicOperator String @default("all")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  usuarioId  String?
+  usuario    User?    @relation(fields: [usuarioId], references: [id])
+  acao       String
+  entidade   String
+  entidadeId String?
+  detalhes   String?
+  ip         String?
+  createdAt  DateTime @default(now())
+}
+
+model SyncLog {
+  id         String   @id @default(uuid())
+  origem     String
+  status     String
+  registros  Int?
+  erro       String?
+  executedAt DateTime @default(now())
+}
+
+model WhatsAppSession {
+  id        String   @id @default(uuid())
+  session   String
+  connected Boolean  @default(false)
+  qrCode    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+model HelpdeskConfig {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  nome      String
+  descricao String?
+  cor       String   @default("#3b82f6")
+  icone     String   @default("inbox")
+  ordem     Int      @default(0)
+  autoMessage String?
+  enviarAuto  Boolean  @default(false)
+  notificarEquipe Boolean @default(false)
+  tempoInatividadeMin Int?
+  mensagemFollowup String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+model TicketStageEvent {
+  id         String   @id @default(uuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  etapaAnterior String?
+  etapaNova  String
+  origem     String   @default("manual")
+  usuarioId  String?
+  usuario    User?    @relation(fields: [usuarioId], references: [id])
+  mensagemAutomatica String?
+  mensagemEnviada Boolean @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model TicketHistory {
+  id           String   @id @default(uuid())
+  ticketId     String
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  etapa        String
+  snapshotJson String
+  totalMensagens Int    @default(0)
+  geradoPor    String   @default("sistema")
+  createdAt    DateTime @default(now())
+}

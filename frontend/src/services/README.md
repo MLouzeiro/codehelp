@@ -1,0 +1,1 @@
+# services — Serviços HTTP (api.ts com Axios) e contexto de autenticação (auth.tsx)

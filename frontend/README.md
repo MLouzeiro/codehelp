@@ -1,0 +1,1 @@
+# frontend — Aplicação React + Vite + Tailwind do Codemed Hub

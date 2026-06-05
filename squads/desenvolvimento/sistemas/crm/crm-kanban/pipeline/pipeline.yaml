@@ -1,0 +1,66 @@
+steps:
+  - id: step-01
+    agent: analista-requisitos
+    label: Levantar requisitos do CRM
+    execution: inline
+    model_tier: powerful
+
+  - id: step-02
+    type: checkpoint
+    label: Requisitos revisados e aprovados?
+    options:
+      - approve
+      - reject
+    on_reject: step-01
+
+  - id: step-03
+    agent: arquiteto
+    label: Desenhar arquitetura do sistema
+    deliverFrom: analista-requisitos
+    execution: inline
+
+  - id: step-04
+    type: checkpoint
+    label: Arquitetura aprovada?
+    options:
+      - approve
+      - reject
+    on_reject: step-03
+
+  - id: step-05
+    agent: ux-designer
+    label: Prototipar interface do usuário
+    deliverFrom: arquiteto
+    execution: inline
+
+  - id: step-06
+    type: checkpoint
+    label: Protótipos aprovados?
+    options:
+      - approve
+      - reject
+    on_reject: step-05
+
+  - id: step-07
+    agent: backend-dev
+    label: Desenvolver API e banco de dados
+    deliverFrom: ux-designer
+    execution: inline
+
+  - id: step-08
+    agent: frontend-dev
+    label: Desenvolver frontend React
+    deliverFrom: backend-dev
+    execution: inline
+
+  - id: step-09
+    agent: revisor
+    label: Revisar código e segurança
+    deliverFrom: frontend-dev
+    execution: inline
+
+  - id: step-10
+    agent: qa
+    label: Testar e validar o sistema
+    deliverFrom: revisor
+    execution: inline

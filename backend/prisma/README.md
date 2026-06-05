@@ -1,0 +1,1 @@
+# prisma — Schema do banco, migrations e seed de dados

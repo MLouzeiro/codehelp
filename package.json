@@ -1,0 +1,28 @@
+{
+  "name": "codemed-hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Codemed Hub — CRM + OS Digital + WhatsApp Nativo + Dashboard IA",
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npx tsx watch src/server.ts",
+    "dev:frontend": "cd frontend && npx vite --host",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npx tsc",
+    "build:frontend": "cd frontend && npx vite build",
+    "start": "cd backend && node dist/server.js",
+    "db:migrate": "cd backend && npx prisma migrate dev",
+    "db:push": "cd backend && npx prisma db push",
+    "db:seed": "cd backend && npx tsx prisma/seed.ts",
+    "db:studio": "cd backend && npx prisma studio",
+    "reset": "powershell -ExecutionPolicy Bypass -File ./reset-dev.ps1",
+    "reset:keep-session": "powershell -ExecutionPolicy Bypass -File ./reset-dev.ps1 -KeepSession -NoStart -Force",
+    "postinstall": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "dependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

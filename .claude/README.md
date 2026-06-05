@@ -1,0 +1,1 @@
+# .claude — Skills do Claude Code para tarefas específicas do projeto

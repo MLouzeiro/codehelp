@@ -1,0 +1,87 @@
+{
+  "squad": "crm-kanban",
+  "status": "completed",
+  "step": { "current": 7, "total": 7, "label": "Testar e validar o sistema" },
+  "agents": [
+    {
+      "id": "analista-requisitos",
+      "name": "Ana Oliveira",
+      "icon": "clipboard-list",
+      "status": "done",
+      "stepIndex": 1,
+      "stepLabel": "step-01-Levantar requisitos do CRM",
+      "desk": { "col": 1, "row": 1 },
+      "deliverTo": "arquiteto",
+      "message": "Requisitos levantados: 10 histórias de usuário, 2 perfis de acesso, 3 módulos"
+    },
+    {
+      "id": "arquiteto",
+      "name": "Carlos Silva",
+      "icon": "blueprint",
+      "status": "done",
+      "stepIndex": 2,
+      "stepLabel": "step-02-Desenhar arquitetura do sistema",
+      "desk": { "col": 2, "row": 1 },
+      "deliverTo": "ux-designer",
+      "message": "Arquitetura completa: schema Prisma, 15 rotas API, estrutura de diretórios"
+    },
+    {
+      "id": "ux-designer",
+      "name": "Julia Costa",
+      "icon": "palette",
+      "status": "done",
+      "stepIndex": 3,
+      "stepLabel": "step-03-Prototipar interface do usuário",
+      "desk": { "col": 3, "row": 1 },
+      "deliverTo": "backend-dev",
+      "message": "UI/UX especificado: 8 telas, design system completo, estados loading/empty/error"
+    },
+    {
+      "id": "backend-dev",
+      "name": "Marcos Santos",
+      "icon": "server",
+      "status": "done",
+      "stepIndex": 4,
+      "stepLabel": "step-04-Desenvolver API e banco de dados",
+      "desk": { "col": 1, "row": 2 },
+      "deliverTo": "frontend-dev",
+      "message": "API completa: Prisma schema, 6 controllers, todas as rotas com auth"
+    },
+    {
+      "id": "frontend-dev",
+      "name": "Fernanda Lima",
+      "icon": "layout",
+      "status": "done",
+      "stepIndex": 5,
+      "stepLabel": "step-05-Desenvolver frontend React",
+      "desk": { "col": 2, "row": 2 },
+      "deliverTo": "revisor",
+      "message": "Frontend completo: 9 telas, componentes, auth, API services"
+    },
+    {
+      "id": "revisor",
+      "name": "Thiago Alves",
+      "icon": "code",
+      "status": "done",
+      "stepIndex": 6,
+      "stepLabel": "step-06-Revisar código e segurança",
+      "desk": { "col": 3, "row": 2 },
+      "deliverTo": "qa",
+      "message": "Revisão concluída: aprovado com ressalvas, 8 issues encontradas"
+    },
+    {
+      "id": "qa",
+      "name": "Patrícia Souza",
+      "icon": "check-circle",
+      "status": "done",
+      "stepIndex": 7,
+      "stepLabel": "step-07-Testar e validar o sistema",
+      "desk": { "col": 1, "row": 3 },
+      "deliverTo": null,
+      "message": "Testes concluídos: 28 casos, 25 passaram, 2 bugs encontrados"
+    }
+  ],
+  "handoff": null,
+  "startedAt": "2026-05-30T11:17:00Z",
+  "updatedAt": "2026-05-30T11:17:30Z"
+}

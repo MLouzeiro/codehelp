@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: 'Dosis', sans-serif;
+    font-size: 1rem;
+    font-weight: 400;
+    color: #2B3636;
+    line-height: 1.6;
+    background-color: #F8FAFA;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Khand', sans-serif;
+    font-weight: 600;
+  }
+
+  ::selection {
+    background-color: #AFDC3B;
+    color: #011126;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-green-300 text-codemed-700 font-semibold px-6 py-3 rounded-lg
+           hover:bg-green-200 hover:shadow-brand
+           active:bg-green-400
+           transition-all duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
+    font-family: 'Khand', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+  }
+
+  .btn-secondary {
+    @apply bg-codemed-700 text-white border-2 border-white/20 px-6 py-3 rounded-lg font-semibold
+           hover:bg-codemed-100 hover:border-green-300
+           active:bg-codemed-200
+           transition-all duration-200;
+    font-family: 'Khand', sans-serif;
+  }
+
+  .btn-outline {
+    @apply bg-transparent text-green-300 border-2 border-green-300 px-6 py-3 rounded-lg font-semibold
+           hover:bg-green-300 hover:text-codemed-700
+           active:bg-green-400
+           transition-all duration-200;
+    font-family: 'Khand', sans-serif;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-green-300 px-6 py-3 rounded-lg font-semibold
+           hover:bg-green-300/10
+           active:bg-green-300/20
+           transition-all duration-200;
+    font-family: 'Khand', sans-serif;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-neutral-100 p-6;
+  }
+
+  .input {
+    @apply w-full px-4 py-3 border border-neutral-200 rounded-lg
+           focus:ring-2 focus:ring-green-300 focus:border-green-300
+           outline-none transition-all duration-200
+           placeholder:text-neutral-400;
+    font-family: 'Dosis', sans-serif;
+  }
+
+  .badge {
+    @apply px-2.5 py-1 text-xs font-medium rounded-full;
+    font-family: 'Khand', sans-serif;
+  }
+
+  .section-badge {
+    @apply inline-flex items-center gap-2 bg-green-50 text-green-600
+           text-xs font-bold tracking-widest uppercase
+           px-3 py-1.5 rounded-full;
+    font-family: 'Khand', sans-serif;
+  }
+
+  .section-title {
+    @apply text-3xl md:text-4xl font-bold text-codemed-700 tracking-tight;
+    font-family: 'Khand', sans-serif;
+  }
+
+  .section-desc {
+    @apply text-lg text-neutral-500 max-w-2xl;
+  }
+}

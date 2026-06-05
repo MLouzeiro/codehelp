@@ -1,0 +1,1 @@
+# squads — Squads ExpxAgents (estado e output gitignored)

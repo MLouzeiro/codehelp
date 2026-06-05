@@ -1,0 +1,1 @@
+# modules — Módulos funcionais (auth, crm, orders, kanban, analytics, alerts, ai, whatsapp)

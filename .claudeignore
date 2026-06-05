@@ -1,0 +1,86 @@
+# =============================================================================
+# .claudeignore — Claude Code exclusion context
+# Gerado automaticamente para o projeto codemed-hub
+# Stack: Express + TypeScript + Prisma + PostgreSQL + Redis | React + Vite + Tailwind
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Dependências
+# -----------------------------------------------------------------------------
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# -----------------------------------------------------------------------------
+# Build e arquivos gerados
+# -----------------------------------------------------------------------------
+backend/dist/
+frontend/dist/
+backend/prisma/seed.js
+backend/prisma/seed.js.map
+backend/prisma/seed.d.ts
+backend/prisma/seed.d.ts.map
+**/*.tsbuildinfo
+
+# -----------------------------------------------------------------------------
+# Segredos e variáveis de ambiente
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+backend/.env
+backend/.env.local
+frontend/.env
+frontend/.env.local
+backend/whatsapp-session/
+**/whatsapp-session/**
+*.key
+*.pem
+*.cert
+**/service-account*.json
+
+# -----------------------------------------------------------------------------
+# Banco de dados local
+# -----------------------------------------------------------------------------
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+*.db
+*.sqlite
+*.sqlite3
+
+# -----------------------------------------------------------------------------
+# Uploads e mídia
+# -----------------------------------------------------------------------------
+backend/storage/pdfs/
+backend/storage/uploads/
+backend/storage/temp/
+storage/**
+
+# -----------------------------------------------------------------------------
+# Cache e logs
+# -----------------------------------------------------------------------------
+backend/.wwebjs_cache/
+backend/whatsapp-session/
+*.log
+backend_err.log
+backend_out.log
+backend/prisma/prisma-engine-*
+.npm/
+.turbo/
+.eslintcache
+.cache/
+**/__pycache__/
+*.pyc
+
+# -----------------------------------------------------------------------------
+# Estado de ferramentas (ExpxAgents, MCP, etc.)
+# -----------------------------------------------------------------------------
+squads/*/state.json
+squads/*/state.json.tmp
+squads/*/output/
+squads/_memory/
+_expxagents/_memory/
+.mcp.json
+*.tmp

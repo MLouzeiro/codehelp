@@ -1,0 +1,1 @@
+# components — Componentes de UI reutilizáveis (Layout, KanbanBoard, Charts, SignaturePad)
