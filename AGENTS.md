@@ -1,5 +1,45 @@
 # AGENTS.md — codemed-hub CRM Kanban
 
+## Versionamento (regra absoluta)
+
+| Branch / Tag | Significado | Pode mexer? |
+|--------------|-------------|-------------|
+| `main`       | Versão **em uso** (estável)            | **NÃO** sem autorização explícita do usuário |
+| `develop`    | Próxima versão em desenvolvimento      | SIM — todo trabalho novo vai aqui |
+| `v1.x`       | Tag de marco estável                   | NÃO — apenas referência histórica |
+| `v1.x.y`     | Tag de patch/bugfix                   | NÃO — apenas referência histórica |
+
+### Fluxo de desenvolvimento
+
+1. Usuário marca uma versão como "em uso" (ex: v1.3)
+2. Tag `v1.3` é criada e o usuário é avisado: "v1.3 estável, a partir de agora desenvolver em `develop`"
+3. Próximas features/bugs vão em branch `develop` (commits com prefixo `v1.4-dev:`)
+4. Quando o usuário testar e aprovar a `develop`:
+   - Cria tag `v1.4` na develop
+   - Merge da develop em main
+   - Próximo ciclo recomeça
+
+### Regra de ouro
+
+> **NUNCA commitar em `main` sem que o usuário diga "pode atualizar" / "merge em main" / "tag v1.4" / similar.**
+>
+> **NUNCA alterar tag já existente (v1.0, v1.1, v1.2, v1.3, etc) — tags são imutáveis.**
+
+### Checklist antes de commitar em `develop`
+
+- [ ] Branch atual é `develop` (não `main`)
+- [ ] `npx tsc --noEmit` limpo no backend e frontend
+- [ ] `npm test` backend: 32/32 OK
+- [ ] Mudança escopada (não mexe em código que está funcionando, ver regra abaixo)
+- [ ] Commit message começa com `v1.4-dev:` (ou versão atual da develop)
+
+### Exceções (únicas situações em que posso mexer em main sem autorização)
+
+- **Bugs críticos de segurança** (vazamento de token, SQL injection, etc) — posso corrigir direto em main E na develop
+- **Pedido explícito do usuário** — quando ele disser "pode commitar em main" / "merge em main agora"
+
+## Stack
+
 ## Stack
 
 | Camada | Tecnologia |

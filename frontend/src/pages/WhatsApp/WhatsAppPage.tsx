@@ -299,7 +299,8 @@ export default function WhatsAppPage() {
     return (t.contactName?.toLowerCase() || '').includes(q)
       || (t.contactPhone || '').includes(q)
       || (t.assunto?.toLowerCase() || '').includes(q)
-      || (t.client?.razaoSocial || '').toLowerCase().includes(q);
+      || (t.client?.razaoSocial || '').toLowerCase().includes(q)
+      || (t.messages?.[0]?.content?.toLowerCase() || '').includes(q);
   });
 
   const formatTime = (dateStr: string) => {
