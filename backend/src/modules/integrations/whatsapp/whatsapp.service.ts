@@ -15,9 +15,6 @@ import {
   iniciarOuResetarTriagem,
   cancelarTriagem,
   enviarMenuInicial,
-  processarOpcaoMenu,
-  reenviarMenuPorInvalido,
-  detectarOpcaoMenu,
 } from '../../helpdesk/triagem.service';
 import {
   isHorarioAtendimento,
@@ -285,7 +282,7 @@ async function handleIncomingMessage(message: any) {
             contactName,
             contactPhone: phoneSemSufixo,
             status: 'aberto',
-            etapa: 'triagem',
+            etapa: 'fila',
             canal: 'whatsapp',
             clientId: client?.id,
           },
@@ -296,7 +293,7 @@ async function handleIncomingMessage(message: any) {
           data: {
             ticketId: created.id,
             etapaAnterior: 'novo',
-            etapaNova: 'triagem',
+            etapaNova: 'fila',
             origem: 'automatico',
           },
         });
@@ -321,29 +318,18 @@ async function handleIncomingMessage(message: any) {
         },
       });
 
-      if (ticket!.etapa === 'triagem' && !ticket!.protocolo) {
-        const opcao = detectarOpcaoMenu(message.body || '');
-        if (opcao) {
-          processarOpcaoMenu(ticket!.id, opcao, message.body || '').catch((e) =>
-            console.error('[WhatsApp] Erro ao processar opcao do menu:', e?.message || e)
-          );
-        } else {
-          const temAlgumaMsgDoBot = await prisma.message.count({
-            where: { ticketId: ticket!.id, fromMe: true },
-          });
-          if (temAlgumaMsgDoBot === 0) {
-            enviarMenuInicial(ticket!.id).catch((e) =>
-              console.error('[WhatsApp] Erro ao enviar menu inicial:', e?.message || e)
-            );
-          } else {
-            reenviarMenuPorInvalido(ticket!.id).catch((e) =>
-              console.error('[WhatsApp] Erro ao reenviar menu:', e?.message || e)
-            );
-          }
-          iniciarOuResetarTriagem(ticket!.id).catch((e) =>
-            console.error('[WhatsApp] Erro ao iniciar triagem:', e?.message || e)
+      if (ticket!.etapa === 'fila' && !ticket!.protocolo) {
+        const temAlgumaMsgDoBot = await prisma.message.count({
+          where: { ticketId: ticket!.id, fromMe: true },
+        });
+        if (temAlgumaMsgDoBot === 0) {
+          enviarMenuInicial(ticket!.id).catch((e) =>
+            console.error('[WhatsApp] Erro ao enviar saudacao inicial:', e?.message || e)
           );
         }
+        iniciarOuResetarTriagem(ticket!.id).catch((e) =>
+          console.error('[WhatsApp] Erro ao iniciar follow-up:', e?.message || e)
+        );
       }
     } finally {
       processingLocks.delete(chatId);

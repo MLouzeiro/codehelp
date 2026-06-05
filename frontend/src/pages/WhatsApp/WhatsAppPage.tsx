@@ -432,11 +432,8 @@ export default function WhatsAppPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`badge text-xs ${statusStyles[selectedTicket.status] || ''}`}>{selectedTicket.status?.replace('_', ' ')}</span>
-                  {selectedTicket.etapa === 'triagem' && !selectedTicket.protocolo && (
-                    <span className="badge text-xs bg-purple-100 text-purple-700 flex items-center gap-1"><Bot size={10} /> Aguardando menu</span>
-                  )}
-                  {selectedTicket.etapa === 'aguardando_confirmacao' && !selectedTicket.protocolo && (
-                    <span className="badge text-xs bg-yellow-100 text-yellow-700 flex items-center gap-1"><ClipboardList size={10} /> Pronto p/ abrir</span>
+                  {!selectedTicket.protocolo && (
+                    <span className="badge text-xs bg-amber-100 text-amber-700 flex items-center gap-1"><ClipboardList size={10} /> Aguardando decisao</span>
                   )}
                   {!selectedTicket.protocolo && (
                     <button onClick={abrirModalAbrirChamado} className="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-1" title="Abrir chamado (gerar protocolo + atribuir a voce)">

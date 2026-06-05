@@ -2,13 +2,11 @@ import prisma from '../../config/database';
 import { sendWhatsAppMessage } from '../integrations/whatsapp/whatsapp.service';
 
 export const ETAPAS_PADRAO = [
-  { slug: 'fila', nome: 'Fila de Espera', descricao: 'Tickets recém-chegados aguardando triagem', cor: '#f59e0b', icone: 'inbox', ordem: 0, enviarAuto: true, notificarEquipe: false },
-  { slug: 'triagem', nome: 'Em Triagem', descricao: 'Cliente escolheu opção do menu, aguardando atendente humano abrir o chamado', cor: '#8b5cf6', icone: 'bot', ordem: 1, enviarAuto: false, notificarEquipe: false, tempoInatividadeMin: 5 },
-  { slug: 'aguardando_confirmacao', nome: 'Aguardando Confirmação', descricao: 'Cliente respondeu o menu, aguardando atendente abrir o chamado', cor: '#eab308', icone: 'user-check', ordem: 2, enviarAuto: false, notificarEquipe: true },
-  { slug: 'em_atendimento', nome: 'Em Atendimento', descricao: 'Analista responsável conduzindo o atendimento', cor: '#10b981', icone: 'headphones', ordem: 3, enviarAuto: true, notificarEquipe: true },
-  { slug: 'aguardando_cliente', nome: 'Aguardando Cliente', descricao: 'Aguardando retorno do cliente', cor: '#0ea5e9', icone: 'clock', ordem: 4, enviarAuto: false, notificarEquipe: false },
-  { slug: 'aguardando_os', nome: 'Aguardando OS', descricao: 'Necessária geração de Ordem de Serviço', cor: '#ec4899', icone: 'file-text', ordem: 5, enviarAuto: true, notificarEquipe: false },
-  { slug: 'concluido', nome: 'Concluído', descricao: 'Atendimento finalizado', cor: '#64748b', icone: 'check-circle', ordem: 6, enviarAuto: true, notificarEquipe: false },
+  { slug: 'fila', nome: 'Fila de Espera', descricao: 'Tickets recém-chegados aguardando atendente decidir se abre o chamado', cor: '#f59e0b', icone: 'inbox', ordem: 0, enviarAuto: false, notificarEquipe: true, tempoInatividadeMin: 5 },
+  { slug: 'em_atendimento', nome: 'Em Atendimento', descricao: 'Analista responsável conduzindo o atendimento', cor: '#10b981', icone: 'headphones', ordem: 1, enviarAuto: true, notificarEquipe: true },
+  { slug: 'aguardando_cliente', nome: 'Aguardando Cliente', descricao: 'Aguardando retorno do cliente', cor: '#0ea5e9', icone: 'clock', ordem: 2, enviarAuto: false, notificarEquipe: false },
+  { slug: 'aguardando_os', nome: 'Aguardando OS', descricao: 'Necessária geração de Ordem de Serviço', cor: '#ec4899', icone: 'file-text', ordem: 3, enviarAuto: true, notificarEquipe: false },
+  { slug: 'concluido', nome: 'Concluído', descricao: 'Atendimento finalizado', cor: '#64748b', icone: 'check-circle', ordem: 4, enviarAuto: true, notificarEquipe: false },
 ];
 
 const MENSAGENS_PADRAO: Record<string, string> = {
@@ -23,7 +21,7 @@ const MENSAGENS_PADRAO: Record<string, string> = {
 const FOLLOWUP_PADRAO = 'Olá {{nome_contato}}! 👋\n\nNotei que você ficou offline após nos enviar uma mensagem. Ainda precisa de ajuda?\n\nQuando quiser, é só responder esta mensagem por aqui mesmo. Seu atendimento continua registrado e um de nossos analistas irá te atender assim que você retornar.\n\nAtenciosamente,\nEquipe Codemed';
 
 const MENSAGEM_BOAS_VINDAS_PADRAO =
-  'Ola, {{nome}}! {{saudacao}} 👋\n\nQue bom ter voce por aqui!\n\nComo podemos te ajudar hoje? Responda *apenas com o numero*:\n\n1️⃣ *Suporte tecnico*\n2️⃣ *Comercial / Orcamentos*\n\nAguardamos sua resposta!';
+  'Ola!! {{nome}} {{saudacao}} 👋\n\nQue bom ter voce por aqui!\n\nComo podemos te ajudar hoje? Descreva por aqui mesmo que um de nossos analistas te atendera em instantes.';
 
 const MENSAGEM_ACK_SUPORTE_PADRAO =
   'Perfeito, {{nome}}! ✅\n\nVoce escolheu *Suporte Tecnico*. Um atendente humano ira abrir seu chamado em instantes.\n\nEnquanto isso, descreva com detalhes o que esta acontecendo para agilizarmos o atendimento. 🙏';
@@ -68,7 +66,6 @@ export async function ensureHelpdeskConfigs() {
       });
     } else if (etapa.slug === 'triagem') {
       const data: any = {};
-      if (!existing.mensagemFollowup) data.mensagemFollowup = FOLLOWUP_PADRAO;
       if (!existing.mensagemBoasVindas) data.mensagemBoasVindas = MENSAGEM_BOAS_VINDAS_PADRAO;
       if (!(existing as any).mensagemAckSuporte) data.mensagemAckSuporte = MENSAGEM_ACK_SUPORTE_PADRAO;
       if (!(existing as any).mensagemAckComercial) data.mensagemAckComercial = MENSAGEM_ACK_COMERCIAL_PADRAO;
@@ -77,15 +74,17 @@ export async function ensureHelpdeskConfigs() {
       if (!existing.horarioInicio) data.horarioInicio = '08:00';
       if (!existing.horarioFim) data.horarioFim = '18:00';
       if (!existing.diasAtendimento) data.diasAtendimento = '1,2,3,4,5';
-      if (existing.tempoInatividadeMin == null) data.tempoInatividadeMin = 5;
       if (Object.keys(data).length > 0) {
         await prisma.helpdeskConfig.update({ where: { id: existing.id }, data });
       }
-    } else if (etapa.slug === 'fila' && !(existing as any).ordenacaoFila) {
-      await prisma.helpdeskConfig.update({
-        where: { id: existing.id },
-        data: { ordenacaoFila: 'updatedAt_desc' },
-      });
+    } else if (etapa.slug === 'fila') {
+      const data: any = {};
+      if (!existing.mensagemFollowup) data.mensagemFollowup = FOLLOWUP_PADRAO;
+      if (existing.tempoInatividadeMin == null) data.tempoInatividadeMin = 5;
+      if (!(existing as any).ordenacaoFila) data.ordenacaoFila = 'updatedAt_desc';
+      if (Object.keys(data).length > 0) {
+        await prisma.helpdeskConfig.update({ where: { id: existing.id }, data });
+      }
     }
   }
 }

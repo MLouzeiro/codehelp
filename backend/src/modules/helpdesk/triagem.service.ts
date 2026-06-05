@@ -11,13 +11,7 @@ import {
   interpolate,
   sendStageAutoMessage,
 } from './helpdesk.service';
-import {
-  montarBoasVindas,
-  montarAck,
-  montarOpcaoInvalida,
-  detectarOpcaoMenu,
-  OpcaoMenu,
-} from './menu';
+import { montarBoasVindas } from './menu';
 
 const timersAtivos = new Map<string, NodeJS.Timeout>();
 const followupEnviado = new Set<string>();
@@ -55,68 +49,9 @@ export async function enviarMenuInicial(ticketId: string) {
     await prisma.message.create({
       data: { ticketId, fromMe: true, content: texto },
     });
-    console.log(`[Triagem] Menu inicial enviado para ticket ${ticketId}`);
+    console.log(`[Fila] Saudacao enviada para ticket ${ticketId}`);
   } else {
-    console.warn(`[Triagem] Falha ao enviar menu inicial: ${result.error}`);
-  }
-}
-
-export async function processarOpcaoMenu(
-  ticketId: string,
-  opcao: OpcaoMenu,
-  mensagemTexto: string
-) {
-  if (processando.has(ticketId)) return;
-  processando.add(ticketId);
-  try {
-    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
-    if (!ticket || ticket.protocolo) {
-      cancelarTriagem(ticketId);
-      return;
-    }
-    const categoria = opcao === '1' ? 'suporte_tecnico' : 'orcamento';
-    await prisma.ticket.update({
-      where: { id: ticketId },
-      data: { etapa: 'aguardando_confirmacao', categoria },
-    });
-    await prisma.ticketStageEvent.create({
-      data: {
-        ticketId,
-        etapaAnterior: ticket.etapa || 'triagem',
-        etapaNova: 'aguardando_confirmacao',
-        origem: 'automatico',
-        mensagemEnviada: true,
-      },
-    });
-    clearTimer(ticketId);
-    followupEnviado.delete(ticketId);
-
-    const phone = sanitizePhoneNumber(ticket.contactPhone || '').replace(/@c\.us$/i, '');
-    const ack = await montarAck(ticket.contactName || '', opcao);
-    const result = await sendWhatsAppMessage(phone, ack);
-    if (result.success) {
-      await prisma.message.create({
-        data: { ticketId, fromMe: true, content: ack },
-      });
-      console.log(`[Triagem] Opcao ${opcao} processada, ticket ${ticketId} -> aguardando_confirmacao`);
-    }
-  } catch (err: any) {
-    console.error('[Triagem] Erro ao processar opcao do menu:', err?.message || err);
-  } finally {
-    processando.delete(ticketId);
-  }
-}
-
-export async function reenviarMenuPorInvalido(ticketId: string) {
-  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
-  if (!ticket || !ticket.contactPhone || ticket.protocolo) return;
-  const texto = await montarOpcaoInvalida(ticket.contactName || '');
-  const phone = sanitizePhoneNumber(ticket.contactPhone).replace(/@c\.us$/i, '');
-  const result = await sendWhatsAppMessage(phone, texto);
-  if (result.success) {
-    await prisma.message.create({
-      data: { ticketId, fromMe: true, content: texto },
-    });
+    console.warn(`[Fila] Falha ao enviar saudacao: ${result.error}`);
   }
 }
 
@@ -124,25 +59,25 @@ export async function iniciarOuResetarTriagem(ticketId: string) {
   await ensureHelpdeskConfigs();
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket) return;
-  if (ticket.protocolo || ticket.etapa !== 'triagem') {
+  if (ticket.protocolo || ticket.etapa !== 'fila') {
     cancelarTriagem(ticketId);
     return;
   }
 
   clearTimer(ticketId);
 
-  const config = await getEtapaConfig('triagem');
+  const config = await getEtapaConfig('fila');
   const minutos = config?.tempoInatividadeMin && config.tempoInatividadeMin > 0
     ? config.tempoInatividadeMin
     : 5;
   const ms = minutos * 60 * 1000;
-  console.log(`[Triagem] ticket=${ticketId} em triagem, follow-up agendado em ${minutos}min`);
+  console.log(`[Fila] ticket=${ticketId} em fila, follow-up agendado em ${minutos}min`);
 
   const handle = setTimeout(async () => {
     timersAtivos.delete(ticketId);
     if (followupEnviado.has(ticketId)) return;
     const t = await prisma.ticket.findUnique({ where: { id: ticketId } });
-    if (!t || t.protocolo || t.etapa !== 'triagem' || t.status === 'fechado') return;
+    if (!t || t.protocolo || t.etapa !== 'fila' || t.status === 'fechado') return;
     await enviarFollowUp(ticketId);
   }, ms);
 
@@ -194,7 +129,7 @@ export async function abrirChamadoPorAtendente(
     await prisma.ticketStageEvent.create({
       data: {
         ticketId,
-        etapaAnterior: ticket.etapa || 'aguardando_confirmacao',
+        etapaAnterior: ticket.etapa || 'fila',
         etapaNova,
         origem: 'manual',
         mensagemEnviada: true,
@@ -204,12 +139,12 @@ export async function abrirChamadoPorAtendente(
     clearTimer(ticketId);
     followupEnviado.delete(ticketId);
     sendStageAutoMessage(ticketId, etapaNova).catch((e) =>
-      console.warn('[Triagem] Falha ao enviar autoMessage em_atendimento:', e?.message || e)
+      console.warn('[Fila] Falha ao enviar autoMessage em_atendimento:', e?.message || e)
     );
-    console.log(`[Triagem] Chamado aberto manualmente, ticket ${ticketId} protocolo ${protocolo}`);
+    console.log(`[Fila] Chamado aberto, ticket ${ticketId} protocolo ${protocolo}`);
     return { ok: true, ticket: updated };
   } catch (err: any) {
-    console.error('[Triagem] Erro ao abrir chamado:', err?.message || err);
+    console.error('[Fila] Erro ao abrir chamado:', err?.message || err);
     return { ok: false, error: 'Erro ao abrir chamado' };
   } finally {
     processando.delete(ticketId);
@@ -250,9 +185,9 @@ async function enviarFollowUp(ticketId: string) {
       include: { client: true },
     });
     if (!ticket || !ticket.contactPhone || ticket.protocolo || ticket.status === 'fechado') return;
-    if (ticket.etapa !== 'triagem') return;
+    if (ticket.etapa !== 'fila') return;
 
-    const config = await getEtapaConfig('triagem');
+    const config = await getEtapaConfig('fila');
     const template = config?.mensagemFollowup;
     if (!template) return;
 
@@ -268,11 +203,9 @@ async function enviarFollowUp(ticketId: string) {
         data: { ticketId, fromMe: true, content: mensagem },
       });
       followupEnviado.add(ticketId);
-      console.log(`[Triagem] Follow-up enviado para ticket ${ticketId}`);
+      console.log(`[Fila] Follow-up enviado para ticket ${ticketId}`);
     }
   } catch (err: any) {
-    console.error('[Triagem] Erro ao enviar follow-up:', err?.message || err);
+    console.error('[Fila] Erro ao enviar follow-up:', err?.message || err);
   }
 }
-
-export { detectarOpcaoMenu };
