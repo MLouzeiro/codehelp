@@ -4,7 +4,7 @@ import { useAuth } from '../../services/auth';
 import {
   RefreshCw, MessageSquare, User, Clock, Tag, FileText, Inbox, Bot,
   Headphones, CheckCircle, AlertTriangle, Phone, X, Send, ArrowRight,
-  UserPlus, ClipboardList, History, Stethoscope, Building2,
+  UserPlus, ClipboardList, History, Stethoscope, Building2, ArrowUpDown,
 } from 'lucide-react';
 import type { HelpdeskKanbanData, HelpdeskEtapa, EtapaSlug } from '../../types';
 
@@ -41,6 +41,7 @@ export default function HelpdeskKanban() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [agents, setAgents] = useState<any[]>([]);
   const [assignTo, setAssignTo] = useState('');
+  const [orderBy, setOrderBy] = useState('updatedAt_desc');
   const [autoMessage, setAutoMessage] = useState<{ sent: boolean; error?: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -50,14 +51,14 @@ export default function HelpdeskKanban() {
 
   const loadKanban = useCallback(async () => {
     try {
-      const { data: res } = await api.get('/helpdesk/kanban');
+      const { data: res } = await api.get('/helpdesk/kanban', { params: { orderBy } });
       setData(res);
     } catch (err) {
       console.error('Erro ao carregar kanban helpdesk:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [orderBy]);
 
   const loadAgents = useCallback(async () => {
     try {
@@ -236,6 +237,24 @@ export default function HelpdeskKanban() {
               {autoMessage.sent ? <><CheckCircle size={12} /> Mensagem automática enviada</> : <><AlertTriangle size={12} /> {autoMessage.error || 'Sem mensagem automática'}</>}
             </div>
           )}
+          <div className="relative">
+            <ArrowUpDown size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <select
+              value={orderBy}
+              onChange={(e) => setOrderBy(e.target.value)}
+              className="pl-8 pr-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none appearance-none bg-white cursor-pointer"
+              title="Ordenar tickets dentro das colunas"
+            >
+              <option value="updatedAt_desc">Mais recente primeiro</option>
+              <option value="updatedAt_asc">Mais antigo primeiro</option>
+              <option value="dataAbertura_desc">Abertura (recente)</option>
+              <option value="dataAbertura_asc">Abertura (antigo)</option>
+              <option value="contactName_asc">Nome A-Z</option>
+              <option value="contactName_desc">Nome Z-A</option>
+              <option value="lastMessage_desc">Ultima msg (recente)</option>
+              <option value="lastMessageCliente_desc">Ultima msg do cliente</option>
+            </select>
+          </div>
           <button onClick={loadKanban} className="btn-secondary text-sm flex items-center gap-1.5">
             <RefreshCw size={14} /> Atualizar
           </button>

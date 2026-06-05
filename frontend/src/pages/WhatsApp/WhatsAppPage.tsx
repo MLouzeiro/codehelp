@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X, FileText, Building2, Calendar, DollarSign, Tag, ArrowRightLeft, Bot, ClipboardList } from 'lucide-react';
+import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X, FileText, Building2, Calendar, DollarSign, Tag, ArrowRightLeft, Bot, ClipboardList, ArrowUpDown } from 'lucide-react';
 import QRCode from 'qrcode';
 
 export default function WhatsAppPage() {
@@ -19,6 +19,7 @@ export default function WhatsAppPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [messageText, setMessageText] = useState('');
   const [search, setSearch] = useState('');
+  const [orderBy, setOrderBy] = useState('updatedAt_desc');
   const [loading, setLoading] = useState(true);
   const [showNewTicket, setShowNewTicket] = useState(false);
   const [newTicket, setNewTicket] = useState({ contactName: '', contactPhone: '', assunto: '' });
@@ -112,10 +113,10 @@ export default function WhatsAppPage() {
 
   const loadTickets = useCallback(async () => {
     try {
-      const { data } = await api.get('/whatsapp/tickets', { params: { limit: 100 } });
+      const { data } = await api.get('/whatsapp/tickets', { params: { limit: 100, orderBy } });
       setTickets(data.tickets || []);
-    } catch (err) { console.error(err); } finally { setLoading(false); }
-  }, []);
+    } catch (err) { console.error(err); }
+  }, [orderBy]);
 
   const loadMessages = useCallback(async (ticketId: string) => {
     try {
@@ -367,10 +368,27 @@ export default function WhatsAppPage() {
 
       <div className="flex-1 flex min-h-0 bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="w-80 lg:w-96 flex-shrink-0 border-r border-gray-200 flex flex-col bg-gray-50/50">
-          <div className="p-3 border-b border-gray-200 bg-white">
+          <div className="p-3 border-b border-gray-200 bg-white space-y-2">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input type="text" placeholder="Pesquisar conversa..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none" />
+            </div>
+            <div className="relative">
+              <ArrowUpDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <select
+                value={orderBy}
+                onChange={(e) => setOrderBy(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none appearance-none bg-white cursor-pointer"
+              >
+                <option value="updatedAt_desc">Mais recente primeiro</option>
+                <option value="updatedAt_asc">Mais antigo primeiro</option>
+                <option value="dataAbertura_desc">Abertura (recente)</option>
+                <option value="dataAbertura_asc">Abertura (antigo)</option>
+                <option value="contactName_asc">Nome A-Z</option>
+                <option value="contactName_desc">Nome Z-A</option>
+                <option value="lastMessageCliente_desc">Ultima msg do cliente</option>
+                <option value="lastMessage_desc">Ultima msg (qualquer)</option>
+              </select>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">

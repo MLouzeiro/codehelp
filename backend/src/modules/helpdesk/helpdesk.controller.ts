@@ -13,6 +13,7 @@ export async function getKanban(req: AuthRequest, res: Response) {
   try {
     await ensureHelpdeskConfigs();
     const etapas = await listEtapas();
+    const orderBy = (req.query.orderBy as string) || 'updatedAt_desc';
     const configFila = etapas.find((e) => e.slug === 'fila') as any;
     const ordenacaoFila = configFila?.ordenacaoFila || 'updatedAt_desc';
 
@@ -30,6 +31,39 @@ export async function getKanban(req: AuthRequest, res: Response) {
       },
       orderBy: { updatedAt: 'desc' },
     });
+
+    const sortBy = (a: any, b: any, key: string): number => {
+      if (key === 'dataAbertura_asc') return new Date(a.dataAbertura).getTime() - new Date(b.dataAbertura).getTime();
+      if (key === 'dataAbertura_desc') return new Date(b.dataAbertura).getTime() - new Date(a.dataAbertura).getTime();
+      if (key === 'updatedAt_asc') return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+      if (key === 'contactName_asc') return (a.contactName || '').localeCompare(b.contactName || '');
+      if (key === 'contactName_desc') return (b.contactName || '').localeCompare(a.contactName || '');
+      if (key === 'lastMessage_desc') {
+        const at = a.messages?.[0]?.createdAt ? new Date(a.messages[0].createdAt).getTime() : 0;
+        const bt = b.messages?.[0]?.createdAt ? new Date(b.messages[0].createdAt).getTime() : 0;
+        return bt - at;
+      }
+      if (key === 'lastMessageCliente_desc') {
+        const at = (a as any).lastClienteAt || 0;
+        const bt = (b as any).lastClienteAt || 0;
+        return bt - at;
+      }
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    };
+
+    if (orderBy === 'lastMessageCliente_desc') {
+      await Promise.all(
+        tickets.map(async (t) => {
+          const last = await prisma.message.findFirst({
+            where: { ticketId: t.id, fromMe: false },
+            orderBy: { createdAt: 'desc' },
+            select: { createdAt: true },
+          });
+          (t as any).lastClienteAt = last?.createdAt ? new Date(last.createdAt).getTime() : 0;
+        })
+      );
+    }
+
     const board: Record<string, any> = {};
     const contagemEtapas: Record<string, number> = {};
     for (const etapa of etapas) {
@@ -39,20 +73,8 @@ export async function getKanban(req: AuthRequest, res: Response) {
           ...t,
           lastMessage: t.messages?.[0] || null,
         }));
-      if (etapa.slug === 'fila') {
-        items = items.sort((a, b) => {
-          if (ordenacaoFila === 'dataAbertura_asc') {
-            return new Date(a.dataAbertura).getTime() - new Date(b.dataAbertura).getTime();
-          }
-          if (ordenacaoFila === 'dataAbertura_desc') {
-            return new Date(b.dataAbertura).getTime() - new Date(a.dataAbertura).getTime();
-          }
-          if (ordenacaoFila === 'updatedAt_asc') {
-            return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
-          }
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-        });
-      }
+      const sortKey = etapa.slug === 'fila' ? ordenacaoFila : orderBy;
+      items = items.sort((a, b) => sortBy(a, b, sortKey));
       board[etapa.slug] = {
         id: etapa.id,
         slug: etapa.slug,

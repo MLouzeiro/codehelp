@@ -45,29 +45,61 @@ export async function disconnect(req: Request, res: Response) {
 
 export async function listTickets(req: AuthRequest, res: Response) {
   try {
-    const { status, page = '1', limit = '20' } = req.query;
+    const { status, page = '1', limit = '20', orderBy = 'updatedAt_desc' } = req.query;
     const where: any = {};
     if (status) where.status = status;
     if (req.user?.role === 'tecnico') where.usuarioId = req.user.id;
 
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-    const [tickets, total] = await Promise.all([
-      prisma.ticket.findMany({
-        where,
-        include: {
-          client: { select: { razaoSocial: true, nomeFantasia: true, telefone: true } },
-          usuario: { select: { name: true } },
-          _count: { select: { messages: true } },
-          messages: { orderBy: { sentAt: 'desc' }, take: 1 },
-        },
-        skip,
-        take: parseInt(limit as string),
-        orderBy: { updatedAt: 'desc' },
-      }),
-      prisma.ticket.count({ where }),
-    ]);
+
+    const includeLastCliente = orderBy === 'lastMessageCliente_desc';
+    const includeAny: any = {
+      client: { select: { razaoSocial: true, nomeFantasia: true, telefone: true } },
+      usuario: { select: { name: true } },
+      _count: { select: { messages: true } },
+      messages: { orderBy: { sentAt: 'desc' }, take: 1 },
+    };
+
+    const orderByMap: Record<string, any> = {
+      updatedAt_desc: { updatedAt: 'desc' },
+      updatedAt_asc: { updatedAt: 'asc' },
+      dataAbertura_desc: { dataAbertura: 'desc' },
+      dataAbertura_asc: { dataAbertura: 'asc' },
+      contactName_asc: { contactName: 'asc' },
+      contactName_desc: { contactName: 'desc' },
+    };
+    const prismaOrderBy = orderByMap[orderBy as string] || orderByMap.updatedAt_desc;
+
+    const findArgs: any = {
+      where,
+      include: includeAny,
+      skip,
+      take: parseInt(limit as string),
+      orderBy: prismaOrderBy,
+    };
+
+    let tickets = await prisma.ticket.findMany(findArgs);
+
+    if (orderBy === 'lastMessage_desc' || orderBy === 'lastMessageCliente_desc') {
+      const isCliente = orderBy === 'lastMessageCliente_desc';
+      const enriched = await Promise.all(
+        tickets.map(async (t) => {
+          const msg = await prisma.message.findFirst({
+            where: { ticketId: t.id, ...(isCliente ? { fromMe: false } : {}) },
+            orderBy: { sentAt: 'desc' },
+            select: { sentAt: true },
+          });
+          return { t, lastAt: msg?.sentAt?.getTime() || 0 };
+        })
+      );
+      enriched.sort((a, b) => b.lastAt - a.lastAt);
+      tickets = enriched.map((e) => e.t);
+    }
+
+    const total = await prisma.ticket.count({ where });
     return res.json({ tickets, total, page: parseInt(page as string), totalPages: Math.ceil(total / parseInt(limit as string)) });
   } catch (error) {
+    console.error('[WhatsApp] Erro ao listar tickets:', error);
     return res.status(500).json({ error: 'Erro ao listar tickets' });
   }
 }
