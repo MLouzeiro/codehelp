@@ -222,6 +222,7 @@ async function handleIncomingMessage(message: any) {
     const chatId = sanitizePhoneNumber(message.from);
     const phoneDigits = chatId.replace(/[^\d]/g, '');
     const phoneLookup = phoneDigits.slice(-11);
+    const phoneSemSufixo = phoneDigits;
     lastMessageAt = new Date();
 
     while (processingLocks.has(chatId)) await sleep(50);
@@ -235,6 +236,7 @@ async function handleIncomingMessage(message: any) {
         where: {
           OR: [
             { contactPhone: chatId },
+            { contactPhone: phoneSemSufixo },
             { contactPhone: { contains: phoneLookup } },
           ],
         },
@@ -281,7 +283,7 @@ async function handleIncomingMessage(message: any) {
         const created = await prisma.ticket.create({
           data: {
             contactName,
-            contactPhone: chatId,
+            contactPhone: phoneSemSufixo,
             status: 'aberto',
             etapa: 'triagem',
             canal: 'whatsapp',

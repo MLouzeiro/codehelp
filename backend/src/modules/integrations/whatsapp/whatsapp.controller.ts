@@ -5,7 +5,7 @@ import { AuthRequest } from '../../../shared/middleware/auth';
 import {
   isClientConnected, getQrCodeData, getConnectionError,
   initializeClient, disconnectClient,
-  sendWhatsAppMessage, sanitizePhoneNumber, generateProtocolo, getChatsList,
+  sendWhatsAppMessage, generateProtocolo, getChatsList,
   getClient, sendProtocolReply, SUBJECTS, classifyMessage, getSubjectLabel,
   getLastMessageAt, pingHeartbeat, getWhatsAppState,
 } from './whatsapp.service';
@@ -100,8 +100,15 @@ export async function createTicketFromChat(req: AuthRequest, res: Response) {
     const { contactName, contactPhone, clientId, assunto, usuarioId } = req.body;
     if (!contactName || !contactPhone) return res.status(400).json({ error: 'Nome e telefone do contato são obrigatórios' });
 
+    const phoneDigits = contactPhone.replace(/[^\d]/g, '');
     const existingTicket = await prisma.ticket.findFirst({
-      where: { contactPhone, status: { not: 'fechado' } },
+      where: {
+        OR: [
+          { contactPhone: phoneDigits },
+          { contactPhone: { contains: phoneDigits.slice(-11) } },
+        ],
+        status: { not: 'fechado' },
+      },
     });
     if (existingTicket) return res.status(409).json({ error: 'Já existe um ticket aberto para este contato', ticket: existingTicket });
 
@@ -109,11 +116,12 @@ export async function createTicketFromChat(req: AuthRequest, res: Response) {
     const categoria = assunto ? classifyMessage(assunto) : 'outro';
     const ticket = await prisma.ticket.create({
       data: {
-        protocolo, contactName, contactPhone: sanitizePhoneNumber(contactPhone), clientId,
+        protocolo, contactName, contactPhone: phoneDigits, clientId,
         assunto: assunto || getSubjectLabel(categoria),
         categoria,
         usuarioId: usuarioId || req.user?.id,
         status: 'aberto',
+        etapa: 'fila',
         canal: 'whatsapp',
       },
     });
