@@ -5,6 +5,7 @@ import {
   RefreshCw, MessageSquare, User, Clock, Tag, FileText, Inbox, Bot,
   Headphones, CheckCircle, AlertTriangle, Phone, X, Send, ArrowRight,
   UserPlus, ClipboardList, History, Stethoscope, Building2, ArrowUpDown,
+  Search,
 } from 'lucide-react';
 import type { HelpdeskKanbanData, HelpdeskEtapa, EtapaSlug } from '../../types';
 
@@ -42,6 +43,7 @@ export default function HelpdeskKanban() {
   const [agents, setAgents] = useState<any[]>([]);
   const [assignTo, setAssignTo] = useState('');
   const [orderBy, setOrderBy] = useState('updatedAt_desc');
+  const [search, setSearch] = useState('');
   const [autoMessage, setAutoMessage] = useState<{ sent: boolean; error?: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -220,6 +222,18 @@ export default function HelpdeskKanban() {
 
   const totalTickets = Object.values(data.board).reduce((acc, c) => acc + c.total, 0);
 
+  const filterItems = (items: any[]) => {
+    if (!search.trim()) return items;
+    const q = search.toLowerCase();
+    return items.filter((t) =>
+      (t.contactName?.toLowerCase() || '').includes(q)
+      || (t.contactPhone || '').includes(q)
+      || (t.assunto?.toLowerCase() || '').includes(q)
+      || (t.client?.razaoSocial?.toLowerCase() || '').includes(q)
+      || (t.lastMessage?.content?.toLowerCase() || '').includes(q)
+    );
+  };
+
   return (
     <div className="space-y-4 h-[calc(100vh-7rem)] flex flex-col">
       <div className="flex items-center justify-between flex-shrink-0">
@@ -230,6 +244,16 @@ export default function HelpdeskKanban() {
           <p className="text-neutral-500 text-sm">
             {totalTickets} chamados ativos • {data.contagemEtapas.fila || 0} na fila • {data.contagemEtapas.em_atendimento || 0} em atendimento
           </p>
+        </div>
+        <div className="relative">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filtrar cards (nome, msg, cliente...)"
+            className="pl-8 pr-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none w-72"
+          />
         </div>
         <div className="flex items-center gap-2">
           {autoMessage && (
@@ -291,11 +315,23 @@ export default function HelpdeskKanban() {
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                    {coluna.items.length === 0 ? (
-                      <div className="text-center py-6 text-neutral-400 text-xs">
-                        {isDropTarget ? 'Solte aqui' : 'Nenhum ticket'}
-                      </div>
-                    ) : coluna.items.map((ticket: any) => {
+                    {(() => {
+                      const items = filterItems(coluna.items);
+                      if (coluna.items.length === 0) {
+                        return (
+                          <div className="text-center py-6 text-neutral-400 text-xs">
+                            {isDropTarget ? 'Solte aqui' : 'Nenhum ticket'}
+                          </div>
+                        );
+                      }
+                      if (items.length === 0) {
+                        return (
+                          <div className="text-center py-6 text-neutral-400 text-xs">
+                            Nenhum resultado para "{search}"
+                          </div>
+                        );
+                      }
+                      return items.map((ticket: any) => {
                       const isSelected = ticket.id === selectedTicketId;
                       return (
                         <div
@@ -365,7 +401,8 @@ export default function HelpdeskKanban() {
                           </div>
                         </div>
                       );
-                    })}
+                    });
+                    })()}
                   </div>
                 </div>
               );
