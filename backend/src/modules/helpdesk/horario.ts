@@ -18,7 +18,7 @@ const DEFAULTS: HorarioConfig = {
 
 export async function getHorarioConfig(): Promise<HorarioConfig> {
   try {
-    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'triagem' } });
+    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
     if (!config) return DEFAULTS;
     return {
       horarioInicio: config.horarioInicio || DEFAULTS.horarioInicio,

@@ -5,7 +5,7 @@ import {
   RefreshCw, MessageSquare, User, Clock, Tag, FileText, Inbox, Bot,
   Headphones, CheckCircle, AlertTriangle, Phone, X, Send, ArrowRight,
   UserPlus, ClipboardList, History, Stethoscope, Building2, ArrowUpDown,
-  Search, Plus,
+  Search, Plus, MoreVertical,
 } from 'lucide-react';
 import type { HelpdeskKanbanData, HelpdeskEtapa, EtapaSlug } from '../../types';
 
@@ -33,6 +33,7 @@ export default function HelpdeskKanban() {
   const [data, setData] = useState<HelpdeskKanbanData | null>(null);
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [openCardMenuId, setOpenCardMenuId] = useState<string | null>(null);
   const [dragFromEtapa, setDragFromEtapa] = useState<EtapaSlug | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [ticketDetail, setTicketDetail] = useState<any | null>(null);
@@ -271,6 +272,36 @@ export default function HelpdeskKanban() {
     }
   };
 
+  const descartarTicketDireto = async (ticket: any) => {
+    if (!window.confirm(`Descartar ticket de ${ticket.contactName}?\n\nNenhuma mensagem sera enviada ao cliente. O ticket sera movido para "Descartados".`)) return;
+    try {
+      await api.post(`/whatsapp/tickets/${ticket.id}/descartar`);
+      loadKanban();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao descartar ticket');
+    }
+  };
+
+  const moverTicketDireto = async (ticketId: string, etapaSlug: string) => {
+    try {
+      await api.post(`/helpdesk/tickets/${ticketId}/move`, { etapa: etapaSlug });
+      loadKanban();
+      if (selectedTicketId === ticketId) loadTicketDetail(ticketId);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao mover ticket');
+    }
+  };
+
+  const handleAssignToMe = async (ticketId: string) => {
+    try {
+      await api.patch(`/helpdesk/tickets/${ticketId}/atribuir`, { usuarioId: user?.id });
+      loadKanban();
+      if (selectedTicketId === ticketId) loadTicketDetail(ticketId);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao atribuir ticket');
+    }
+  };
+
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -420,6 +451,68 @@ export default function HelpdeskKanban() {
                                 <FileText size={9} /> {ticket._count.orders}
                               </span>
                             )}
+                            <div className="relative" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setOpenCardMenuId(openCardMenuId === ticket.id ? null : ticket.id); }}
+                                className="p-0.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700"
+                                title="Ações"
+                              >
+                                <MoreVertical size={14} />
+                              </button>
+                              {openCardMenuId === ticket.id && (
+                                <>
+                                  <div className="fixed inset-0 z-30" onClick={() => setOpenCardMenuId(null)} />
+                                  <div className="absolute right-0 top-6 z-40 bg-white border border-neutral-200 rounded-lg shadow-lg w-52 py-1 text-xs">
+                                    <div className="px-2.5 py-1.5 text-[10px] font-bold text-neutral-400 uppercase border-b border-neutral-100">
+                                      Mover para
+                                    </div>
+                                    {Object.values(data.board)
+                                      .filter((c: any) => c.slug !== coluna.slug)
+                                      .map((c: any) => (
+                                        <button
+                                          key={c.slug}
+                                          onClick={() => { moverTicketDireto(ticket.id, c.slug); setOpenCardMenuId(null); }}
+                                          className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 flex items-center gap-2"
+                                        >
+                                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.cor }} />
+                                          {c.title}
+                                        </button>
+                                      ))}
+                                    <div className="border-t border-neutral-100 my-1" />
+                                    {!ticket.assigneeId && (
+                                      <button
+                                        onClick={() => { handleAssignToMe(ticket.id); setOpenCardMenuId(null); }}
+                                        className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 flex items-center gap-2 text-emerald-700"
+                                      >
+                                        <UserPlus size={12} /> Atribuir a mim
+                                      </button>
+                                    )}
+                                    {!ticket.protocolo && coluna.slug === 'fila' && (
+                                      <>
+                                        <button
+                                          onClick={() => { setSelectedTicketId(ticket.id); setOpenCardMenuId(null); setTimeout(() => abrirModalAbrirChamado(), 100); }}
+                                          className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 flex items-center gap-2 text-emerald-700"
+                                        >
+                                          <Plus size={12} /> Abrir Chamado
+                                        </button>
+                                        <button
+                                          onClick={() => { descartarTicketDireto(ticket); setOpenCardMenuId(null); }}
+                                          className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 flex items-center gap-2 text-zinc-700"
+                                        >
+                                          <X size={12} /> Descartar (sem msg)
+                                        </button>
+                                      </>
+                                    )}
+                                    <button
+                                      onClick={() => { setSelectedTicketId(ticket.id); setOpenCardMenuId(null); }}
+                                      className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 flex items-center gap-2"
+                                    >
+                                      <FileText size={12} /> Ver detalhes
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           </div>
 
                           {ticket.assunto && (

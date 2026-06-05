@@ -5,7 +5,7 @@ import path from 'path';
 import { env } from './config/env';
 import { startScheduler } from './modules/alerts/scheduler';
 import { initializeClient } from './modules/integrations/whatsapp/whatsapp.service';
-import { ensureHelpdeskConfigs, migrateLegacyTickets } from './modules/helpdesk/helpdesk.service';
+import { ensureHelpdeskConfigs, migrateLegacyTickets, migrateLegacyTriagemConfig } from './modules/helpdesk/helpdesk.service';
 
 import authRoutes from './modules/auth/auth.routes';
 import crmRoutes from './modules/crm/crm.routes';
@@ -92,6 +92,7 @@ async function start() {
     startScheduler();
     await ensureHelpdeskConfigs();
     await migrateLegacyTickets();
+    await migrateLegacyTriagemConfig();
     initializeClient().catch((err) => console.error('WhatsApp init error:', err));
 
     app.listen(env.port, () => {

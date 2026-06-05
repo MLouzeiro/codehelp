@@ -271,7 +271,7 @@ export async function getDashboard(req: AuthRequest, res: Response) {
           id: true, name: true, email: true, role: true, online: true, lastSeenAt: true,
           _count: {
             select: {
-              ticketsAtendidos: { where: { etapa: { in: ['em_atendimento', 'triagem', 'aguardando_os'] } } },
+              ticketsAtendidos: { where: { etapa: { in: ['em_atendimento', 'aguardando_os'] } } },
             },
           },
         },

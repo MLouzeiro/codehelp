@@ -24,14 +24,8 @@ const FOLLOWUP_PADRAO = 'Olá {{nome_contato}}! 👋\n\nNotei que você ficou of
 const MENSAGEM_BOAS_VINDAS_PADRAO =
   'Ola!! {{nome}} {{saudacao}} 👋\n\nQue bom ter voce por aqui!\n\nComo podemos te ajudar hoje? Descreva por aqui mesmo que um de nossos analistas te atendera em instantes.';
 
-const MENSAGEM_ACK_SUPORTE_PADRAO =
-  'Perfeito, {{nome}}! ✅\n\nVoce escolheu *Suporte Tecnico*. Um atendente humano ira abrir seu chamado em instantes.\n\nEnquanto isso, descreva com detalhes o que esta acontecendo para agilizarmos o atendimento. 🙏';
-
-const MENSAGEM_ACK_COMERCIAL_PADRAO =
-  'Otimo, {{nome}}! ✅\n\nVoce escolheu *Comercial / Orcamentos*. Nossa equipe comercial ira abrir seu chamado em instantes.\n\nEnquanto isso, nos conte um pouco sobre o que precisa para agilizarmos o atendimento. 🙏';
-
 const MENSAGEM_OPCAO_INVALIDA_PADRAO =
-  'Hmm, nao entendi sua resposta, {{nome}} 😅\n\nPor favor, responda *apenas* com:\n\n1️⃣ para *Suporte tecnico*\n2️⃣ para *Comercial / Orcamentos*';
+  'Hmm, nao entendi sua resposta, {{nome}} 😅\n\nPor favor, descreva com mais detalhes o que voce precisa.';
 
 const MENSAGEM_FORA_HORARIO_PADRAO =
   'Ola! Nosso horario de atendimento e de segunda a sexta, das 08:00 as 18:00. ' +
@@ -41,7 +35,7 @@ export async function ensureHelpdeskConfigs() {
   for (const etapa of ETAPAS_PADRAO) {
     const existing = await prisma.helpdeskConfig.findUnique({ where: { slug: etapa.slug } });
     if (!existing) {
-      const isTriagem = etapa.slug === 'triagem';
+      const isFila = etapa.slug === 'fila';
       await prisma.helpdeskConfig.create({
         data: {
           slug: etapa.slug,
@@ -54,35 +48,26 @@ export async function ensureHelpdeskConfigs() {
           notificarEquipe: etapa.notificarEquipe,
           autoMessage: MENSAGENS_PADRAO[etapa.slug] || '',
           tempoInatividadeMin: (etapa as any).tempoInatividadeMin,
-          mensagemFollowup: isTriagem ? FOLLOWUP_PADRAO : null,
-          mensagemBoasVindas: isTriagem ? MENSAGEM_BOAS_VINDAS_PADRAO : null,
-          mensagemAckSuporte: isTriagem ? MENSAGEM_ACK_SUPORTE_PADRAO : null,
-          mensagemAckComercial: isTriagem ? MENSAGEM_ACK_COMERCIAL_PADRAO : null,
-          mensagemOpcaoInvalida: isTriagem ? MENSAGEM_OPCAO_INVALIDA_PADRAO : null,
-          mensagemForaHorario: isTriagem ? MENSAGEM_FORA_HORARIO_PADRAO : null,
-          horarioInicio: isTriagem ? '08:00' : null,
-          horarioFim: isTriagem ? '18:00' : null,
-          diasAtendimento: isTriagem ? '1,2,3,4,5' : null,
+          mensagemFollowup: isFila ? FOLLOWUP_PADRAO : null,
+          mensagemBoasVindas: isFila ? MENSAGEM_BOAS_VINDAS_PADRAO : null,
+          mensagemOpcaoInvalida: isFila ? MENSAGEM_OPCAO_INVALIDA_PADRAO : null,
+          mensagemForaHorario: isFila ? MENSAGEM_FORA_HORARIO_PADRAO : null,
+          horarioInicio: isFila ? '08:00' : null,
+          horarioFim: isFila ? '18:00' : null,
+          diasAtendimento: isFila ? '1,2,3,4,5' : null,
         },
       });
-    } else if (etapa.slug === 'triagem') {
-      const data: any = {};
-      if (!existing.mensagemBoasVindas) data.mensagemBoasVindas = MENSAGEM_BOAS_VINDAS_PADRAO;
-      if (!(existing as any).mensagemAckSuporte) data.mensagemAckSuporte = MENSAGEM_ACK_SUPORTE_PADRAO;
-      if (!(existing as any).mensagemAckComercial) data.mensagemAckComercial = MENSAGEM_ACK_COMERCIAL_PADRAO;
-      if (!(existing as any).mensagemOpcaoInvalida) data.mensagemOpcaoInvalida = MENSAGEM_OPCAO_INVALIDA_PADRAO;
-      if (!existing.mensagemForaHorario) data.mensagemForaHorario = MENSAGEM_FORA_HORARIO_PADRAO;
-      if (!existing.horarioInicio) data.horarioInicio = '08:00';
-      if (!existing.horarioFim) data.horarioFim = '18:00';
-      if (!existing.diasAtendimento) data.diasAtendimento = '1,2,3,4,5';
-      if (Object.keys(data).length > 0) {
-        await prisma.helpdeskConfig.update({ where: { id: existing.id }, data });
-      }
     } else if (etapa.slug === 'fila') {
       const data: any = {};
       if (!existing.mensagemFollowup) data.mensagemFollowup = FOLLOWUP_PADRAO;
       if (existing.tempoInatividadeMin == null) data.tempoInatividadeMin = 5;
       if (!(existing as any).ordenacaoFila) data.ordenacaoFila = 'updatedAt_desc';
+      if (!existing.mensagemBoasVindas) data.mensagemBoasVindas = MENSAGEM_BOAS_VINDAS_PADRAO;
+      if (!(existing as any).mensagemOpcaoInvalida) data.mensagemOpcaoInvalida = MENSAGEM_OPCAO_INVALIDA_PADRAO;
+      if (!existing.mensagemForaHorario) data.mensagemForaHorario = MENSAGEM_FORA_HORARIO_PADRAO;
+      if (!existing.horarioInicio) data.horarioInicio = '08:00';
+      if (!existing.horarioFim) data.horarioFim = '18:00';
+      if (!existing.diasAtendimento) data.diasAtendimento = '1,2,3,4,5';
       if (Object.keys(data).length > 0) {
         await prisma.helpdeskConfig.update({ where: { id: existing.id }, data });
       }
@@ -104,6 +89,33 @@ export async function migrateLegacyTickets() {
     }
   } catch (err: any) {
     console.warn('[Helpdesk] Migração de tickets legados falhou (não-crítico):', err?.message || err);
+  }
+}
+
+export async function migrateLegacyTriagemConfig() {
+  try {
+    const triagem = await prisma.helpdeskConfig.findUnique({ where: { slug: 'triagem' } });
+    if (!triagem) return;
+    const fila = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
+    if (!fila) return;
+    const data: any = {};
+    if (triagem.mensagemBoasVindas && !fila.mensagemBoasVindas) data.mensagemBoasVindas = triagem.mensagemBoasVindas;
+    if ((triagem as any).mensagemOpcaoInvalida && !(fila as any).mensagemOpcaoInvalida) data.mensagemOpcaoInvalida = (triagem as any).mensagemOpcaoInvalida;
+    if (triagem.mensagemForaHorario && !fila.mensagemForaHorario) data.mensagemForaHorario = triagem.mensagemForaHorario;
+    if (triagem.horarioInicio && !fila.horarioInicio) data.horarioInicio = triagem.horarioInicio;
+    if (triagem.horarioFim && !fila.horarioFim) data.horarioFim = triagem.horarioFim;
+    if (triagem.diasAtendimento && !fila.diasAtendimento) data.diasAtendimento = triagem.diasAtendimento;
+    if (Object.keys(data).length > 0) {
+      await prisma.helpdeskConfig.update({ where: { id: fila.id }, data });
+      console.log('[Helpdesk] Migração: configs de boas-vindas/horario copiadas de triagem para fila');
+    }
+    await prisma.helpdeskConfig.update({
+      where: { id: triagem.id },
+      data: { ativo: false },
+    });
+    console.log('[Helpdesk] Migração: config legada slug=triagem desativada');
+  } catch (err: any) {
+    console.warn('[Helpdesk] Migração da config triagem falhou (não-crítico):', err?.message || err);
   }
 }
 
