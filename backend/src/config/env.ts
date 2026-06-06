@@ -4,7 +4,7 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 export const env = {
-  port: parseInt(process.env.PORT || '3001', 10),
+  port: parseInt(process.env.PORT || '3010', 10),
   databaseUrl: process.env.DATABASE_URL || '',
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
   jwtSecret: process.env.JWT_SECRET || 'dev-secret',
@@ -12,7 +12,7 @@ export const env = {
   jwtExpiresIn: '15m',
   jwtRefreshExpiresIn: '7d',
   appUrl: process.env.APP_URL || 'http://localhost:3000',
-  apiUrl: process.env.API_URL || 'http://localhost:3001',
+  apiUrl: process.env.API_URL || 'http://localhost:3010',
   alertWhatsappNumbers: (process.env.ALERT_WHATSAPP_NUMBERS || '').split(',').filter(Boolean),
   alertDay: parseInt(process.env.ALERT_DAY || '1', 10),
   alertHour: parseInt(process.env.ALERT_HOUR || '8', 10),

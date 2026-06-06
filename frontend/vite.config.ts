@@ -6,8 +6,8 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/api': 'http://localhost:3050',
-      '/storage': 'http://localhost:3050',
+      '/api': 'http://localhost:3010',
+      '/storage': 'http://localhost:3010',
     },
   },
 });
