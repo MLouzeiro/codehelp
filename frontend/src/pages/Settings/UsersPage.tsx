@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import { Plus, X, User, Shield, Mail, Phone, ChevronDown, Check, AlertCircle } from 'lucide-react';
 
@@ -56,14 +56,26 @@ export default function UsersPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [roleInfo, setRoleInfo] = useState<string | null>(null);
+  const initialLoadedRef = useRef(false);
 
   useEffect(() => { loadUsers(); }, []);
 
   const loadUsers = async () => {
+    setError('');
     try {
       const { data } = await api.get('/auth/users');
-      setUsers(data);
-    } catch { } finally { setLoading(false); }
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.error;
+      if (status === 401) setError('Sessão expirada. Faça login novamente.');
+      else if (status === 403) setError(msg || 'Você não tem permissão para listar usuários.');
+      else if (status === 500) setError('Erro interno do servidor ao listar usuários.');
+      else setError(msg || 'Erro ao carregar lista de usuários.');
+    } finally {
+      setLoading(false);
+      initialLoadedRef.current = true;
+    }
   };
 
   const openNew = () => {
@@ -132,11 +144,11 @@ export default function UsersPage() {
       )}
 
       <div className="grid gap-3">
-        {loading ? (
+        {loading && !initialLoadedRef.current ? (
           <div className="text-center py-12 text-neutral-400">Carregando...</div>
-        ) : users.length === 0 ? (
+        ) : !error && users.length === 0 ? (
           <div className="text-center py-12 text-neutral-400">Nenhum funcionário cadastrado</div>
-        ) : (
+        ) : !loading && !error && users.length > 0 ? (
           users.map((u) => {
             const roleCfg = ROLE_CONFIG[u.role] || ROLE_CONFIG.tecnico;
             return (
@@ -192,7 +204,7 @@ export default function UsersPage() {
               </div>
             );
           })
-        )}
+        ) : null}
       </div>
 
       {showModal && (

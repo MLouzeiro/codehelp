@@ -1,26 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
-import { Plus, X, Bell, Trash2, Send } from 'lucide-react';
+import { Plus, X, Bell, Trash2, Send, AlertCircle } from 'lucide-react';
 
 export default function AlertsPage() {
   const [recipients, setRecipients] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ nome: '', whatsapp: '', cargo: '' });
+  const initialLoadedRef = useRef(false);
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setLoading(true);
+    setError('');
     try {
       const [recRes, histRes] = await Promise.all([
         api.get('/alerts/recipients'),
         api.get('/alerts/history'),
       ]);
-      setRecipients(recRes.data);
-      setHistory(histRes.data);
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+      setRecipients(Array.isArray(recRes.data) ? recRes.data : []);
+      setHistory(Array.isArray(histRes.data) ? histRes.data : []);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.error;
+      if (status === 401) setError('Sessão expirada. Faça login novamente.');
+      else if (status === 403) setError(msg || 'Você não tem permissão para visualizar alertas.');
+      else if (status === 500) setError('Erro interno do servidor ao carregar alertas.');
+      else setError(msg || 'Erro ao carregar dados de alertas.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+      initialLoadedRef.current = true;
+    }
   };
 
   const addRecipient = async () => {
@@ -49,6 +63,11 @@ export default function AlertsPage() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          <AlertCircle size={16} /> {error}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold text-gray-900">Alertas Semanais</h1><p className="text-gray-500">Configuração do relatório automático de segunda-feira</p></div>
         <div className="flex gap-2">
