@@ -160,6 +160,44 @@ export interface DashboardMetrics {
   }>;
 }
 
+export interface KBCategoriaRef {
+  id: string;
+  nome: string;
+  slug?: string;
+  cor?: string;
+  icone?: string;
+}
+
+export interface KBAutorRef {
+  id: string;
+  name: string;
+}
+
+export interface KBArticle {
+  id: string;
+  slug: string;
+  titulo: string;
+  conteudo: string;
+  resumo?: string | null;
+  categoriaId?: string | null;
+  categoria?: KBCategoriaRef | null;
+  tags: string;
+  autorId?: string | null;
+  autor?: KBAutorRef | null;
+  visualizacoes: number;
+  util: number;
+  inutil: number;
+  publicado: boolean;
+  ordem: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KBListResponse {
+  items: KBArticle[];
+  total: number;
+}
+
 export interface HelpdeskDashboardData {
   atualizadoEm: string;
   etapas: (HelpdeskEtapa & { total: number })[];
