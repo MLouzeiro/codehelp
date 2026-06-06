@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../../shared/middleware/auth';
 import {
   getKanban,
+  getStatusBoard,
   getEtapas,
   updateEtapaConfig,
   moveTicketEtapa,
@@ -27,6 +28,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/kanban', getKanban);
+router.get('/status-board', getStatusBoard);
 router.get('/tickets', getTickets);
 router.get('/dashboard', authorize('admin', 'gerente'), getDashboard);
 router.get('/etapas', getEtapas);

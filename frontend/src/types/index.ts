@@ -92,10 +92,34 @@ export interface HelpdeskTicket {
   dataAbertura: string;
   dataInicioAtendimento?: string;
   dataFechamento?: string;
+  updatedAt?: string;
   lastMessage?: { content?: string; fromMe?: boolean; createdAt?: string } | null;
   _count?: { messages: number; orders: number };
   emAtendimentoDesde?: string;
   tempoDecorridoMin?: number;
+}
+
+export type StatusSlug =
+  | 'aberto'
+  | 'em_andamento'
+  | 'pendente'
+  | 'escalonado'
+  | 'resolvido'
+  | 'fechado'
+  | 'cancelado';
+
+export interface StatusColumn {
+  slug: StatusSlug;
+  title: string;
+  cor: string;
+  icone: string;
+  items: HelpdeskTicket[];
+  total: number;
+}
+
+export interface StatusBoardData {
+  board: Record<StatusSlug, StatusColumn>;
+  colunas: Array<{ slug: StatusSlug; titulo: string; cor: string; icone: string }>;
 }
 
 export interface HelpdeskKanbanData {

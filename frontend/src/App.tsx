@@ -21,6 +21,7 @@ import RobosPage from './pages/Robos/RobosPage';
 import HelpdeskKanban from './pages/Helpdesk/HelpdeskKanban';
 import HelpdeskDashboard from './pages/Helpdesk/HelpdeskDashboard';
 import HelpdeskMetrics from './pages/Helpdesk/HelpdeskMetrics';
+import HelpdeskStatusBoard from './pages/Helpdesk/HelpdeskStatusBoard';
 import KBList from './pages/KB/KBList';
 import AutomationsPage from './pages/Automations/AutomationsPage';
 import Layout from './components/Layout';
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="helpdesk" element={<HelpdeskKanban />} />
           <Route path="helpdesk/painel" element={<HelpdeskDashboard />} />
           <Route path="helpdesk/metrics" element={<HelpdeskMetrics />} />
+          <Route path="helpdesk/board" element={<HelpdeskStatusBoard />} />
           <Route path="kb" element={<KBList />} />
           <Route path="automations" element={<AutomationsPage />} />
           <Route path="settings" element={<SettingsPage />} />

@@ -97,6 +97,70 @@ export async function getKanban(req: AuthRequest, res: Response) {
   }
 }
 
+export async function getStatusBoard(req: AuthRequest, res: Response) {
+  try {
+    const orderBy = (req.query.orderBy as string) || 'updatedAt_desc';
+    const where: any = { status: { not: 'arquivado' } };
+    if (req.user?.role === 'tecnico') {
+      where.OR = [{ assigneeId: req.user.id }, { assigneeId: null }];
+    }
+    const tickets = await prisma.ticket.findMany({
+      where,
+      include: {
+        client: { select: { id: true, razaoSocial: true, nomeFantasia: true, telefone: true } },
+        assignee: { select: { id: true, name: true, email: true } },
+        messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+        _count: { select: { messages: true, orders: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const STATUS_COLUNAS: Array<{ slug: string; titulo: string; cor: string; icone: string }> = [
+      { slug: 'aberto', titulo: 'Aberto', cor: '#3b82f6', icone: 'inbox' },
+      { slug: 'em_andamento', titulo: 'Em Atendimento', cor: '#10b981', icone: 'headphones' },
+      { slug: 'pendente', titulo: 'Pendente', cor: '#f59e0b', icone: 'clock' },
+      { slug: 'escalonado', titulo: 'Escalonado', cor: '#ef4444', icone: 'arrow-up-circle' },
+      { slug: 'resolvido', titulo: 'Resolvido', cor: '#22c55e', icone: 'check-circle' },
+      { slug: 'fechado', titulo: 'Fechado', cor: '#6b7280', icone: 'archive' },
+      { slug: 'cancelado', titulo: 'Cancelado', cor: '#9ca3af', icone: 'x-circle' },
+    ];
+    const board: Record<string, any> = {};
+    for (const col of STATUS_COLUNAS) {
+      const items = tickets
+        .filter((t) => t.status === col.slug)
+        .map((t) => ({
+          id: t.id,
+          protocolo: t.protocolo,
+          contactName: t.contactName,
+          contactPhone: t.contactPhone,
+          assunto: t.assunto,
+          categoria: t.categoria,
+          prioridade: t.prioridade,
+          status: t.status,
+          etapa: t.etapa,
+          assignee: t.assignee,
+          client: t.client,
+          dataAbertura: t.dataAbertura,
+          updatedAt: t.updatedAt,
+          lastMessage: t.messages?.[0] || null,
+          _count: t._count,
+        }));
+      board[col.slug] = {
+        slug: col.slug,
+        title: col.titulo,
+        cor: col.cor,
+        icone: col.icone,
+        items,
+        total: items.length,
+      };
+    }
+    return res.json({ board, colunas: STATUS_COLUNAS });
+  } catch (error) {
+    console.error('Erro ao carregar status board:', error);
+    return res.status(500).json({ error: 'Erro ao carregar board' });
+  }
+}
+
 export async function getEtapas(req: AuthRequest, res: Response) {
   try {
     await ensureHelpdeskConfigs();
