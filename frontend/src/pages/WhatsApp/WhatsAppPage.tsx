@@ -40,6 +40,7 @@ export default function WhatsAppPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const msgPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const initialLoadedRef = useRef(false);
 
   const CATEGORIAS = [
     { value: 'suporte_tecnico', label: 'Suporte Tecnico' },
@@ -116,6 +117,12 @@ export default function WhatsAppPage() {
       const { data } = await api.get('/whatsapp/tickets', { params: { limit: 100, orderBy } });
       setTickets(data.tickets || []);
     } catch (err) { console.error(err); }
+    finally {
+      if (!initialLoadedRef.current) {
+        initialLoadedRef.current = true;
+        setLoading(false);
+      }
+    }
   }, [orderBy]);
 
   const loadMessages = useCallback(async (ticketId: string) => {
