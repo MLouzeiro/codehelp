@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
 import prisma from '../../config/database';
+import { normalizeRole, hasAtLeast, Role } from '../../modules/auth/rbac';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -37,7 +38,36 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 
 export function authorize(...roles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    if (!req.user) {
+      return res.status(403).json({ error: 'Acesso não autorizado para este perfil' });
+    }
+    const userRoleNormalized = normalizeRole(req.user.role);
+    if (!userRoleNormalized) {
+      return res.status(403).json({ error: 'Acesso não autorizado para este perfil' });
+    }
+    const allowed = roles.some((r) => {
+      const roleNorm = normalizeRole(r);
+      if (roleNorm) return roleNorm === userRoleNormalized;
+      return r === req.user!.role;
+    });
+    if (!allowed) {
+      return res.status(403).json({ error: 'Acesso não autorizado para este perfil' });
+    }
+    next();
+  };
+}
+
+export function requireRole(...roles: Role[]) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(403).json({ error: 'Acesso não autorizado para este perfil' });
+    }
+    const userRoleNormalized = normalizeRole(req.user.role);
+    if (!userRoleNormalized) {
+      return res.status(403).json({ error: 'Acesso não autorizado para este perfil' });
+    }
+    const allowed = roles.some((r) => hasAtLeast(userRoleNormalized, r));
+    if (!allowed) {
       return res.status(403).json({ error: 'Acesso não autorizado para este perfil' });
     }
     next();

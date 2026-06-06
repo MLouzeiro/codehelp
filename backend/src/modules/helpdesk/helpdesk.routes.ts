@@ -35,7 +35,7 @@ router.post('/presence', setAgentPresence);
 
 router.get('/tickets/:id/sla', getTicketSla);
 router.post('/tickets/:id/atribuir-sla', postAtribuirSla);
-router.post('/sla/processar-alertas', authorize('admin', 'gerente'), postProcessarAlertasSla);
+router.post('/sla/processar-alertas', authorize('admin', 'gerente', 'supervisor'), postProcessarAlertasSla);
 router.get('/filas', getFilas);
 router.get('/sla-configs', getSlaConfigs);
 router.get('/categorias', getCategorias);
