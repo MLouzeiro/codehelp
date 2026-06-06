@@ -18,6 +18,7 @@ import aiRoutes from './modules/ai/ai.routes';
 import usersRoutes from './modules/users/users.routes';
 import helpdeskRoutes from './modules/helpdesk/helpdesk.routes';
 import auditRoutes from './modules/audit/audit.routes';
+import kbRoutes from './modules/kb/kb.routes';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/helpdesk', helpdeskRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/kb', kbRoutes);
 
 app.use('/storage', express.static(path.resolve(__dirname, '../storage')));
 
