@@ -93,6 +93,8 @@ async function start() {
     await ensureHelpdeskConfigs();
     await migrateLegacyTickets();
     await migrateLegacyTriagemConfig();
+    const { ensureHelpdeskRules } = await import('./modules/helpdesk/rules.service');
+    await ensureHelpdeskRules();
     initializeClient().catch((err) => console.error('WhatsApp init error:', err));
 
     app.listen(env.port, () => {

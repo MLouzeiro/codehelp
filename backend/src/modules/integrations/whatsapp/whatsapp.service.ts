@@ -21,6 +21,7 @@ import {
   getHorarioConfig,
 } from '../../helpdesk/horario';
 import { montarForaHorario } from '../../helpdesk/menu';
+import { classificarPorPalavrasChave } from '../../helpdesk/rules.service';
 
 let whatsappClient: Client | null = null;
 let qrCodeData: string | null = null;
@@ -317,6 +318,17 @@ async function handleIncomingMessage(message: any) {
           mediaUrl,
         },
       });
+
+      if (message.body && !ticket!.categoria) {
+        const match = await classificarPorPalavrasChave(message.body);
+        if (match) {
+          await prisma.ticket.update({
+            where: { id: ticket!.id },
+            data: { categoria: match.categoria },
+          });
+          console.log(`[Regras] Ticket ${ticket!.id} classificado como "${match.categoria}" pela regra "${match.regraNome}" (match: "${match.matchedKeyword}")`);
+        }
+      }
 
       if (ticket!.etapa === 'fila' && !ticket!.protocolo) {
         const temAlgumaMsgDoBot = await prisma.message.count({
