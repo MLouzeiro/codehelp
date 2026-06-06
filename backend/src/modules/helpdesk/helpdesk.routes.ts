@@ -21,6 +21,7 @@ import {
   getSlaConfigs,
   getCategorias,
 } from './sla.controller';
+import { getMetrics } from './metrics.controller';
 
 const router = Router();
 router.use(authenticate);
@@ -43,5 +44,6 @@ router.post('/sla/processar-alertas', authorize('admin', 'gerente', 'supervisor'
 router.get('/filas', getFilas);
 router.get('/sla-configs', getSlaConfigs);
 router.get('/categorias', getCategorias);
+router.get('/metrics', authorize('admin', 'gerente', 'supervisor'), getMetrics);
 
 export default router;
