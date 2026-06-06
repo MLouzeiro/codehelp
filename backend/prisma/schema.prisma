@@ -160,6 +160,8 @@ model Ticket {
   contactPhone        String?
   assunto             String?
   categoria           String?
+  categoriaId         String?
+  categoriaRef        Categoria? @relation(fields: [categoriaId], references: [id])
   status              String   @default("aberto")
   canal               String   @default("whatsapp")
   etapa               String   @default("fila")
@@ -168,11 +170,21 @@ model Ticket {
   assignee            User?    @relation("TicketAssignee", fields: [assigneeId], references: [id])
   usuarioId           String?
   usuario             User?    @relation(fields: [usuarioId], references: [id])
+  idFila              String?
+  fila                Fila?    @relation(fields: [idFila], references: [id])
+  ativoId             String?
+  ativo               Ativo?   @relation(fields: [ativoId], references: [id])
   dataAbertura        DateTime @default(now())
   dataFechamento      DateTime?
   dataPrimeiraResposta DateTime?
   dataInicioAtendimento DateTime?
   dataConclusao       DateTime?
+  dataResolucao       DateTime?
+  dataCSAT            DateTime?
+  slaTotalMinutos     Int?
+  slaPausadoEm        DateTime?
+  slaPausadoTotalMin  Int      @default(0)
+  motivoStatus        String?
   satisfacao          Int?
   resumoFinal         String?
   tipo                String?
@@ -383,6 +395,8 @@ model Fila {
   ativo      Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now())
+
+  tickets    Ticket[]
 }
 
 /// Configuracao de SLA por prioridade
@@ -411,6 +425,7 @@ model Categoria {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
+  tickets   Ticket[]
   articles  KBArticle[]
 }
 
@@ -427,6 +442,8 @@ model Ativo {
   ativo     Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
+
+  tickets   Ticket[]
 }
 
 /// Artigo da Base de Conhecimento

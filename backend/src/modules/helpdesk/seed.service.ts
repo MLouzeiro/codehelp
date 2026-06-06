@@ -134,3 +134,38 @@ export async function ensureHelpdeskEntities() {
   await ensureSLAConfigs();
   await ensureCategorias();
 }
+
+export async function migrateCategoriaStringToFK() {
+  try {
+    const ticketsSemFK = await prisma.ticket.findMany({
+      where: { categoriaId: null, categoria: { not: null } },
+      select: { id: true, categoria: true },
+    });
+    if (ticketsSemFK.length === 0) return;
+    let atualizados = 0;
+    for (const t of ticketsSemFK) {
+      const slug = t.categoria as string;
+      let cat = await prisma.categoria.findUnique({ where: { slug } });
+      if (!cat) {
+        cat = await prisma.categoria.create({
+          data: {
+            slug,
+            nome: slug.replace(/_/g, ' '),
+            ordem: 999,
+          },
+        });
+        console.log(`[Helpdesk] Categoria legada criada: ${slug}`);
+      }
+      await prisma.ticket.update({
+        where: { id: t.id },
+        data: { categoriaId: cat.id },
+      });
+      atualizados++;
+    }
+    if (atualizados > 0) {
+      console.log(`[Helpdesk] Migracao: ${atualizados} tickets com categoriaId preenchido`);
+    }
+  } catch (err: any) {
+    console.warn('[Helpdesk] Migracao categoriaId falhou (nao-critico):', err?.message || err);
+  }
+}

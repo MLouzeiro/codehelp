@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import prisma from '../config/database';
-import { ensureHelpdeskEntities, FILAS_PADRAO, SLA_PADRAO, CATEGORIAS_PADRAO } from '../modules/helpdesk/seed.service';
+import {
+  ensureHelpdeskEntities,
+  FILAS_PADRAO,
+  SLA_PADRAO,
+  CATEGORIAS_PADRAO,
+  migrateCategoriaStringToFK,
+} from '../modules/helpdesk/seed.service';
 
 describe('Helpdesk Entities (Bloco 1)', () => {
   beforeAll(async () => {
@@ -97,6 +103,126 @@ describe('Helpdesk Entities (Bloco 1)', () => {
     });
     it('CATEGORIAS_PADRAO contem 5 categorias', () => {
       expect(CATEGORIAS_PADRAO.length).toBe(5);
+    });
+  });
+
+  describe('Migracao categoria string -> FK (Bloco 2)', () => {
+    it('cria categoria nova para slug desconhecido e seta categoriaId', async () => {
+      const ticket = await prisma.ticket.create({
+        data: {
+          externalId: `test-mig-${Date.now()}-${Math.random()}`,
+          contactName: 'Cliente Teste Migracao',
+          contactPhone: '85999990001',
+          categoria: 'categoria_rara_xyz',
+          status: 'aberto',
+          etapa: 'fila',
+        },
+      });
+      expect(ticket.categoriaId).toBeNull();
+      await migrateCategoriaStringToFK();
+      const updated = await prisma.ticket.findUnique({ where: { id: ticket.id } });
+      expect(updated?.categoriaId).toBeTruthy();
+      const cat = await prisma.categoria.findUnique({ where: { slug: 'categoria_rara_xyz' } });
+      expect(cat).toBeTruthy();
+      await prisma.ticket.delete({ where: { id: ticket.id } });
+    });
+
+    it('reutiliza categoria existente para slug conhecido', async () => {
+      const ticket = await prisma.ticket.create({
+        data: {
+          externalId: `test-mig-known-${Date.now()}-${Math.random()}`,
+          contactName: 'Cliente Financeiro',
+          contactPhone: '85999990002',
+          categoria: 'financeiro',
+          status: 'aberto',
+          etapa: 'fila',
+        },
+      });
+      await migrateCategoriaStringToFK();
+      const updated = await prisma.ticket.findUnique({ where: { id: ticket.id } });
+      const catFin = await prisma.categoria.findUnique({ where: { slug: 'financeiro' } });
+      expect(updated?.categoriaId).toBe(catFin?.id);
+      await prisma.ticket.delete({ where: { id: ticket.id } });
+    });
+
+    it('idempotente: rodar 2x nao duplica nem corrompe', async () => {
+      const ticket = await prisma.ticket.create({
+        data: {
+          externalId: `test-mig-idem-${Date.now()}-${Math.random()}`,
+          contactName: 'Cliente Idempotente',
+          contactPhone: '85999990003',
+          categoria: 'suporte_tecnico',
+          status: 'aberto',
+          etapa: 'fila',
+        },
+      });
+      await migrateCategoriaStringToFK();
+      await migrateCategoriaStringToFK();
+      const updated = await prisma.ticket.findUnique({ where: { id: ticket.id } });
+      expect(updated?.categoriaId).toBeTruthy();
+      const catCount = await prisma.categoria.count({ where: { slug: 'suporte_tecnico' } });
+      expect(catCount).toBe(1);
+      await prisma.ticket.delete({ where: { id: ticket.id } });
+    });
+  });
+
+  describe('Novos campos do Ticket (Bloco 2)', () => {
+    it('Ticket aceita idFila, categoriaId, ativoId, slaTotalMinutos, slaPausadoEm', async () => {
+      const filaN1 = await prisma.fila.findUnique({ where: { slug: 'n1' } });
+      const catSup = await prisma.categoria.findUnique({ where: { slug: 'suporte_tecnico' } });
+      const cliente = await prisma.client.create({
+        data: { razaoSocial: 'Empresa Teste SLA', segmento: 'laboratorio' },
+      });
+      const ticket = await prisma.ticket.create({
+        data: {
+          externalId: `test-newfields-${Date.now()}-${Math.random()}`,
+          contactName: 'Cliente SLA',
+          contactPhone: '85999990004',
+          clientId: cliente.id,
+          idFila: filaN1!.id,
+          categoriaId: catSup!.id,
+          slaTotalMinutos: 60,
+          slaPausadoTotalMin: 0,
+          status: 'aberto',
+          etapa: 'fila',
+        },
+        include: { fila: true, categoriaRef: true, client: true },
+      });
+      expect(ticket.fila?.slug).toBe('n1');
+      expect(ticket.categoriaRef?.slug).toBe('suporte_tecnico');
+      expect(ticket.slaTotalMinutos).toBe(60);
+      expect(ticket.slaPausadoTotalMin).toBe(0);
+      expect(ticket.motivoStatus).toBeNull();
+      expect(ticket.dataResolucao).toBeNull();
+      expect(ticket.dataCSAT).toBeNull();
+      await prisma.ticket.delete({ where: { id: ticket.id } });
+      await prisma.client.delete({ where: { id: cliente.id } });
+    });
+
+    it('campos SLA podem ser atualizados (pausar/retomar)', async () => {
+      const ticket = await prisma.ticket.create({
+        data: {
+          externalId: `test-sla-pause-${Date.now()}-${Math.random()}`,
+          contactName: 'Cliente Pause',
+          contactPhone: '85999990005',
+          status: 'em_atendimento',
+          etapa: 'em_atendimento',
+          slaTotalMinutos: 60,
+        },
+      });
+      const pausedAt = new Date();
+      const updated = await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { slaPausadoEm: pausedAt },
+      });
+      expect(updated.slaPausadoEm).toBeInstanceOf(Date);
+      const resumed = await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { slaPausadoEm: null, slaPausadoTotalMin: { increment: 15 } },
+      });
+      expect(resumed.slaPausadoEm).toBeNull();
+      expect(resumed.slaPausadoTotalMin).toBe(15);
+      await prisma.ticket.delete({ where: { id: ticket.id } });
     });
   });
 });
