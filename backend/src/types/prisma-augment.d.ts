@@ -10,4 +10,16 @@ declare module '@prisma/client/runtime/library' {
   }
 }
 
+declare module '@prisma/client' {
+  interface PrismaClient {
+    automationRule: any;
+  }
+}
+
+declare module '@prisma/client/runtime/library' {
+  interface PrismaClient {
+    automationRule: any;
+  }
+}
+
 export {};

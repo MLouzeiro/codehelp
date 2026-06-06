@@ -493,3 +493,19 @@ model Notificacao {
   lida           Boolean  @default(false)
   createdAt      DateTime @default(now())
 }
+
+/// Regra de automacao WHEN/IF/THEN
+model AutomationRule {
+  id            String   @id @default(uuid())
+  nome          String
+  descricao     String?
+  trigger       String
+  condicoes     String   @default("[]")
+  acoes         String   @default("[]")
+  logicOperator String   @default("all")
+  ativo         Boolean  @default(true)
+  ordem         Int      @default(0)
+  autorId       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+}

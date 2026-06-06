@@ -20,6 +20,7 @@ import helpdeskRoutes from './modules/helpdesk/helpdesk.routes';
 import auditRoutes from './modules/audit/audit.routes';
 import kbRoutes from './modules/kb/kb.routes';
 import csatRoutes from './modules/csat/csat.routes';
+import automationsRoutes from './modules/automations/automations.routes';
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/helpdesk', helpdeskRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/kb', kbRoutes);
 app.use('/api/csat', csatRoutes);
+app.use('/api/automations', automationsRoutes);
 
 app.use('/storage', express.static(path.resolve(__dirname, '../storage')));
 
