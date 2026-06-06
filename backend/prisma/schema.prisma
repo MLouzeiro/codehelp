@@ -32,6 +32,8 @@ model User {
   orderTechnician  ServiceOrder[] @relation("OrderTechnician")
   orderCreator     ServiceOrder[] @relation("OrderCreator")
   stageMovements   TicketStageEvent[]
+  notificacoes     Notificacao[]
+  kbArticlesAutor  KBArticle[]     @relation("KBArticleAutor")
 }
 
 model Client {
@@ -61,6 +63,7 @@ model Client {
   opportunities Opportunity[]
   serviceOrders ServiceOrder[]
   tickets       Ticket[]
+  ativos        Ativo[]
 }
 
 model Contact {
@@ -181,6 +184,8 @@ model Ticket {
   stageHistory  TicketStageEvent[]
   snapshots     TicketHistory[]
   orders        ServiceOrder[] @relation("OrderTicket")
+  csatResposta  CSATResposta?
+  notificacoes  Notificacao[]
 }
 
 model Message {
@@ -362,4 +367,112 @@ model TicketHistory {
   totalMensagens Int    @default(0)
   geradoPor    String   @default("sistema")
   createdAt    DateTime @default(now())
+}
+
+/// Fila de atendimento (escalonamento multinivel: N1, N2, N3)
+model Fila {
+  id         String   @id @default(uuid())
+  slug       String   @unique
+  nome       String
+  descricao  String?
+  nivel      String   @default("N1")
+  slaMinutos Int      @default(60)
+  cor        String   @default("#3b82f6")
+  icone      String   @default("inbox")
+  ordem      Int      @default(0)
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
+}
+
+/// Configuracao de SLA por prioridade
+model SLAConfig {
+  id                         String   @id @default(uuid())
+  prioridade                 String   @unique
+  slaMinutosPrimeiraResposta Int      @default(60)
+  slaMinutosResolucao        Int      @default(240)
+  alerta75Porcento           Boolean  @default(true)
+  alerta90Porcento           Boolean  @default(true)
+  ativo                      Boolean  @default(true)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @default(now())
+}
+
+/// Categoria de ticket (formalizacao das categorias existentes)
+model Categoria {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  nome      String
+  descricao String?
+  cor       String   @default("#3b82f6")
+  icone     String   @default("tag")
+  ordem     Int      @default(0)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  articles  KBArticle[]
+}
+
+/// Ativo (asset) - software/hardware/servico/sistema vinculado a um cliente
+model Ativo {
+  id        String   @id @default(uuid())
+  nome      String
+  tipo      String
+  descricao String?
+  serial    String?
+  clienteId String?
+  cliente   Client?  @relation(fields: [clienteId], references: [id])
+  metadata  String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+/// Artigo da Base de Conhecimento
+model KBArticle {
+  id            String     @id @default(uuid())
+  slug          String     @unique
+  titulo        String
+  conteudo      String
+  resumo        String?
+  categoriaId   String?
+  categoria     Categoria? @relation(fields: [categoriaId], references: [id])
+  tags          String     @default("")
+  autorId       String?
+  autor         User?      @relation("KBArticleAutor", fields: [autorId], references: [id])
+  visualizacoes Int        @default(0)
+  util          Int        @default(0)
+  inutil        Int        @default(0)
+  publicado     Boolean    @default(false)
+  ordem         Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now())
+}
+
+/// Resposta CSAT (pesquisa de satisfacao)
+model CSATResposta {
+  id            String    @id @default(uuid())
+  ticketId      String    @unique
+  ticket        Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  nota          Int?
+  comentario    String?
+  tokenResposta String    @unique @default(uuid())
+  enviadoEm     DateTime  @default(now())
+  respondidoEm  DateTime?
+  createdAt     DateTime  @default(now())
+}
+
+/// Notificacao interna para usuario
+model Notificacao {
+  id             String   @id @default(uuid())
+  tipo           String
+  mensagem       String
+  destinatarioId String
+  destinatario   User     @relation(fields: [destinatarioId], references: [id])
+  ticketId       String?
+  ticket         Ticket?  @relation(fields: [ticketId], references: [id])
+  dados          String?
+  lida           Boolean  @default(false)
+  createdAt      DateTime @default(now())
 }
