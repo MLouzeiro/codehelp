@@ -41,7 +41,7 @@ export default function OrderDetail() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <button onClick={() => navigate('/orders')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
+      <button onClick={() => navigate('/app/orders')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
         <ArrowLeft size={18} /> Voltar
       </button>
 
@@ -97,7 +97,7 @@ export default function OrderDetail() {
             </button>
           )}
           {order.status === 'rascunho' && (
-            <button onClick={() => navigate(`/orders/${id}/edit`)} className="btn-secondary">Editar</button>
+            <button onClick={() => navigate(`/app/orders/${id}/edit`)} className="btn-secondary">Editar</button>
           )}
           {order.signature?.pdfPath && (
             <button onClick={() => window.open(`/api/orders/${id}/pdf`, '_blank')} className="btn-secondary flex items-center gap-2">

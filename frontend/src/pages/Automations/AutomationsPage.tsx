@@ -25,7 +25,7 @@ const ACTIONS: Array<{ value: AutomationAction; label: string; params: Array<{ k
   { value: 'definir_categoria', label: 'Definir Categoria', params: [{ key: 'categoria', label: 'Categoria (slug)', type: 'text' }] },
   { value: 'definir_prioridade', label: 'Definir Prioridade', params: [{ key: 'prioridade', label: 'Prioridade', type: 'select', options: ['baixa', 'media', 'alta', 'urgente'] }] },
   { value: 'atribuir_usuario', label: 'Atribuir a Usuario', params: [{ key: 'usuarioId', label: 'ID do Usuario', type: 'text' }] },
-  { value: 'mudar_etapa', label: 'Mudar Etapa', params: [{ key: 'etapa', label: 'Etapa', type: 'select', options: ['fila', 'triagem', 'em_atendimento', 'aguardando_cliente', 'aguardando_os', 'concluido', 'descartado'] }] },
+  { value: 'mudar_etapa', label: 'Mudar Etapa', params: [{ key: 'etapa', label: 'Etapa', type: 'select', options: ['fila', 'em_atendimento', 'aguardando_cliente', 'aguardando_os', 'concluido', 'descartado'] }] },
   { value: 'enviar_msg', label: 'Enviar Mensagem WhatsApp', params: [{ key: 'mensagem', label: 'Mensagem', type: 'text' }] },
   { value: 'escalar_fila', label: 'Escalar para Fila', params: [
     { key: 'filaId', label: 'ID da Fila', type: 'text' },

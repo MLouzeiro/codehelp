@@ -152,7 +152,7 @@ export default function ClientDetail() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <button onClick={() => navigate('/crm')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
+      <button onClick={() => navigate('/app/crm')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
         <ArrowLeft size={18} /> Voltar
       </button>
 
@@ -169,7 +169,7 @@ export default function ClientDetail() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => navigate(`/orders/new?clientId=${client.id}`)} className="btn-primary text-sm">
+            <button onClick={() => navigate(`/app/orders/new?clientId=${client.id}`)} className="btn-primary text-sm">
               <Plus size={16} className="inline mr-1" /> Nova OS
             </button>
           </div>
@@ -308,7 +308,7 @@ export default function ClientDetail() {
           <h3 className="font-semibold text-gray-900 mb-4">Ordens de Serviço</h3>
           <div className="space-y-2">
             {client.serviceOrders?.map((os: any) => (
-              <div key={os.id} onClick={() => navigate(`/orders/${os.id}`)}
+              <div key={os.id} onClick={() => navigate(`/app/orders/${os.id}`)}
                 className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
                 <div>
                   <p className="text-sm font-medium text-gray-900">{os.numeroOs}</p>

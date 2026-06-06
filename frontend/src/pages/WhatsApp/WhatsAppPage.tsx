@@ -232,7 +232,7 @@ export default function WhatsAppPage() {
 
   const createOS = () => {
     if (!selectedTicket) return;
-    navigate(`/orders/new?clientId=${selectedTicket.client?.id || ''}&ticketId=${selectedTicket.id}`);
+    navigate(`/app/orders/new?clientId=${selectedTicket.client?.id || ''}&ticketId=${selectedTicket.id}`);
   };
 
   const carregarUsuarios = useCallback(async () => {

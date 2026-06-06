@@ -73,7 +73,7 @@ export default function OrderForm() {
       } else {
         await api.post('/orders', payload);
       }
-      navigate('/orders');
+      navigate('/app/orders');
     } catch (err) {
       console.error(err);
     } finally {
@@ -152,7 +152,7 @@ export default function OrderForm() {
           <button type="submit" disabled={loading} className="btn-primary">
             {loading ? 'Salvando...' : isEdit ? 'Atualizar OS' : 'Criar OS'}
           </button>
-          <button type="button" onClick={() => navigate('/orders')} className="btn-secondary">Cancelar</button>
+          <button type="button" onClick={() => navigate('/app/orders')} className="btn-secondary">Cancelar</button>
         </div>
       </form>
     </div>

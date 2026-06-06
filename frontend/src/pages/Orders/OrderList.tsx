@@ -44,7 +44,7 @@ export default function OrderList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold text-codemed-700">Ordens de Serviço</h1><p className="text-neutral-500">{total} OS registradas</p></div>
-        <button onClick={() => navigate('/orders/new')} className="btn-primary flex items-center gap-2">
+        <button onClick={() => navigate('/app/orders/new')} className="btn-primary flex items-center gap-2">
           <Plus size={18} /> Nova OS
         </button>
       </div>
@@ -63,7 +63,7 @@ export default function OrderList() {
 
       <div className="grid gap-3">
         {orders.map((order) => (
-          <div key={order.id} onClick={() => navigate(`/orders/${order.id}`)}
+          <div key={order.id} onClick={() => navigate(`/app/orders/${order.id}`)}
             className="card cursor-pointer hover:shadow-md transition-shadow p-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">

@@ -48,7 +48,7 @@ export default function ClientList() {
           <h1 className="text-2xl font-bold text-codemed-700">Clientes</h1>
           <p className="text-neutral-500">{total} clientes cadastrados</p>
         </div>
-          <button onClick={() => navigate('/crm/new')} className="btn-primary flex items-center gap-2">
+          <button onClick={() => navigate('/app/crm/new')} className="btn-primary flex items-center gap-2">
           <Plus size={18} /> Novo Cliente
         </button>
       </div>
@@ -70,7 +70,7 @@ export default function ClientList() {
 
       <div className="grid gap-4">
         {clients.map((client) => (
-          <div key={client.id} onClick={() => navigate(`/crm/${client.id}`)}
+          <div key={client.id} onClick={() => navigate(`/app/crm/${client.id}`)}
             className="card cursor-pointer hover:shadow-md transition-shadow p-4">
             <div className="flex items-start justify-between">
               <div className="space-y-2">

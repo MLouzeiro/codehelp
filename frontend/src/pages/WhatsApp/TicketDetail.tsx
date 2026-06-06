@@ -37,7 +37,7 @@ export default function TicketDetail() {
   };
 
   const createOS = () => {
-    navigate(`/orders/new?clientId=${ticket.client?.id || ''}&ticketId=${ticket.id}`);
+    navigate(`/app/orders/new?clientId=${ticket.client?.id || ''}&ticketId=${ticket.id}`);
   };
 
   if (loading) return <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" /></div>;
@@ -46,7 +46,7 @@ export default function TicketDetail() {
   return (
     <div className="max-w-3xl mx-auto h-[calc(100vh-6rem)] flex flex-col">
       <div className="flex items-center justify-between mb-4">
-        <button onClick={() => navigate('/whatsapp')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
+        <button onClick={() => navigate('/app/whatsapp')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
           <ArrowLeft size={18} /> Voltar
         </button>
         <button onClick={createOS} className="btn-primary text-sm flex items-center gap-1">
@@ -70,7 +70,7 @@ export default function TicketDetail() {
         {ticket.serviceOrders?.length > 0 && (
           <div className="mt-2 flex gap-2 flex-wrap">
             {ticket.serviceOrders.map((os: any) => (
-              <span key={os.id} onClick={() => navigate(`/orders/${os.id}`)} className="badge bg-codemed-100 text-codemed-700 cursor-pointer hover:bg-codemed-200">{os.numeroOs}</span>
+              <span key={os.id} onClick={() => navigate(`/app/orders/${os.id}`)} className="badge bg-codemed-100 text-codemed-700 cursor-pointer hover:bg-codemed-200">{os.numeroOs}</span>
             ))}
           </div>
         )}
