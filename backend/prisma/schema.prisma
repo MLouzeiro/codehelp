@@ -59,11 +59,34 @@ model Client {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @default(now())
 
-  contacts      Contact[]
-  opportunities Opportunity[]
-  serviceOrders ServiceOrder[]
-  tickets       Ticket[]
-  ativos        Ativo[]
+  contacts       Contact[]
+  colaboradores  Colaborador[]
+  opportunities  Opportunity[]
+  serviceOrders  ServiceOrder[]
+  tickets        Ticket[]
+  ativos         Ativo[]
+}
+
+/// Colaborador de um cliente (pessoa que trabalha na empresa cliente)
+/// Diferente de Contact: Contact registra INTERACOES (ligacoes, emails trocados);
+/// Colaborador lista PESSOAS que trabalham no cliente.
+model Colaborador {
+  id          String   @id @default(uuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  nome        String
+  cargo       String?
+  setor       String?
+  email       String?
+  telefone    String?
+  whatsapp    String?
+  principal   Boolean  @default(false)
+  observacoes String?
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+
+  @@index([clientId])
 }
 
 model Contact {

@@ -5,8 +5,8 @@ export default function SettingsPage() {
   const location = useLocation();
 
   const links = [
-    { path: '/settings/users', label: 'Usuários', icon: Users, desc: 'Gerenciar usuários e permissões' },
-    { path: '/settings/alerts', label: 'Alertas', icon: Bell, desc: 'Configurar alertas semanais e destinatários' },
+    { path: '/app/settings/users', label: 'Usuários', icon: Users, desc: 'Gerenciar usuários e permissões' },
+    { path: '/app/settings/alerts', label: 'Alertas', icon: Bell, desc: 'Configurar alertas semanais e destinatários' },
   ];
 
   return (

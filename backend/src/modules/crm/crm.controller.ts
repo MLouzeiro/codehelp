@@ -53,6 +53,7 @@ export async function getClient(req: AuthRequest, res: Response) {
         opportunities: { include: { responsavel: { select: { name: true } } }, orderBy: { createdAt: 'desc' } },
         serviceOrders: { orderBy: { createdAt: 'desc' }, take: 10 },
         tickets: { orderBy: { createdAt: 'desc' }, take: 10 },
+        colaboradores: { orderBy: [{ principal: 'desc' }, { nome: 'asc' }] },
       },
     });
     if (!client) return res.status(404).json({ error: 'Cliente não encontrado' });

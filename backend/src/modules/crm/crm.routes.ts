@@ -7,6 +7,13 @@ import {
   listOpportunities, createOpportunity, updateOpportunity,
   getPipeline
 } from './crm.controller';
+import {
+  getColaboradoresPorCliente,
+  postColaborador,
+  putColaborador,
+  deleteColaborador,
+  postMarcarPrincipal,
+} from './colaboradores.controller';
 
 const router = Router();
 router.use(authenticate);
@@ -19,6 +26,12 @@ router.delete('/clients/:id', authorize('admin'), auditLog('deletar_cliente', 'C
 
 router.get('/clients/:clientId/contacts', listContacts);
 router.post('/contacts', auditLog('criar_contato', 'Contact'), createContact);
+
+router.get('/clients/:clientId/colaboradores', getColaboradoresPorCliente);
+router.post('/clients/:clientId/colaboradores', authorize('admin', 'gerente', 'comercial'), auditLog('criar_colaborador', 'Colaborador'), postColaborador);
+router.put('/colaboradores/:id', authorize('admin', 'gerente', 'comercial'), auditLog('editar_colaborador', 'Colaborador'), putColaborador);
+router.delete('/colaboradores/:id', authorize('admin', 'gerente'), auditLog('deletar_colaborador', 'Colaborador'), deleteColaborador);
+router.post('/colaboradores/:id/principal', postMarcarPrincipal);
 
 router.get('/opportunities', listOpportunities);
 router.post('/opportunities', authorize('admin', 'gerente', 'comercial'), auditLog('criar_oportunidade', 'Opportunity'), createOpportunity);
