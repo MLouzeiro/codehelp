@@ -4,8 +4,11 @@ import {
   LayoutDashboard, Users, FileText, MessageSquare, Kanban,
   Settings, LogOut, Menu, X, ChevronDown, Bot, TrendingUp, BarChart3,
   Stethoscope, Activity, LineChart, BookOpen, Zap, ArrowUpDown,
+  Bell, Check, CheckCheck,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import api from '../services/api';
+import type { Notificacao } from '../types';
 
 const navItems = [
   { path: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -29,6 +32,51 @@ export default function Layout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifs, setNotifs] = useState<Notificacao[]>([]);
+  const [naoLidas, setNaoLidas] = useState(0);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  const carregarNotifs = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data } = await api.get('/notificacoes', { params: { limit: 10 } });
+      setNotifs(data.items || []);
+      setNaoLidas(data.naoLidas || 0);
+    } catch {}
+  }, [user]);
+
+  useEffect(() => {
+    carregarNotifs();
+    const id = setInterval(carregarNotifs, 30000);
+    return () => clearInterval(id);
+  }, [carregarNotifs]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    };
+    if (notifOpen) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [notifOpen]);
+
+  const marcarLida = async (id: string) => {
+    try {
+      await api.post(`/notificacoes/${id}/lida`);
+      setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, lida: true } : n));
+      setNaoLidas((c) => Math.max(0, c - 1));
+    } catch {}
+  };
+
+  const marcarTodas = async () => {
+    try {
+      await api.post('/notificacoes/marcar-todas');
+      setNotifs((prev) => prev.map((n) => ({ ...n, lida: true })));
+      setNaoLidas(0);
+    } catch {}
+  };
 
   const handleLogout = () => {
     logout();
@@ -105,6 +153,53 @@ export default function Layout() {
             <Menu size={24} />
           </button>
           <div className="flex-1" />
+          <div className="relative" ref={notifRef}>
+            <button onClick={() => setNotifOpen(!notifOpen)} className="relative p-2 rounded-lg hover:bg-white/5 transition-colors">
+              <Bell size={18} className="text-white/70" />
+              {naoLidas > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center">
+                  {naoLidas > 9 ? '9+' : naoLidas}
+                </span>
+              )}
+            </button>
+            {notifOpen && (
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-codemed-700 rounded-xl shadow-xl border border-white/10 z-50 backdrop-blur-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-white">Notificacoes</span>
+                  {naoLidas > 0 && (
+                    <button onClick={marcarTodas} className="text-[11px] text-emerald-300 hover:text-emerald-200 flex items-center gap-1">
+                      <CheckCheck size={11} /> Marcar todas como lidas
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifs.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-white/40 text-xs">
+                      Nenhuma notificacao
+                    </div>
+                  ) : (
+                    notifs.map((n) => (
+                      <div key={n.id}
+                        onClick={() => !n.lida && marcarLida(n.id)}
+                        className={`px-4 py-3 border-b border-white/5 cursor-pointer transition-colors ${n.lida ? 'opacity-60' : 'bg-white/5 hover:bg-white/10'}`}>
+                        <div className="flex items-start gap-2">
+                          {!n.lida && <span className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white/90">{n.mensagem}</p>
+                            <div className="flex items-center gap-2 mt-1 text-[10px] text-white/40">
+                              <span className="px-1.5 py-0.5 bg-white/10 rounded uppercase tracking-wider">{n.tipo}</span>
+                              <span>{new Date(n.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          </div>
+                          {n.lida && <Check size={12} className="text-white/30 mt-1" />}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="relative">
             <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors">
               <div className="w-8 h-8 bg-green-300 rounded-full flex items-center justify-center text-codemed-700 text-sm font-bold" style={{ fontFamily: 'Khand, sans-serif' }}>

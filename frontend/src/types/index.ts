@@ -117,6 +117,23 @@ export interface StatusColumn {
   total: number;
 }
 
+export interface Notificacao {
+  id: string;
+  tipo: string;
+  mensagem: string;
+  destinatarioId: string;
+  ticketId?: string | null;
+  dados?: string | null;
+  lida: boolean;
+  createdAt: string;
+}
+
+export interface NotificacoesResponse {
+  items: Notificacao[];
+  total: number;
+  naoLidas: number;
+}
+
 export interface StatusBoardData {
   board: Record<StatusSlug, StatusColumn>;
   colunas: Array<{ slug: StatusSlug; titulo: string; cor: string; icone: string }>;
