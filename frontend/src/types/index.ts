@@ -114,6 +114,52 @@ export interface HelpdeskKanbanData {
   contagemEtapas: Record<string, number>;
 }
 
+export interface DashboardMetrics {
+  periodo: { inicio: string; fim: string };
+  backlog: {
+    total: number;
+    porEtapa: Record<string, number>;
+    porPrioridade: Record<string, number>;
+    porFila: Record<string, number>;
+  };
+  mttr: {
+    mediaMinutos: number;
+    medianaMinutos: number;
+    p95Minutos: number;
+  };
+  mtfa: {
+    mediaMinutos: number;
+  };
+  sla: {
+    compliancePercentual: number;
+    violados: number;
+    noPrazo: number;
+    total: number;
+  };
+  fcr: {
+    percentual: number;
+    primeiraResolucao: number;
+    escalonados: number;
+  };
+  csat: {
+    mediaNotas: number;
+    totalRespostas: number;
+    percentualResposta: number;
+  };
+  porAgente: Array<{
+    usuarioId: string;
+    nome: string;
+    ticketsAtendidos: number;
+    mttrMedioMin: number;
+    csatMedio: number | null;
+  }>;
+  porCategoria: Array<{
+    categoria: string;
+    total: number;
+    percentual: number;
+  }>;
+}
+
 export interface HelpdeskDashboardData {
   atualizadoEm: string;
   etapas: (HelpdeskEtapa & { total: number })[];

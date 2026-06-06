@@ -3,7 +3,7 @@ import { useAuth } from '../services/auth';
 import {
   LayoutDashboard, Users, FileText, MessageSquare, Kanban,
   Settings, LogOut, Menu, X, ChevronDown, Bot, TrendingUp, BarChart3,
-  Stethoscope, Activity,
+  Stethoscope, Activity, LineChart,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -11,6 +11,7 @@ const navItems = [
   { path: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/app/helpdesk', label: 'Helpdesk', icon: Stethoscope },
   { path: '/app/helpdesk/painel', label: 'Painel ao Vivo', icon: Activity, roles: ['admin', 'gerente'] },
+  { path: '/app/helpdesk/metrics', label: 'Métricas Helpdesk', icon: LineChart, roles: ['admin', 'gerente'] },
   { path: '/app/crm', label: 'CRM', icon: Users },
   { path: '/app/crm/pipeline', label: 'Pipeline', icon: TrendingUp },
   { path: '/app/orders', label: 'OS', icon: FileText },
