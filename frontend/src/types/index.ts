@@ -198,6 +198,36 @@ export interface KBListResponse {
   total: number;
 }
 
+export type AutomationTrigger = 'novo_ticket' | 'msg_recebida' | 'status_alterado' | 'sla_alerta' | 'csat_recebido';
+export type AutomationAction = 'definir_categoria' | 'definir_prioridade' | 'atribuir_usuario' | 'mudar_etapa' | 'enviar_msg' | 'escalar_fila' | 'notificar' | 'adicionar_tag';
+export type AutomationOperator = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'in';
+
+export interface AutomationCondition {
+  campo: string;
+  operador: AutomationOperator;
+  valor: any;
+}
+
+export interface AutomationActionStep {
+  tipo: AutomationAction;
+  parametros: Record<string, any>;
+}
+
+export interface AutomationRule {
+  id: string;
+  nome: string;
+  descricao?: string | null;
+  trigger: AutomationTrigger;
+  condicoes: AutomationCondition[];
+  acoes: AutomationActionStep[];
+  logicOperator: 'all' | 'any';
+  ativo: boolean;
+  ordem: number;
+  autorId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface HelpdeskDashboardData {
   atualizadoEm: string;
   etapas: (HelpdeskEtapa & { total: number })[];

@@ -22,6 +22,7 @@ import HelpdeskKanban from './pages/Helpdesk/HelpdeskKanban';
 import HelpdeskDashboard from './pages/Helpdesk/HelpdeskDashboard';
 import HelpdeskMetrics from './pages/Helpdesk/HelpdeskMetrics';
 import KBList from './pages/KB/KBList';
+import AutomationsPage from './pages/Automations/AutomationsPage';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="helpdesk/painel" element={<HelpdeskDashboard />} />
           <Route path="helpdesk/metrics" element={<HelpdeskMetrics />} />
           <Route path="kb" element={<KBList />} />
+          <Route path="automations" element={<AutomationsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/users" element={<UsersPage />} />
           <Route path="settings/alerts" element={<AlertsPage />} />
