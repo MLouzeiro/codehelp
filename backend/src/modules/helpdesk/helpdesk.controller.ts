@@ -9,6 +9,7 @@ import {
   saveConversationSnapshot,
 } from './helpdesk.service';
 import { logAction, getIpFromRequest } from '../audit/audit.service';
+import { gerenciarPausaSlaPorEtapa } from './slaPausa.service';
 
 export async function getKanban(req: AuthRequest, res: Response) {
   try {
@@ -180,6 +181,8 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
     }
 
     const updated = await prisma.ticket.update({ where: { id }, data: updateData });
+
+    await gerenciarPausaSlaPorEtapa(id, etapa, etapaAnterior, req.user?.id, getIpFromRequest(req));
 
     await prisma.ticketStageEvent.create({
       data: {
