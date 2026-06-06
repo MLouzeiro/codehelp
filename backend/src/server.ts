@@ -98,6 +98,8 @@ async function start() {
     const { ensureHelpdeskEntities, migrateCategoriaStringToFK } = await import('./modules/helpdesk/seed.service');
     await ensureHelpdeskEntities();
     await migrateCategoriaStringToFK();
+    const { startSlaScheduler } = await import('./modules/helpdesk/sla.scheduler');
+    startSlaScheduler();
     initializeClient().catch((err) => console.error('WhatsApp init error:', err));
 
     app.listen(env.port, () => {

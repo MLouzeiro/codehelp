@@ -11,6 +11,14 @@ import {
   setAgentPresence,
   getTickets,
 } from './helpdesk.controller';
+import {
+  getTicketSla,
+  postProcessarAlertasSla,
+  postAtribuirSla,
+  getFilas,
+  getSlaConfigs,
+  getCategorias,
+} from './sla.controller';
 
 const router = Router();
 router.use(authenticate);
@@ -24,5 +32,12 @@ router.post('/tickets/:id/move', moveTicketEtapa);
 router.patch('/tickets/:id/atribuir', atribuirTicket);
 router.get('/tickets/:id/history', getTicketHistory);
 router.post('/presence', setAgentPresence);
+
+router.get('/tickets/:id/sla', getTicketSla);
+router.post('/tickets/:id/atribuir-sla', postAtribuirSla);
+router.post('/sla/processar-alertas', authorize('admin', 'gerente'), postProcessarAlertasSla);
+router.get('/filas', getFilas);
+router.get('/sla-configs', getSlaConfigs);
+router.get('/categorias', getCategorias);
 
 export default router;
