@@ -8,6 +8,7 @@ import {
   sendStageAutoMessage,
   saveConversationSnapshot,
 } from './helpdesk.service';
+import { logAction, getIpFromRequest } from '../audit/audit.service';
 
 export async function getKanban(req: AuthRequest, res: Response) {
   try {
@@ -132,6 +133,14 @@ export async function updateEtapaConfig(req: AuthRequest, res: Response) {
     if (mensagemOpcaoInvalida !== undefined) data.mensagemOpcaoInvalida = mensagemOpcaoInvalida;
     data.updatedAt = new Date();
     const etapa = await prisma.helpdeskConfig.update({ where: { id }, data });
+    await logAction({
+      usuarioId: req.user?.id,
+      acao: 'config_alterada',
+      entidade: 'HelpdeskConfig',
+      entidadeId: id,
+      detalhes: { campos: Object.keys(data) },
+      ip: getIpFromRequest(req),
+    });
     return res.json(etapa);
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao atualizar etapa' });
@@ -207,6 +216,19 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
       await saveConversationSnapshot(id, etapa, req.user?.id || 'sistema');
     }
 
+    const acaoLog =
+      etapa === 'concluido' ? 'concluir' :
+      etapa === 'descartado' ? 'descartar' :
+      'mover_etapa';
+    await logAction({
+      usuarioId: req.user?.id,
+      acao: acaoLog,
+      entidade: 'Ticket',
+      entidadeId: id,
+      detalhes: { etapaAnterior, etapaNova: etapa, atribuirParaMim, autoMessageEnviada: autoMessageResult.sent },
+      ip: getIpFromRequest(req),
+    });
+
     return res.json({ ticket: updated, autoMessage: autoMessageResult });
   } catch (error) {
     console.error('Erro ao mover ticket:', error);
@@ -224,6 +246,14 @@ export async function atribuirTicket(req: AuthRequest, res: Response) {
         assigneeId: usuarioId || null,
         usuarioId: usuarioId || req.user?.id,
       },
+    });
+    await logAction({
+      usuarioId: req.user?.id,
+      acao: 'atribuir',
+      entidade: 'Ticket',
+      entidadeId: id,
+      detalhes: { assigneeId: usuarioId || null },
+      ip: getIpFromRequest(req),
     });
     return res.json(ticket);
   } catch (error) {
