@@ -80,7 +80,7 @@ export default function KBList() {
 
   const loadCategorias = useCallback(async () => {
     try {
-      const { data } = await api.get<KBCategoriaRef[]>('/categorias');
+      const { data } = await api.get<KBCategoriaRef[]>('/helpdesk/categorias');
       setCategorias(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Erro ao carregar categorias:', err);
