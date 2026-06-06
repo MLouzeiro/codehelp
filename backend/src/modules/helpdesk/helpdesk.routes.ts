@@ -15,6 +15,8 @@ import {
   getTicketSla,
   postProcessarAlertasSla,
   postAtribuirSla,
+  postEscalarTicket,
+  postResolverTicket,
   getFilas,
   getSlaConfigs,
   getCategorias,
@@ -35,6 +37,8 @@ router.post('/presence', setAgentPresence);
 
 router.get('/tickets/:id/sla', getTicketSla);
 router.post('/tickets/:id/atribuir-sla', postAtribuirSla);
+router.post('/tickets/:id/escalar', postEscalarTicket);
+router.post('/tickets/:id/resolver', postResolverTicket);
 router.post('/sla/processar-alertas', authorize('admin', 'gerente', 'supervisor'), postProcessarAlertasSla);
 router.get('/filas', getFilas);
 router.get('/sla-configs', getSlaConfigs);

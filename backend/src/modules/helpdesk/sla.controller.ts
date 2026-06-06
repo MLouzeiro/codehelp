@@ -8,6 +8,8 @@ import {
   atribuirSlaAoTicket,
   SLA_DEFAULT_MINUTOS,
 } from './sla.service';
+import { escalarTicket, marcarResolvido } from './status.service';
+import { getIpFromRequest } from '../audit/audit.service';
 
 export async function getTicketSla(req: AuthRequest, res: Response) {
   try {
@@ -39,6 +41,41 @@ export async function postAtribuirSla(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('Erro ao atribuir SLA:', error);
     return res.status(500).json({ error: 'Erro ao atribuir SLA' });
+  }
+}
+
+export async function postEscalarTicket(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { filaId, motivo } = req.body;
+    if (!filaId || !motivo) return res.status(400).json({ error: 'filaId e motivo sao obrigatorios' });
+    const result = await escalarTicket(id, filaId, motivo, req.user?.id, getIpFromRequest(req));
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Erro ao escalar ticket:', error);
+    const msg = error?.message || 'Erro ao escalar ticket';
+    if (msg.includes('nao encontrado') || msg.includes('N1')) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.status(500).json({ error: 'Erro ao escalar ticket' });
+  }
+}
+
+export async function postResolverTicket(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { resumoFinal } = req.body;
+    if (!resumoFinal || resumoFinal.trim().length < 5) {
+      return res.status(400).json({ error: 'resumoFinal e obrigatorio (min 5 caracteres)' });
+    }
+    const updated = await marcarResolvido(id, resumoFinal, req.user?.id, getIpFromRequest(req));
+    return res.json(updated);
+  } catch (error: any) {
+    console.error('Erro ao resolver ticket:', error);
+    if (error?.message?.includes('nao encontrado')) {
+      return res.status(404).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Erro ao resolver ticket' });
   }
 }
 
