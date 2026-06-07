@@ -21,7 +21,7 @@ function Navbar() {
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-neutral-100' : 'bg-transparent'
+        scrolled ? 'bg-white dark:bg-[#1A2222]/90 backdrop-blur-md shadow-sm border-b border-neutral-100 dark:border-neutral-800' : 'bg-transparent'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -36,7 +36,7 @@ function Navbar() {
                 key={l.href}
                 href={l.href}
                 className={`text-sm font-semibold transition-colors hover:text-green-300 ${
-                  scrolled ? 'text-codemed-800' : 'text-white/80 hover:text-white'
+                  scrolled ? 'text-codemed-800 dark:text-neutral-50' : 'text-white/80 hover:text-white'
                 }`}
               >
                 {l.label}
@@ -46,8 +46,8 @@ function Navbar() {
               to="/login"
               className={`text-sm font-bold px-5 py-2.5 rounded-lg transition-all duration-200 ${
                 scrolled
-                  ? 'bg-green-300 text-codemed-700 hover:bg-green-200'
-                  : 'bg-white text-codemed-700 hover:bg-green-50'
+                  ? 'bg-green-300 text-codemed-700 dark:text-neutral-100 hover:bg-green-200'
+                  : 'bg-white dark:bg-[#1A2222] text-codemed-700 dark:text-neutral-100 hover:bg-green-50'
               }`}
             >
               Acessar Sistema
@@ -59,22 +59,22 @@ function Navbar() {
             className="md:hidden p-2 rounded-lg"
             aria-label="Menu"
           >
-            <div className={`w-6 h-0.5 mb-1.5 transition-all ${scrolled ? 'bg-codemed-700' : 'bg-white'}`} />
-            <div className={`w-6 h-0.5 mb-1.5 transition-all ${scrolled ? 'bg-codemed-700' : 'bg-white'}`} />
-            <div className={`w-6 h-0.5 transition-all ${scrolled ? 'bg-codemed-700' : 'bg-white'}`} />
+            <div className={`w-6 h-0.5 mb-1.5 transition-all ${scrolled ? 'bg-codemed-700' : 'bg-white dark:bg-[#1A2222]'}`} />
+            <div className={`w-6 h-0.5 mb-1.5 transition-all ${scrolled ? 'bg-codemed-700' : 'bg-white dark:bg-[#1A2222]'}`} />
+            <div className={`w-6 h-0.5 transition-all ${scrolled ? 'bg-codemed-700' : 'bg-white dark:bg-[#1A2222]'}`} />
           </button>
         </div>
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden bg-white border-t border-neutral-100 shadow-lg">
+        <div className="md:hidden bg-white dark:bg-[#1A2222] border-t border-neutral-100 dark:border-neutral-800 shadow-lg">
           <div className="px-4 py-4 space-y-3">
             {links.map((l) => (
                 <a
                   key={l.href}
                   href={l.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block text-sm font-semibold text-codemed-800 py-2"
+                  className="block text-sm font-semibold text-codemed-800 dark:text-neutral-50 py-2"
                 >
                 {l.label}
               </a>
@@ -82,7 +82,7 @@ function Navbar() {
             <Link
               to="/login"
               onClick={() => setMobileOpen(false)}
-              className="block text-center bg-green-300 text-codemed-700 font-bold px-5 py-3 rounded-lg"
+              className="block text-center bg-green-300 text-codemed-700 dark:text-neutral-100 font-bold px-5 py-3 rounded-lg"
             >
               Acessar Sistema
             </Link>
@@ -135,13 +135,13 @@ function Hero() {
           <div className="flex flex-col sm:flex-row gap-4 mb-12">
             <a
               href="#precos"
-              className="inline-flex items-center justify-center bg-green-300 text-codemed-700 font-bold px-8 py-4 rounded-lg text-base hover:bg-green-200 hover:shadow-brand transition-all duration-200"
+              className="inline-flex items-center justify-center bg-green-300 text-codemed-700 dark:text-neutral-100 font-bold px-8 py-4 rounded-lg text-base hover:bg-green-200 hover:shadow-brand transition-all duration-200"
             >
               Começar agora
             </a>
             <a
               href="#funcionalidades"
-              className="inline-flex items-center justify-center bg-white/10 text-white font-semibold px-8 py-4 rounded-lg text-base hover:bg-white/20 transition-all duration-200"
+              className="inline-flex items-center justify-center bg-white dark:bg-[#1A2222]/10 text-white font-semibold px-8 py-4 rounded-lg text-base hover:bg-white dark:bg-[#1A2222]/20 transition-all duration-200"
             >
               Ver funcionalidades
               <svg className="ml-2 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -155,12 +155,12 @@ function Hero() {
               {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="w-8 h-8 rounded-full border-2 border-codemed-700 bg-gradient-to-br from-green-300 to-green-400 flex items-center justify-center text-[10px] font-bold text-codemed-700"
+                  className="w-8 h-8 rounded-full border-2 border-codemed-700 bg-gradient-to-br from-green-300 to-green-400 flex items-center justify-center text-[10px] font-bold text-codemed-700 dark:text-neutral-100"
                 >
                   {['JC', 'ML', 'RP', 'AS'][i - 1]}
                 </div>
               ))}
-              <div className="w-8 h-8 rounded-full border-2 border-codemed-700 bg-green-300 flex items-center justify-center text-[10px] font-bold text-codemed-700">
+              <div className="w-8 h-8 rounded-full border-2 border-codemed-700 bg-green-300 flex items-center justify-center text-[10px] font-bold text-codemed-700 dark:text-neutral-100">
                 +1.2k
               </div>
             </div>
@@ -243,7 +243,7 @@ const features = [
 
 function Features() {
   return (
-    <section id="funcionalidades" className="py-24 lg:py-32 bg-neutral-50">
+    <section id="funcionalidades" className="py-24 lg:py-32 bg-neutral-50 dark:bg-neutral-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="section-badge justify-center mx-auto mb-4">Funcionalidades</div>
@@ -258,13 +258,13 @@ function Features() {
           {features.map((f, i) => (
             <div
               key={i}
-              className="group bg-white rounded-xl border border-neutral-100 p-8 hover:shadow-lg hover:border-green-300/30 transition-all duration-300"
+              className="group bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-100 dark:border-neutral-800 p-8 hover:shadow-lg hover:border-green-300/30 transition-all duration-300"
             >
-              <div className="w-12 h-12 rounded-lg bg-green-50 text-green-600 flex items-center justify-center mb-5 group-hover:bg-green-300 group-hover:text-codemed-700 transition-all duration-300">
+              <div className="w-12 h-12 rounded-lg bg-green-50 text-green-600 flex items-center justify-center mb-5 group-hover:bg-green-300 group-hover:text-codemed-700 dark:text-neutral-100 transition-all duration-300">
                 {f.icon}
               </div>
-              <h3 className="text-lg font-bold text-codemed-700 mb-3">{f.title}</h3>
-              <p className="text-neutral-500 text-sm leading-relaxed mb-4">{f.desc}</p>
+              <h3 className="text-lg font-bold text-codemed-700 dark:text-neutral-100 mb-3">{f.title}</h3>
+              <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed mb-4">{f.desc}</p>
               <div className="text-xs font-semibold text-green-600 bg-green-50 rounded-md px-3 py-1.5 inline-block">
                 {f.highlight}
               </div>
@@ -286,7 +286,7 @@ function TargetAudience() {
   ];
 
   return (
-    <section id="para-quem" className="py-24 lg:py-32 bg-white">
+    <section id="para-quem" className="py-24 lg:py-32 bg-white dark:bg-[#1A2222]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div>
@@ -295,12 +295,12 @@ function TargetAudience() {
               Feito para laboratório. <br />
               <span className="text-green-500">Não adaptado.</span>
             </h2>
-            <p className="text-neutral-500 text-lg leading-relaxed mb-8">
+            <p className="text-neutral-500 dark:text-neutral-400 text-lg leading-relaxed mb-8">
               O Codemed Hub foi construído por quem entende a rotina de um laboratório
               de análises clínicas. Coleta às 6h, pressão do PCMSO, laudos, convênios,
               faturamento — a gente sabe como é.
             </p>
-            <p className="text-neutral-500 text-lg leading-relaxed mb-8">
+            <p className="text-neutral-500 dark:text-neutral-400 text-lg leading-relaxed mb-8">
           Se você é dono ou gestor de laboratório em cidades de médio porte (tier 2/3),
           com 1 a 5 unidades e faturamento entre R$ 50K e R$ 500K/mês: esse sistema
           foi pensado para você.
@@ -318,11 +318,11 @@ function TargetAudience() {
 
           <div className="space-y-4">
             {problems.map((p, i) => (
-              <div key={i} className="flex items-start gap-4 p-4 rounded-lg bg-neutral-50 border border-neutral-100">
+              <div key={i} className="flex items-start gap-4 p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800">
                 <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0 text-sm font-bold">
                   {i + 1}
                 </div>
-                <p className="text-codemed-800 font-medium leading-relaxed pt-1">{p}</p>
+                <p className="text-codemed-800 dark:text-neutral-50 font-medium leading-relaxed pt-1">{p}</p>
               </div>
             ))}
             <div className="p-4 rounded-lg bg-green-50 border border-green-100">
@@ -388,7 +388,7 @@ const testimonials = [
 
 function Testimonials() {
   return (
-    <section id="depoimentos" className="py-24 lg:py-32 bg-neutral-50">
+    <section id="depoimentos" className="py-24 lg:py-32 bg-neutral-50 dark:bg-neutral-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="section-badge justify-center mx-auto mb-4">Depoimentos</div>
@@ -401,7 +401,7 @@ function Testimonials() {
 
         <div className="grid md:grid-cols-3 gap-8">
           {testimonials.map((t, i) => (
-            <div key={i} className="bg-white rounded-xl border border-neutral-100 p-8 shadow-sm hover:shadow-md transition-shadow">
+            <div key={i} className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-100 dark:border-neutral-800 p-8 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center gap-1 mb-6">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <svg key={s} className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
@@ -409,13 +409,13 @@ function Testimonials() {
                   </svg>
                 ))}
               </div>
-              <p className="text-neutral-600 leading-relaxed mb-6">"{t.text}"</p>
+              <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed mb-6">"{t.text}"</p>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-300 to-green-500 flex items-center justify-center text-xs font-bold text-codemed-700">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-300 to-green-500 flex items-center justify-center text-xs font-bold text-codemed-700 dark:text-neutral-100">
                   {t.initials}
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-codemed-700">{t.name}</div>
+                  <div className="text-sm font-bold text-codemed-700 dark:text-neutral-100">{t.name}</div>
                   <div className="text-xs text-neutral-400">{t.role} — {t.city}</div>
                 </div>
               </div>
@@ -483,7 +483,7 @@ const plans = [
 
 function Pricing() {
   return (
-    <section id="precos" className="py-24 lg:py-32 bg-white">
+    <section id="precos" className="py-24 lg:py-32 bg-white dark:bg-[#1A2222]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="section-badge justify-center mx-auto mb-4">Planos</div>
@@ -499,29 +499,29 @@ function Pricing() {
               key={i}
               className={`rounded-2xl border-2 p-8 flex flex-col ${
                 p.highlight
-                  ? 'border-green-300 bg-white shadow-xl relative'
-                  : 'border-neutral-100 bg-white'
+                  ? 'border-green-300 bg-white dark:bg-[#1A2222] shadow-xl relative'
+                  : 'border-neutral-100 dark:border-neutral-800 bg-white dark:bg-[#1A2222]'
               }`}
             >
               {p.highlight && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-green-300 text-codemed-700 text-xs font-bold tracking-wider uppercase px-4 py-1.5 rounded-full">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-green-300 text-codemed-700 dark:text-neutral-100 text-xs font-bold tracking-wider uppercase px-4 py-1.5 rounded-full">
                   Mais popular
                 </div>
               )}
 
               <div className="mb-6">
-                <h3 className="text-lg font-bold text-codemed-700 mb-1">{p.name}</h3>
+                <h3 className="text-lg font-bold text-codemed-700 dark:text-neutral-100 mb-1">{p.name}</h3>
                 <p className="text-sm text-neutral-400">{p.desc}</p>
               </div>
 
               <div className="mb-8">
-                <span className="text-3xl font-extrabold text-codemed-700">{p.price}</span>
+                <span className="text-3xl font-extrabold text-codemed-700 dark:text-neutral-100">{p.price}</span>
                 <span className="text-neutral-400 text-sm">{p.period}</span>
               </div>
 
               <ul className="space-y-3 mb-8 flex-1">
                 {p.features.map((f, j) => (
-                  <li key={j} className="flex items-start gap-3 text-sm text-neutral-600">
+                  <li key={j} className="flex items-start gap-3 text-sm text-neutral-600 dark:text-neutral-300">
                     <svg className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -533,8 +533,8 @@ function Pricing() {
               <button
                 className={`w-full py-3.5 rounded-lg font-bold text-sm transition-all duration-200 ${
                   p.highlight
-                    ? 'bg-green-300 text-codemed-700 hover:bg-green-200 hover:shadow-brand'
-                    : 'bg-neutral-50 text-codemed-700 hover:bg-neutral-100 border border-neutral-200'
+                    ? 'bg-green-300 text-codemed-700 dark:text-neutral-100 hover:bg-green-200 hover:shadow-brand'
+                    : 'bg-neutral-50 dark:bg-neutral-900 text-codemed-700 dark:text-neutral-100 hover:bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700'
                 }`}
               >
                 {p.cta}
@@ -575,10 +575,10 @@ function Cta() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="bg-green-300 text-codemed-700 font-bold px-10 py-4 rounded-lg text-base hover:bg-green-200 hover:shadow-brand transition-all duration-200">
+          <button className="bg-green-300 text-codemed-700 dark:text-neutral-100 font-bold px-10 py-4 rounded-lg text-base hover:bg-green-200 hover:shadow-brand transition-all duration-200">
             Testar grátis por 7 dias
           </button>
-          <button className="bg-white/10 text-white font-semibold px-10 py-4 rounded-lg text-base hover:bg-white/20 transition-all duration-200">
+          <button className="bg-white dark:bg-[#1A2222]/10 text-white font-semibold px-10 py-4 rounded-lg text-base hover:bg-white dark:bg-[#1A2222]/20 transition-all duration-200">
             Falar com especialista
           </button>
         </div>

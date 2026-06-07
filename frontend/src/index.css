@@ -3,6 +3,22 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg-app: #F8FAFA;
+    --bg-sidebar: #011126;
+    --bg-topbar: #011126;
+    --fg-primary: #2B3636;
+    --fg-muted: #617373;
+  }
+
+  .dark {
+    --bg-app: #0D1414;
+    --bg-sidebar: #050339;
+    --bg-topbar: #050339;
+    --fg-primary: #F0F4F4;
+    --fg-muted: #8FA0A0;
+  }
+
   html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
@@ -13,9 +29,10 @@
     font-family: 'Dosis', sans-serif;
     font-size: 1rem;
     font-weight: 400;
-    color: #2B3636;
     line-height: 1.6;
-    background-color: #F8FAFA;
+    color: var(--fg-primary);
+    background-color: var(--bg-app);
+    transition: background-color 200ms ease, color 200ms ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -66,14 +83,15 @@
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-neutral-100 p-6;
+    @apply bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-100 dark:border-neutral-700 p-6;
   }
 
   .input {
-    @apply w-full px-4 py-3 border border-neutral-200 rounded-lg
+    @apply w-full px-4 py-3 border border-neutral-200 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700
+           text-neutral-700 dark:text-neutral-200
            focus:ring-2 focus:ring-green-300 focus:border-green-300
            outline-none transition-all duration-200
-           placeholder:text-neutral-400;
+           placeholder:text-neutral-400 dark:placeholder:text-neutral-500;
     font-family: 'Dosis', sans-serif;
   }
 
@@ -90,11 +108,11 @@
   }
 
   .section-title {
-    @apply text-3xl md:text-4xl font-bold text-codemed-700 tracking-tight;
+    @apply text-3xl md:text-4xl font-bold text-codemed-700 dark:text-neutral-100 tracking-tight;
     font-family: 'Khand', sans-serif;
   }
 
   .section-desc {
-    @apply text-lg text-neutral-500 max-w-2xl;
+    @apply text-lg text-neutral-500 dark:text-neutral-400 max-w-2xl;
   }
 }

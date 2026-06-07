@@ -171,7 +171,7 @@ export default function HelpdeskStagesPage() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowInativas(!showInativas)}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${showInativas ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 text-neutral-600'}`}>
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${showInativas ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'}`}>
             {showInativas ? 'Mostrando inativas' : 'Mostrar inativas'}
           </button>
           {isMaster && (
@@ -208,7 +208,7 @@ export default function HelpdeskStagesPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-sm text-navy-900 truncate">{stage.nome}</h3>
-                <code className="text-[10px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded font-mono">{stage.slug}</code>
+                <code className="text-[10px] text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-mono">{stage.slug}</code>
                 {stage.etapaInicial && (
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded uppercase">Inicial</span>
                 )}
@@ -216,17 +216,17 @@ export default function HelpdeskStagesPage() {
                   <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-medium">Auto</span>
                 )}
                 {!stage.ativo && (
-                  <span className="text-[10px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded font-medium uppercase">Inativa</span>
+                  <span className="text-[10px] text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-medium uppercase">Inativa</span>
                 )}
               </div>
-              {stage.descricao && <p className="text-xs text-neutral-500 truncate mt-0.5">{stage.descricao}</p>}
+              {stage.descricao && <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5">{stage.descricao}</p>}
             </div>
             {isMaster && (
               <div className="flex items-center gap-1">
-                <button onClick={() => { setEditing(stage); setCreating(false); }} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-600" title="Editar">
+                <button onClick={() => { setEditing(stage); setCreating(false); }} className="p-1.5 hover:bg-neutral-100 dark:bg-neutral-800 rounded text-neutral-600 dark:text-neutral-300" title="Editar">
                   <Edit2 size={14} />
                 </button>
-                <button onClick={() => handleToggleAtivo(stage)} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-600" title={stage.ativo ? 'Desativar' : 'Reativar'}>
+                <button onClick={() => handleToggleAtivo(stage)} className="p-1.5 hover:bg-neutral-100 dark:bg-neutral-800 rounded text-neutral-600 dark:text-neutral-300" title={stage.ativo ? 'Desativar' : 'Reativar'}>
                   {stage.ativo ? <PowerOff size={14} className="text-red-500" /> : <Power size={14} className="text-emerald-500" />}
                 </button>
               </div>
@@ -285,39 +285,39 @@ function StageEditor({ stage, onClose, onSave, saving }: EditorProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-xl p-5 w-full max-w-2xl my-8 space-y-3" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-[#1A2222] rounded-xl p-5 w-full max-w-2xl my-8 space-y-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-navy-900">{isNew ? 'Nova Etapa' : `Editar "${stage!.nome}"`}</h3>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600"><X size={18} /></button>
+          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-300"><X size={18} /></button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-neutral-700 block mb-1">Slug (kebab-case) *</label>
+            <label className="text-xs font-medium text-neutral-700 dark:text-neutral-200 block mb-1">Slug (kebab-case) *</label>
             <input
               type="text"
               value={form.slug || ''}
               onChange={(e) => setForm({ ...form, slug: e.target.value })}
               disabled={!isNew}
               placeholder="em-analise"
-              className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 disabled:bg-neutral-50 disabled:text-neutral-500 font-mono"
+              className="w-full text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2 disabled:bg-neutral-50 dark:bg-neutral-900 disabled:text-neutral-500 dark:text-neutral-400 font-mono"
             />
             <p className="text-[10px] text-neutral-400 mt-0.5">Identificador interno. Nao pode ser alterado depois.</p>
           </div>
           <div>
-            <label className="text-xs font-medium text-neutral-700 block mb-1">Nome exibido *</label>
-            <input type="text" value={form.nome || ''} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2" />
+            <label className="text-xs font-medium text-neutral-700 dark:text-neutral-200 block mb-1">Nome exibido *</label>
+            <input type="text" value={form.nome || ''} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="w-full text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2" />
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-neutral-700 block mb-1">Descricao</label>
-          <input type="text" value={form.descricao || ''} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2" />
+          <label className="text-xs font-medium text-neutral-700 dark:text-neutral-200 block mb-1">Descricao</label>
+          <input type="text" value={form.descricao || ''} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className="w-full text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2" />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-neutral-700 block mb-1">Cor</label>
+            <label className="text-xs font-medium text-neutral-700 dark:text-neutral-200 block mb-1">Cor</label>
             <div className="flex flex-wrap gap-1.5">
               {CORES_OPCOES.map((c) => (
                 <button key={c} type="button" onClick={() => setForm({ ...form, cor: c })}
@@ -328,28 +328,28 @@ function StageEditor({ stage, onClose, onSave, saving }: EditorProps) {
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-neutral-700 block mb-1">Icone</label>
-            <select value={form.icone} onChange={(e) => setForm({ ...form, icone: e.target.value })} className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2">
+            <label className="text-xs font-medium text-neutral-700 dark:text-neutral-200 block mb-1">Icone</label>
+            <select value={form.icone} onChange={(e) => setForm({ ...form, icone: e.target.value })} className="w-full text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2">
               {ICONES_OPCOES.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
             </select>
           </div>
         </div>
 
         <div>
-          <label className="flex items-center gap-2 text-xs text-neutral-700">
+          <label className="flex items-center gap-2 text-xs text-neutral-700 dark:text-neutral-200">
             <input type="checkbox" checked={form.etapaInicial || false} onChange={(e) => setForm({ ...form, etapaInicial: e.target.checked })} />
             <span>Marcar como etapa inicial (novos tickets entram aqui)</span>
           </label>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-neutral-700 block mb-1">Mensagem automatica (template)</label>
+          <label className="text-xs font-medium text-neutral-700 dark:text-neutral-200 block mb-1">Mensagem automatica (template)</label>
           <textarea
             value={form.autoMessage || ''}
             onChange={(e) => setForm({ ...form, autoMessage: e.target.value })}
             rows={4}
             placeholder="Ola {{nome_contato}}! Recebemos sua solicitacao..."
-            className="w-full text-xs border border-neutral-200 rounded-lg px-3 py-2 font-mono"
+            className="w-full text-xs border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2 font-mono"
           />
           <div className="mt-1.5 flex flex-wrap gap-1">
             {VARIAVEIS.map((v) => (
@@ -362,11 +362,11 @@ function StageEditor({ stage, onClose, onSave, saving }: EditorProps) {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <label className="flex items-center gap-2 text-xs text-neutral-700">
+          <label className="flex items-center gap-2 text-xs text-neutral-700 dark:text-neutral-200">
             <input type="checkbox" checked={form.enviarAuto || false} onChange={(e) => setForm({ ...form, enviarAuto: e.target.checked })} />
             <span>Enviar mensagem automatica ao mover</span>
           </label>
-          <label className="flex items-center gap-2 text-xs text-neutral-700">
+          <label className="flex items-center gap-2 text-xs text-neutral-700 dark:text-neutral-200">
             <input type="checkbox" checked={form.notificarEquipe || false} onChange={(e) => setForm({ ...form, notificarEquipe: e.target.checked })} />
             <span>Notificar equipe</span>
           </label>
@@ -374,7 +374,7 @@ function StageEditor({ stage, onClose, onSave, saving }: EditorProps) {
 
         {form.autoMessage && (
           <details className="text-xs">
-            <summary className="cursor-pointer text-neutral-500 font-medium">Preview da mensagem</summary>
+            <summary className="cursor-pointer text-neutral-500 dark:text-neutral-400 font-medium">Preview da mensagem</summary>
             <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded text-emerald-900 whitespace-pre-wrap text-[11px]">
               {previewMessage}
             </div>
@@ -382,7 +382,7 @@ function StageEditor({ stage, onClose, onSave, saving }: EditorProps) {
         )}
 
         <div className="flex gap-2 pt-3 border-t">
-          <button onClick={onClose} disabled={saving} className="flex-1 px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
+          <button onClick={onClose} disabled={saving} className="flex-1 px-4 py-2 text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:bg-neutral-900 disabled:opacity-50">Cancelar</button>
           <button onClick={() => onSave(form)} disabled={saving || !form.nome?.trim() || !form.slug?.trim()}
             className="flex-1 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-1.5">
             <Save size={14} /> {saving ? 'Salvando...' : isNew ? 'Criar etapa' : 'Salvar alteracoes'}

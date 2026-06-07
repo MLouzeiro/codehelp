@@ -146,7 +146,7 @@ export default function PermissionsPage() {
       <div className="card max-w-md mx-auto text-center space-y-3 mt-12">
         <Lock size={32} className="text-red-500 mx-auto" />
         <h2 className="font-bold text-navy-900">Acesso restrito</h2>
-        <p className="text-sm text-neutral-500">Apenas administradores master podem editar a matriz de permissoes.</p>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">Apenas administradores master podem editar a matriz de permissoes.</p>
       </div>
     );
   }
@@ -164,7 +164,7 @@ export default function PermissionsPage() {
             Defina o que cada role pode fazer. Alteracoes sao aplicadas imediatamente apos salvar.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-neutral-500">
+        <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
           <Check size={12} className="text-emerald-500" /> permitido &nbsp;
           <X size={12} className="text-red-500" /> negado &nbsp;
           <span className="inline-block w-3 h-3 rounded-full bg-amber-400" /> override custom
@@ -177,12 +177,12 @@ export default function PermissionsPage() {
         </div>
       )}
 
-      <div className="flex items-center gap-1 border-b border-neutral-200">
+      <div className="flex items-center gap-1 border-b border-neutral-200 dark:border-neutral-700">
         {ROLES.map((r) => {
           const editCount = Object.keys(edits[r] || {}).length;
           return (
             <button key={r} onClick={() => setActiveRole(r)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${activeRole === r ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-neutral-600 hover:text-neutral-900'}`}>
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${activeRole === r ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:text-neutral-50'}`}>
               {ROLE_LABELS[r]}
               {editCount > 0 && (
                 <span className="text-[10px] font-bold text-white bg-amber-500 rounded-full px-1.5">{editCount}</span>
@@ -193,10 +193,10 @@ export default function PermissionsPage() {
       </div>
 
       <div className="card p-0 overflow-hidden">
-        <div className="px-4 py-3 border-b border-neutral-200 flex items-center justify-between bg-neutral-50/50">
+        <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between bg-neutral-50 dark:bg-neutral-900/50">
           <div>
             <h3 className="font-semibold text-navy-900">Permissoes de {ROLE_LABELS[activeRole]}</h3>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
               {overrides[activeRole]?.length || 0} override(s) customizado(s) no banco
               {roleEditsCount > 0 && ` • ${roleEditsCount} alteracao(oes) nao salva(s)`}
             </p>
@@ -214,10 +214,10 @@ export default function PermissionsPage() {
 
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-neutral-50 border-b border-neutral-200">
-              <th className="text-left px-4 py-2 font-semibold text-neutral-600">Recurso</th>
+            <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
+              <th className="text-left px-4 py-2 font-semibold text-neutral-600 dark:text-neutral-300">Recurso</th>
               {Array.from(new Set(catalog.flatMap((c) => c.actions))).map((a) => (
-                <th key={a} className="px-3 py-2 font-semibold text-neutral-600 text-center text-xs uppercase tracking-wider">
+                <th key={a} className="px-3 py-2 font-semibold text-neutral-600 dark:text-neutral-300 text-center text-xs uppercase tracking-wider">
                   {ACTION_LABELS[a] || a}
                 </th>
               ))}
@@ -225,7 +225,7 @@ export default function PermissionsPage() {
           </thead>
           <tbody>
             {catalog.map((r) => (
-              <tr key={r.key} className="border-b border-neutral-100 hover:bg-neutral-50/50">
+              <tr key={r.key} className="border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:bg-neutral-900/50">
                 <td className="px-4 py-2 font-medium text-navy-900">{r.label}</td>
                 {r.actions.map((a) => {
                   const granted = effectiveFor(activeRole, r.key, a);
@@ -237,7 +237,7 @@ export default function PermissionsPage() {
                         className={`w-7 h-7 rounded-md border-2 flex items-center justify-center transition-all ${
                           granted
                             ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                            : 'border-neutral-200 bg-neutral-50 text-neutral-400'
+                            : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-neutral-400'
                         } ${overridden ? 'ring-2 ring-amber-300' : ''}`}
                         title={overridden ? 'Override customizado' : 'Valor padrao'}
                       >

@@ -139,7 +139,7 @@ export default function SignPage() {
   if (error && !data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-codemed-50 to-green-50 p-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 max-w-md text-center">
+        <div className="bg-white dark:bg-[#1A2222] rounded-xl shadow-sm border border-gray-100 p-8 max-w-md text-center">
           <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-900 mb-2">Link Inválido</h2>
           <p className="text-gray-500">{error}</p>
@@ -151,7 +151,7 @@ export default function SignPage() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-codemed-50 to-green-50 p-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 max-w-md text-center">
+        <div className="bg-white dark:bg-[#1A2222] rounded-xl shadow-sm border border-gray-100 p-8 max-w-md text-center">
           <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-900 mb-2">OS Assinada com Sucesso!</h2>
           <p className="text-gray-500">A Ordem de Serviço {data?.order?.numeroOs} foi assinada eletronicamente.</p>
@@ -172,7 +172,7 @@ export default function SignPage() {
           <p className="text-gray-500">Codemed — Desenvolvimento de Software Laboratorial</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+        <div className="bg-white dark:bg-[#1A2222] rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
           <h2 className="font-semibold text-gray-900">Resumo da OS</h2>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div><p className="text-gray-500">Número</p><p className="font-medium">{data?.order?.numeroOs}</p></div>
@@ -186,7 +186,7 @@ export default function SignPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+        <div className="bg-white dark:bg-[#1A2222] rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
           <h2 className="font-semibold text-gray-900">Dados do Assinante</h2>
           <div className="space-y-3">
             <input type="text" placeholder="Nome completo" value={form.assinanteNome}
@@ -198,13 +198,13 @@ export default function SignPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+        <div className="bg-white dark:bg-[#1A2222] rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">Assinatura</h2>
             <button onClick={clearCanvas} className="text-sm text-gray-500 hover:text-gray-700">Limpar</button>
           </div>
           <canvas ref={canvasRef} width={500} height={150}
-            className="w-full border-2 border-gray-300 rounded-lg bg-white cursor-crosshair"
+            className="w-full border-2 border-gray-300 rounded-lg bg-white dark:bg-[#1A2222] cursor-crosshair"
             style={{ touchAction: 'none' }} />
           <p className="text-xs text-gray-400">Desenhe sua assinatura no campo acima usando o mouse ou touch</p>
         </div>

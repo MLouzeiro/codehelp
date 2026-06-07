@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Bell, Inbox, Shield, Settings2, Lock } from 'lucide-react';
+import { Users, Bell, Inbox, Shield, Settings2, Lock, CalendarOff } from 'lucide-react';
 
 export default function SettingsPage() {
   const location = useLocation();
@@ -7,6 +7,7 @@ export default function SettingsPage() {
   const links = [
     { path: '/app/settings/users', label: 'Usuários', icon: Users, desc: 'Gerenciar usuários e permissões' },
     { path: '/app/settings/permissions', label: 'Permissões', icon: Shield, desc: 'Matriz de permissões por role (somente admin master)' },
+    { path: '/app/settings/feriados', label: 'Feriados', icon: CalendarOff, desc: 'Cadastrar feriados para bloquear atendimento fora do horário comercial' },
     { path: '/app/settings/helpdesk-stages', label: 'Etapas do Helpdesk', icon: Inbox, desc: 'Criar, renomear, ativar ou desativar etapas (somente admin master)' },
     { path: '/app/settings/alerts', label: 'Alertas', icon: Bell, desc: 'Configurar alertas semanais e destinatários' },
   ];

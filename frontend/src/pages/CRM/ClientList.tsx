@@ -45,8 +45,8 @@ export default function ClientList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-codemed-700">Clientes</h1>
-          <p className="text-neutral-500">{total} clientes cadastrados</p>
+          <h1 className="text-2xl font-bold text-codemed-700 dark:text-neutral-100">Clientes</h1>
+          <p className="text-neutral-500 dark:text-neutral-400">{total} clientes cadastrados</p>
         </div>
           <button onClick={() => navigate('/app/crm/new')} className="btn-primary flex items-center gap-2">
           <Plus size={18} /> Novo Cliente
@@ -76,11 +76,11 @@ export default function ClientList() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Building2 size={18} className="text-neutral-400" />
-                  <span className="font-semibold text-codemed-700">{client.razaoSocial}</span>
+                  <span className="font-semibold text-codemed-700 dark:text-neutral-100">{client.razaoSocial}</span>
                   {statusBadge(client.status)}
                 </div>
-                {client.nomeFantasia && <p className="text-sm text-neutral-500">{client.nomeFantasia}</p>}
-                <div className="flex flex-wrap gap-4 text-sm text-neutral-500">
+                {client.nomeFantasia && <p className="text-sm text-neutral-500 dark:text-neutral-400">{client.nomeFantasia}</p>}
+                <div className="flex flex-wrap gap-4 text-sm text-neutral-500 dark:text-neutral-400">
                   {client.email && <span className="flex items-center gap-1"><Mail size={14} />{client.email}</span>}
                   {client.telefone && <span className="flex items-center gap-1"><Phone size={14} />{client.telefone}</span>}
                   {client.cidade && <span className="flex items-center gap-1"><MapPin size={14} />{client.cidade}/{client.estado}</span>}
@@ -93,7 +93,7 @@ export default function ClientList() {
           </div>
         ))}
         {!loading && clients.length === 0 && (
-          <div className="text-center py-12 text-neutral-500">Nenhum cliente encontrado</div>
+          <div className="text-center py-12 text-neutral-500 dark:text-neutral-400">Nenhum cliente encontrado</div>
         )}
       </div>
 
@@ -101,7 +101,7 @@ export default function ClientList() {
         <div className="flex items-center justify-center gap-2 pt-4">
           {Array.from({ length: Math.ceil(total / 20) }, (_, i) => (
             <button key={i} onClick={() => setPage(i + 1)}
-              className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${page === i + 1 ? 'bg-green-500 text-white' : 'border border-neutral-200 hover:bg-neutral-50 text-neutral-600'}`}>
+              className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${page === i + 1 ? 'bg-green-500 text-white' : 'border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300'}`}>
               {i + 1}
             </button>
           ))}

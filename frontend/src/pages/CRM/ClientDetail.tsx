@@ -192,7 +192,7 @@ export default function ClientDetail() {
             <Users size={18} />
             Colaboradores ({client.colaboradores?.length || 0})
           </h3>
-          <button onClick={abrirNovoColab} className="text-sm text-codemed-600 hover:text-codemed-700 font-medium flex items-center gap-1">
+          <button onClick={abrirNovoColab} className="text-sm text-codemed-600 hover:text-codemed-700 dark:text-neutral-100 font-medium flex items-center gap-1">
             <Plus size={14} /> Novo
           </button>
         </div>
@@ -201,7 +201,7 @@ export default function ClientDetail() {
           {client.colaboradores?.map((c: Colaborador) => (
             <div key={c.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg border border-gray-100">
               <div className="w-9 h-9 rounded-full bg-codemed-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-codemed-700 font-semibold text-sm">{c.nome.charAt(0).toUpperCase()}</span>
+                <span className="text-codemed-700 dark:text-neutral-100 font-semibold text-sm">{c.nome.charAt(0).toUpperCase()}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -262,7 +262,7 @@ export default function ClientDetail() {
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-900">Histórico de Contatos</h3>
-            <button onClick={() => setShowContactForm(!showContactForm)} className="text-sm text-codemed-600 hover:text-codemed-700 font-medium">+ Novo</button>
+            <button onClick={() => setShowContactForm(!showContactForm)} className="text-sm text-codemed-600 hover:text-codemed-700 dark:text-neutral-100 font-medium">+ Novo</button>
           </div>
 
           {showContactForm && (
@@ -326,7 +326,7 @@ export default function ClientDetail() {
 
       {showColabForm && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setShowColabForm(false)}>
-          <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-lg mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-[#1A2222] rounded-2xl p-6 shadow-xl w-full max-w-lg mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-lg text-gray-900">
                 {colabEdit ? 'Editar Colaborador' : 'Novo Colaborador'}

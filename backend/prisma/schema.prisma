@@ -549,3 +549,18 @@ model RolePermission {
   @@unique([role, resource, action])
   @@index([role])
 }
+
+/// Feriado nacional/estadual/municipal para bloqueio do horario comercial
+/// data: se recorrente=true, considera apenas mes/dia; senao considera data completa
+model Feriado {
+  id        String   @id @default(uuid())
+  data      DateTime
+  nome      String
+  tipo      String   @default("nacional")
+  recorrente Boolean @default(false)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@index([data])
+}

@@ -97,7 +97,7 @@ export default function HelpdeskStatusBoard() {
           <h1 className="text-2xl font-bold text-navy-900 flex items-center gap-2">
             <ArrowUpCircle className="text-emerald-600" size={24} /> Board por Status
           </h1>
-          <p className="text-neutral-500 text-sm">
+          <p className="text-neutral-500 dark:text-neutral-400 text-sm">
             {totalGeral} ticket(s) ativos • 7 status (read-only, atualizado a cada 10s)
           </p>
         </div>
@@ -106,11 +106,11 @@ export default function HelpdeskStatusBoard() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input type="text" placeholder="Filtrar..."
               value={search} onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:ring-1 focus:ring-emerald-500 outline-none w-40" />
+              className="pl-8 pr-3 py-1.5 text-xs border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-1 focus:ring-emerald-500 outline-none w-40" />
           </div>
           <button onClick={() => setAutoRefresh(!autoRefresh)}
             className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
-              autoRefresh ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-600'
+              autoRefresh ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'
             }`}>
             {autoRefresh ? 'Auto ON' : 'Pausado'}
           </button>
@@ -125,15 +125,15 @@ export default function HelpdeskStatusBoard() {
           const Icone = ICONES[col.icone] || Inbox;
           const items = filteredBoard(col.slug);
           return (
-            <div key={col.slug} className="flex flex-col bg-neutral-50 rounded-xl border border-neutral-200 min-w-[180px]">
-              <div className="px-3 py-2.5 border-b border-neutral-200 flex items-center justify-between sticky top-0 bg-neutral-50 rounded-t-xl z-10">
+            <div key={col.slug} className="flex flex-col bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 min-w-[180px]">
+              <div className="px-3 py-2.5 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between sticky top-0 bg-neutral-50 dark:bg-neutral-900 rounded-t-xl z-10">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <div className="w-6 h-6 rounded flex items-center justify-center text-white flex-shrink-0" style={{ backgroundColor: col.cor }}>
                     <Icone size={12} />
                   </div>
                   <span className="text-xs font-bold text-navy-900 truncate">{col.titulo}</span>
                 </div>
-                <span className="text-xs font-bold text-neutral-500 bg-white px-1.5 py-0.5 rounded flex-shrink-0">
+                <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 bg-white dark:bg-[#1A2222] px-1.5 py-0.5 rounded flex-shrink-0">
                   {items.length}
                 </span>
               </div>
@@ -146,7 +146,7 @@ export default function HelpdeskStatusBoard() {
                     const critico = minAtualizado > 60;
                     return (
                       <div key={t.id} onClick={() => navigate(`/app/whatsapp/tickets/${t.id}`)}
-                        className={`bg-white rounded-lg border-l-4 ${PRIORIDADE_COR[t.prioridade] || 'border-l-neutral-300'} border-r border-t border-b border-neutral-200 p-2 cursor-pointer hover:shadow-md transition-shadow`}>
+                        className={`bg-white dark:bg-[#1A2222] rounded-lg border-l-4 ${PRIORIDADE_COR[t.prioridade] || 'border-l-neutral-300'} border-r border-t border-b border-neutral-200 dark:border-neutral-700 p-2 cursor-pointer hover:shadow-md transition-shadow`}>
                         <div className="flex items-start justify-between gap-1 mb-1">
                           <p className="text-xs font-bold text-navy-900 truncate flex-1">
                             {t.contactName || t.client?.razaoSocial || t.contactPhone || 'Sem nome'}
@@ -154,9 +154,9 @@ export default function HelpdeskStatusBoard() {
                           {critico && <AlertTriangle size={10} className="text-amber-500 flex-shrink-0" />}
                         </div>
                         {t.protocolo && <p className="text-[9px] text-neutral-400 font-mono">{t.protocolo}</p>}
-                        {t.assunto && <p className="text-[11px] text-neutral-600 mt-1 line-clamp-2">{t.assunto}</p>}
-                        <div className="flex items-center justify-between gap-1 mt-1.5 pt-1.5 border-t border-neutral-100">
-                          <div className="flex items-center gap-1 text-[10px] text-neutral-500 min-w-0">
+                        {t.assunto && <p className="text-[11px] text-neutral-600 dark:text-neutral-300 mt-1 line-clamp-2">{t.assunto}</p>}
+                        <div className="flex items-center justify-between gap-1 mt-1.5 pt-1.5 border-t border-neutral-100 dark:border-neutral-800">
+                          <div className="flex items-center gap-1 text-[10px] text-neutral-500 dark:text-neutral-400 min-w-0">
                             {t.assignee ? (
                               <><User size={9} className="flex-shrink-0" /><span className="truncate">{t.assignee.name.split(' ')[0]}</span></>
                             ) : (
@@ -168,7 +168,7 @@ export default function HelpdeskStatusBoard() {
                           </span>
                         </div>
                         {t.lastMessage && (
-                          <p className="text-[10px] text-neutral-500 mt-1 line-clamp-1 italic">
+                          <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 italic">
                             {t.lastMessage.fromMe ? '↩ ' : ''}
                             {(t.lastMessage.content || '').slice(0, 40)}
                             {(t.lastMessage.content?.length || 0) > 40 ? '...' : ''}

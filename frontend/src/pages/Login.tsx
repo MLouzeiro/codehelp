@@ -85,7 +85,7 @@ export default function Login() {
               />
             </div>
 
-            <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 shadow-2xl">
+            <div className="bg-white dark:bg-[#1A2222]/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 shadow-2xl">
               <h2 className="text-2xl font-bold text-white mb-1"
                   style={{ fontFamily: 'Khand, sans-serif', letterSpacing: '-0.01em' }}>
                 Acessar plataforma
@@ -113,7 +113,7 @@ export default function Login() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/30
+                    className="w-full px-4 py-3 bg-white dark:bg-[#1A2222]/5 border border-white/10 rounded-lg text-white placeholder:text-white/30
                              focus:ring-2 focus:ring-green-300 focus:border-green-300 outline-none transition-all duration-200"
                     placeholder="seu@email.com"
                     required
@@ -130,7 +130,7 @@ export default function Login() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/30
+                    className="w-full px-4 py-3 bg-white dark:bg-[#1A2222]/5 border border-white/10 rounded-lg text-white placeholder:text-white/30
                              focus:ring-2 focus:ring-green-300 focus:border-green-300 outline-none transition-all duration-200"
                     placeholder="••••••••"
                     required
@@ -141,7 +141,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-green-300 text-codemed-700 font-bold rounded-lg
+                  className="w-full py-3 bg-green-300 text-codemed-700 dark:text-neutral-100 font-bold rounded-lg
                            hover:bg-green-200 hover:shadow-brand
                            active:bg-green-400 transition-all duration-200
                            disabled:opacity-50 disabled:cursor-not-allowed

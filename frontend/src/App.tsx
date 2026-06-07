@@ -19,6 +19,7 @@ import UsersPage from './pages/Settings/UsersPage';
 import AlertsPage from './pages/Settings/AlertsPage';
 import HelpdeskStagesPage from './pages/Settings/HelpdeskStagesPage';
 import PermissionsPage from './pages/Settings/PermissionsPage';
+import FeriadosPage from './pages/Settings/FeriadosPage';
 import RobosPage from './pages/Robos/RobosPage';
 import HelpdeskKanban from './pages/Helpdesk/HelpdeskKanban';
 import HelpdeskDashboard from './pages/Helpdesk/HelpdeskDashboard';
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="settings/alerts" element={<AlertsPage />} />
           <Route path="settings/helpdesk-stages" element={<HelpdeskStagesPage />} />
           <Route path="settings/permissions" element={<PermissionsPage />} />
+          <Route path="settings/feriados" element={<FeriadosPage />} />
           <Route path="robos" element={<RobosPage />} />
         </Route>
       </Routes>

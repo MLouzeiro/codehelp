@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { env } from '../../config/env';
+import { ehFeriado } from '../feriados/feriados.service';
 
 type AiProvider = 'claude' | 'local';
 
@@ -47,6 +48,9 @@ async function robotPodeExecutar(slug: string): Promise<boolean> {
     const robot = await prisma.robot.findUnique({ where: { slug } });
     if (!robot) return true;
     if (!robot.ativo) return false;
+
+    const isHoliday = await ehFeriado(new Date());
+    if (isHoliday) return false;
 
     return dentroDoHorario({
       ativo: robot.horarioAtivo,

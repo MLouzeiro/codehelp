@@ -139,7 +139,7 @@ export default function OpportunityPipeline() {
           >
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-sm">{stageLabels[stage.etapa] || stage.etapa}</h3>
-              <span className="badge bg-white/80">{stage.total}</span>
+              <span className="badge bg-white dark:bg-[#1A2222]/80">{stage.total}</span>
             </div>
             <div className="space-y-2 min-h-[60px]">
               {stage.items.map((opp: any) => (
@@ -148,7 +148,7 @@ export default function OpportunityPipeline() {
                   draggable={canMove(opp.id)}
                   onDragStart={(e) => onDragStart(e, opp.id)}
                   onDragEnd={onDragEnd}
-                  className={`bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow relative ${draggedId === opp.id ? 'opacity-50' : ''} ${canMove(opp.id) ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                  className={`bg-white dark:bg-[#1A2222] rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow relative ${draggedId === opp.id ? 'opacity-50' : ''} ${canMove(opp.id) ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-medium text-gray-900 flex-1">{opp.titulo}</p>
@@ -162,7 +162,7 @@ export default function OpportunityPipeline() {
                           <Target size={14} />
                         </button>
                         {openMenuId === opp.id && (
-                          <div className="absolute right-0 top-6 z-20 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[140px]" onMouseLeave={() => setOpenMenuId(null)}>
+                          <div className="absolute right-0 top-6 z-20 bg-white dark:bg-[#1A2222] rounded-lg shadow-lg border border-gray-200 py-1 min-w-[140px]" onMouseLeave={() => setOpenMenuId(null)}>
                             {pipeline
                               .filter((s) => s.etapa !== stage.etapa)
                               .map((s) => (
