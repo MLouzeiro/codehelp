@@ -62,6 +62,18 @@ export async function createOrder(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: 'Cliente e tipo de serviço são obrigatórios' });
     }
 
+    const tecnicoId = tecnicoResponsavelId || req.user!.id;
+    const [clienteExiste, tecnicoExiste] = await Promise.all([
+      prisma.client.findUnique({ where: { id: clientId }, select: { id: true } }),
+      prisma.user.findUnique({ where: { id: tecnicoId }, select: { id: true } }),
+    ]);
+    if (!clienteExiste) {
+      return res.status(400).json({ error: 'Cliente não encontrado. Recarregue a lista e selecione novamente.' });
+    }
+    if (!tecnicoExiste) {
+      return res.status(400).json({ error: 'Técnico responsável não encontrado.' });
+    }
+
     const year = new Date().getFullYear();
     const count = await prisma.serviceOrder.count({
       where: { numeroOs: { startsWith: `OS-${year}-` } },
@@ -76,7 +88,7 @@ export async function createOrder(req: AuthRequest, res: Response) {
         descricaoServico,
         sistemasEnvolvidos: JSON.stringify(sistemasEnvolvidos || []),
         equipamentos,
-        tecnicoResponsavelId: tecnicoResponsavelId || req.user!.id,
+        tecnicoResponsavelId: tecnicoId,
         valorServico: valorServico ? parseFloat(valorServico) : null,
         dataPrevistaEntrega: dataPrevistaEntrega ? new Date(dataPrevistaEntrega) : null,
         ticketId,
@@ -87,7 +99,15 @@ export async function createOrder(req: AuthRequest, res: Response) {
       include: { client: true, tecnicoResponsavel: { select: { name: true } } },
     });
     return res.status(201).json(order);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2003') {
+      const field = error?.meta?.field_name || 'referência';
+      return res.status(400).json({ error: `Referência inválida em ${field}. Recarregue os dados e tente novamente.` });
+    }
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Registro relacionado não encontrado.' });
+    }
+    console.error('Erro ao criar OS:', error);
     return res.status(500).json({ error: 'Erro ao criar OS' });
   }
 }
