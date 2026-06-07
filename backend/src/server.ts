@@ -22,6 +22,7 @@ import kbRoutes from './modules/kb/kb.routes';
 import csatRoutes from './modules/csat/csat.routes';
 import automationsRoutes from './modules/automations/automations.routes';
 import notificacoesRoutes from './modules/notificacoes/notificacoes.routes';
+import permissionsRoutes from './modules/permissions/permissions.routes';
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use('/api/kb', kbRoutes);
 app.use('/api/csat', csatRoutes);
 app.use('/api/automations', automationsRoutes);
 app.use('/api/notificacoes', notificacoesRoutes);
+app.use('/api/permissions', permissionsRoutes);
 
 app.use('/storage', express.static(path.resolve(__dirname, '../storage')));
 

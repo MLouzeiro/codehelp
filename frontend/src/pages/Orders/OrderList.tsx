@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { Plus, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useCan } from '../../services/useCan';
 
 const LIMIT = 20;
 
@@ -12,6 +13,7 @@ export default function OrderList() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const canCreate = useCan('order', 'create');
   const totalPages = Math.ceil(total / LIMIT);
 
   useEffect(() => { loadOrders(); }, [statusFilter, page]);
@@ -44,9 +46,11 @@ export default function OrderList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold text-codemed-700">Ordens de Serviço</h1><p className="text-neutral-500">{total} OS registradas</p></div>
-        <button onClick={() => navigate('/app/orders/new')} className="btn-primary flex items-center gap-2">
-          <Plus size={18} /> Nova OS
-        </button>
+        {canCreate && (
+          <button onClick={() => navigate('/app/orders/new')} className="btn-primary flex items-center gap-2">
+            <Plus size={18} /> Nova OS
+          </button>
+        )}
       </div>
 
       <div className="flex gap-3">

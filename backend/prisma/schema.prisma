@@ -534,3 +534,18 @@ model AutomationRule {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @default(now())
 }
+
+/// Permissao por role (override da matriz padrao)
+/// Se `granted` e true, libera; se e false, nega; se nao existe registro, usa default do codigo.
+model RolePermission {
+  id        String   @id @default(uuid())
+  role      String
+  resource  String
+  action    String
+  granted   Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@unique([role, resource, action])
+  @@index([role])
+}
