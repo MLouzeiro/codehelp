@@ -45,7 +45,7 @@ export default function OrderList() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold text-codemed-700 dark:text-neutral-100">Ordens de Serviço</h1><p className="text-neutral-500 dark:text-neutral-400">{total} OS registradas</p></div>
+        <div><h1 className="text-2xl font-bold text-codemed-700">Ordens de Serviço</h1><p className="text-neutral-500">{total} OS registradas</p></div>
         {canCreate && (
           <button onClick={() => navigate('/app/orders/new')} className="btn-primary flex items-center gap-2">
             <Plus size={18} /> Nova OS
@@ -76,38 +76,38 @@ export default function OrderList() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-codemed-700 dark:text-neutral-100">{order.numeroOs}</span>
+                    <span className="font-semibold text-codemed-700">{order.numeroOs}</span>
                     {statusBadge(order.status)}
                   </div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">{order.client?.razaoSocial}</p>
+                  <p className="text-sm text-neutral-500">{order.client?.razaoSocial}</p>
                   <p className="text-xs text-neutral-400">{order.tipoServico} • {order.tecnicoResponsavel?.name}</p>
                 </div>
               </div>
               <div className="text-right text-sm">
-                {order.valorServico && <p className="font-medium text-codemed-700 dark:text-neutral-100">R$ {order.valorServico}</p>}
+                {order.valorServico && <p className="font-medium text-codemed-700">R$ {order.valorServico}</p>}
                 <p className="text-xs text-neutral-400">{new Date(order.dataEmissao).toLocaleDateString('pt-BR')}</p>
                 {order.signature?.assinadoEm && <span className="badge bg-green-100 text-green-700 text-xs mt-1 inline-block">Assinada</span>}
               </div>
             </div>
           </div>
         ))}
-        {!loading && orders.length === 0 && <div className="text-center py-12 text-neutral-500 dark:text-neutral-400">Nenhuma OS encontrada</div>}
+        {!loading && orders.length === 0 && <div className="text-center py-12 text-neutral-500">Nenhuma OS encontrada</div>}
       </div>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="w-9 h-9 rounded-lg border border-neutral-200 dark:border-neutral-700 flex items-center justify-center hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed">
+            className="w-9 h-9 rounded-lg border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed">
             <ChevronLeft size={16} />
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <button key={p} onClick={() => setPage(p)}
-              className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${p === page ? 'bg-green-500 text-white' : 'border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}>
+              className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${p === page ? 'bg-green-500 text-white' : 'border border-neutral-200 hover:bg-neutral-50'}`}>
               {p}
             </button>
           ))}
           <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="w-9 h-9 rounded-lg border border-neutral-200 dark:border-neutral-700 flex items-center justify-center hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed">
+            className="w-9 h-9 rounded-lg border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed">
             <ChevronRight size={16} />
           </button>
         </div>

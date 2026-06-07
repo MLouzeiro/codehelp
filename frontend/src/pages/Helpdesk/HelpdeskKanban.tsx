@@ -331,7 +331,7 @@ export default function HelpdeskKanban() {
           <h1 className="text-2xl font-bold text-navy-900 flex items-center gap-2">
             <Stethoscope className="text-emerald-600" size={24} /> Helpdesk
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 text-sm">
+          <p className="text-neutral-500 text-sm">
             {totalTickets} chamados ativos • {data.contagemEtapas.fila || 0} na fila • {data.contagemEtapas.em_atendimento || 0} em atendimento
           </p>
         </div>
@@ -342,7 +342,7 @@ export default function HelpdeskKanban() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filtrar cards (nome, msg, cliente...)"
-            className="pl-8 pr-3 py-1.5 text-xs border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none w-72"
+            className="pl-8 pr-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none w-72"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -356,7 +356,7 @@ export default function HelpdeskKanban() {
             <select
               value={orderBy}
               onChange={(e) => setOrderBy(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none appearance-none bg-white dark:bg-[#1A2222] cursor-pointer"
+              className="pl-8 pr-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none appearance-none bg-white cursor-pointer"
               title="Ordenar tickets dentro das colunas"
             >
               <option value="updatedAt_desc">Mais recente primeiro</option>
@@ -386,19 +386,19 @@ export default function HelpdeskKanban() {
                   key={coluna.slug}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, coluna.slug)}
-                  className={`w-72 flex-shrink-0 rounded-xl border-2 border-dashed bg-neutral-50 dark:bg-neutral-900/50 flex flex-col max-h-full transition-colors ${
+                  className={`w-72 flex-shrink-0 rounded-xl border-2 border-dashed bg-neutral-50/50 flex flex-col max-h-full transition-colors ${
                     isDropTarget ? 'border-emerald-300 bg-emerald-50/30' : 'border-transparent'
                   }`}
                   style={{ borderTopColor: coluna.cor, borderTopWidth: '3px' }}
                 >
-                  <div className="px-3 py-2.5 flex items-center gap-2 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-[#1A2222] rounded-t-xl">
+                  <div className="px-3 py-2.5 flex items-center gap-2 border-b border-neutral-200 bg-white rounded-t-xl">
                     <div className="w-7 h-7 rounded-md flex items-center justify-center text-white" style={{ backgroundColor: coluna.cor }}>
                       <Icone size={14} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-bold text-navy-900 truncate">{coluna.title}</h3>
                     </div>
-                    <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">{coluna.total}</span>
+                    <span className="text-xs font-bold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full">{coluna.total}</span>
                     {coluna.enviarAuto && (
                       <span title="Envia mensagem automática" className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-medium">AUTO</span>
                     )}
@@ -430,8 +430,8 @@ export default function HelpdeskKanban() {
                           onDragStart={(e) => handleDragStart(e, ticket.id, coluna.slug)}
                           onDragEnd={handleDragEnd}
                           onClick={() => setSelectedTicketId(ticket.id)}
-                          className={`bg-white dark:bg-[#1A2222] rounded-lg border p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${
-                            isSelected ? 'border-emerald-400 shadow-md ring-1 ring-emerald-200' : 'border-neutral-200 dark:border-neutral-700'
+                          className={`bg-white rounded-lg border p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${
+                            isSelected ? 'border-emerald-400 shadow-md ring-1 ring-emerald-200' : 'border-neutral-200'
                           } ${dragId === ticket.id ? 'opacity-50' : ''}`}
                         >
                           <div className="flex items-start gap-2 mb-1.5">
@@ -454,7 +454,7 @@ export default function HelpdeskKanban() {
                             <div className="relative" onClick={(e) => e.stopPropagation()}>
                               <button
                                 onClick={(e) => { e.stopPropagation(); setOpenCardMenuId(openCardMenuId === ticket.id ? null : ticket.id); }}
-                                className="p-0.5 hover:bg-neutral-100 dark:bg-neutral-800 rounded text-neutral-400 hover:text-neutral-700 dark:text-neutral-200"
+                                className="p-0.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700"
                                 title="Ações"
                               >
                                 <MoreVertical size={14} />
@@ -462,8 +462,8 @@ export default function HelpdeskKanban() {
                               {openCardMenuId === ticket.id && (
                                 <>
                                   <div className="fixed inset-0 z-30" onClick={() => setOpenCardMenuId(null)} />
-                                  <div className="absolute right-0 top-6 z-40 bg-white dark:bg-[#1A2222] border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg w-52 py-1 text-xs">
-                                    <div className="px-2.5 py-1.5 text-[10px] font-bold text-neutral-400 uppercase border-b border-neutral-100 dark:border-neutral-800">
+                                  <div className="absolute right-0 top-6 z-40 bg-white border border-neutral-200 rounded-lg shadow-lg w-52 py-1 text-xs">
+                                    <div className="px-2.5 py-1.5 text-[10px] font-bold text-neutral-400 uppercase border-b border-neutral-100">
                                       Mover para
                                     </div>
                                     {Object.values(data.board)
@@ -472,17 +472,17 @@ export default function HelpdeskKanban() {
                                         <button
                                           key={c.slug}
                                           onClick={() => { moverTicketDireto(ticket.id, c.slug); setOpenCardMenuId(null); }}
-                                          className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 dark:bg-neutral-900 flex items-center gap-2"
+                                          className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 flex items-center gap-2"
                                         >
                                           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.cor }} />
                                           {c.title}
                                         </button>
                                       ))}
-                                    <div className="border-t border-neutral-100 dark:border-neutral-800 my-1" />
+                                    <div className="border-t border-neutral-100 my-1" />
                                     {!ticket.assigneeId && (
                                       <button
                                         onClick={() => { handleAssignToMe(ticket.id); setOpenCardMenuId(null); }}
-                                        className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 dark:bg-neutral-900 flex items-center gap-2 text-emerald-700"
+                                        className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 flex items-center gap-2 text-emerald-700"
                                       >
                                         <UserPlus size={12} /> Atribuir a mim
                                       </button>
@@ -491,13 +491,13 @@ export default function HelpdeskKanban() {
                                       <>
                                         <button
                                           onClick={() => { setSelectedTicketId(ticket.id); setOpenCardMenuId(null); setTimeout(() => abrirModalAbrirChamado(), 100); }}
-                                          className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 dark:bg-neutral-900 flex items-center gap-2 text-emerald-700"
+                                          className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 flex items-center gap-2 text-emerald-700"
                                         >
                                           <Plus size={12} /> Abrir Chamado
                                         </button>
                                         <button
                                           onClick={() => { descartarTicketDireto(ticket); setOpenCardMenuId(null); }}
-                                          className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 dark:bg-neutral-900 flex items-center gap-2 text-zinc-700"
+                                          className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 flex items-center gap-2 text-zinc-700"
                                         >
                                           <X size={12} /> Descartar (sem msg)
                                         </button>
@@ -505,7 +505,7 @@ export default function HelpdeskKanban() {
                                     )}
                                     <button
                                       onClick={() => { setSelectedTicketId(ticket.id); setOpenCardMenuId(null); }}
-                                      className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 dark:bg-neutral-900 flex items-center gap-2"
+                                      className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 flex items-center gap-2"
                                     >
                                       <FileText size={12} /> Ver detalhes
                                     </button>
@@ -516,27 +516,27 @@ export default function HelpdeskKanban() {
                           </div>
 
                           {ticket.assunto && (
-                            <p className="text-xs text-neutral-700 dark:text-neutral-200 font-medium mb-1.5 line-clamp-2">{ticket.assunto}</p>
+                            <p className="text-xs text-neutral-700 font-medium mb-1.5 line-clamp-2">{ticket.assunto}</p>
                           )}
 
                           <div className="flex flex-wrap gap-1 mb-1.5">
                             {ticket.categoria && (
-                              <span className="text-[10px] text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">
+                              <span className="text-[10px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded">
                                 {ticket.categoria.replace(/_/g, ' ')}
                               </span>
                             )}
-                            <span className="text-[10px] text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                            <span className="text-[10px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded flex items-center gap-0.5">
                               <MessageSquare size={9} /> {ticket._count?.messages || 0}
                             </span>
                           </div>
 
                           {ticket.lastMessage?.content && (
-                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-1 italic mb-1.5">
+                            <p className="text-[11px] text-neutral-500 line-clamp-1 italic mb-1.5">
                               {ticket.lastMessage.fromMe ? '↪ ' : '↩ '}{ticket.lastMessage.content}
                             </p>
                           )}
 
-                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-neutral-100 dark:border-neutral-800">
+                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-neutral-100">
                             {ticket.assignee ? (
                               <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-medium truncate max-w-[100px]">
                                 {ticket.assignee.name}
@@ -569,8 +569,8 @@ export default function HelpdeskKanban() {
         </div>
 
         {selectedTicketId && ticketDetail && (
-          <div className="w-[420px] flex-shrink-0 bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 flex flex-col">
-            <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
+          <div className="w-[420px] flex-shrink-0 bg-white rounded-xl border border-neutral-200 flex flex-col">
+            <div className="px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                   <User size={14} className="text-emerald-700" />
@@ -579,23 +579,23 @@ export default function HelpdeskKanban() {
                   <h3 className="text-sm font-bold text-navy-900 truncate">
                     {ticketDetail.ticket.client?.razaoSocial || ticketDetail.ticket.contactName || 'Sem nome'}
                   </h3>
-                  <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-mono">
+                  <p className="text-[10px] text-neutral-500 font-mono">
                     {ticketDetail.ticket.protocolo}
                     {ticketDetail.ticket.contactPhone && <span className="ml-2"><Phone size={8} className="inline" /> {ticketDetail.ticket.contactPhone}</span>}
                   </p>
                 </div>
               </div>
-              <button onClick={() => setSelectedTicketId(null)} className="p-1 hover:bg-neutral-100 dark:bg-neutral-800 rounded text-neutral-400">
+              <button onClick={() => setSelectedTicketId(null)} className="p-1 hover:bg-neutral-100 rounded text-neutral-400">
                 <X size={16} />
               </button>
             </div>
 
-            <div className="px-4 py-2 border-b border-neutral-200 dark:border-neutral-700 flex items-center gap-1.5 flex-wrap">
+            <div className="px-4 py-2 border-b border-neutral-200 flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] font-bold text-white px-2 py-1 rounded uppercase" style={{ backgroundColor: data.board[ticketDetail.ticket.etapa as EtapaSlug]?.cor || '#64748b' }}>
                 {data.board[ticketDetail.ticket.etapa as EtapaSlug]?.title || ticketDetail.ticket.etapa}
               </span>
               {ticketDetail.ticket.categoria && (
-                <span className="text-[10px] text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 px-2 py-1 rounded font-medium flex items-center gap-0.5">
+                <span className="text-[10px] text-neutral-700 bg-neutral-100 px-2 py-1 rounded font-medium flex items-center gap-0.5">
                   <Tag size={9} /> {ticketDetail.ticket.categoria.replace(/_/g, ' ')}
                 </span>
               )}
@@ -630,7 +630,7 @@ export default function HelpdeskKanban() {
               )}
             </div>
 
-            <div className="px-4 py-2 border-b border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/30 flex items-center gap-2 text-[11px] text-neutral-500 dark:text-neutral-400">
+            <div className="px-4 py-2 border-b border-neutral-200 bg-neutral-50/30 flex items-center gap-2 text-[11px] text-neutral-500">
               <Clock size={11} />
               {ticketDetail.ticket.dataInicioAtendimento ? (
                 <span>Em atendimento há {formatarTempo(Math.floor((Date.now() - new Date(ticketDetail.ticket.dataInicioAtendimento).getTime()) / 60000))}</span>
@@ -644,7 +644,7 @@ export default function HelpdeskKanban() {
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 bg-neutral-50 dark:bg-neutral-900/30 min-h-0">
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 bg-neutral-50/30 min-h-0">
               {detailLoading && (
                 <div className="text-center py-2">
                   <RefreshCw size={14} className="animate-spin inline text-neutral-400" />
@@ -655,7 +655,7 @@ export default function HelpdeskKanban() {
                   <div className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-xs ${
                     msg.fromMe
                       ? 'bg-emerald-500 text-white rounded-br-sm'
-                      : 'bg-white dark:bg-[#1A2222] border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-50 rounded-bl-sm'
+                      : 'bg-white border border-neutral-200 text-neutral-900 rounded-bl-sm'
                   } ${msg.content?.startsWith('[INTERNO]') ? 'opacity-50 italic' : ''}`}>
                     {msg.content?.startsWith('[INTERNO]') ? (
                       <span>🔒 {msg.content.replace('[INTERNO]', '').trim()}</span>
@@ -671,13 +671,13 @@ export default function HelpdeskKanban() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="px-3 py-2 border-t border-neutral-200 dark:border-neutral-700 flex items-center gap-2">
+            <div className="px-3 py-2 border-t border-neutral-200 flex items-center gap-2">
               <input
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                 placeholder="Digite uma mensagem..."
-                className="flex-1 text-xs border border-neutral-200 dark:border-neutral-700 rounded-full px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                className="flex-1 text-xs border border-neutral-200 rounded-full px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
               />
               <button
                 onClick={sendMessage}
@@ -689,18 +689,18 @@ export default function HelpdeskKanban() {
             </div>
 
             {ticketDetail.stageEvents && ticketDetail.stageEvents.length > 0 && (
-              <details className="px-3 py-2 border-t border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/30">
-                <summary className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium cursor-pointer flex items-center gap-1">
+              <details className="px-3 py-2 border-t border-neutral-200 bg-neutral-50/30">
+                <summary className="text-[10px] text-neutral-500 font-medium cursor-pointer flex items-center gap-1">
                   <History size={10} /> Histórico de movimentações ({ticketDetail.stageEvents.length})
                 </summary>
                 <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto">
                   {ticketDetail.stageEvents.map((ev: any) => (
-                    <div key={ev.id} className="text-[10px] text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5">
+                    <div key={ev.id} className="text-[10px] text-neutral-600 flex items-center gap-1.5">
                       <ArrowRight size={9} className="text-neutral-400" />
                       <span className="font-medium">{ev.etapaAnterior || 'novo'}</span>
                       <span>→</span>
                       <span className="font-bold text-navy-900">{ev.etapaNova}</span>
-                      {ev.usuario && <span className="text-neutral-500 dark:text-neutral-400">por {ev.usuario.name}</span>}
+                      {ev.usuario && <span className="text-neutral-500">por {ev.usuario.name}</span>}
                       <span className="ml-auto text-neutral-400">
                         {new Date(ev.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                       </span>
@@ -715,12 +715,12 @@ export default function HelpdeskKanban() {
 
       {showAssignModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => setShowAssignModal(false)}>
-          <div className="bg-white dark:bg-[#1A2222] rounded-xl p-5 w-full max-w-md mx-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl p-5 w-full max-w-md mx-4 space-y-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-navy-900 flex items-center gap-2"><UserPlus size={16} /> Atribuir Analista</h3>
-              <button onClick={() => setShowAssignModal(false)} className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-300"><X size={18} /></button>
+              <button onClick={() => setShowAssignModal(false)} className="text-neutral-400 hover:text-neutral-600"><X size={18} /></button>
             </div>
-            <select value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className="w-full text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2.5">
+            <select value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5">
               <option value="">Selecione um analista</option>
               {agents.map((a) => <option key={a.id} value={a.id}>{a.name} — {a.role}</option>)}
             </select>
@@ -731,31 +731,31 @@ export default function HelpdeskKanban() {
 
       {showAbrirChamado && ticketDetail?.ticket && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => !abrirSaving && setShowAbrirChamado(false)}>
-          <div className="bg-white dark:bg-[#1A2222] rounded-xl p-5 w-full max-w-md mx-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl p-5 w-full max-w-md mx-4 space-y-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-navy-900 flex items-center gap-2"><Plus size={16} className="text-emerald-600" /> Abrir Chamado</h3>
-              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-300"><X size={18} /></button>
+              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="text-neutral-400 hover:text-neutral-600"><X size={18} /></button>
             </div>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            <p className="text-xs text-neutral-500">
               Ticket #{ticketDetail.ticket.id.slice(0, 8)} • {ticketDetail.ticket.contactName} ({ticketDetail.ticket.contactPhone})
             </p>
             <div>
-              <label className="text-xs font-medium text-neutral-700 dark:text-neutral-200 block mb-1">Assunto *</label>
+              <label className="text-xs font-medium text-neutral-700 block mb-1">Assunto *</label>
               <input
                 type="text"
                 value={abrirChamado.assunto}
                 onChange={(e) => setAbrirChamado({ ...abrirChamado, assunto: e.target.value })}
                 placeholder="Ex: Erro no sistema de notas fiscais"
-                className="w-full text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-xs font-medium text-neutral-700 dark:text-neutral-200 block mb-1">Categoria</label>
+                <label className="text-xs font-medium text-neutral-700 block mb-1">Categoria</label>
                 <select
                   value={abrirChamado.categoria}
                   onChange={(e) => setAbrirChamado({ ...abrirChamado, categoria: e.target.value })}
-                  className="w-full text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2"
+                  className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2"
                 >
                   <option value="">—</option>
                   <option value="suporte_tecnico">Suporte técnico</option>
@@ -766,11 +766,11 @@ export default function HelpdeskKanban() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-700 dark:text-neutral-200 block mb-1">Prioridade</label>
+                <label className="text-xs font-medium text-neutral-700 block mb-1">Prioridade</label>
                 <select
                   value={abrirChamado.prioridade}
                   onChange={(e) => setAbrirChamado({ ...abrirChamado, prioridade: e.target.value })}
-                  className="w-full text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2"
+                  className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2"
                 >
                   <option value="baixa">Baixa</option>
                   <option value="media">Média</option>
@@ -780,27 +780,27 @@ export default function HelpdeskKanban() {
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-neutral-700 dark:text-neutral-200 block mb-1">Tipo</label>
+              <label className="text-xs font-medium text-neutral-700 block mb-1">Tipo</label>
               <input
                 type="text"
                 value={abrirChamado.tipo}
                 onChange={(e) => setAbrirChamado({ ...abrirChamado, tipo: e.target.value })}
                 placeholder="Ex: Suporte N1, Atendimento comercial"
-                className="w-full text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2"
+                className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-neutral-700 dark:text-neutral-200 block mb-1">Observações</label>
+              <label className="text-xs font-medium text-neutral-700 block mb-1">Observações</label>
               <textarea
                 value={abrirChamado.observacoes}
                 onChange={(e) => setAbrirChamado({ ...abrirChamado, observacoes: e.target.value })}
                 rows={3}
                 placeholder="Notas internas para o atendente"
-                className="w-full text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2 resize-none"
+                className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 resize-none"
               />
             </div>
             <div className="flex gap-2 pt-2">
-              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="flex-1 px-4 py-2 text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:bg-neutral-900 disabled:opacity-50">
+              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="flex-1 px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50">
                 Cancelar
               </button>
               <button

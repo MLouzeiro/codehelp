@@ -156,14 +156,14 @@ export default function HelpdeskMetrics() {
           <h1 className="text-2xl font-bold text-navy-900 flex items-center gap-2">
             <BarChart3 className="text-emerald-600" size={24} /> Métricas do Helpdesk
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 text-sm flex items-center gap-1.5">
+          <p className="text-neutral-500 text-sm flex items-center gap-1.5">
             <Calendar size={12} />
             {new Date(data.periodo.inicio).toLocaleDateString('pt-BR')} até{' '}
             {new Date(data.periodo.fim).toLocaleDateString('pt-BR')}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex bg-white dark:bg-[#1A2222] border border-neutral-200 dark:border-neutral-700 rounded-lg p-0.5">
+          <div className="flex bg-white border border-neutral-200 rounded-lg p-0.5">
             {([7, 30, 90] as Periodo[]).map((p) => (
               <button
                 key={p}
@@ -171,7 +171,7 @@ export default function HelpdeskMetrics() {
                 className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
                   periodo === p
                     ? 'bg-emerald-100 text-emerald-700'
-                    : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:bg-neutral-900'
+                    : 'text-neutral-600 hover:bg-neutral-50'
                 }`}
               >
                 {p}d
@@ -186,78 +186,78 @@ export default function HelpdeskMetrics() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
               <Inbox size={18} className="text-amber-600" />
             </div>
-            <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Backlog</span>
+            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Backlog</span>
           </div>
           <p className="text-3xl font-bold text-navy-900">{formatarNumero(data.backlog.total)}</p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Tickets abertos agora</p>
+          <p className="text-xs text-neutral-500 mt-1">Tickets abertos agora</p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center">
               <CheckCircle size={18} className="text-emerald-600" />
             </div>
-            <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">SLA</span>
+            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">SLA</span>
           </div>
           <p className="text-3xl font-bold text-navy-900">
             {data.sla.total > 0 ? `${data.sla.compliancePercentual}%` : '—'}
           </p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+          <p className="text-xs text-neutral-500 mt-1">
             {data.sla.noPrazo} no prazo • {data.sla.violados} violados
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
               <Target size={18} className="text-blue-600" />
             </div>
-            <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">FCR</span>
+            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">FCR</span>
           </div>
           <p className="text-3xl font-bold text-navy-900">{data.fcr.percentual}%</p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+          <p className="text-xs text-neutral-500 mt-1">
             {data.fcr.primeiraResolucao} sem escalonamento
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center">
               <Clock size={18} className="text-purple-600" />
             </div>
-            <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">MTTR</span>
+            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">MTTR</span>
           </div>
           <p className="text-3xl font-bold text-navy-900">{formatarMinutos(data.mttr.mediaMinutos)}</p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Tempo médio de resolução</p>
+          <p className="text-xs text-neutral-500 mt-1">Tempo médio de resolução</p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-cyan-100 flex items-center justify-center">
               <Zap size={18} className="text-cyan-600" />
             </div>
-            <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">MTFA</span>
+            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">MTFA</span>
           </div>
           <p className="text-3xl font-bold text-navy-900">{formatarMinutos(data.mtfa.mediaMinutos)}</p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Primeira resposta</p>
+          <p className="text-xs text-neutral-500 mt-1">Primeira resposta</p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-yellow-100 flex items-center justify-center">
               <Star size={18} className="text-yellow-600" />
             </div>
-            <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">CSAT</span>
+            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">CSAT</span>
           </div>
           <p className="text-3xl font-bold text-navy-900">
             {data.csat.totalRespostas > 0 ? data.csat.mediaNotas.toFixed(1) : '—'}
           </p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+          <p className="text-xs text-neutral-500 mt-1">
             {data.csat.totalRespostas} respostas ({data.csat.percentualResposta}%)
           </p>
         </div>
@@ -276,27 +276,27 @@ export default function HelpdeskMetrics() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
             <Activity size={16} className="text-emerald-600" /> MTTR detalhado
           </h3>
           <div className="space-y-2.5">
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-neutral-50 dark:bg-neutral-900">
-              <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-300">Média</span>
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-neutral-50">
+              <span className="text-xs font-semibold text-neutral-600">Média</span>
               <span className="text-sm font-bold text-navy-900">{formatarMinutos(data.mttr.mediaMinutos)}</span>
             </div>
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-neutral-50 dark:bg-neutral-900">
-              <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-300">Mediana</span>
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-neutral-50">
+              <span className="text-xs font-semibold text-neutral-600">Mediana</span>
               <span className="text-sm font-bold text-navy-900">{formatarMinutos(data.mttr.medianaMinutos)}</span>
             </div>
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-neutral-50 dark:bg-neutral-900">
-              <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-300">Percentil 95</span>
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-neutral-50">
+              <span className="text-xs font-semibold text-neutral-600">Percentil 95</span>
               <span className="text-sm font-bold text-amber-700">{formatarMinutos(data.mttr.p95Minutos)}</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
             <TrendingUp size={16} className="text-emerald-600" /> SLA no Período
           </h3>
@@ -306,12 +306,12 @@ export default function HelpdeskMetrics() {
                 <div className={`text-3xl font-bold px-3 py-1.5 rounded-lg ${corPorPercentual(data.sla.compliancePercentual)}`}>
                   {data.sla.compliancePercentual}%
                 </div>
-                <div className="flex-1 text-xs text-neutral-600 dark:text-neutral-300">
+                <div className="flex-1 text-xs text-neutral-600">
                   <p className="font-bold text-navy-900">{data.sla.noPrazo} tickets</p>
                   <p>entregues no prazo</p>
                 </div>
               </div>
-              <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-2.5 overflow-hidden">
+              <div className="w-full bg-neutral-100 rounded-full h-2.5 overflow-hidden">
                 <div
                   className="h-full bg-emerald-500 rounded-full transition-all"
                   style={{ width: `${data.sla.compliancePercentual}%` }}
@@ -324,7 +324,7 @@ export default function HelpdeskMetrics() {
           )}
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
             <Target size={16} className="text-emerald-600" /> First Call Resolution
           </h3>
@@ -332,7 +332,7 @@ export default function HelpdeskMetrics() {
             <div className={`text-3xl font-bold px-3 py-1.5 rounded-lg ${corPorPercentual(data.fcr.percentual)}`}>
               {data.fcr.percentual}%
             </div>
-            <div className="flex-1 text-xs text-neutral-600 dark:text-neutral-300">
+            <div className="flex-1 text-xs text-neutral-600">
               <p className="font-bold text-navy-900">{data.fcr.primeiraResolucao} tickets</p>
               <p>resolvidos sem escalonar</p>
             </div>
@@ -346,7 +346,7 @@ export default function HelpdeskMetrics() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
             <Inbox size={16} className="text-emerald-600" /> Backlog por Etapa
           </h3>
@@ -367,7 +367,7 @@ export default function HelpdeskMetrics() {
           )}
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
             <Activity size={16} className="text-emerald-600" /> Backlog por Prioridade
           </h3>
@@ -390,7 +390,7 @@ export default function HelpdeskMetrics() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
             <Users size={16} className="text-emerald-600" /> Backlog por Fila
           </h3>
@@ -413,7 +413,7 @@ export default function HelpdeskMetrics() {
           )}
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
             <CheckCircle size={16} className="text-emerald-600" /> SLA: No Prazo vs Violados
           </h3>
@@ -435,7 +435,7 @@ export default function HelpdeskMetrics() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+      <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
         <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
           <Users size={16} className="text-emerald-600" /> Performance por Agente
         </h3>
@@ -443,7 +443,7 @@ export default function HelpdeskMetrics() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-neutral-200 dark:border-neutral-700 text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                <tr className="border-b border-neutral-200 text-xs text-neutral-500 uppercase tracking-wider">
                   <th className="text-left py-2 px-3">Agente</th>
                   <th className="text-right py-2 px-3">Tickets</th>
                   <th className="text-right py-2 px-3">MTTR Médio</th>
@@ -452,7 +452,7 @@ export default function HelpdeskMetrics() {
               </thead>
               <tbody>
                 {data.porAgente.map((a) => (
-                  <tr key={a.usuarioId} className="border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:bg-neutral-900">
+                  <tr key={a.usuarioId} className="border-b border-neutral-100 hover:bg-neutral-50">
                     <td className="py-2 px-3 font-semibold text-navy-900">{a.nome}</td>
                     <td className="py-2 px-3 text-right font-mono">{a.ticketsAtendidos}</td>
                     <td className="py-2 px-3 text-right font-mono">{formatarMinutos(a.mttrMedioMin)}</td>
@@ -475,7 +475,7 @@ export default function HelpdeskMetrics() {
         )}
       </div>
 
-      <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+      <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
         <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
           <Tag size={16} className="text-emerald-600" /> Distribuição por Categoria
         </h3>

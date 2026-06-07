@@ -76,44 +76,44 @@ export default function ClientForm() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/app/crm')} className="w-9 h-9 rounded-lg border border-neutral-200 dark:border-neutral-700 flex items-center justify-center hover:bg-neutral-50 dark:bg-neutral-900 transition-colors">
-          <ArrowLeft size={18} className="text-neutral-600 dark:text-neutral-300" />
+        <button onClick={() => navigate('/app/crm')} className="w-9 h-9 rounded-lg border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 transition-colors">
+          <ArrowLeft size={18} className="text-neutral-600" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-codemed-700 dark:text-neutral-100">{isEdit ? 'Editar Cliente' : 'Novo Cliente'}</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">{isEdit ? 'Atualize os dados do cliente' : 'Cadastre um novo cliente'}</p>
+          <h1 className="text-2xl font-bold text-codemed-700">{isEdit ? 'Editar Cliente' : 'Novo Cliente'}</h1>
+          <p className="text-sm text-neutral-500">{isEdit ? 'Atualize os dados do cliente' : 'Cadastre um novo cliente'}</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-100 dark:border-neutral-800 shadow-sm p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-neutral-100 shadow-sm p-6 space-y-5">
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">Razão Social *</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Razão Social *</label>
             <input type="text" value={form.razaoSocial} onChange={(e) => update('razaoSocial', e.target.value)}
               className="input" required placeholder="Nome da empresa" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">Nome Fantasia</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Nome Fantasia</label>
             <input type="text" value={form.nomeFantasia} onChange={(e) => update('nomeFantasia', e.target.value)}
               className="input" placeholder="Nome fantasia" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">CNPJ/CPF</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">CNPJ/CPF</label>
             <input type="text" value={form.cnpjCpf} onChange={(e) => update('cnpjCpf', e.target.value)}
               className="input" placeholder="00.000.000/0001-00" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">Telefone</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Telefone</label>
             <input type="text" value={form.telefone} onChange={(e) => update('telefone', e.target.value)}
               className="input" placeholder="(99) 99999-9999" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">Email</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Email</label>
             <input type="email" value={form.email} onChange={(e) => update('email', e.target.value)}
               className="input" placeholder="email@exemplo.com" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">Segmento</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Segmento</label>
             <select value={form.segmento} onChange={(e) => update('segmento', e.target.value)} className="input">
               <option value="laboratorio">Laboratório</option>
               <option value="clinica">Clínica</option>
@@ -122,12 +122,12 @@ export default function ClientForm() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">Cidade</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Cidade</label>
             <input type="text" value={form.cidade} onChange={(e) => update('cidade', e.target.value)}
               className="input" placeholder="Cidade" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">Estado</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Estado</label>
             <select value={form.estado} onChange={(e) => update('estado', e.target.value)} className="input">
               <option value="">Selecione</option>
               {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map((uf) => (
@@ -136,7 +136,7 @@ export default function ClientForm() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-1">Status</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Status</label>
             <select value={form.status} onChange={(e) => update('status', e.target.value)} className="input">
               <option value="ativo">Ativo</option>
               <option value="inativo">Inativo</option>

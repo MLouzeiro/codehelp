@@ -129,8 +129,8 @@ export default function UsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-codemed-700 dark:text-neutral-100">Funcionários</h1>
-          <p className="text-neutral-500 dark:text-neutral-400">{users.length} usuários cadastrados</p>
+          <h1 className="text-2xl font-bold text-codemed-700">Funcionários</h1>
+          <p className="text-neutral-500">{users.length} usuários cadastrados</p>
         </div>
         <button onClick={openNew} className="btn-primary text-sm flex items-center gap-2">
           <Plus size={16} /> Novo Funcionário
@@ -152,7 +152,7 @@ export default function UsersPage() {
           users.map((u) => {
             const roleCfg = ROLE_CONFIG[u.role] || ROLE_CONFIG.tecnico;
             return (
-              <div key={u.id} className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-100 dark:border-neutral-800 shadow-sm p-5 hover:shadow-md transition-shadow">
+              <div key={u.id} className="bg-white rounded-xl border border-neutral-100 shadow-sm p-5 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
@@ -162,11 +162,11 @@ export default function UsersPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-codemed-700 dark:text-neutral-100">{u.name}</span>
+                        <span className="font-semibold text-codemed-700">{u.name}</span>
                         <span className={`badge ${roleCfg.color}`}>{roleCfg.label}</span>
                         {!u.active && <span className="badge bg-red-100 text-red-700">Inativo</span>}
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400">
+                      <div className="flex items-center gap-3 text-xs text-neutral-500">
                         <span className="flex items-center gap-1"><Mail size={12} /> {u.email}</span>
                         {u.phone && <span className="flex items-center gap-1"><Phone size={12} /> {u.phone}</span>}
                       </div>
@@ -187,13 +187,13 @@ export default function UsersPage() {
                 </div>
 
                 {roleInfo === u.id && (
-                  <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-                    <p className="text-xs font-semibold text-codemed-700 dark:text-neutral-100 mb-2 uppercase tracking-wider">
+                  <div className="mt-4 pt-4 border-t border-neutral-100">
+                    <p className="text-xs font-semibold text-codemed-700 mb-2 uppercase tracking-wider">
                       Permissões de {roleCfg.label}
                     </p>
                     <div className="grid grid-cols-2 gap-1.5">
                       {roleCfg.permissions.map((perm, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+                        <div key={i} className="flex items-center gap-2 text-xs text-neutral-600">
                           <Check size={12} className="text-green-400 flex-shrink-0" />
                           {perm}
                         </div>
@@ -209,54 +209,54 @@ export default function UsersPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setShowModal(false)}>
-          <div className="bg-white dark:bg-[#1A2222] rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-lg text-codemed-700 dark:text-neutral-100">
+              <h3 className="font-semibold text-lg text-codemed-700">
                 {editingId ? 'Editar Funcionário' : 'Novo Funcionário'}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-300 p-1">
+              <button onClick={() => setShowModal(false)} className="text-neutral-400 hover:text-neutral-600 p-1">
                 <X size={20} />
               </button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">Nome completo</label>
+                <label className="text-xs font-medium text-neutral-500 mb-1 block">Nome completo</label>
                 <input type="text" placeholder="Ex: João Silva" value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })} className="input" />
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">Email</label>
+                <label className="text-xs font-medium text-neutral-500 mb-1 block">Email</label>
                 <input type="email" placeholder="Ex: joao@exemplo.com" value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })} className="input" />
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">Telefone (opcional)</label>
+                <label className="text-xs font-medium text-neutral-500 mb-1 block">Telefone (opcional)</label>
                 <input type="text" placeholder="Ex: 5511999999999" value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input" />
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">
+                <label className="text-xs font-medium text-neutral-500 mb-1 block">
                   {editingId ? 'Nova senha (deixe em branco para manter)' : 'Senha'}
                 </label>
                 <input type="password" placeholder={editingId ? 'Nova senha' : 'Mínimo 6 caracteres'} value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })} className="input" />
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">Perfil de acesso</label>
+                <label className="text-xs font-medium text-neutral-500 mb-1 block">Perfil de acesso</label>
                 <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  className="input appearance-none bg-white dark:bg-[#1A2222]">
+                  className="input appearance-none bg-white">
                   {Object.entries(ROLE_CONFIG).map(([key, cfg]) => (
                     <option key={key} value={key}>{cfg.label}</option>
                   ))}
                 </select>
-                <div className="mt-2 bg-neutral-50 dark:bg-neutral-900 rounded-lg p-3">
-                  <p className="text-xs font-medium text-codemed-700 dark:text-neutral-100 mb-1.5">
+                <div className="mt-2 bg-neutral-50 rounded-lg p-3">
+                  <p className="text-xs font-medium text-codemed-700 mb-1.5">
                     {ROLE_CONFIG[form.role]?.label} pode:
                   </p>
                   <div className="space-y-1">
                     {ROLE_CONFIG[form.role]?.permissions.map((perm, i) => (
-                      <div key={i} className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-300">
+                      <div key={i} className="flex items-center gap-1.5 text-xs text-neutral-600">
                         <Check size={10} className="text-green-400 flex-shrink-0" />
                         {perm}
                       </div>

@@ -88,13 +88,13 @@ export default function KanbanPage() {
             onDrop={() => { if (dragItem) { updateStatus(dragItem, status); setDragItem(null); } }}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-sm text-gray-700">{column.title}</h3>
-              <span className="text-xs text-gray-400 bg-white dark:bg-[#1A2222] px-2 py-0.5 rounded-full">{column.items.length}</span>
+              <span className="text-xs text-gray-400 bg-white px-2 py-0.5 rounded-full">{column.items.length}</span>
             </div>
             <div className="space-y-2 min-h-[100px]">
               {column.items.map((task: any) => (
                 <div key={task.id} draggable
                   onDragStart={() => setDragItem(task.id)}
-                  className="bg-white dark:bg-[#1A2222] rounded-lg p-3 shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow transition-shadow">
+                  className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow transition-shadow">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-medium text-gray-900 flex-1">{task.titulo}</p>
                     <span className={`badge text-xs ${priorityColors[task.prioridade] || ''}`}>{task.prioridade}</span>

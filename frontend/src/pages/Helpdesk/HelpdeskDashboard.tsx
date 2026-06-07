@@ -69,7 +69,7 @@ export default function HelpdeskDashboard() {
           <h1 className="text-2xl font-bold text-navy-900 flex items-center gap-2">
             <Activity className="text-emerald-600" size={24} /> Painel do Helpdesk
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 text-sm flex items-center gap-2">
+          <p className="text-neutral-500 text-sm flex items-center gap-2">
             <Circle size={8} className="text-emerald-500 fill-emerald-500 animate-pulse" />
             Tempo real • última atualização: {ultimaAtualizacao.toLocaleTimeString('pt-BR')}
           </p>
@@ -78,7 +78,7 @@ export default function HelpdeskDashboard() {
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
             className={`text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors ${
-              autoRefresh ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'
+              autoRefresh ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-600'
             }`}
           >
             <Activity size={12} /> {autoRefresh ? 'Auto-refresh ON' : 'Pausado'}
@@ -90,50 +90,50 @@ export default function HelpdeskDashboard() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
               <Inbox size={18} className="text-amber-600" />
             </div>
-            <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Na fila</span>
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Na fila</span>
           </div>
           <p className="text-3xl font-bold text-navy-900">{data.filaEspera}</p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Aguardando triagem</p>
+          <p className="text-xs text-neutral-500 mt-1">Aguardando triagem</p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center">
               <Headphones size={18} className="text-emerald-600" />
             </div>
-            <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Em atendimento</span>
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Em atendimento</span>
           </div>
           <p className="text-3xl font-bold text-navy-900">{data.emAtendimento.length}</p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Sendo resolvidos agora</p>
+          <p className="text-xs text-neutral-500 mt-1">Sendo resolvidos agora</p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
               <CheckCircle size={18} className="text-blue-600" />
             </div>
-            <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Concluídos hoje</span>
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Concluídos hoje</span>
           </div>
           <p className="text-3xl font-bold text-navy-900">{data.concluidosHoje}</p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Finalizados nas últimas 24h</p>
+          <p className="text-xs text-neutral-500 mt-1">Finalizados nas últimas 24h</p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center">
               <TrendingUp size={18} className="text-purple-600" />
             </div>
-            <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">TMA</span>
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">TMA</span>
           </div>
           <p className="text-3xl font-bold text-navy-900">
             {data.tempoMedioAtendimentoMin > 0 ? formatarTempo(data.tempoMedioAtendimentoMin) : '—'}
           </p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Tempo médio de atendimento</p>
+          <p className="text-xs text-neutral-500 mt-1">Tempo médio de atendimento</p>
         </div>
       </div>
 
@@ -148,7 +148,7 @@ export default function HelpdeskDashboard() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
             <Activity size={16} className="text-emerald-600" /> Chamados em Atendimento Agora
           </h3>
@@ -159,18 +159,18 @@ export default function HelpdeskDashboard() {
               {data.emAtendimento.map((t) => {
                 const critico = (t.tempoDecorridoMin || 0) > 30;
                 return (
-                  <div key={t.id} className={`p-3 rounded-lg border ${critico ? 'border-amber-300 bg-amber-50/50' : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/30'}`}>
+                  <div key={t.id} className={`p-3 rounded-lg border ${critico ? 'border-amber-300 bg-amber-50/50' : 'border-neutral-200 bg-neutral-50/30'}`}>
                     <div className="flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full ${critico ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500 animate-pulse'}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-navy-900 truncate">{t.cliente || t.contactName || 'Sem nome'}</p>
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">{t.protocolo}</p>
+                        <p className="text-xs text-neutral-500 font-mono">{t.protocolo}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className={`text-sm font-bold ${critico ? 'text-amber-700' : 'text-emerald-700'}`}>
                           {formatarTempo(t.tempoDecorridoMin || 0)}
                         </p>
-                        {t.assignee && <p className="text-[10px] text-neutral-500 dark:text-neutral-400">{t.assignee.name}</p>}
+                        {t.assignee && <p className="text-[10px] text-neutral-500">{t.assignee.name}</p>}
                       </div>
                     </div>
                   </div>
@@ -180,13 +180,13 @@ export default function HelpdeskDashboard() {
           )}
         </div>
 
-        <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
             <Users size={16} className="text-emerald-600" /> Equipe ({data.agentes.length})
           </h3>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {data.agentes.map((a) => (
-              <div key={a.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+              <div key={a.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-50 transition-colors">
                 <div className="relative">
                   <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm font-bold">
                     {a.name.charAt(0).toUpperCase()}
@@ -197,7 +197,7 @@ export default function HelpdeskDashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-navy-900 truncate">{a.name}</p>
-                  <p className="text-[10px] text-neutral-500 dark:text-neutral-400">{a.role}</p>
+                  <p className="text-[10px] text-neutral-500">{a.role}</p>
                 </div>
                 <div className="text-right">
                   <p className={`text-xs font-bold ${a.emAtendimento > 0 ? 'text-emerald-700' : 'text-neutral-400'}`}>
@@ -214,7 +214,7 @@ export default function HelpdeskDashboard() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+      <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
         <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
           <Stethoscope size={16} className="text-emerald-600" /> Distribuição por Etapa
         </h3>
@@ -225,7 +225,7 @@ export default function HelpdeskDashboard() {
             const maxTotal = Math.max(...data.etapas.map((e) => e.total || 0), 1);
             const percentual = Math.round((total / maxTotal) * 100);
             return (
-              <div key={etapa.slug} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 hover:shadow-md transition-shadow">
+              <div key={etapa.slug} className="rounded-lg border border-neutral-200 p-3 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-7 h-7 rounded-md flex items-center justify-center text-white" style={{ backgroundColor: etapa.cor }}>
                     <Icone size={14} />
@@ -233,7 +233,7 @@ export default function HelpdeskDashboard() {
                   <p className="text-xs font-bold text-navy-900 truncate flex-1">{etapa.nome}</p>
                 </div>
                 <p className="text-2xl font-bold text-navy-900">{total}</p>
-                <div className="mt-1.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+                <div className="mt-1.5 w-full bg-neutral-100 rounded-full h-1.5 overflow-hidden">
                   <div className="h-full rounded-full transition-all" style={{ width: `${percentual}%`, backgroundColor: etapa.cor }} />
                 </div>
                 {etapa.enviarAuto && (
@@ -245,7 +245,7 @@ export default function HelpdeskDashboard() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1A2222] rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 shadow-sm">
+      <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
         <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
           <MessageSquare size={16} className="text-emerald-600" /> Linha do Tempo — Últimas Movimentações
         </h3>
@@ -254,7 +254,7 @@ export default function HelpdeskDashboard() {
         ) : (
           <div className="space-y-2 max-h-80 overflow-y-auto">
             {data.ultimosMovimentos.map((ev) => (
-              <div key={ev.id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+              <div key={ev.id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-neutral-50 transition-colors border-b border-neutral-100 last:border-0">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -265,12 +265,12 @@ export default function HelpdeskDashboard() {
                       <span className="text-[10px] text-neutral-400 font-mono">{ev.ticket.protocolo}</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-neutral-600 dark:text-neutral-300 mt-0.5">
+                  <div className="flex items-center gap-1.5 text-[11px] text-neutral-600 mt-0.5">
                     <span className="capitalize">{ev.etapaAnterior || 'novo'}</span>
                     <ArrowRight size={10} className="text-neutral-400" />
                     <span className="font-bold text-navy-900 capitalize">{ev.etapaNova}</span>
                     <span className="text-neutral-400">•</span>
-                    <span className="text-neutral-500 dark:text-neutral-400">{ev.origem === 'manual' ? 'Manual' : 'Automático'}</span>
+                    <span className="text-neutral-500">{ev.origem === 'manual' ? 'Manual' : 'Automático'}</span>
                     {ev.usuario && <><span className="text-neutral-400">•</span><span>por {ev.usuario.name}</span></>}
                   </div>
                 </div>

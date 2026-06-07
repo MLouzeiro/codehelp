@@ -338,7 +338,7 @@ export default function WhatsAppPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <MessageSquare className="text-green-500" size={22} />
-            <h1 className="text-xl font-bold text-codemed-700 dark:text-neutral-100">WhatsApp</h1>
+            <h1 className="text-xl font-bold text-codemed-700">WhatsApp</h1>
           </div>
           <div className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${connected ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
             {connected ? <><Bluetooth size={12} /> Conectado</> : <><BluetoothOff size={12} /> Desconectado</>}
@@ -376,7 +376,7 @@ export default function WhatsAppPage() {
 
       {qrDataUrl && !connected && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => { setQrCode(null); setQrDataUrl(null); if (!connecting) setConnecting(false); }}>
-          <div className="bg-white dark:bg-[#1A2222] rounded-2xl p-6 shadow-xl text-center max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl p-6 shadow-xl text-center max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold text-lg text-gray-900 mb-1">Conectar WhatsApp</h3>
             <p className="text-sm text-gray-500 mb-4">Abra o WhatsApp no celular<br />Menu → WhatsApp Web → Escanear</p>
             <img src={qrDataUrl} alt="QR Code" className="mx-auto w-56 h-56" />
@@ -386,19 +386,19 @@ export default function WhatsAppPage() {
         </div>
       )}
 
-      <div className="flex-1 flex min-h-0 bg-white dark:bg-[#1A2222] rounded-xl border border-gray-200 overflow-hidden">
+      <div className="flex-1 flex min-h-0 bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="w-80 lg:w-96 flex-shrink-0 border-r border-gray-200 flex flex-col bg-gray-50/50">
-          <div className="p-3 border-b border-gray-200 bg-white dark:bg-[#1A2222] space-y-2">
+          <div className="p-3 border-b border-gray-200 bg-white space-y-2">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input type="text" placeholder="Pesquisar conversa..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none" />
+              <input type="text" placeholder="Pesquisar conversa..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none" />
             </div>
             <div className="relative">
               <ArrowUpDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <select
                 value={orderBy}
                 onChange={(e) => setOrderBy(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none appearance-none bg-white dark:bg-[#1A2222] cursor-pointer"
+                className="w-full pl-8 pr-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none appearance-none bg-white cursor-pointer"
               >
                 <option value="updatedAt_desc">Mais recente primeiro</option>
                 <option value="updatedAt_asc">Mais antigo primeiro</option>
@@ -424,7 +424,7 @@ export default function WhatsAppPage() {
                 const isSelected = ticket.id === selectedTicketId;
                 return (
                   <div key={ticket.id} onClick={() => handleSelectTicket(ticket)}
-                    className={`flex items-start gap-3 px-4 py-3 cursor-pointer border-b border-neutral-100 dark:border-neutral-800 transition-colors ${isSelected ? 'bg-green-50 border-l-2 border-l-green-500' : 'hover:bg-neutral-100 dark:bg-neutral-800'}`}>
+                    className={`flex items-start gap-3 px-4 py-3 cursor-pointer border-b border-neutral-100 transition-colors ${isSelected ? 'bg-green-50 border-l-2 border-l-green-500' : 'hover:bg-neutral-100'}`}>
                     <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                       <User size={18} className="text-green-500" />
                     </div>
@@ -453,7 +453,7 @@ export default function WhatsAppPage() {
         <div className="flex-1 flex flex-col">
           {selectedTicket ? (
             <>
-              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white dark:bg-[#1A2222] flex-shrink-0">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white flex-shrink-0">
                    <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center">
                      <User size={16} className="text-green-500" />
@@ -461,7 +461,7 @@ export default function WhatsAppPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium text-sm text-gray-900">{selectedTicket.contactName || selectedTicket.client?.razaoSocial || 'Desconhecido'}</h3>
-                        {selectedTicket.protocolo && <span className="text-[10px] font-mono text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">{selectedTicket.protocolo}</span>}
+                        {selectedTicket.protocolo && <span className="text-[10px] font-mono text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded">{selectedTicket.protocolo}</span>}
                       </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <span className="flex items-center gap-1"><Phone size={10} />{selectedTicket.contactPhone}</span>
@@ -480,12 +480,12 @@ export default function WhatsAppPage() {
                     </button>
                   )}
                   {!selectedTicket.protocolo && (
-                    <button onClick={handleDescartar} className="bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-colors font-medium flex items-center gap-1" title="Descartar (tira da fila sem mandar msg ao cliente)">
+                    <button onClick={handleDescartar} className="bg-neutral-100 text-neutral-700 text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-colors font-medium flex items-center gap-1" title="Descartar (tira da fila sem mandar msg ao cliente)">
                       <XCircle size={12} /> Descartar
                     </button>
                   )}
                   {selectedTicket.protocolo && selectedTicket.assigneeId && (
-                    <button onClick={abrirModalTransferir} className="bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-colors font-medium flex items-center gap-1" title="Transferir atendimento para outro usuario">
+                    <button onClick={abrirModalTransferir} className="bg-neutral-100 text-neutral-700 text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-colors font-medium flex items-center gap-1" title="Transferir atendimento para outro usuario">
                       <ArrowRightLeft size={12} /> Transferir
                     </button>
                   )}
@@ -530,7 +530,7 @@ export default function WhatsAppPage() {
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2 bg-gray-50/30">
                 {messages.map((msg: any) => (
                   <div key={msg.id} className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${msg.fromMe ? 'bg-green-500 text-white rounded-br-sm' : 'bg-white dark:bg-[#1A2222] border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-50 rounded-bl-sm'}`}>
+                    <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${msg.fromMe ? 'bg-green-500 text-white rounded-br-sm' : 'bg-white border border-neutral-200 text-neutral-900 rounded-bl-sm'}`}>
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                       <div className={`flex items-center gap-2 mt-1 ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
                         <span className={`text-[10px] ${msg.fromMe ? 'text-white/70' : 'text-gray-400'}`}>
@@ -547,15 +547,15 @@ export default function WhatsAppPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="px-5 py-2 bg-white dark:bg-[#1A2222] flex-shrink-0">
+              <div className="px-5 py-2 bg-white flex-shrink-0">
                 {sendError && <p className="text-xs text-red-600 mb-1 flex items-center gap-1"><AlertCircle size={12} /> {sendError}</p>}
                 {!connected && <p className="text-xs text-amber-600 mb-1 flex items-center gap-1"><AlertCircle size={12} /> WhatsApp desconectado — conecte-se para enviar mensagens</p>}
               </div>
-              <div className="flex items-center gap-2 px-5 py-3 border-t border-gray-200 bg-white dark:bg-[#1A2222] flex-shrink-0">
+              <div className="flex items-center gap-2 px-5 py-3 border-t border-gray-200 bg-white flex-shrink-0">
                 <input type="text" value={messageText} onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                   placeholder="Digite sua mensagem..."
-                  className="flex-1 px-4 py-2.5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none bg-neutral-50 dark:bg-neutral-900" />
+                  className="flex-1 px-4 py-2.5 text-sm border border-neutral-200 rounded-full focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none bg-neutral-50" />
                 <button onClick={sendMessage} disabled={!messageText.trim() || !connected}
                   className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center disabled:opacity-40 hover:bg-green-600 transition-colors">
                   <Send size={16} />
@@ -573,10 +573,10 @@ export default function WhatsAppPage() {
 
       {showNewTicket && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setShowNewTicket(false)}>
-          <div className="bg-white dark:bg-[#1A2222] rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-gray-900">Nova Conversa</h3>
-              <button onClick={() => setShowNewTicket(false)} className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-300 p-1"><X size={20} /></button>
+              <button onClick={() => setShowNewTicket(false)} className="text-neutral-400 hover:text-neutral-600 p-1"><X size={20} /></button>
             </div>
             <input type="text" placeholder="Nome do contato" value={newTicket.contactName} onChange={(e) => setNewTicket({ ...newTicket, contactName: e.target.value })} className="input w-full" />
             <input type="text" placeholder="WhatsApp (5511999999999)" value={newTicket.contactPhone} onChange={(e) => setNewTicket({ ...newTicket, contactPhone: e.target.value })} className="input w-full" />
@@ -588,10 +588,10 @@ export default function WhatsAppPage() {
 
       {showAbrirChamado && selectedTicket && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => !abrirSaving && setShowAbrirChamado(false)}>
-          <div className="bg-white dark:bg-[#1A2222] rounded-2xl p-6 shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-1">
               <h3 className="font-semibold text-gray-900">Abrir Chamado</h3>
-              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-300 p-1 disabled:opacity-50"><X size={20} /></button>
+              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>
             </div>
             <p className="text-xs text-gray-500 mb-4">
               {selectedTicket.protocolo
@@ -667,7 +667,7 @@ export default function WhatsAppPage() {
             </div>
 
             <div className="flex gap-2 mt-5">
-              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="flex-1 px-4 py-2 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50">Cancelar</button>
+              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="flex-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
               <button onClick={confirmarAbrirChamado} disabled={!abrirChamado.assunto.trim() || abrirSaving} className="flex-1 btn-primary disabled:opacity-50">
                 {abrirSaving ? 'Abrindo...' : selectedTicket.protocolo ? 'Salvar alteracoes' : 'Abrir Chamado'}
               </button>
@@ -678,10 +678,10 @@ export default function WhatsAppPage() {
 
       {showTransferir && selectedTicket && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => !transferirSaving && setShowTransferir(false)}>
-          <div className="bg-white dark:bg-[#1A2222] rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-gray-900">Transferir Atendimento</h3>
-              <button onClick={() => setShowTransferir(false)} disabled={transferirSaving} className="text-neutral-400 hover:text-neutral-600 dark:text-neutral-300 p-1 disabled:opacity-50"><X size={20} /></button>
+              <button onClick={() => setShowTransferir(false)} disabled={transferirSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">Transferir para</label>
@@ -707,7 +707,7 @@ export default function WhatsAppPage() {
               />
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setShowTransferir(false)} disabled={transferirSaving} className="flex-1 px-4 py-2 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50">Cancelar</button>
+              <button onClick={() => setShowTransferir(false)} disabled={transferirSaving} className="flex-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
               <button onClick={confirmarTransferir} disabled={!transferirPara || transferirSaving} className="flex-1 btn-primary disabled:opacity-50">
                 {transferirSaving ? 'Transferindo...' : 'Transferir'}
               </button>

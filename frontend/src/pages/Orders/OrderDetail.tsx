@@ -84,7 +84,7 @@ export default function OrderDetail() {
             <p className="text-xs text-gray-500 mb-1">Sistemas Envolvidos</p>
             <div className="flex gap-2 flex-wrap">
               {order.sistemasEnvolvidos.map((s: string) => (
-                <span key={s} className="badge bg-codemed-100 text-codemed-700 dark:text-neutral-100">{s}</span>
+                <span key={s} className="badge bg-codemed-100 text-codemed-700">{s}</span>
               ))}
             </div>
           </div>
@@ -119,7 +119,7 @@ export default function OrderDetail() {
           {order.signature.assinaturaBase64 && (
             <div className="mt-4">
               <p className="text-xs text-gray-500 mb-2">Assinatura</p>
-              <img src={order.signature.assinaturaBase64} alt="Assinatura" className="max-h-24 border border-gray-200 rounded-lg p-2 bg-white dark:bg-[#1A2222]" />
+              <img src={order.signature.assinaturaBase64} alt="Assinatura" className="max-h-24 border border-gray-200 rounded-lg p-2 bg-white" />
             </div>
           )}
         </div>

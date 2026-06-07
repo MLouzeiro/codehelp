@@ -86,7 +86,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex h-screen" style={{ backgroundColor: 'var(--bg-app)' }}>
+    <div className="flex h-screen bg-neutral-50">
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-30 w-64 bg-codemed-700 border-r border-codemed-100/20 transform transition-transform lg:translate-x-0 lg:static lg:inset-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
@@ -150,7 +150,7 @@ export default function Layout() {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 backdrop-blur-md border-b flex items-center justify-between px-4 lg:px-6" style={{ backgroundColor: 'var(--bg-sidebar)', borderColor: 'rgba(255,255,255,0.1)' }}>
+        <header className="h-16 bg-codemed-700/95 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4 lg:px-6">
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-white/60 hover:text-white">
             <Menu size={24} />
           </button>
@@ -159,9 +159,8 @@ export default function Layout() {
             onClick={toggleTheme}
             title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
             className="p-2 rounded-lg hover:bg-white/5 transition-colors mr-2"
-            style={{ color: 'rgba(255,255,255,0.7)' }}
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === 'dark' ? <Sun size={18} className="text-white/70" /> : <Moon size={18} className="text-white/70" />}
           </button>
           <div className="relative" ref={notifRef}>
             <button onClick={() => setNotifOpen(!notifOpen)} className="relative p-2 rounded-lg hover:bg-white/5 transition-colors">
@@ -229,7 +228,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-4 lg:p-6" style={{ backgroundColor: 'var(--bg-app)' }}>
+        <main className="flex-1 overflow-auto p-4 lg:p-6">
           <Outlet />
         </main>
       </div>

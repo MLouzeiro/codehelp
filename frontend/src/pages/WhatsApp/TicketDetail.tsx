@@ -70,7 +70,7 @@ export default function TicketDetail() {
         {ticket.serviceOrders?.length > 0 && (
           <div className="mt-2 flex gap-2 flex-wrap">
             {ticket.serviceOrders.map((os: any) => (
-              <span key={os.id} onClick={() => navigate(`/app/orders/${os.id}`)} className="badge bg-codemed-100 text-codemed-700 dark:text-neutral-100 cursor-pointer hover:bg-codemed-200">{os.numeroOs}</span>
+              <span key={os.id} onClick={() => navigate(`/app/orders/${os.id}`)} className="badge bg-codemed-100 text-codemed-700 cursor-pointer hover:bg-codemed-200">{os.numeroOs}</span>
             ))}
           </div>
         )}
@@ -79,7 +79,7 @@ export default function TicketDetail() {
       <div className="flex-1 overflow-y-auto space-y-2 mb-4 bg-gray-50 rounded-xl p-4">
         {ticket.messages?.map((msg: any) => (
           <div key={msg.id} className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[75%] rounded-lg px-4 py-2 ${msg.fromMe ? 'bg-codemed-600 text-white' : 'bg-white dark:bg-[#1A2222] border border-gray-200 text-gray-900'}`}>
+            <div className={`max-w-[75%] rounded-lg px-4 py-2 ${msg.fromMe ? 'bg-codemed-600 text-white' : 'bg-white border border-gray-200 text-gray-900'}`}>
               <p className="text-sm">{msg.content}</p>
               <p className={`text-xs mt-1 ${msg.fromMe ? 'text-codemed-200' : 'text-gray-400'}`}>
                 {msg.sentAt ? new Date(msg.sentAt).toLocaleTimeString('pt-BR') : ''}
