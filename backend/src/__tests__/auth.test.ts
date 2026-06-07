@@ -150,6 +150,7 @@ describe('Auth Controller — Task 2.1', () => {
         id: '550e8400-e29b-41d4-a716-446655440000',
         email: 'admin@codemed.com.br',
         role: 'admin',
+        isMaster: true,
         active: true,
         password: '',
         name: 'Admin',

@@ -11,8 +11,8 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@codemed.com.br' },
-    update: {},
-    create: { name: 'Admin Codemed', email: 'admin@codemed.com.br', password: adminPassword, role: 'admin' },
+    update: { isMaster: true },
+    create: { name: 'Admin Codemed', email: 'admin@codemed.com.br', password: adminPassword, role: 'admin', isMaster: true },
   });
 
   const gerente = await prisma.user.upsert({

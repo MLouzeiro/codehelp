@@ -90,6 +90,7 @@ export default function AutomationsPage() {
   const [regraAtual, setRegraAtual] = useState<AutomationRule | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
+  const [stages, setStages] = useState<Array<{ slug: string; nome: string; cor: string }>>([]);
 
   const [testForm, setTestForm] = useState(TEST_FORM_VAZIO);
   const [testResultado, setTestResultado] = useState<any>(null);
@@ -113,6 +114,10 @@ export default function AutomationsPage() {
   }, [filtroTrigger, filtroAtivo]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    api.get('/helpdesk/stages').then(({ data }) => setStages(data)).catch(() => {});
+  }, []);
 
   const abrirNova = () => {
     setForm({
@@ -503,7 +508,11 @@ export default function AutomationsPage() {
                                     }}
                                     className="input w-full text-xs">
                                     <option value="">—</option>
-                                    {p.options?.map((o) => <option key={o} value={o}>{o}</option>)}
+                                    {a.tipo === 'mudar_etapa' && p.key === 'etapa' ? (
+                                      stages.map((s) => <option key={s.slug} value={s.slug}>{s.nome} ({s.slug})</option>)
+                                    ) : (
+                                      p.options?.map((o) => <option key={o} value={o}>{o}</option>)
+                                    )}
                                   </select>
                                 ) : (
                                   <input type={p.type === 'number' ? 'number' : 'text'}

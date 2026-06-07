@@ -13,6 +13,7 @@ model User {
   email     String   @unique
   password  String
   role      String   @default("tecnico")
+  isMaster  Boolean  @default(false)
   phone     String?
   avatar    String?
   active    Boolean  @default(true)
@@ -348,6 +349,7 @@ model HelpdeskConfig {
   cor       String   @default("#3b82f6")
   icone     String   @default("inbox")
   ordem     Int      @default(0)
+  etapaInicial Boolean @default(false)
   autoMessage String?
   enviarAuto  Boolean  @default(false)
   notificarEquipe Boolean @default(false)

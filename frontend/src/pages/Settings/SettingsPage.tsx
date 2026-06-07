@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Bell, Shield, Settings2 } from 'lucide-react';
+import { Users, Bell, Inbox, Shield, Settings2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const location = useLocation();
 
   const links = [
     { path: '/app/settings/users', label: 'Usuários', icon: Users, desc: 'Gerenciar usuários e permissões' },
+    { path: '/app/settings/helpdesk-stages', label: 'Etapas do Helpdesk', icon: Inbox, desc: 'Criar, renomear, ativar ou desativar etapas (somente admin master)' },
     { path: '/app/settings/alerts', label: 'Alertas', icon: Bell, desc: 'Configurar alertas semanais e destinatários' },
   ];
 

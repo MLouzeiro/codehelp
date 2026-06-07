@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   role: 'admin' | 'vendedor' | 'gerente' | 'comercial' | 'tecnico';
+  isMaster?: boolean;
   phone?: string;
   active?: boolean;
   online?: boolean;

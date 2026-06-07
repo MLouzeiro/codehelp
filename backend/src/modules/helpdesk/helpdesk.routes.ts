@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../../shared/middleware/auth';
+import { authenticate, authorize, authorizeMaster } from '../../shared/middleware/auth';
 import {
   getKanban,
   getStatusBoard,
@@ -12,6 +12,15 @@ import {
   setAgentPresence,
   getTickets,
 } from './helpdesk.controller';
+import {
+  getStages,
+  getEtapaInicialSlug,
+  postStage,
+  putStage,
+  patchReorder,
+  deleteStageHandler,
+  restoreStageHandler,
+} from './stages.controller';
 import {
   getTicketSla,
   postProcessarAlertasSla,
@@ -37,6 +46,14 @@ router.post('/tickets/:id/move', moveTicketEtapa);
 router.patch('/tickets/:id/atribuir', atribuirTicket);
 router.get('/tickets/:id/history', getTicketHistory);
 router.post('/presence', setAgentPresence);
+
+router.get('/stages', getStages);
+router.get('/stages/inicial', getEtapaInicialSlug);
+router.post('/stages', authorizeMaster, postStage);
+router.put('/stages/:id', authorizeMaster, putStage);
+router.patch('/stages/reorder', authorizeMaster, patchReorder);
+router.delete('/stages/:id', authorizeMaster, deleteStageHandler);
+router.post('/stages/:id/restore', authorizeMaster, restoreStageHandler);
 
 router.get('/tickets/:id/sla', getTicketSla);
 router.post('/tickets/:id/atribuir-sla', postAtribuirSla);
