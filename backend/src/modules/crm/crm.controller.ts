@@ -21,9 +21,8 @@ export async function listClients(req: AuthRequest, res: Response) {
       ];
     }
 
-    if (req.user?.role === 'tecnico' && !search) {
-      where.responsavelTecnicoId = req.user.id;
-    }
+    // Filtro por responsavel so aplica quando explicitamente solicitado
+    // Tecnicos veem TODOS os clientes (nao apenas os atribuidos a eles)
 
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
     const [clients, total] = await Promise.all([

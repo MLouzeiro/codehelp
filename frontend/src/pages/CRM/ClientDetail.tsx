@@ -92,7 +92,21 @@ export default function ClientDetail() {
     } catch (err) { console.error(err); }
   };
 
-  const abrirNovoColab = () => { setColabEdit(null); setColabForm(COLAB_FORM_VAZIO); setColabErro(''); setShowColabForm(true); };
+  const abrirNovoColab = () => {
+    setColabEdit(null);
+    setColabForm({
+      nome: '',
+      cargo: '',
+      setor: '',
+      email: client?.email || '',
+      telefone: client?.telefone || '',
+      whatsapp: client?.telefone || '',
+      principal: false,
+      observacoes: '',
+    });
+    setColabErro('');
+    setShowColabForm(true);
+  };
   const abrirEdicaoColab = (c: Colaborador) => {
     setColabEdit(c);
     setColabForm({ nome: c.nome, cargo: c.cargo || '', setor: c.setor || '', email: c.email || '', telefone: c.telefone || '', whatsapp: c.whatsapp || '', principal: c.principal, observacoes: c.observacoes || '' });
