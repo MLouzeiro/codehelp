@@ -11,6 +11,7 @@ export interface AuthRequest extends Request {
     email: string;
     role: string;
     isMaster: boolean;
+    departamentoId: string | null;
   };
 }
 
@@ -25,7 +26,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     const decoded = jwt.verify(token, env.jwtSecret) as { id: string; role: string };
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { id: true, name: true, email: true, role: true, isMaster: true, active: true },
+      select: { id: true, name: true, email: true, role: true, isMaster: true, active: true, departamentoId: true },
     });
     if (!user || !user.active) {
       return res.status(401).json({ error: 'Usuário inativo ou não encontrado' });

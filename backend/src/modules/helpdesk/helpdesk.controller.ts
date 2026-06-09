@@ -21,7 +21,10 @@ export async function getKanban(req: AuthRequest, res: Response) {
 
     const where: any = { status: { not: 'arquivado' } };
     if (req.user?.role === 'tecnico') {
-      where.OR = [{ assigneeId: req.user.id }, { assigneeId: null }];
+      where.OR = [
+        { assigneeId: req.user.id },
+        { etapa: 'fila', departamentoId: req.user.departamentoId, assigneeId: null },
+      ];
     }
     const tickets = await prisma.ticket.findMany({
       where,
@@ -215,7 +218,7 @@ export async function updateEtapaConfig(req: AuthRequest, res: Response) {
 export async function moveTicketEtapa(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { etapa, atribuirParaMim, observacao } = req.body;
+    const { etapa, atribuirParaMim, observacao, clientId } = req.body;
     if (!etapa) return res.status(400).json({ error: 'Etapa é obrigatória' });
 
     const config = await getEtapaConfig(etapa);
@@ -231,6 +234,9 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
       updateData.assigneeId = req.user.id;
       updateData.usuarioId = req.user.id;
     }
+    if (clientId !== undefined) {
+      updateData.clientId = clientId || null;
+    }
     if (etapa === 'em_atendimento' && !ticket.dataInicioAtendimento) {
       updateData.dataInicioAtendimento = new Date();
     }
@@ -245,6 +251,30 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
     }
 
     const updated = await prisma.ticket.update({ where: { id }, data: updateData });
+
+    if (clientId && ticket.contactPhone && etapa === 'em_atendimento') {
+      const phoneNorm = ticket.contactPhone.replace(/\D/g, '');
+      const existente = await prisma.colaborador.findFirst({
+        where: {
+          clientId,
+          OR: [
+            { telefone: { contains: phoneNorm } },
+            { whatsapp: { contains: phoneNorm } },
+          ],
+        },
+      });
+      if (!existente) {
+        await prisma.colaborador.create({
+          data: {
+            clientId,
+            nome: ticket.contactName || 'Contato WhatsApp',
+            telefone: ticket.contactPhone,
+            whatsapp: ticket.contactPhone,
+            principal: false,
+          },
+        });
+      }
+    }
 
     await gerenciarPausaSlaPorEtapa(id, etapa, etapaAnterior, req.user?.id, getIpFromRequest(req));
 
@@ -328,6 +358,40 @@ export async function atribuirTicket(req: AuthRequest, res: Response) {
   }
 }
 
+export async function updateTicketClient(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { clientId } = req.body;
+
+    const ticket = await prisma.ticket.findUnique({ where: { id }, select: { id: true, clientId: true } });
+    if (!ticket) return res.status(404).json({ error: 'Ticket nao encontrado' });
+
+    if (clientId) {
+      const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true } });
+      if (!client) return res.status(404).json({ error: 'Cliente nao encontrado' });
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id },
+      data: { clientId: clientId || null },
+      include: { client: { select: { id: true, razaoSocial: true, nomeFantasia: true } } },
+    });
+
+    await logAction({
+      usuarioId: req.user?.id,
+      acao: clientId ? 'vincular_cliente' : 'desvincular_cliente',
+      entidade: 'Ticket',
+      entidadeId: id,
+      detalhes: { clientIdAnterior: ticket.clientId, clientIdNovo: clientId || null },
+      ip: getIpFromRequest(req),
+    });
+
+    return res.json(updated);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao atualizar cliente do ticket' });
+  }
+}
+
 export async function getDashboard(req: AuthRequest, res: Response) {
   try {
     await ensureHelpdeskConfigs();
@@ -368,8 +432,17 @@ export async function getDashboard(req: AuthRequest, res: Response) {
           id: true, name: true, email: true, role: true, online: true, lastSeenAt: true,
           _count: {
             select: {
-              ticketsAtendidos: { where: { etapa: { in: ['em_atendimento', 'aguardando_os'] } } },
+              ticketsAtendidos: { where: { etapa: { in: ['em_atendimento', 'aguardando_os', 'aguardando_cliente'] } } },
             },
+          },
+          ticketsAtendidos: {
+            where: { etapa: { in: ['em_atendimento', 'aguardando_os', 'aguardando_cliente'] } },
+            select: {
+              id: true, protocolo: true, assunto: true, contactName: true, etapa: true,
+              prioridade: true, dataInicioAtendimento: true, dataAbertura: true, categoria: true,
+              client: { select: { razaoSocial: true, nomeFantasia: true } },
+            },
+            orderBy: { dataAbertura: 'asc' },
           },
         },
         orderBy: { name: 'asc' },
@@ -420,6 +493,20 @@ export async function getDashboard(req: AuthRequest, res: Response) {
       agentes: agentes.map((a) => ({
         ...a,
         emAtendimento: a._count.ticketsAtendidos,
+        tickets: a.ticketsAtendidos.map((t) => ({
+          id: t.id,
+          protocolo: t.protocolo,
+          assunto: t.assunto,
+          contactName: t.contactName,
+          cliente: t.client?.razaoSocial || t.client?.nomeFantasia || null,
+          etapa: t.etapa,
+          prioridade: t.prioridade,
+          categoria: t.categoria,
+          dataAbertura: t.dataAbertura,
+          tempoDecorridoMin: t.dataInicioAtendimento
+            ? Math.floor((agora.getTime() - t.dataInicioAtendimento.getTime()) / 60000)
+            : Math.floor((agora.getTime() - t.dataAbertura.getTime()) / 60000),
+        })),
       })),
     });
   } catch (error) {
