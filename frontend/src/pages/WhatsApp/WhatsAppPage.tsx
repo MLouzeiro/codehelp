@@ -37,6 +37,12 @@ export default function WhatsAppPage() {
   const [transferirPara, setTransferirPara] = useState('');
   const [transferirMotivo, setTransferirMotivo] = useState('');
   const [transferirSaving, setTransferirSaving] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [clientSearch, setClientSearch] = useState('');
+  const [clientResults, setClientResults] = useState<any[]>([]);
+  const [showCreateClient, setShowCreateClient] = useState(false);
+  const [newClient, setNewClient] = useState({ razaoSocial: '', telefone: '', cnpj: '', email: '' });
+  const [creatingClient, setCreatingClient] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const msgPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -169,6 +175,17 @@ export default function WhatsAppPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    if (!clientSearch.trim()) { setClientResults([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await api.get('/crm/clients', { params: { search: clientSearch, limit: 8 } });
+        setClientResults(Array.isArray(data) ? data : data?.clients || data?.items || []);
+      } catch { setClientResults([]); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [clientSearch]);
+
   const handleSelectTicket = (ticket: any) => {
     setSelectedTicketId(ticket.id);
   };
@@ -251,7 +268,32 @@ export default function WhatsAppPage() {
       tipo: selectedTicket.tipo || '',
       observacoes: selectedTicket.observacoes || '',
     });
+    setSelectedClientId(selectedTicket.client?.id || null);
+    setClientSearch(selectedTicket.client?.razaoSocial || selectedTicket.contactName || '');
+    setClientResults([]);
+    setShowCreateClient(false);
     setShowAbrirChamado(true);
+  };
+
+  const criarClienteInline = async () => {
+    if (!newClient.razaoSocial.trim()) return;
+    setCreatingClient(true);
+    try {
+      const { data } = await api.post('/crm/clients', {
+        razaoSocial: newClient.razaoSocial.trim(),
+        telefone: newClient.telefone.trim() || undefined,
+        cnpj: newClient.cnpj.trim() || undefined,
+        email: newClient.email.trim() || undefined,
+      });
+      setSelectedClientId(data.id);
+      setClientSearch(data.razaoSocial);
+      setNewClient({ razaoSocial: '', telefone: '', cnpj: '', email: '' });
+      setShowCreateClient(false);
+    } catch (err: any) {
+      setSendError(err?.response?.data?.error || 'Erro ao criar cliente');
+    } finally {
+      setCreatingClient(false);
+    }
   };
 
   const confirmarAbrirChamado = async () => {
@@ -264,9 +306,12 @@ export default function WhatsAppPage() {
         prioridade: abrirChamado.prioridade,
         tipo: abrirChamado.tipo || undefined,
         observacoes: abrirChamado.observacoes.trim() || undefined,
+        clientId: selectedClientId || undefined,
       });
       setSelectedTicket((prev: any) => ({ ...prev, ...data }));
       setShowAbrirChamado(false);
+      setSelectedClientId(null);
+      setClientSearch('');
       loadTickets();
       if (selectedTicketId) loadMessages(selectedTicketId);
     } catch (err: any) {
@@ -334,8 +379,8 @@ export default function WhatsAppPage() {
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
-      <div className="flex items-center justify-between mb-3 flex-shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 flex-shrink-0">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <MessageSquare className="text-green-500" size={22} />
             <h1 className="text-xl font-bold text-codemed-700">WhatsApp</h1>
@@ -344,17 +389,17 @@ export default function WhatsAppPage() {
             {connected ? <><Bluetooth size={12} /> Conectado</> : <><BluetoothOff size={12} /> Desconectado</>}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowNewTicket(true)} className="btn-primary text-sm flex items-center gap-1"><Plus size={14} /> Novo</button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => setShowNewTicket(true)} className="btn-primary text-sm flex items-center gap-1 min-h-[40px] px-3"><Plus size={14} /> Novo</button>
           {!connected && (
-            <button onClick={reconnectWhatsApp} disabled={connecting} className="bg-amber-500 text-white text-sm px-3 py-2 rounded-lg hover:bg-amber-600 transition-colors font-medium flex items-center gap-1 disabled:opacity-50">
+            <button onClick={reconnectWhatsApp} disabled={connecting} className="bg-amber-500 text-white text-sm px-3 py-2 rounded-lg hover:bg-amber-600 transition-colors font-medium flex items-center gap-1 disabled:opacity-50 min-h-[40px]">
               <RefreshCw size={14} /> Reconectar
             </button>
           )}
           {connected ? (
-            <button onClick={disconnectWhatsApp} className="bg-red-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-1"><BluetoothOff size={14} /> Desconectar</button>
+            <button onClick={disconnectWhatsApp} className="bg-red-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-1 min-h-[40px]"><BluetoothOff size={14} /> Desconectar</button>
           ) : (
-            <button onClick={connectWhatsApp} disabled={connecting} className="btn-primary text-sm flex items-center gap-1 disabled:opacity-50">
+            <button onClick={connectWhatsApp} disabled={connecting} className="btn-primary text-sm flex items-center gap-1 disabled:opacity-50 min-h-[40px] px-3">
               {connecting ? <><RefreshCw size={14} className="animate-spin" /> Conectando</> : <><Bluetooth size={14} /> Conectar</>}
             </button>
           )}
@@ -387,7 +432,7 @@ export default function WhatsAppPage() {
       )}
 
       <div className="flex-1 flex min-h-0 bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="w-80 lg:w-96 flex-shrink-0 border-r border-gray-200 flex flex-col bg-gray-50/50">
+        <div className={`${selectedTicket ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-gray-200 flex flex-col bg-gray-50/50`}>
           <div className="p-3 border-b border-gray-200 bg-white space-y-2">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -431,10 +476,15 @@ export default function WhatsAppPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium text-sm text-gray-900 truncate">
-                          {ticket.contactName || ticket.client?.razaoSocial || ticket.contactPhone || 'Desconhecido'}
+                          {ticket.contactName || ticket.contactPhone || 'Desconhecido'}
                         </span>
                         <span className="text-xs text-gray-400 flex-shrink-0">{lastMsg ? formatTime(lastMsg.sentAt || ticket.updatedAt) : formatTime(ticket.updatedAt)}</span>
                       </div>
+                      {ticket.client && (
+                        <p className="text-[11px] text-gray-500 truncate flex items-center gap-1 mt-0.5">
+                          <Building2 size={9} /> {ticket.client.razaoSocial || ticket.client.nomeFantasia}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className={`text-xs px-1.5 py-0.5 rounded ${statusStyles[ticket.status] || ''}`}>{ticket.status?.replace('_', ' ')}</span>
                         {ticket.protocolo && <span className="text-[10px] text-neutral-400 font-mono">{ticket.protocolo}</span>}
@@ -450,51 +500,56 @@ export default function WhatsAppPage() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col">
+        <div className={`${selectedTicket ? 'flex' : 'hidden md:flex'} flex-1 flex-col`}>
           {selectedTicket ? (
             <>
-              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white flex-shrink-0">
-                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center">
+              <div className="flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-gray-200 bg-white flex-shrink-0">
+                <button onClick={() => setSelectedTicketId(null)} className="md:hidden p-1 hover:bg-neutral-100 rounded text-neutral-500 mr-1">
+                  <ArrowRightLeft size={16} className="rotate-180" />
+                </button>
+                <div className="flex items-center justify-between flex-1 min-w-0">
+                   <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                      <User size={16} className="text-green-500" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-sm text-gray-900">{selectedTicket.contactName || selectedTicket.client?.razaoSocial || 'Desconhecido'}</h3>
-                        {selectedTicket.protocolo && <span className="text-[10px] font-mono text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded">{selectedTicket.protocolo}</span>}
+                        <h3 className="font-medium text-sm text-gray-900 truncate">{selectedTicket.contactName || selectedTicket.client?.razaoSocial || 'Desconhecido'}</h3>
+                        {selectedTicket.protocolo && <span className="text-[10px] font-mono text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded flex-shrink-0">{selectedTicket.protocolo}</span>}
                       </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <span className="flex items-center gap-1"><Phone size={10} />{selectedTicket.contactPhone}</span>
-                      {selectedTicket.client?.razaoSocial && <span>• {selectedTicket.client.razaoSocial}</span>}
+                      {selectedTicket.client?.razaoSocial && <span className="hidden sm:inline">• {selectedTicket.client.razaoSocial}</span>}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`badge text-xs ${statusStyles[selectedTicket.status] || ''}`}>{selectedTicket.status?.replace('_', ' ')}</span>
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 flex-wrap">
+                  <span className={`badge text-[10px] sm:text-xs ${statusStyles[selectedTicket.status] || ''}`}>{selectedTicket.status?.replace('_', ' ')}</span>
                   {!selectedTicket.protocolo && (
-                    <span className="badge text-xs bg-amber-100 text-amber-700 flex items-center gap-1"><ClipboardList size={10} /> Aguardando decisao</span>
+                    <span className="hidden sm:flex badge text-xs bg-amber-100 text-amber-700 items-center gap-1"><ClipboardList size={10} /> Aguardando decisao</span>
                   )}
                   {!selectedTicket.protocolo && (
-                    <button onClick={abrirModalAbrirChamado} className="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-1" title="Abrir chamado (gerar protocolo + atribuir a voce)">
-                      <ClipboardList size={12} /> Abrir Chamado
+                    <button onClick={abrirModalAbrirChamado} className="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-1 min-h-[36px]" title="Abrir chamado (gerar protocolo + atribuir a voce)">
+                      <ClipboardList size={12} /> <span className="hidden sm:inline">Abrir Chamado</span>
                     </button>
                   )}
                   {!selectedTicket.protocolo && (
-                    <button onClick={handleDescartar} className="bg-neutral-100 text-neutral-700 text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-colors font-medium flex items-center gap-1" title="Descartar (tira da fila sem mandar msg ao cliente)">
-                      <XCircle size={12} /> Descartar
+                    <button onClick={handleDescartar} className="bg-neutral-100 text-neutral-700 text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-colors font-medium flex items-center gap-1 min-h-[36px]" title="Descartar (tira da fila sem mandar msg ao cliente)">
+                      <XCircle size={12} /> <span className="hidden sm:inline">Descartar</span>
                     </button>
                   )}
                   {selectedTicket.protocolo && selectedTicket.assigneeId && (
-                    <button onClick={abrirModalTransferir} className="bg-neutral-100 text-neutral-700 text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-colors font-medium flex items-center gap-1" title="Transferir atendimento para outro usuario">
-                      <ArrowRightLeft size={12} /> Transferir
+                    <button onClick={abrirModalTransferir} className="bg-neutral-100 text-neutral-700 text-xs px-2.5 py-1.5 rounded-lg hover:bg-neutral-200 transition-colors font-medium flex items-center gap-1 min-h-[36px]" title="Transferir atendimento para outro usuario">
+                      <ArrowRightLeft size={12} /> <span className="hidden sm:inline">Transferir</span>
                     </button>
                   )}
-                  <button onClick={createOS} className="btn-primary text-xs flex items-center gap-1"><Plus size={12} /> OS</button>
+                   <button onClick={createOS} className="btn-primary text-xs flex items-center gap-1 min-h-[36px] px-2.5"><Plus size={12} /> OS</button>
+                </div>
                 </div>
               </div>
 
               {selectedTicket.client && (
-                <div className="px-5 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50/40 to-green-50/40 flex-shrink-0">
+                <div className="px-3 sm:px-5 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50/40 to-green-50/40 flex-shrink-0">
                   <div className="flex items-start gap-2 mb-2">
                     <Building2 size={14} className="text-blue-600 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -527,7 +582,7 @@ export default function WhatsAppPage() {
                 </div>
               )}
 
-              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2 bg-gray-50/30">
+              <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-2 bg-gray-50/30">
                 {messages.map((msg: any) => (
                   <div key={msg.id} className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${msg.fromMe ? 'bg-green-500 text-white rounded-br-sm' : 'bg-white border border-neutral-200 text-neutral-900 rounded-bl-sm'}`}>
@@ -547,11 +602,11 @@ export default function WhatsAppPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="px-5 py-2 bg-white flex-shrink-0">
+              <div className="px-3 sm:px-5 py-2 bg-white flex-shrink-0">
                 {sendError && <p className="text-xs text-red-600 mb-1 flex items-center gap-1"><AlertCircle size={12} /> {sendError}</p>}
                 {!connected && <p className="text-xs text-amber-600 mb-1 flex items-center gap-1"><AlertCircle size={12} /> WhatsApp desconectado — conecte-se para enviar mensagens</p>}
               </div>
-              <div className="flex items-center gap-2 px-5 py-3 border-t border-gray-200 bg-white flex-shrink-0">
+              <div className="flex items-center gap-2 px-3 sm:px-5 py-3 border-t border-gray-200 bg-white flex-shrink-0">
                 <input type="text" value={messageText} onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                   placeholder="Digite sua mensagem..."
@@ -587,89 +642,161 @@ export default function WhatsAppPage() {
       )}
 
       {showAbrirChamado && selectedTicket && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => !abrirSaving && setShowAbrirChamado(false)}>
-          <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-1">
-              <h3 className="font-semibold text-gray-900">Abrir Chamado</h3>
-              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => !abrirSaving && setShowAbrirChamado(false)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-xl sm:max-w-lg w-full max-h-[92vh] sm:max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white z-10 px-4 sm:px-5 pt-4 sm:pt-5 pb-3 border-b border-neutral-100">
+              <div className="flex justify-between items-center">
+                <h3 className="font-semibold text-gray-900 text-base">Abrir Chamado</h3>
+                <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {selectedTicket.protocolo
+                  ? 'Editando informacoes do chamado.'
+                  : 'Defina os dados do chamado. Sera gerado protocolo e o ticket ira para "Em Atendimento" atribuido a voce.'}
+              </p>
             </div>
-            <p className="text-xs text-gray-500 mb-4">
-              {selectedTicket.protocolo
-                ? 'Editando informacoes do chamado.'
-                : 'Defina os dados do chamado. Sera gerado protocolo e o ticket ira para "Em Atendimento" atribuido a voce.'}
-            </p>
 
-            <div className="space-y-3">
+            <div className="px-4 sm:px-5 py-4 space-y-4">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Assunto *</label>
+                <label className="text-xs font-medium text-gray-700 mb-1.5 block">Cliente vinculado</label>
+                {selectedClientId ? (
+                  <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                    <Building2 size={14} className="text-emerald-600 flex-shrink-0" />
+                    <span className="text-sm text-emerald-800 font-medium flex-1 truncate">{clientSearch}</span>
+                    <button onClick={() => { setSelectedClientId(null); setClientSearch(''); }} className="text-emerald-600 hover:text-emerald-800 p-0.5" title="Remover"><X size={14} /></button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={clientSearch}
+                        onChange={(e) => { setClientSearch(e.target.value); setSelectedClientId(null); }}
+                        placeholder="Buscar cliente por nome, CNPJ ou telefone..."
+                        className="w-full pl-9 pr-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none"
+                      />
+                    </div>
+                    {clientResults.length > 0 && !selectedClientId && (
+                      <div className="border border-neutral-200 rounded-lg max-h-40 overflow-y-auto divide-y divide-neutral-100">
+                        {clientResults.map((c: any) => (
+                          <button
+                            key={c.id}
+                            onClick={() => { setSelectedClientId(c.id); setClientSearch(c.razaoSocial); setClientResults([]); }}
+                            className="w-full text-left px-3 py-2.5 hover:bg-green-50 transition-colors flex items-center gap-2 min-h-[44px]"
+                          >
+                            <Building2 size={14} className="text-neutral-400 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{c.razaoSocial}</p>
+                              {c.telefone && <p className="text-[11px] text-neutral-500">{c.telefone}</p>}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {clientSearch && !selectedClientId && clientResults.length === 0 && clientSearch.length >= 2 && (
+                      <button
+                        onClick={() => { setNewClient({ razaoSocial: clientSearch, telefone: selectedTicket?.contactPhone || '', cnpj: '', email: '' }); setShowCreateClient(true); }}
+                        className="w-full text-left px-3 py-2.5 border border-dashed border-green-300 rounded-lg text-sm text-green-700 hover:bg-green-50 transition-colors flex items-center gap-2 min-h-[44px]"
+                      >
+                        <Building2 size={14} /> Criar cliente "{clientSearch}"
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1.5 block">Assunto *</label>
                 <input
                   type="text"
                   placeholder="Ex: Erro no modulo LIS, Duvida sobre boleto..."
                   value={abrirChamado.assunto}
                   onChange={(e) => setAbrirChamado({ ...abrirChamado, assunto: e.target.value })}
                   autoFocus
-                  className="input w-full"
+                  className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Categoria</label>
-                  <select
-                    value={abrirChamado.categoria}
-                    onChange={(e) => setAbrirChamado({ ...abrirChamado, categoria: e.target.value })}
-                    className="input w-full"
-                  >
+                  <label className="text-xs font-medium text-gray-700 mb-1.5 block">Categoria</label>
+                  <select value={abrirChamado.categoria} onChange={(e) => setAbrirChamado({ ...abrirChamado, categoria: e.target.value })} className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg">
                     <option value="">Selecione...</option>
-                    {CATEGORIAS.map((c) => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
+                    {CATEGORIAS.map((c) => (<option key={c.value} value={c.value}>{c.label}</option>))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Prioridade</label>
-                  <select
-                    value={abrirChamado.prioridade}
-                    onChange={(e) => setAbrirChamado({ ...abrirChamado, prioridade: e.target.value })}
-                    className="input w-full"
-                  >
-                    {PRIORIDADES.map((p) => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
+                  <label className="text-xs font-medium text-gray-700 mb-1.5 block">Prioridade</label>
+                  <select value={abrirChamado.prioridade} onChange={(e) => setAbrirChamado({ ...abrirChamado, prioridade: e.target.value })} className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg">
+                    {PRIORIDADES.map((p) => (<option key={p.value} value={p.value}>{p.label}</option>))}
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Tipo de solicitacao</label>
-                <select
-                  value={abrirChamado.tipo}
-                  onChange={(e) => setAbrirChamado({ ...abrirChamado, tipo: e.target.value })}
-                  className="input w-full"
-                >
+                <label className="text-xs font-medium text-gray-700 mb-1.5 block">Tipo de solicitacao</label>
+                <select value={abrirChamado.tipo} onChange={(e) => setAbrirChamado({ ...abrirChamado, tipo: e.target.value })} className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg">
                   <option value="">Selecione...</option>
-                  {TIPOS.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
+                  {TIPOS.map((t) => (<option key={t.value} value={t.value}>{t.label}</option>))}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Observacoes internas (auditoria)</label>
+                <label className="text-xs font-medium text-gray-700 mb-1.5 block">Observacoes internas (auditoria)</label>
                 <textarea
                   rows={3}
                   placeholder="Anotacoes visiveis apenas para a equipe (nao enviadas ao cliente)..."
                   value={abrirChamado.observacoes}
                   onChange={(e) => setAbrirChamado({ ...abrirChamado, observacoes: e.target.value })}
-                  className="input w-full resize-none"
+                  className="w-full px-3 py-2.5 min-h-[80px] text-sm border border-neutral-200 rounded-lg resize-none focus:ring-1 focus:ring-green-500 outline-none"
                 />
               </div>
             </div>
 
-            <div className="flex gap-2 mt-5">
-              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="flex-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
-              <button onClick={confirmarAbrirChamado} disabled={!abrirChamado.assunto.trim() || abrirSaving} className="flex-1 btn-primary disabled:opacity-50">
-                {abrirSaving ? 'Abrindo...' : selectedTicket.protocolo ? 'Salvar alteracoes' : 'Abrir Chamado'}
+            <div className="sticky bottom-0 bg-white px-4 sm:px-5 py-3 border-t border-neutral-100 flex gap-2">
+              <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="flex-1 px-4 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
+              <button onClick={confirmarAbrirChamado} disabled={!abrirChamado.assunto.trim() || abrirSaving} className="flex-1 px-4 py-2.5 min-h-[44px] text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-1.5">
+                {abrirSaving ? <><RefreshCw size={14} className="animate-spin" /> Abrindo...</> : selectedTicket.protocolo ? 'Salvar alteracoes' : 'Abrir Chamado'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateClient && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => !creatingClient && setShowCreateClient(false)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-xl sm:max-w-md w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 sm:px-5 pt-4 sm:pt-5 pb-3 border-b border-neutral-100">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-gray-900 flex items-center gap-2 text-base"><Building2 size={18} className="text-green-600" /> Novo Cliente</h3>
+                <button onClick={() => setShowCreateClient(false)} disabled={creatingClient} className="text-neutral-400 hover:text-neutral-600 p-1"><X size={20} /></button>
+              </div>
+            </div>
+            <div className="px-4 sm:px-5 py-4 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1.5">Razao Social *</label>
+                <input type="text" value={newClient.razaoSocial} onChange={(e) => setNewClient({ ...newClient, razaoSocial: e.target.value })} className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 min-h-[44px] focus:ring-1 focus:ring-green-500 outline-none" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1.5">Telefone</label>
+                <input type="text" value={newClient.telefone} onChange={(e) => setNewClient({ ...newClient, telefone: e.target.value })} placeholder="5511999999999" className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 min-h-[44px] focus:ring-1 focus:ring-green-500 outline-none" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-700 block mb-1.5">CNPJ</label>
+                  <input type="text" value={newClient.cnpj} onChange={(e) => setNewClient({ ...newClient, cnpj: e.target.value })} className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 min-h-[44px] focus:ring-1 focus:ring-green-500 outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 block mb-1.5">Email</label>
+                  <input type="email" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 min-h-[44px] focus:ring-1 focus:ring-green-500 outline-none" />
+                </div>
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-white px-4 sm:px-5 py-3 border-t border-neutral-100 flex gap-2">
+              <button onClick={() => setShowCreateClient(false)} disabled={creatingClient} className="flex-1 px-4 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
+              <button onClick={criarClienteInline} disabled={creatingClient || !newClient.razaoSocial.trim()} className="flex-1 px-4 py-2.5 min-h-[44px] text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-1.5">
+                {creatingClient ? <><RefreshCw size={14} className="animate-spin" /> Criando...</> : 'Criar e Vincular'}
               </button>
             </div>
           </div>

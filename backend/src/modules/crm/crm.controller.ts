@@ -21,7 +21,7 @@ export async function listClients(req: AuthRequest, res: Response) {
       ];
     }
 
-    if (req.user?.role === 'tecnico') {
+    if (req.user?.role === 'tecnico' && !search) {
       where.responsavelTecnicoId = req.user.id;
     }
 
