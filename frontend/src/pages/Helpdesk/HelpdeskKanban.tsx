@@ -870,12 +870,14 @@ export default function HelpdeskKanban() {
                 </span>
               )}
               {ticketDetail.ticket.assignee ? (
-                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded font-medium flex items-center gap-1">
-                  {ticketDetail.ticket.assignee.name}
-                  <button onClick={() => setShowAssignModal(true)} className="text-emerald-500 hover:text-emerald-700 ml-0.5" title="Transferir para outro analista">
-                    <ArrowRightLeft size={10} />
+                <>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded font-medium">
+                    {ticketDetail.ticket.assignee.name}
+                  </span>
+                  <button onClick={() => setShowAssignModal(true)} className="text-[10px] text-blue-700 bg-blue-50 px-2 py-1 rounded font-medium hover:bg-blue-100 flex items-center gap-0.5" title="Transferir chamado">
+                    <ArrowRightLeft size={10} /> Transferir
                   </button>
-                </span>
+                </>
               ) : (
                 <button onClick={() => setShowAssignModal(true)} className="text-[10px] text-amber-700 bg-amber-50 px-2 py-1 rounded font-medium hover:bg-amber-100 flex items-center gap-0.5">
                   <UserPlus size={9} /> Atribuir
