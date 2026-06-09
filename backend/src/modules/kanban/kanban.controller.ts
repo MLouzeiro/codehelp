@@ -68,7 +68,7 @@ export async function updateTask(req: AuthRequest, res: Response) {
 
 export async function deleteTask(req: AuthRequest, res: Response) {
   try {
-    await prisma.task.delete({ where: { id: req.params.id } });
+    await prisma.task.update({ where: { id: req.params.id }, data: { ativo: false } });
     return res.status(204).send();
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao deletar tarefa' });

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../services/auth';
 import {
@@ -80,9 +81,10 @@ const KanbanCard = memo(function KanbanCard({
             {ticket.contactName || 'Sem nome'}
           </p>
           {ticket.client && (
-            <p className="text-[10px] text-neutral-500 truncate flex items-center gap-0.5">
+            <Link to={`/app/crm/${ticket.client.id}`} onClick={(e) => e.stopPropagation()}
+              className="text-[10px] text-blue-600 hover:text-blue-800 truncate flex items-center gap-0.5 hover:underline">
               <Building2 size={8} /> {ticket.client.razaoSocial || ticket.client.nomeFantasia}
-            </p>
+            </Link>
           )}
           {ticket.protocolo && (
             <p className="text-[10px] text-neutral-400 font-mono">{ticket.protocolo}</p>
@@ -227,6 +229,7 @@ export default function HelpdeskKanban() {
   const [assignTo, setAssignTo] = useState('');
   const [orderBy, setOrderBy] = useState('updatedAt_desc');
   const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
   const [autoMessage, setAutoMessage] = useState<{ sent: boolean; error?: string } | null>(null);
   const [showAbrirChamado, setShowAbrirChamado] = useState(false);
   const [abrirChamado, setAbrirChamado] = useState({
@@ -300,6 +303,13 @@ export default function HelpdeskKanban() {
     loadAgents();
     loadDepartamentos();
   }, [loadKanban, loadAgents, loadDepartamentos]);
+
+  useEffect(() => {
+    const ticketParam = searchParams.get('ticket');
+    if (ticketParam) {
+      setSelectedTicketId(ticketParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (isDragging) return;
@@ -844,9 +854,10 @@ export default function HelpdeskKanban() {
                   </h3>
                   <div className="flex items-center gap-1">
                     {ticketDetail.ticket.client ? (
-                      <p className="text-[10px] text-neutral-500 truncate flex items-center gap-1">
+                      <Link to={`/app/crm/${ticketDetail.ticket.client.id}`}
+                        className="text-[10px] text-blue-600 hover:text-blue-800 truncate flex items-center gap-1 hover:underline">
                         <Building2 size={9} /> {ticketDetail.ticket.client.razaoSocial || ticketDetail.ticket.client.nomeFantasia}
-                      </p>
+                      </Link>
                     ) : (
                       <p className="text-[10px] text-amber-600 italic">Sem empresa vinculada</p>
                     )}

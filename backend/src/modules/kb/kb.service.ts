@@ -79,7 +79,7 @@ export async function atualizarKb(id: string, input: KbUpdateInput) {
 }
 
 export async function deletarKb(id: string) {
-  return prisma.kBArticle.delete({ where: { id } });
+  return prisma.kBArticle.update({ where: { id }, data: { ativo: false } });
 }
 
 export async function publicarKb(id: string, publicado: boolean) {
@@ -114,7 +114,7 @@ export interface KbListFilters {
 }
 
 export async function listarKb(filters: KbListFilters = {}) {
-  const where: any = {};
+  const where: any = { ativo: true };
   if (filters.categoriaId) where.categoriaId = filters.categoriaId;
   if (filters.publicado !== undefined) where.publicado = filters.publicado;
   if (filters.tag) where.tags = { contains: filters.tag };
@@ -166,7 +166,7 @@ export async function sugerirKbParaTicket(ticketId: string, limite: number = 5) 
   }
   const textoBusca = termos.join(' ').slice(0, 200);
   if (textoBusca.trim().length < 3) return [];
-  const where: any = { publicado: true };
+  const where: any = { publicado: true, ativo: true };
   where.OR = [
     { titulo: { contains: textoBusca.split(' ').slice(0, 5).join(' ') } },
     { tags: { contains: textoBusca.split(' ')[0] } },

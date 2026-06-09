@@ -262,7 +262,7 @@ export default function ClientDetail() {
                 </div>
                 <div className="space-y-2">
                   {tickets.slice(0, 5).map((t: any) => (
-                    <div key={t.id} onClick={() => navigate(`/app/helpdesk`)}
+                    <div key={t.id} onClick={() => navigate(`/app/helpdesk?ticket=${t.id}`)}
                       className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -315,7 +315,7 @@ export default function ClientDetail() {
             ) : (
               <div className="space-y-2">
                 {tickets.map((t: any) => (
-                  <div key={t.id} onClick={() => navigate('/app/helpdesk')}
+                  <div key={t.id} onClick={() => navigate(`/app/helpdesk?ticket=${t.id}`)}
                     className="card flex items-center gap-4 p-4 hover:shadow-md transition-shadow cursor-pointer">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">

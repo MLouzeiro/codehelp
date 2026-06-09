@@ -23,6 +23,7 @@ import automationsRoutes from './modules/automations/automations.routes';
 import notificacoesRoutes from './modules/notificacoes/notificacoes.routes';
 import permissionsRoutes from './modules/permissions/permissions.routes';
 import feriadosRoutes from './modules/feriados/feriados.routes';
+import searchRoutes from './modules/search/search.routes';
 
 const isVercel = !!process.env.VERCEL;
 
@@ -58,6 +59,7 @@ app.use('/api/notificacoes', notificacoesRoutes);
 app.use('/api/permissions', permissionsRoutes);
 app.use('/api/feriados', feriadosRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api', searchRoutes);
 
 if (!isVercel) {
   app.use('/storage', express.static(path.resolve(__dirname, '../storage')));

@@ -75,10 +75,16 @@ export async function createOrder(req: AuthRequest, res: Response) {
     }
 
     const year = new Date().getFullYear();
-    const count = await prisma.serviceOrder.count({
-      where: { numeroOs: { startsWith: `OS-${year}-` } },
-    });
-    const numeroOs = generateOsNumber(year, count + 1);
+    let numeroOs = '';
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const count = await prisma.serviceOrder.count({
+        where: { numeroOs: { startsWith: `OS-${year}-` } },
+      });
+      numeroOs = generateOsNumber(year, count + 1);
+      const existing = await prisma.serviceOrder.findUnique({ where: { numeroOs } });
+      if (!existing) break;
+      await new Promise(r => setTimeout(r, 50));
+    }
 
     const order = await prisma.serviceOrder.create({
       data: {

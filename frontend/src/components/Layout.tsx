@@ -7,6 +7,7 @@ import {
   Stethoscope, Activity, LineChart, BookOpen, Zap, ArrowUpDown,
   Bell, Check, CheckCheck, Sun, Moon,
 } from 'lucide-react';
+import SearchBar from './SearchBar';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import type { Notificacao } from '../types';
@@ -163,6 +164,9 @@ export default function Layout() {
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-500 hover:text-slate-700 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors">
             <Menu size={22} />
           </button>
+          <div className="flex-1 max-w-md mx-4 hidden sm:block">
+            <SearchBar compact />
+          </div>
           <div className="flex-1" />
           <button
             onClick={toggleTheme}

@@ -4,9 +4,10 @@ import { AuthRequest } from '../../shared/middleware/auth';
 
 export async function listClients(req: AuthRequest, res: Response) {
   try {
-    const { status, segmento, cidade, responsavel, search, page = '1', limit = '20' } = req.query;
+    const { status, segmento, cidade, responsavel, search, page = '1', limit = '20', includeInativos } = req.query;
     const where: any = {};
 
+    if (!includeInativos) where.ativo = true;
     if (status) where.status = status;
     if (segmento) where.segmento = segmento;
     if (cidade) where.cidade = { contains: cidade as string, mode: 'insensitive' };
@@ -68,9 +69,16 @@ export async function createClient(req: AuthRequest, res: Response) {
     const { razaoSocial, nomeFantasia, cnpjCpf, segmento, responsavelTecnicoId, telefone, email, cidade, estado, status, origem } = req.body;
     if (!razaoSocial) return res.status(400).json({ error: 'Razão social é obrigatória' });
 
+    if (cnpjCpf?.trim()) {
+      const existing = await prisma.client.findFirst({
+        where: { cnpjCpf: cnpjCpf.trim(), ativo: true },
+      });
+      if (existing) return res.status(409).json({ error: 'Já existe um cliente ativo com este CNPJ/CPF' });
+    }
+
     const client = await prisma.client.create({
       data: {
-        razaoSocial, nomeFantasia, cnpjCpf, segmento,
+        razaoSocial, nomeFantasia, cnpjCpf: cnpjCpf?.trim() || null, segmento,
         responsavelTecnicoId: responsavelTecnicoId || req.user?.id,
         telefone, email, cidade, estado,
         status: status || 'ativo',
@@ -97,7 +105,13 @@ export async function updateClient(req: AuthRequest, res: Response) {
 
 export async function deleteClient(req: AuthRequest, res: Response) {
   try {
-    await prisma.client.delete({ where: { id: req.params.id } });
+    const client = await prisma.client.findUnique({ where: { id: req.params.id }, select: { id: true, ativo: true } });
+    if (!client) return res.status(404).json({ error: 'Cliente não encontrado' });
+
+    await prisma.client.update({
+      where: { id: req.params.id },
+      data: { ativo: false },
+    });
     return res.status(204).send();
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao deletar cliente' });
