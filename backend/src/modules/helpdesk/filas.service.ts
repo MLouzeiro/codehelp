@@ -7,6 +7,7 @@ export interface FilaInput {
   nivelSuporteId: string;
   descricao?: string;
   ordem?: number;
+  proximaFilaId?: string;
 }
 
 function badRequest(message: string, field?: string) {
@@ -34,6 +35,7 @@ export async function listFilas(departamentoId?: string) {
     include: {
       departamento: { select: { id: true, slug: true, nome: true, cor: true } },
       nivelSuporte: { select: { id: true, slug: true, nome: true, cor: true, slaMinutos: true } },
+      proximaFila: { select: { id: true, nome: true, slug: true } },
       _count: { select: { tickets: true } },
     },
     orderBy: [{ departamento: { ordem: 'asc' } }, { ordem: 'asc' }, { nome: 'asc' }],
@@ -85,10 +87,12 @@ export async function createFila(input: FilaInput) {
       nivelSuporteId: input.nivelSuporteId,
       descricao: input.descricao?.trim() || null,
       ordem: input.ordem ?? (maxOrdem._max.ordem ?? 0) + 1,
+      proximaFilaId: input.proximaFilaId || null,
     },
     include: {
       departamento: { select: { id: true, slug: true, nome: true, cor: true } },
       nivelSuporte: { select: { id: true, slug: true, nome: true, cor: true, slaMinutos: true } },
+      proximaFila: { select: { id: true, nome: true, slug: true } },
     },
   });
 }
@@ -106,6 +110,7 @@ export async function updateFila(id: string, input: Partial<FilaInput>) {
   if (input.nivelSuporteId !== undefined) data.nivelSuporteId = input.nivelSuporteId;
   if (input.descricao !== undefined) data.descricao = input.descricao?.trim() || null;
   if (input.ordem !== undefined) data.ordem = input.ordem;
+  if (input.proximaFilaId !== undefined) data.proximaFilaId = input.proximaFilaId || null;
 
   return prisma.fila.update({
     where: { id },
@@ -113,6 +118,7 @@ export async function updateFila(id: string, input: Partial<FilaInput>) {
     include: {
       departamento: { select: { id: true, slug: true, nome: true, cor: true } },
       nivelSuporte: { select: { id: true, slug: true, nome: true, cor: true, slaMinutos: true } },
+      proximaFila: { select: { id: true, nome: true, slug: true } },
     },
   });
 }
