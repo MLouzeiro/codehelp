@@ -20,7 +20,7 @@ import {
   isHorarioAtendimento,
   getHorarioConfig,
 } from '../../helpdesk/horario';
-import { montarForaHorario } from '../../helpdesk/menu';
+import { montarForaHorario, detectarOpcaoMenu, montarAckSuporte, montarAckComercial, montarOpcaoInvalida } from '../../helpdesk/menu';
 import { classificarPorPalavrasChave } from '../../helpdesk/rules.service';
 
 let whatsappClient: Client | null = null;
@@ -51,10 +51,15 @@ function clearReconnectTimer() {
 
 function scheduleReconnect(reason: string) {
   clearReconnectTimer();
-  console.warn(`[WhatsApp] Reagendando reconexÃ£o em 15s â€” motivo: ${reason}`);
-  reconnectTimer = setTimeout(() => {
+  console.warn(`[WhatsApp] Reagendando reconexão em 15s — motivo: ${reason}`);
+  reconnectTimer = setTimeout(async () => {
     reconnectTimer = null;
-    initializeClient().catch((e) => console.error('[WhatsApp] Erro na reconexÃ£o:', e?.message || e));
+    if (whatsappClient) {
+      try { await whatsappClient.destroy(); } catch { }
+      whatsappClient = null;
+    }
+    initializing = false;
+    initializeClient().catch((e) => console.error('[WhatsApp] Erro na reconexão:', e?.message || e));
   }, 15000);
 }
 
@@ -119,7 +124,7 @@ export async function initializeClient(): Promise<void> {
   clearReconnectTimer();
 
   whatsappClient = new Client({
-    authStrategy: new LocalAuth({ dataPath: SESSION_DIR, clientId: 'codemed-hub' }),
+    authStrategy: new LocalAuth({ dataPath: SESSION_DIR, clientId: 'code-help' }),
     puppeteer: {
       headless: true,
       executablePath: env.whatsappChromePath || undefined,
@@ -130,6 +135,24 @@ export async function initializeClient(): Promise<void> {
         '--disable-gpu',
         '--disable-web-security',
         '--disable-features=IsolateOrigins,site-per-process',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-breakpad',
+        '--disable-client-side-phishing-detection',
+        '--disable-default-apps',
+        '--disable-domain-reliability',
+        '--disable-hang-monitor',
+        '--disable-ipc-flooding-protection',
+        '--disable-popup-blocking',
+        '--disable-prompt-on-repost',
+        '--disable-renderer-backgrounding',
+        '--disable-sync',
+        '--metrics-recording-only',
+        '--no-first-run',
+        '--password-store=basic',
+        '--use-gl=swiftshader',
       ],
     },
   });
@@ -183,6 +206,16 @@ export async function initializeClient(): Promise<void> {
     console.log('[WhatsApp] Desconectado:', reason);
     if (healthCheckTimer) { clearInterval(healthCheckTimer); healthCheckTimer = null; }
     scheduleReconnect(`disconnected_${reason}`);
+  });
+
+  whatsappClient.on('browser_crashed', (error: any) => {
+    isConnected = false;
+    connectionError = `Browser crashou: ${error?.message || 'desconhecido'}`;
+    console.error('[WhatsApp] Browser do Puppeteer crashou:', error?.message || error);
+    if (healthCheckTimer) { clearInterval(healthCheckTimer); healthCheckTimer = null; }
+    try { whatsappClient?.destroy(); } catch { }
+    whatsappClient = null;
+    scheduleReconnect('browser_crashed');
   });
 
   whatsappClient.on('message', async (message: any) => {
@@ -268,11 +301,26 @@ async function handleIncomingMessage(message: any) {
           return;
         }
 
-        let client = phoneLookup
-          ? await prisma.client.findFirst({
-              where: { telefone: { contains: phoneLookup } },
-            })
-          : null;
+        let client = null;
+        if (phoneLookup) {
+          client = await prisma.client.findFirst({
+            where: { telefone: { contains: phoneLookup } },
+          });
+          if (!client) {
+            const colaborador = await prisma.colaborador.findFirst({
+              where: {
+                OR: [
+                  { telefone: { contains: phoneLookup } },
+                  { whatsapp: { contains: phoneLookup } },
+                ],
+              },
+              include: { client: true },
+            });
+            if (colaborador?.client) {
+              client = colaborador.client;
+            }
+          }
+        }
 
         const contactName = (contact?.pushname || contact?.name || chatId) as string;
 
@@ -318,6 +366,62 @@ async function handleIncomingMessage(message: any) {
           mediaUrl,
         },
       });
+
+      // Processar opção do menu (1=Suporte, 2=Comercial)
+      if (message.body && ticket!.etapa === 'fila' && !ticket!.protocolo) {
+        const opcao = detectarOpcaoMenu(message.body);
+        if (opcao) {
+          const contactName = ticket!.contactName || 'cliente';
+          const phone = chatId.replace(/@c\.us$/i, '');
+          let ackMsg: string;
+          let categoria: string;
+          let departamentoSlug: string;
+          if (opcao === '1') {
+            ackMsg = await montarAckSuporte(contactName);
+            categoria = 'suporte_tecnico';
+            departamentoSlug = 'suporte-tecnico';
+          } else {
+            ackMsg = await montarAckComercial(contactName);
+            categoria = 'comercial';
+            departamentoSlug = 'comercial';
+          }
+
+          // Buscar departamento pelo slug
+          const dept = await prisma.departamento.findUnique({ where: { slug: departamentoSlug }, select: { id: true } });
+
+          await prisma.ticket.update({
+            where: { id: ticket!.id },
+            data: {
+              categoria,
+              ...(dept ? { departamentoId: dept.id } : {}),
+            },
+          });
+          const result = await sendWhatsAppMessage(phone, ackMsg);
+          if (result.success) {
+            await prisma.message.create({
+              data: { ticketId: ticket!.id, fromMe: true, content: ackMsg },
+            });
+          }
+          console.log(`[WhatsApp] Opção ${opcao} selecionada no ticket ${ticket!.id}, categoria=${categoria}`);
+          return;
+        }
+
+        // Se já tem mensagem do bot e o usuário digitou algo que não é opção válida
+        const temAlgumaMsgDoBot = await prisma.message.count({
+          where: { ticketId: ticket!.id, fromMe: true },
+        });
+        if (temAlgumaMsgDoBot > 0 && !ticket!.categoria) {
+          const opcaoInvalida = await montarOpcaoInvalida(ticket!.contactName || 'cliente');
+          const phone = chatId.replace(/@c\.us$/i, '');
+          const result = await sendWhatsAppMessage(phone, opcaoInvalida);
+          if (result.success) {
+            await prisma.message.create({
+              data: { ticketId: ticket!.id, fromMe: true, content: opcaoInvalida },
+            });
+          }
+          return;
+        }
+      }
 
       if (message.body && !ticket!.categoria) {
         const match = await classificarPorPalavrasChave(message.body);
@@ -436,22 +540,26 @@ export function sanitizePhoneNumber(phone: string): string {
 }
 
 export async function generateProtocolo(): Promise<string> {
-  const hoje = new Date();
-  const data = hoje.toISOString().slice(0, 10).replace(/-/g, '');
-  const prefixo = `TKT-${data}`;
+  return withProtocoloLock(async () => {
+    const hoje = new Date();
+    const data = hoje.toISOString().slice(0, 10).replace(/-/g, '');
+    const prefixo = `TKT-${data}`;
 
-  const ultimo = await prisma.ticket.findFirst({
-    where: { protocolo: { startsWith: prefixo } },
-    orderBy: { protocolo: 'desc' },
+    const ultimo = await prisma.ticket.findFirst({
+      where: { protocolo: { startsWith: prefixo } },
+      orderBy: { protocolo: 'desc' },
+    });
+
+    let seq = 1;
+    if (ultimo?.protocolo) {
+      const partes = ultimo.protocolo.split('-');
+      seq = parseInt(partes[2] || '0', 10) + 1;
+    }
+
+    const proto = `${prefixo}-${String(seq).padStart(4, '0')}`;
+    console.log(`[Protocolo] Gerado: ${proto} (prefixo=${prefixo}, ultimo=${ultimo?.protocolo || 'nenhum'}, seq=${seq})`);
+    return proto;
   });
-
-  let seq = 1;
-  if (ultimo?.protocolo) {
-    const partes = ultimo.protocolo.split('-');
-    seq = parseInt(partes[2] || '0', 10) + 1;
-  }
-
-  return `${prefixo}-${String(seq).padStart(4, '0')}`;
 }
 
 export async function sendWhatsAppMessage(to: string, message: string): Promise<{ success: boolean; error?: string }> {

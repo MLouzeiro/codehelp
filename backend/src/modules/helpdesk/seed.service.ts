@@ -74,58 +74,50 @@ export const CATEGORIAS_PADRAO = [
 
 export async function ensureFilas() {
   for (const fila of FILAS_PADRAO) {
-    const existing = await prisma.fila.findUnique({ where: { slug: fila.slug } });
-    if (!existing) {
-      await prisma.fila.create({ data: fila });
-      console.log(`[Helpdesk] Fila criada: ${fila.slug} (${fila.nome})`);
-    } else {
-      const data: any = {};
-      if (existing.nome !== fila.nome) data.nome = fila.nome;
-      if (existing.descricao !== fila.descricao) data.descricao = fila.descricao;
-      if (existing.nivel !== fila.nivel) data.nivel = fila.nivel;
-      if (existing.slaMinutos !== fila.slaMinutos) data.slaMinutos = fila.slaMinutos;
-      if (Object.keys(data).length > 0) {
-        await prisma.fila.update({ where: { id: existing.id }, data });
-      }
-    }
+    await prisma.fila.upsert({
+      where: { slug: fila.slug },
+      create: fila,
+      update: {
+        nome: fila.nome,
+        descricao: fila.descricao,
+        nivel: fila.nivel,
+        slaMinutos: fila.slaMinutos,
+        cor: fila.cor,
+        icone: fila.icone,
+        ordem: fila.ordem,
+      },
+    });
   }
 }
 
 export async function ensureSLAConfigs() {
   for (const sla of SLA_PADRAO) {
-    const existing = await prisma.sLAConfig.findUnique({ where: { prioridade: sla.prioridade } });
-    if (!existing) {
-      await prisma.sLAConfig.create({ data: sla });
-      console.log(`[Helpdesk] SLAConfig criado: ${sla.prioridade}`);
-    } else {
-      const data: any = {};
-      if (existing.slaMinutosPrimeiraResposta !== sla.slaMinutosPrimeiraResposta) {
-        data.slaMinutosPrimeiraResposta = sla.slaMinutosPrimeiraResposta;
-      }
-      if (existing.slaMinutosResolucao !== sla.slaMinutosResolucao) {
-        data.slaMinutosResolucao = sla.slaMinutosResolucao;
-      }
-      if (Object.keys(data).length > 0) {
-        await prisma.sLAConfig.update({ where: { id: existing.id }, data });
-      }
-    }
+    await prisma.sLAConfig.upsert({
+      where: { prioridade: sla.prioridade },
+      create: sla,
+      update: {
+        slaMinutosPrimeiraResposta: sla.slaMinutosPrimeiraResposta,
+        slaMinutosResolucao: sla.slaMinutosResolucao,
+        alerta75Porcento: sla.alerta75Porcento,
+        alerta90Porcento: sla.alerta90Porcento,
+      },
+    });
   }
 }
 
 export async function ensureCategorias() {
   for (const cat of CATEGORIAS_PADRAO) {
-    const existing = await prisma.categoria.findUnique({ where: { slug: cat.slug } });
-    if (!existing) {
-      await prisma.categoria.create({ data: cat });
-      console.log(`[Helpdesk] Categoria criada: ${cat.slug} (${cat.nome})`);
-    } else {
-      const data: any = {};
-      if (existing.nome !== cat.nome) data.nome = cat.nome;
-      if (existing.descricao !== cat.descricao) data.descricao = cat.descricao;
-      if (Object.keys(data).length > 0) {
-        await prisma.categoria.update({ where: { id: existing.id }, data });
-      }
-    }
+    await prisma.categoria.upsert({
+      where: { slug: cat.slug },
+      create: cat,
+      update: {
+        nome: cat.nome,
+        descricao: cat.descricao,
+        cor: cat.cor,
+        icone: cat.icone,
+        ordem: cat.ordem,
+      },
+    });
   }
 }
 
@@ -145,17 +137,15 @@ export async function migrateCategoriaStringToFK() {
     let atualizados = 0;
     for (const t of ticketsSemFK) {
       const slug = t.categoria as string;
-      let cat = await prisma.categoria.findUnique({ where: { slug } });
-      if (!cat) {
-        cat = await prisma.categoria.create({
-          data: {
-            slug,
-            nome: slug.replace(/_/g, ' '),
-            ordem: 999,
-          },
-        });
-        console.log(`[Helpdesk] Categoria legada criada: ${slug}`);
-      }
+      const cat = await prisma.categoria.upsert({
+        where: { slug },
+        create: {
+          slug,
+          nome: slug.replace(/_/g, ' '),
+          ordem: 999,
+        },
+        update: {},
+      });
       await prisma.ticket.update({
         where: { id: t.id },
         data: { categoriaId: cat.id },

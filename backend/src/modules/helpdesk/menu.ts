@@ -2,10 +2,10 @@ import prisma from '../../config/database';
 import { getSaudacao, getHorarioConfig } from './horario';
 
 const DEFAULT_BOAS_VINDAS =
-  'Ola!! {{nome}} {{saudacao}} 👋\n\nQue bom ter voce por aqui!\n\nComo podemos te ajudar hoje? Descreva por aqui mesmo que um de nossos analistas te atendera em instantes.';
+  'Olá!! {{nome}} {{saudacao}} 👋\n\nQue bom ter você por aqui!\n\nComo podemos te ajudar hoje(Apenas números)?\n1️⃣ Suporte\n2️⃣ Comercial';
 
 const DEFAULT_OPCAO_INVALIDA =
-  'Hmm, nao entendi sua resposta, {{nome}} 😅\n\nPor favor, descreva com mais detalhes o que voce precisa.';
+  'Hmm, não entendi sua resposta, {{nome}} 😅\n\nPor favor, responda com *1* para Suporte ou *2* para Comercial.';
 
 export type OpcaoMenu = '1' | '2';
 
@@ -36,6 +36,26 @@ export async function montarOpcaoInvalida(nome: string): Promise<string> {
   try {
     const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
     if ((config as any)?.mensagemOpcaoInvalida) template = (config as any).mensagemOpcaoInvalida;
+  } catch {}
+  return interpolar(template, { nome: nome || 'cliente' });
+}
+
+export async function montarAckSuporte(nome: string): Promise<string> {
+  const DEFAULT_ACK = 'Perfeito, {{nome}}! 🛠️\nVocê escolheu *Suporte*.\nDescreva seu problema que um analista técnico te atenderá em breve.';
+  let template = DEFAULT_ACK;
+  try {
+    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
+    if (config?.mensagemAckSuporte) template = config.mensagemAckSuporte;
+  } catch {}
+  return interpolar(template, { nome: nome || 'cliente' });
+}
+
+export async function montarAckComercial(nome: string): Promise<string> {
+  const DEFAULT_ACK = 'Ótimo, {{nome}}! 💼\nVocê escolheu *Comercial*.\nUm de nossos consultores entrará em contato com você em instantes.';
+  let template = DEFAULT_ACK;
+  try {
+    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
+    if (config?.mensagemAckComercial) template = config.mensagemAckComercial;
   } catch {}
   return interpolar(template, { nome: nome || 'cliente' });
 }

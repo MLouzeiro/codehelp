@@ -4,6 +4,12 @@ import { env } from '../../config/env';
 import prisma from '../../config/database';
 import { normalizeRole, hasAtLeast, Role } from '../../modules/auth/rbac';
 
+export interface UserDepartamentoInfo {
+  id: string;
+  slug: string;
+  nome: string;
+}
+
 export interface AuthRequest extends Request {
   user?: {
     id: string;
@@ -11,7 +17,7 @@ export interface AuthRequest extends Request {
     email: string;
     role: string;
     isMaster: boolean;
-    departamentoId: string | null;
+    departamentos: UserDepartamentoInfo[];
   };
 }
 
@@ -26,12 +32,26 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     const decoded = jwt.verify(token, env.jwtSecret) as { id: string; role: string };
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { id: true, name: true, email: true, role: true, isMaster: true, active: true, departamentoId: true },
+      select: {
+        id: true, name: true, email: true, role: true, isMaster: true, active: true,
+        departamentos: {
+          select: {
+            departamento: { select: { id: true, slug: true, nome: true } },
+          },
+        },
+      },
     });
     if (!user || !user.active) {
       return res.status(401).json({ error: 'Usuário inativo ou não encontrado' });
     }
-    req.user = user;
+    req.user = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isMaster: user.isMaster,
+      departamentos: user.departamentos.map((d) => d.departamento),
+    };
     next();
   } catch {
     return res.status(401).json({ error: 'Token inválido ou expirado' });

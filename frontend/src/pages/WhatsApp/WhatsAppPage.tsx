@@ -32,8 +32,10 @@ export default function WhatsAppPage() {
     prioridade: 'media',
     tipo: '',
     observacoes: '',
+    departamentoId: '',
   });
   const [abrirSaving, setAbrirSaving] = useState(false);
+  const [departamentos, setDepartamentos] = useState<any[]>([]);
   const [transferirPara, setTransferirPara] = useState('');
   const [transferirMotivo, setTransferirMotivo] = useState('');
   const [transferirSaving, setTransferirSaving] = useState(false);
@@ -139,10 +141,18 @@ export default function WhatsAppPage() {
     } catch (err) { console.error(err); }
   }, []);
 
+  const loadDepartamentos = useCallback(async () => {
+    try {
+      const { data } = await api.get('/helpdesk/departamentos');
+      setDepartamentos(data.filter((d: any) => d.ativo));
+    } catch { }
+  }, []);
+
   useEffect(() => {
     loadStatus();
     loadTickets();
-  }, [loadStatus, loadTickets]);
+    loadDepartamentos();
+  }, [loadStatus, loadTickets, loadDepartamentos]);
 
   useEffect(() => {
     if (!connected) {
@@ -267,6 +277,7 @@ export default function WhatsAppPage() {
       prioridade: selectedTicket.prioridade || 'media',
       tipo: selectedTicket.tipo || '',
       observacoes: selectedTicket.observacoes || '',
+      departamentoId: selectedTicket.departamentoId || '',
     });
     setSelectedClientId(selectedTicket.client?.id || null);
     setClientSearch(selectedTicket.client?.razaoSocial || selectedTicket.contactName || '');
@@ -307,6 +318,7 @@ export default function WhatsAppPage() {
         tipo: abrirChamado.tipo || undefined,
         observacoes: abrirChamado.observacoes.trim() || undefined,
         clientId: selectedClientId || undefined,
+        departamentoId: abrirChamado.departamentoId || undefined,
       });
       setSelectedTicket((prev: any) => ({ ...prev, ...data }));
       setShowAbrirChamado(false);
@@ -720,12 +732,22 @@ export default function WhatsAppPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1.5 block">Departamento *</label>
+                  <select value={abrirChamado.departamentoId} onChange={(e) => setAbrirChamado({ ...abrirChamado, departamentoId: e.target.value })} className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg" required>
+                    <option value="">Selecione o setor</option>
+                    {departamentos.map((d: any) => (<option key={d.id} value={d.id}>{d.nome}</option>))}
+                  </select>
+                </div>
+                <div>
                   <label className="text-xs font-medium text-gray-700 mb-1.5 block">Categoria</label>
                   <select value={abrirChamado.categoria} onChange={(e) => setAbrirChamado({ ...abrirChamado, categoria: e.target.value })} className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg">
                     <option value="">Selecione...</option>
                     {CATEGORIAS.map((c) => (<option key={c.value} value={c.value}>{c.label}</option>))}
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-700 mb-1.5 block">Prioridade</label>
                   <select value={abrirChamado.prioridade} onChange={(e) => setAbrirChamado({ ...abrirChamado, prioridade: e.target.value })} className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg">
@@ -756,7 +778,7 @@ export default function WhatsAppPage() {
 
             <div className="sticky bottom-0 bg-white px-4 sm:px-5 py-3 border-t border-neutral-100 flex gap-2">
               <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="flex-1 px-4 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
-              <button onClick={confirmarAbrirChamado} disabled={!abrirChamado.assunto.trim() || abrirSaving} className="flex-1 px-4 py-2.5 min-h-[44px] text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-1.5">
+              <button onClick={confirmarAbrirChamado} disabled={!abrirChamado.assunto.trim() || !abrirChamado.departamentoId || abrirSaving} className="flex-1 px-4 py-2.5 min-h-[44px] text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-1.5">
                 {abrirSaving ? <><RefreshCw size={14} className="animate-spin" /> Abrindo...</> : selectedTicket.protocolo ? 'Salvar alteracoes' : 'Abrir Chamado'}
               </button>
             </div>

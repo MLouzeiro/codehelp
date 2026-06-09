@@ -1,3 +1,46 @@
+export interface Departamento {
+  id: string;
+  slug: string;
+  nome: string;
+  descricao?: string;
+  cor: string;
+  icone: string;
+  ordem: number;
+  ativo: boolean;
+  _count?: { tickets: number; usuarios: number; filas: number };
+}
+
+export interface NivelSuporte {
+  id: string;
+  slug: string;
+  nome: string;
+  descricao?: string;
+  slaMinutos?: number;
+  cor: string;
+  icone: string;
+  ordem: number;
+  ativo: boolean;
+  _count?: { tickets: number; filas: number };
+}
+
+export interface Fila {
+  id: string;
+  slug: string;
+  nome: string;
+  descricao?: string;
+  nivel: string;
+  slaMinutos: number;
+  cor: string;
+  icone: string;
+  ordem: number;
+  ativo: boolean;
+  departamentoId?: string;
+  departamento?: Departamento;
+  nivelSuporteId?: string;
+  nivelSuporte?: NivelSuporte;
+  _count?: { tickets: number };
+}
+
 export interface User {
   id: string;
   name: string;
@@ -8,6 +51,7 @@ export interface User {
   active?: boolean;
   online?: boolean;
   lastSeenAt?: string;
+  departamentos?: Departamento[];
 }
 
 export interface Client {
@@ -85,11 +129,17 @@ export interface HelpdeskTicket {
   contactPhone?: string;
   assunto?: string;
   categoria?: string;
+  tipo?: string;
+  observacoes?: string;
   etapa: EtapaSlug;
   prioridade: string;
   status: string;
   client?: { id: string; razaoSocial?: string; nomeFantasia?: string; telefone?: string } | null;
   assignee?: { id: string; name: string; email: string } | null;
+  departamentoId?: string;
+  departamento?: Departamento;
+  nivelSuporteId?: string;
+  nivel?: NivelSuporte;
   dataAbertura: string;
   dataInicioAtendimento?: string;
   dataFechamento?: string;
@@ -304,5 +354,17 @@ export interface HelpdeskDashboardData {
     online: boolean;
     lastSeenAt?: string;
     emAtendimento: number;
+    tickets: Array<{
+      id: string;
+      protocolo?: string;
+      assunto?: string;
+      contactName?: string;
+      cliente?: string;
+      etapa: string;
+      prioridade: string;
+      categoria?: string;
+      dataAbertura: string;
+      tempoDecorridoMin: number;
+    }>;
   }>;
 }

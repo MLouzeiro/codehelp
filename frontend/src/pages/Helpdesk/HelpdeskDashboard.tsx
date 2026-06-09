@@ -4,6 +4,7 @@ import {
   RefreshCw, MessageSquare, Clock, CheckCircle, Users,
   ArrowRight, Activity, UserCheck, AlertTriangle, TrendingUp,
   Inbox, Bot, Headphones, FileText, Stethoscope, Circle,
+  ChevronDown, ChevronRight, AlertCircle,
 } from 'lucide-react';
 import type { HelpdeskDashboardData, EtapaSlug } from '../../types';
 
@@ -30,6 +31,7 @@ export default function HelpdeskDashboard() {
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date>(new Date());
+  const [agenteExpandido, setAgenteExpandido] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -89,7 +91,7 @@ export default function HelpdeskDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
@@ -147,7 +149,7 @@ export default function HelpdeskDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
         <div className="lg:col-span-2 bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
             <Activity size={16} className="text-emerald-600" /> Chamados em Atendimento Agora
@@ -184,29 +186,79 @@ export default function HelpdeskDashboard() {
           <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2">
             <Users size={16} className="text-emerald-600" /> Equipe ({data.agentes.length})
           </h3>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {data.agentes.map((a) => (
-              <div key={a.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-50 transition-colors">
-                <div className="relative">
-                  <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm font-bold">
-                    {a.name.charAt(0).toUpperCase()}
-                  </div>
-                  <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-                    a.online ? 'bg-emerald-500' : 'bg-neutral-300'
-                  }`} />
+          <div className="space-y-1 max-h-[32rem] overflow-y-auto">
+            {data.agentes.map((a) => {
+              const expandido = agenteExpandido === a.id;
+              return (
+                <div key={a.id} className="rounded-lg border border-neutral-200 overflow-hidden">
+                  <button
+                    onClick={() => setAgenteExpandido(expandido ? null : a.id)}
+                    className="w-full flex items-center gap-3 p-2.5 hover:bg-neutral-50 transition-colors text-left"
+                  >
+                    <div className="relative flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm font-bold">
+                        {a.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                        a.online ? 'bg-emerald-500' : 'bg-neutral-300'
+                      }`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-navy-900 truncate">{a.name}</p>
+                      <p className="text-[10px] text-neutral-500 capitalize">{a.role}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {a.emAtendimento > 0 && (
+                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                          {a.emAtendimento}
+                        </span>
+                      )}
+                      {expandido ? <ChevronDown size={14} className="text-neutral-400" /> : <ChevronRight size={14} className="text-neutral-400" />}
+                    </div>
+                  </button>
+
+                  {expandido && (
+                    <div className="border-t border-neutral-100 bg-neutral-50/50 px-3 py-2 space-y-1.5">
+                      {a.tickets.length === 0 ? (
+                        <p className="text-[11px] text-neutral-400 py-2 text-center">Nenhum chamado ativo</p>
+                      ) : (
+                        a.tickets.map((t) => {
+                          const critico = t.prioridade === 'urgente' || t.prioridade === 'alta';
+                          return (
+                            <div key={t.id} className={`flex items-center gap-2 p-2 rounded-md text-left ${
+                              critico ? 'bg-amber-50/80 border border-amber-200' : 'bg-white border border-neutral-200'
+                            }`}>
+                              <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                                t.etapa === 'em_atendimento' ? 'bg-emerald-500 animate-pulse' :
+                                t.etapa === 'aguardando_cliente' ? 'bg-blue-500' : 'bg-amber-500'
+                              }`} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] font-bold text-navy-900 truncate">
+                                  {t.cliente || t.contactName || 'Sem nome'}
+                                </p>
+                                <p className="text-[10px] text-neutral-500 truncate">
+                                  {t.assunto || t.categoria || 'Sem assunto'}
+                                </p>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                {t.protocolo && (
+                                  <p className="text-[9px] text-neutral-400 font-mono">{t.protocolo}</p>
+                                )}
+                                <p className={`text-[10px] font-bold ${
+                                  t.tempoDecorridoMin > 30 ? 'text-amber-600' : 'text-emerald-600'
+                                }`}>
+                                  {formatarTempo(t.tempoDecorridoMin)}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-navy-900 truncate">{a.name}</p>
-                  <p className="text-[10px] text-neutral-500">{a.role}</p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-xs font-bold ${a.emAtendimento > 0 ? 'text-emerald-700' : 'text-neutral-400'}`}>
-                    {a.emAtendimento}
-                  </p>
-                  <p className="text-[9px] text-neutral-400">atendendo</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {data.agentes.length === 0 && (
               <p className="text-center py-4 text-neutral-400 text-xs">Nenhum agente cadastrado</p>
             )}

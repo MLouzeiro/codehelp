@@ -93,12 +93,15 @@ export async function abrirChamadoPorAtendente(
     prioridade?: string;
     tipo?: string;
     observacoes?: string;
+    clientId?: string;
+    departamentoId?: string;
   }
 ) {
   if (processando.has(ticketId)) {
     return { ok: false, error: 'Ticket sendo processado, tente novamente' };
   }
   processando.add(ticketId);
+  const MAX_RETRIES = 3;
   try {
     const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) return { ok: false, error: 'Ticket nao encontrado' };
@@ -109,40 +112,93 @@ export async function abrirChamadoPorAtendente(
       return { ok: false, error: 'Assunto obrigatorio' };
     }
 
-    const protocolo = await generateProtocolo();
-    const etapaNova = 'em_atendimento';
-    const updated = await prisma.ticket.update({
-      where: { id: ticketId },
-      data: {
-        protocolo,
-        assunto: dados.assunto.trim(),
-        categoria: dados.categoria || ticket.categoria,
-        prioridade: dados.prioridade || ticket.prioridade || 'media',
-        tipo: dados.tipo || ticket.tipo,
-        observacoes: dados.observacoes?.trim() || ticket.observacoes,
-        etapa: etapaNova,
-        status: 'em_andamento',
-        assigneeId: atendenteId,
-        dataInicioAtendimento: new Date(),
-      },
-    });
-    await prisma.ticketStageEvent.create({
-      data: {
-        ticketId,
-        etapaAnterior: ticket.etapa || 'fila',
-        etapaNova,
-        origem: 'manual',
-        mensagemEnviada: true,
-        usuarioId: atendenteId,
-      },
-    });
-    clearTimer(ticketId);
-    followupEnviado.delete(ticketId);
-    sendStageAutoMessage(ticketId, etapaNova).catch((e) =>
-      console.warn('[Fila] Falha ao enviar autoMessage em_atendimento:', e?.message || e)
-    );
-    console.log(`[Fila] Chamado aberto, ticket ${ticketId} protocolo ${protocolo}`);
-    return { ok: true, ticket: updated };
+    let lastError: any = null;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const protocolo = await generateProtocolo();
+        const etapaNova = 'em_atendimento';
+        const updateData: any = {
+          protocolo,
+          assunto: dados.assunto.trim(),
+          categoria: dados.categoria || ticket.categoria,
+          prioridade: dados.prioridade || ticket.prioridade || 'media',
+          tipo: dados.tipo || ticket.tipo,
+          observacoes: dados.observacoes?.trim() || ticket.observacoes,
+          etapa: etapaNova,
+          status: 'em_andamento',
+          assigneeId: atendenteId,
+          dataInicioAtendimento: new Date(),
+        };
+        if (dados.clientId) {
+          updateData.clientId = dados.clientId;
+        }
+        if (dados.departamentoId) {
+          updateData.departamentoId = dados.departamentoId;
+        } else if (!ticket.departamentoId) {
+          // Se nao veio departamentoId do request, tentar pegar do atendente
+          const atendente = await prisma.user.findUnique({
+            where: { id: atendenteId },
+            select: { departamentos: { select: { departamentoId: true }, take: 1 } },
+          });
+          const deptId = atendente?.departamentos?.[0]?.departamentoId;
+          if (deptId) updateData.departamentoId = deptId;
+        }
+        const updated = await prisma.ticket.update({
+          where: { id: ticketId },
+          data: updateData,
+        });
+
+        if (dados.clientId && ticket.contactPhone) {
+          const phoneNorm = ticket.contactPhone.replace(/\D/g, '');
+          const existente = await prisma.colaborador.findFirst({
+            where: {
+              clientId: dados.clientId,
+              OR: [
+                { telefone: { contains: phoneNorm } },
+                { whatsapp: { contains: phoneNorm } },
+              ],
+            },
+          });
+          if (!existente) {
+            await prisma.colaborador.create({
+              data: {
+                clientId: dados.clientId,
+                nome: ticket.contactName || 'Contato WhatsApp',
+                telefone: ticket.contactPhone,
+                whatsapp: ticket.contactPhone,
+                principal: false,
+              },
+            });
+          }
+        }
+        await prisma.ticketStageEvent.create({
+          data: {
+            ticketId,
+            etapaAnterior: ticket.etapa || 'fila',
+            etapaNova,
+            origem: 'manual',
+            mensagemEnviada: true,
+            usuarioId: atendenteId,
+          },
+        });
+        clearTimer(ticketId);
+        followupEnviado.delete(ticketId);
+        sendStageAutoMessage(ticketId, etapaNova).catch((e) =>
+          console.warn('[Fila] Falha ao enviar autoMessage em_atendimento:', e?.message || e)
+        );
+        console.log(`[Fila] Chamado aberto, ticket ${ticketId} protocolo ${protocolo}`);
+        return { ok: true, ticket: updated };
+      } catch (err: any) {
+        lastError = err;
+        if (err?.code === 'P2002' && err?.meta?.target?.includes('protocolo')) {
+          console.warn(`[Fila] P2002 protocolo duplicado, tentativa ${attempt + 1}/${MAX_RETRIES}`);
+          continue;
+        }
+        throw err;
+      }
+    }
+    console.error('[Fila] Todas as tentativas de gerar protocolo falharam:', lastError?.message || lastError);
+    return { ok: false, error: 'Falha ao gerar protocolo, tente novamente' };
   } catch (err: any) {
     console.error('[Fila] Erro ao abrir chamado:', err?.message || err);
     return { ok: false, error: 'Erro ao abrir chamado' };

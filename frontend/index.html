@@ -2,24 +2,61 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Codemed Hub — CRM + OS Digital + WhatsApp para Laboratórios</title>
     <meta name="description" content="Sistema completo de gestão para laboratórios de análises clínicas. CRM, OS Digital, WhatsApp nativo e Dashboard IA — o sistema que cresce com você." />
-    <meta name="keywords" content="sistema para laboratório, LIS, CRM laboratorial, OS digital, WhatsApp laboratório, gestão laboratorial" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="keywords" content="sistema para laboratório, LIS, CRM laboratorial, OS digital, WhatsApp laboratório, gestão laboratorial, analyses clínicas" />
+    <meta name="author" content="Codemed" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#1D4ED8" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Codemed Hub" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
 
     <!-- Open Graph -->
     <meta property="og:title" content="Codemed Hub — Gestão Inteligente para Laboratórios" />
-    <meta property="og:description" content="CRM, OS Digital, WhatsApp Nativo e Dashboard IA em um só sistema." />
+    <meta property="og:description" content="CRM, OS Digital, WhatsApp Nativo e Dashboard IA em um só sistema. Feito para laboratórios de análises clínicas." />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="Codemed Hub" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Codemed Hub — Gestão Inteligente para Laboratórios" />
+    <meta name="twitter:description" content="CRM, OS Digital, WhatsApp Nativo e Dashboard IA em um só sistema." />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://codemed.com.br" />
 
     <!-- Google Fonts: Khand + Dosis + Lexend + JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Khand:wght@400;500;600;700&family=Dosis:wght@300;400;500;600;700;800&family=Lexend:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Codemed Hub",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "Sistema completo de gestão para laboratórios de análises clínicas com CRM, OS Digital, WhatsApp nativo e Dashboard IA.",
+      "url": "https://codemed.com.br",
+      "offers": {
+        "@type": "Offer",
+        "price": "197",
+        "priceCurrency": "BRL"
+      }
+    }
+    </script>
   </head>
-  <body class="bg-neutral-0 text-neutral-700">
+  <body class="bg-slate-50 text-slate-800 antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

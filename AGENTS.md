@@ -1,4 +1,4 @@
-# AGENTS.md — codemed-hub CRM Kanban
+# AGENTS.md — code-help CRM Kanban
 
 ## Versionamento (regra absoluta)
 
@@ -57,7 +57,7 @@
 ## Estrutura do projeto
 
 ```
-codemed-hub/
+code-help/
 ├── backend/
 │   ├── prisma/          # Schema + migrations + seed
 │   ├── src/

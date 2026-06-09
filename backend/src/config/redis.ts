@@ -11,6 +11,12 @@ try {
     lazyConnect: true,
   });
 
+  redis.on('error', () => {
+    if (redis) {
+      redis = null;
+    }
+  });
+
   redis.connect().then(() => {
     console.log('Redis connected');
   }).catch(() => {

@@ -38,6 +38,7 @@ describe('Auth Controller — Task 2.1', () => {
         email: 'admin@codemed.com.br',
         password: await bcrypt.hash('admin123', 12),
         role: 'admin',
+        isMaster: true,
         active: true,
         phone: null,
         avatar: null,
@@ -64,6 +65,8 @@ describe('Auth Controller — Task 2.1', () => {
             name: 'Admin Codemed',
             email: 'admin@codemed.com.br',
             role: 'admin',
+            isMaster: true,
+            phone: null,
           },
         })
       );
@@ -158,7 +161,7 @@ describe('Auth Controller — Task 2.1', () => {
         phone: null,
         online: false,
         lastSeenAt: null,
-        departamentoId: null,
+        departamentos: [],
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -191,7 +194,7 @@ describe('Auth Controller — Task 2.1', () => {
       await refreshToken(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Refresh token obrigatório' });
+      expect(res.json).toHaveBeenCalledWith({ error: 'Refresh token é obrigatório' });
     });
 
     it('deve retornar 401 para refresh token inválido', async () => {
@@ -219,7 +222,7 @@ describe('Auth Controller — Task 2.1', () => {
       await refreshToken(req, res);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Usuário não encontrado' });
+      expect(res.json).toHaveBeenCalledWith({ error: 'Usuário inválido' });
     });
   });
 
@@ -237,7 +240,7 @@ describe('Auth Controller — Task 2.1', () => {
 
       await me(req, res);
 
-      expect(res.json).toHaveBeenCalledWith(mockUser);
+      expect(res.json).toHaveBeenCalledWith({ user: mockUser });
     });
   });
 });

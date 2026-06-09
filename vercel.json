@@ -1,13 +1,35 @@
 {
-  "experimentalServices": {
-    "frontend": {
-      "entrypoint": "frontend",
-      "routePrefix": "/",
-      "framework": "vite"
+  "version": 2,
+  "installCommand": "npm install",
+  "builds": [
+    {
+      "src": "api/index.ts",
+      "use": "@vercel/node"
     },
-    "backend": {
-      "entrypoint": "backend",
-      "routePrefix": "/_/backend"
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
-  }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.ts"
+    },
+    {
+      "src": "/storage/(.*)",
+      "dest": "/api/index.ts"
+    },
+    {
+      "src": "/(.*\\.(js|css|json|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp))",
+      "dest": "/frontend/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/index.html"
+    }
+  ]
 }

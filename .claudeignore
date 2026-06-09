@@ -1,6 +1,6 @@
 # =============================================================================
 # .claudeignore — Claude Code exclusion context
-# Gerado automaticamente para o projeto codemed-hub
+# Gerado automaticamente para o projeto code-help
 # Stack: Express + TypeScript + Prisma + PostgreSQL + Redis | React + Vite + Tailwind
 # =============================================================================
 

@@ -235,8 +235,10 @@ export default function HelpdeskKanban() {
     prioridade: 'media',
     tipo: '',
     observacoes: '',
+    departamentoId: '',
   });
   const [abrirSaving, setAbrirSaving] = useState(false);
+  const [departamentos, setDepartamentos] = useState<any[]>([]);
   const [descartarSaving, setDescartarSaving] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [clientSearch, setClientSearch] = useState('');
@@ -275,6 +277,13 @@ export default function HelpdeskKanban() {
     } catch { }
   }, []);
 
+  const loadDepartamentos = useCallback(async () => {
+    try {
+      const { data } = await api.get('/helpdesk/departamentos');
+      setDepartamentos(data.filter((d: any) => d.ativo));
+    } catch { }
+  }, []);
+
   const loadTicketDetail = useCallback(async (id: string) => {
     try {
       const { data } = await api.get(`/helpdesk/tickets/${id}/history`);
@@ -289,7 +298,8 @@ export default function HelpdeskKanban() {
   useEffect(() => {
     loadKanban();
     loadAgents();
-  }, [loadKanban, loadAgents]);
+    loadDepartamentos();
+  }, [loadKanban, loadAgents, loadDepartamentos]);
 
   useEffect(() => {
     if (isDragging) return;
@@ -375,6 +385,7 @@ export default function HelpdeskKanban() {
         prioridade: ticketOrigem.prioridade || 'media',
         tipo: ticketOrigem.tipo || '',
         observacoes: ticketOrigem.observacoes || '',
+        departamentoId: ticketOrigem.departamentoId || '',
       });
       setSelectedClientId(ticketOrigem.client?.id || null);
       setClientSearch(ticketOrigem.client?.razaoSocial || ticketOrigem.contactName || '');
@@ -506,6 +517,7 @@ export default function HelpdeskKanban() {
       prioridade: t.prioridade || 'media',
       tipo: t.tipo || '',
       observacoes: t.observacoes || '',
+      departamentoId: t.departamentoId || '',
     });
     setSelectedClientId(t.client?.id || null);
     setClientSearch(t.client?.razaoSocial || t.contactName || '');
@@ -531,6 +543,7 @@ export default function HelpdeskKanban() {
           tipo: abrirChamado.tipo || undefined,
           observacoes: abrirChamado.observacoes.trim() || undefined,
           clientId: selectedClientId || undefined,
+          departamentoId: abrirChamado.departamentoId || undefined,
         });
         if (pendingDrop) {
           await api.post(`/helpdesk/tickets/${pendingDrop.ticketId}/move`, {
@@ -542,7 +555,7 @@ export default function HelpdeskKanban() {
       }
       setPendingDrop(null);
       setShowAbrirChamado(false);
-      setAbrirChamado({ assunto: '', categoria: '', prioridade: 'media', tipo: '', observacoes: '' });
+      setAbrirChamado({ assunto: '', categoria: '', prioridade: 'media', tipo: '', observacoes: '', departamentoId: '' });
       setSelectedClientId(null);
       setClientSearch('');
       loadTicketDetail(ticketDetail.ticket.id);
@@ -1092,6 +1105,20 @@ export default function HelpdeskKanban() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
+                  <label className="text-xs font-medium text-neutral-700 block mb-1.5">Departamento *</label>
+                  <select
+                    value={abrirChamado.departamentoId}
+                    onChange={(e) => setAbrirChamado({ ...abrirChamado, departamentoId: e.target.value })}
+                    className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 min-h-[44px]"
+                    required
+                  >
+                    <option value="">Selecione o setor</option>
+                    {departamentos.map((d: any) => (
+                      <option key={d.id} value={d.id}>{d.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="text-xs font-medium text-neutral-700 block mb-1.5">Categoria</label>
                   <select
                     value={abrirChamado.categoria}
@@ -1106,6 +1133,9 @@ export default function HelpdeskKanban() {
                     <option value="outro">Outro</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-neutral-700 block mb-1.5">Prioridade</label>
                   <select
@@ -1150,7 +1180,7 @@ export default function HelpdeskKanban() {
               </button>
               <button
                 onClick={confirmarAbrirChamado}
-                disabled={abrirSaving || !abrirChamado.assunto.trim()}
+                disabled={abrirSaving || !abrirChamado.assunto.trim() || !abrirChamado.departamentoId}
                 className="flex-1 px-4 py-2.5 min-h-[44px] text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
                 {abrirSaving ? <><RefreshCw size={14} className="animate-spin" /> Salvando...</> : pendingDrop?.forConcluido ? 'Finalizar' : pendingDrop ? 'Mover e Abrir' : 'Confirmar'}

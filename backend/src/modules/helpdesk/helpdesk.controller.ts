@@ -21,11 +21,12 @@ export async function getKanban(req: AuthRequest, res: Response) {
 
     const where: any = { status: { not: 'arquivado' } };
     if (req.user?.role === 'tecnico') {
-      if (req.user.departamentoId) {
-        // Tecnicos com departamento: veem seus tickets + fila do departamento + fila sem departamento
+      const deptIds = req.user.departamentos.map((d) => d.id);
+      if (deptIds.length > 0) {
+        // Tecnicos com departamento: veem seus tickets + fila dos departamentos + fila sem departamento
         where.OR = [
           { assigneeId: req.user.id },
-          { etapa: 'fila', departamentoId: req.user.departamentoId, assigneeId: null },
+          { etapa: 'fila', departamentoId: { in: deptIds }, assigneeId: null },
           { etapa: 'fila', departamentoId: null, assigneeId: null },
         ];
       } else {
@@ -243,8 +244,8 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
     if (atribuirParaMim && req.user) {
       updateData.assigneeId = req.user.id;
       updateData.usuarioId = req.user.id;
-      if (!ticket.departamentoId && req.user.departamentoId) {
-        updateData.departamentoId = req.user.departamentoId;
+      if (!ticket.departamentoId && req.user.departamentos.length > 0) {
+        updateData.departamentoId = req.user.departamentos[0].id;
       }
     }
     if (clientId !== undefined) {

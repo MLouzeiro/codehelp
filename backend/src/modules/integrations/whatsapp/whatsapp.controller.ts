@@ -129,7 +129,7 @@ export async function getTicket(req: AuthRequest, res: Response) {
 
 export async function createTicketFromChat(req: AuthRequest, res: Response) {
   try {
-    const { contactName, contactPhone, clientId, assunto, usuarioId } = req.body;
+    const { contactName, contactPhone, clientId, assunto, usuarioId, departamentoId } = req.body;
     if (!contactName || !contactPhone) return res.status(400).json({ error: 'Nome e telefone do contato são obrigatórios' });
 
     const phoneDigits = contactPhone.replace(/[^\d]/g, '');
@@ -155,6 +155,7 @@ export async function createTicketFromChat(req: AuthRequest, res: Response) {
         status: 'aberto',
         etapa: 'fila',
         canal: 'whatsapp',
+        departamentoId: departamentoId || null,
       },
     });
 
@@ -256,9 +257,10 @@ export async function updateTicket(req: AuthRequest, res: Response) {
 export async function abrirChamado(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { assunto, categoria, prioridade, tipo, observacoes } = req.body;
+    const { assunto, categoria, prioridade, tipo, observacoes, clientId, departamentoId } = req.body;
     if (!req.user) return res.status(401).json({ error: 'Nao autenticado' });
 
+    console.log(`[WhatsApp] abrirChamado chamado: ticket=${id}, user=${req.user.id}, assunto=${assunto}`);
     const { abrirChamadoPorAtendente } = await import('../../helpdesk/triagem.service');
     const result = await abrirChamadoPorAtendente(id, req.user.id, {
       assunto,
@@ -266,7 +268,10 @@ export async function abrirChamado(req: AuthRequest, res: Response) {
       prioridade,
       tipo,
       observacoes,
+      clientId,
+      departamentoId,
     });
+    console.log(`[WhatsApp] abrirChamado resultado: ok=${result.ok}, error=${(result as any).error || 'nenhum'}`);
     if (!result.ok) {
       const status = result.error === 'Ticket nao encontrado' ? 404
         : result.error === 'Ticket ja triado' ? 409

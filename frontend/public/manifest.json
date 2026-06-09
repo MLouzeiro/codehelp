@@ -1,0 +1,22 @@
+{
+  "name": "Codemed Hub — CRM + Helpdesk",
+  "short_name": "Codemed Hub",
+  "description": "Sistema completo de gestão para laboratórios. CRM, OS Digital, WhatsApp e Helpdesk.",
+  "theme_color": "#059669",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "any",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "pt-BR",
+  "dir": "ltr"
+}

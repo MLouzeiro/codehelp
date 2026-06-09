@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/auth';
-import { LogIn } from 'lucide-react';
+import { LogIn, ArrowRight, Shield, Zap, BarChart3 } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -26,48 +26,52 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex relative overflow-hidden bg-codemed-700">
+    <div className="min-h-screen min-h-[100dvh] flex relative overflow-hidden bg-slate-900">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] rounded-full bg-green-300/5 blur-3xl" />
-        <div className="absolute bottom-[-150px] left-[-150px] w-[500px] h-[500px] rounded-full bg-green-300/3 blur-3xl" />
-        <div className="absolute top-1/3 left-1/6 w-1.5 h-1.5 rounded-full bg-green-300/30" />
-        <div className="absolute top-2/3 right-1/4 w-2 h-2 rounded-full bg-green-300/20" />
-        <div className="absolute bottom-1/4 left-1/3 w-1 h-1 rounded-full bg-green-300/25" />
+        <div className="absolute top-[-200px] right-[-200px] w-[700px] h-[700px] rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="absolute bottom-[-150px] left-[-150px] w-[500px] h-[500px] rounded-full bg-blue-600/5 blur-3xl" />
+        <div className="absolute top-1/4 left-1/3 w-2 h-2 rounded-full bg-blue-400/30 animate-pulse" />
+        <div className="absolute top-2/3 right-1/4 w-1.5 h-1.5 rounded-full bg-blue-300/20" />
+        <div className="absolute bottom-1/3 left-1/5 w-1 h-1 rounded-full bg-blue-500/25" />
+        {/* Grid pattern */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+          backgroundSize: '60px 60px'
+        }} />
       </div>
 
       <div className="relative z-10 flex w-full">
         {/* Left side - Brand */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col justify-center px-16">
-          <div className="max-w-md">
-            <img
-              src="/logo-codemed-horizontal.png"
-              alt="Codemed"
-              className="h-12 w-auto mb-12"
-            />
-            <h1 className="text-5xl font-bold text-white leading-tight mb-6"
-                style={{ fontFamily: 'Khand, sans-serif', letterSpacing: '-0.02em' }}>
+        <div className="hidden lg:flex lg:w-[55%] flex-col justify-center px-16 xl:px-20">
+          <div className="max-w-lg">
+            <div className="flex items-center gap-2 mb-14">
+              <img src="/logo-codemed-horizontal.png" alt="Codemed" className="h-10 w-auto" />
+            </div>
+
+            <h1 className="text-5xl xl:text-6xl font-bold text-white leading-[1.08] mb-6 tracking-tight"
+                style={{ fontFamily: 'Khand, sans-serif' }}>
               O sistema que cresce<br />
-              <span className="text-green-300">com seu laboratório</span>
+              <span className="bg-gradient-to-r from-blue-400 to-blue-300 bg-clip-text text-transparent">com seu laboratório</span>
             </h1>
-            <p className="text-lg text-white/60 leading-relaxed"
-               style={{ fontFamily: 'Dosis, sans-serif' }}>
+            <p className="text-lg text-slate-400 leading-relaxed max-w-md"
+               style={{ fontFamily: 'Lexend, sans-serif' }}>
               CRM, Ordem de Serviço Digital, WhatsApp nativo e Dashboard com IA —
               tudo em um sistema que seu time vai gostar de usar.
             </p>
 
-            <div className="mt-12 space-y-4">
+            <div className="mt-14 space-y-5">
               {[
-                'Gestão completa de clientes',
-                'OS Digital com assinatura via WhatsApp',
-                'Dashboard com insights de IA',
-                'Kanban de tarefas integrado',
+                { icon: Shield, text: 'Gestão completa de clientes' },
+                { icon: Zap, text: 'OS Digital com assinatura via WhatsApp' },
+                { icon: BarChart3, text: 'Dashboard com insights de IA' },
+                { icon: ArrowRight, text: 'Kanban de tarefas integrado' },
               ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 text-white/70">
-                  <div className="w-5 h-5 rounded-full bg-green-300/20 flex items-center justify-center flex-shrink-0">
-                    <div className="w-2 h-2 rounded-full bg-green-300" />
+                <div key={i} className="flex items-center gap-4 group">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                    <item.icon size={18} className="text-blue-400" />
                   </div>
-                  <span style={{ fontFamily: 'Dosis, sans-serif' }}>{item}</span>
+                  <span className="text-slate-300 text-sm" style={{ fontFamily: 'Lexend, sans-serif' }}>{item.text}</span>
                 </div>
               ))}
             </div>
@@ -75,80 +79,83 @@ export default function Login() {
         </div>
 
         {/* Right side - Login form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-6">
+        <div className="w-full lg:w-[45%] flex items-center justify-center p-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <div className="w-full max-w-sm">
-            <div className="text-center mb-8 lg:hidden">
-              <img
-                src="/logo-codemed-horizontal.png"
-                alt="Codemed"
-                className="h-10 w-auto mx-auto mb-8"
-              />
+            <div className="text-center mb-10 lg:hidden">
+              <img src="/logo-codemed-horizontal.png" alt="Codemed" className="h-10 w-auto mx-auto mb-4" />
             </div>
 
-            <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 shadow-2xl">
-              <h2 className="text-2xl font-bold text-white mb-1"
-                  style={{ fontFamily: 'Khand, sans-serif', letterSpacing: '-0.01em' }}>
+            <div className="bg-white/[0.07] backdrop-blur-xl rounded-3xl border border-white/10 p-8 shadow-2xl">
+              <h2 className="text-2xl font-bold text-white mb-1 tracking-tight"
+                  style={{ fontFamily: 'Khand, sans-serif' }}>
                 Acessar plataforma
               </h2>
-              <p className="text-white/40 text-sm mb-8"
-                 style={{ fontFamily: 'Dosis, sans-serif' }}>
+              <p className="text-slate-400 text-sm mb-8"
+                 style={{ fontFamily: 'Lexend, sans-serif' }}>
                 Faça login para continuar
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 {error && (
-                  <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-lg flex items-center gap-2"
-                       style={{ fontFamily: 'Dosis, sans-serif' }}>
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3.5 rounded-xl flex items-center gap-2.5"
+                       style={{ fontFamily: 'Lexend, sans-serif' }}>
                     <div className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
                     {error}
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-white/60 mb-1.5"
-                         style={{ fontFamily: 'Khand, sans-serif', letterSpacing: '0.03em' }}>
+                  <label className="block text-sm font-medium text-slate-300 mb-2"
+                         style={{ fontFamily: 'Lexend, sans-serif' }}>
                     Email
                   </label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/30
-                             focus:ring-2 focus:ring-green-300 focus:border-green-300 outline-none transition-all duration-200"
+                    className="w-full px-4 py-3.5 min-h-[48px] bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-slate-500
+                             focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200"
                     placeholder="seu@email.com"
+                    autoComplete="email"
                     required
-                    style={{ fontFamily: 'Dosis, sans-serif' }}
+                    style={{ fontFamily: 'Lexend, sans-serif' }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/60 mb-1.5"
-                         style={{ fontFamily: 'Khand, sans-serif', letterSpacing: '0.03em' }}>
+                  <label className="block text-sm font-medium text-slate-300 mb-2"
+                         style={{ fontFamily: 'Lexend, sans-serif' }}>
                     Senha
                   </label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/30
-                             focus:ring-2 focus:ring-green-300 focus:border-green-300 outline-none transition-all duration-200"
+                    className="w-full px-4 py-3.5 min-h-[48px] bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-slate-500
+                             focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200"
                     placeholder="••••••••"
+                    autoComplete="current-password"
                     required
-                    style={{ fontFamily: 'Dosis, sans-serif' }}
+                    style={{ fontFamily: 'Lexend, sans-serif' }}
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-green-300 text-codemed-700 font-bold rounded-lg
-                           hover:bg-green-200 hover:shadow-brand
-                           active:bg-green-400 transition-all duration-200
+                  className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-xl
+                           hover:from-blue-700 hover:to-blue-600 hover:shadow-brand
+                           active:from-blue-800 active:to-blue-700 transition-all duration-200
                            disabled:opacity-50 disabled:cursor-not-allowed
-                           flex items-center justify-center gap-2"
+                           flex items-center justify-center gap-2 shadow-lg shadow-blue-600/25"
                   style={{ fontFamily: 'Khand, sans-serif', fontSize: '1.05rem', letterSpacing: '0.03em' }}
                 >
-                  {loading ? 'Entrando...' : (
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Entrando...
+                    </div>
+                  ) : (
                     <>
                       <LogIn size={18} />
                       Entrar
@@ -158,9 +165,9 @@ export default function Login() {
               </form>
             </div>
 
-            <p className="text-center mt-6">
-              <Link to="/" className="text-white/40 hover:text-green-300 text-sm transition-colors"
-                     style={{ fontFamily: 'Dosis, sans-serif' }}>
+            <p className="text-center mt-8">
+              <Link to="/" className="text-slate-500 hover:text-blue-400 text-sm transition-colors"
+                     style={{ fontFamily: 'Lexend, sans-serif' }}>
                 ← Voltar para o site
               </Link>
             </p>

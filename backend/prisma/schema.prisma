@@ -19,24 +19,23 @@ model User {
   active         Boolean       @default(true)
   online         Boolean       @default(false)
   lastSeenAt     DateTime?
-  departamentoId String?
-  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @default(now())
 
-  contacts         Contact[]
-  opportunities    Opportunity[]
-  tasks            Task[]
-  tickets          Ticket[]
-  ticketsAtendidos Ticket[]        @relation("TicketAssignee")
-  messages         Message[]
-  auditLogs        AuditLog[]
-  clientTechnician Client[]     @relation("ClientTechnician")
-  orderTechnician  ServiceOrder[] @relation("OrderTechnician")
-  orderCreator     ServiceOrder[] @relation("OrderCreator")
-  stageMovements   TicketStageEvent[]
-  notificacoes     Notificacao[]
-  kbArticlesAutor  KBArticle[]     @relation("KBArticleAutor")
+  departamentos      UserDepartamento[]
+  contacts           Contact[]
+  opportunities      Opportunity[]
+  tasks              Task[]
+  tickets            Ticket[]
+  ticketsAtendidos   Ticket[]        @relation("TicketAssignee")
+  messages           Message[]
+  auditLogs          AuditLog[]
+  clientTechnician   Client[]     @relation("ClientTechnician")
+  orderTechnician    ServiceOrder[] @relation("OrderTechnician")
+  orderCreator       ServiceOrder[] @relation("OrderCreator")
+  stageMovements     TicketStageEvent[]
+  notificacoes       Notificacao[]
+  kbArticlesAutor    KBArticle[]     @relation("KBArticleAutor")
 }
 
 model Client {
@@ -451,7 +450,7 @@ model Departamento {
 
   filas              Fila[]
   tickets            Ticket[]
-  usuarios           User[]
+  usuarios           UserDepartamento[]
   whatsappConnections WhatsAppConnection[]
 }
 
@@ -627,4 +626,17 @@ model Feriado {
   updatedAt DateTime @default(now())
 
   @@index([data])
+}
+
+/// Tabela pivô: Usuario pode pertencer a multiplos departamentos
+model UserDepartamento {
+  id             String       @id @default(uuid())
+  userId         String
+  departamentoId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  departamento   Departamento @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, departamentoId])
+  @@index([departamentoId])
 }
