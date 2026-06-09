@@ -42,6 +42,7 @@ export async function getKanban(req: AuthRequest, res: Response) {
       include: {
         client: { select: { id: true, razaoSocial: true, nomeFantasia: true, telefone: true } },
         assignee: { select: { id: true, name: true, email: true } },
+        departamento: { select: { id: true, nome: true, slug: true, cor: true } },
         messages: { orderBy: { createdAt: 'desc' }, take: 1 },
         _count: { select: { messages: true, orders: true } },
       },

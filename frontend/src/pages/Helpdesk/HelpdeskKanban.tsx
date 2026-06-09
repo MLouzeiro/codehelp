@@ -68,9 +68,16 @@ const KanbanCard = memo(function KanbanCard({
       onDragStart={(e) => onDragStart(e, ticket.id, colunaSlug)}
       onDragEnd={onDragEnd}
       onClick={() => onSelect(ticket.id)}
-      className={`bg-white rounded-lg border p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${
-        isSelected ? 'border-emerald-400 shadow-md ring-1 ring-emerald-200' : 'border-neutral-200'
-      } ${isDragging ? 'opacity-40' : ''}`}
+      className={`bg-white rounded-lg border p-2.5 cursor-grab active:cursor-grabbing hover:shadow-lg hover:-translate-y-0.5 transition-all duration-150 ${
+        isSelected ? 'border-emerald-400 shadow-md ring-1 ring-emerald-200' : 'border-neutral-200 hover:border-neutral-300'
+      } ${isDragging ? 'opacity-40 scale-95' : ''}`}
+      style={{
+        borderLeftWidth: '3px',
+        borderLeftColor: ticket.prioridade === 'urgente' ? '#ef4444'
+          : ticket.prioridade === 'alta' ? '#f59e0b'
+          : ticket.prioridade === 'media' ? '#3b82f6'
+          : '#9ca3af',
+      }}
     >
       <div className="flex items-start gap-2 mb-1.5">
         <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -171,6 +178,11 @@ const KanbanCard = memo(function KanbanCard({
       )}
 
       <div className="flex flex-wrap gap-1 mb-1.5">
+        {ticket.departamento && (
+          <span className="text-[10px] text-white px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: ticket.departamento.cor || '#64748b' }}>
+            {ticket.departamento.nome}
+          </span>
+        )}
         {ticket.categoria && (
           <span className="text-[10px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded">
             {ticket.categoria.replace(/_/g, ' ')}
@@ -231,6 +243,7 @@ export default function HelpdeskKanban() {
   const [search, setSearch] = useState('');
   const [searchParams] = useSearchParams();
   const [autoMessage, setAutoMessage] = useState<{ sent: boolean; error?: string } | null>(null);
+  const [filterDept, setFilterDept] = useState<string>('');
   const [showAbrirChamado, setShowAbrirChamado] = useState(false);
   const [abrirChamado, setAbrirChamado] = useState({
     assunto: '',
@@ -763,6 +776,45 @@ export default function HelpdeskKanban() {
         </div>
       </div>
 
+      <div className="flex gap-1 overflow-x-auto pb-2 border-b border-neutral-200">
+        <button
+          onClick={() => setFilterDept('')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+            filterDept === ''
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+          }`}
+        >
+          Todos
+        </button>
+        {departamentos.map((d: any) => {
+          const deptCount = Object.values(data.board).reduce(
+            (acc: number, col: any) => acc + col.items.filter((t: any) => t.departamentoId === d.id).length,
+            0
+          );
+          return (
+            <button
+              key={d.id}
+              onClick={() => setFilterDept(filterDept === d.id ? '' : d.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                filterDept === d.id
+                  ? 'text-white shadow-sm'
+                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+              }`}
+              style={filterDept === d.id ? { backgroundColor: d.cor } : undefined}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: d.cor }} />
+              {d.nome}
+              {deptCount > 0 && (
+                <span className={`text-[10px] px-1 py-0 rounded-full ${filterDept === d.id ? 'bg-white/20' : 'bg-neutral-200 text-neutral-500'}`}>
+                  {deptCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="flex-1 flex gap-4 min-h-0">
         <div className="flex-1 overflow-x-auto pb-4">
           <div className="flex gap-3 min-w-max h-full">
@@ -770,14 +822,17 @@ export default function HelpdeskKanban() {
               const Icone = ETAPA_ICONES[coluna.icone] || Inbox;
               const isDropTarget = isDragging;
 
-              const items = searchLower
-                ? coluna.items.filter((t: any) =>
-                    (t.contactName?.toLowerCase() || '').includes(searchLower)
-                    || (t.contactPhone || '').includes(searchLower)
-                    || (t.assunto?.toLowerCase() || '').includes(searchLower)
-                    || (t.client?.razaoSocial?.toLowerCase() || '').includes(searchLower)
-                    || (t.lastMessage?.content?.toLowerCase() || '').includes(searchLower)
-                  )
+              const items = (searchLower || filterDept)
+                ? coluna.items.filter((t: any) => {
+                    const matchSearch = !searchLower
+                      || (t.contactName?.toLowerCase() || '').includes(searchLower)
+                      || (t.contactPhone || '').includes(searchLower)
+                      || (t.assunto?.toLowerCase() || '').includes(searchLower)
+                      || (t.client?.razaoSocial?.toLowerCase() || '').includes(searchLower)
+                      || (t.lastMessage?.content?.toLowerCase() || '').includes(searchLower);
+                    const matchDept = !filterDept || t.departamentoId === filterDept;
+                    return matchSearch && matchDept;
+                  })
                 : coluna.items;
 
               return (

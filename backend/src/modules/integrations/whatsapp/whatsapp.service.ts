@@ -243,7 +243,7 @@ export async function initializeClient(): Promise<void> {
   }
 }
 
-async function handleIncomingMessage(message: any) {
+async function handleIncomingMessage(message: any, connectionId?: string) {
   try {
     if (!message || !message.from) return;
     const fromMe = !!message.fromMe;
@@ -334,6 +334,7 @@ async function handleIncomingMessage(message: any) {
             etapa: 'fila',
             canal: 'whatsapp',
             clientId: client?.id,
+            whatsappConnectionId: connectionId || null,
           },
         });
         ticket = created;
@@ -386,14 +387,27 @@ async function handleIncomingMessage(message: any) {
             departamentoSlug = 'comercial';
           }
 
-          // Buscar departamento pelo slug
-          const dept = await prisma.departamento.findUnique({ where: { slug: departamentoSlug }, select: { id: true } });
+          // Usar departamento da conexao se disponivel, senao buscar pelo slug
+          let departamentoId: string | undefined;
+          if (connectionId) {
+            const conn = await prisma.whatsAppConnection.findUnique({
+              where: { id: connectionId },
+              select: { departamentoId: true },
+            });
+            if (conn?.departamentoId) {
+              departamentoId = conn.departamentoId;
+            }
+          }
+          if (!departamentoId) {
+            const dept = await prisma.departamento.findUnique({ where: { slug: departamentoSlug }, select: { id: true } });
+            departamentoId = dept?.id;
+          }
 
           await prisma.ticket.update({
             where: { id: ticket!.id },
             data: {
               categoria,
-              ...(dept ? { departamentoId: dept.id } : {}),
+              ...(departamentoId ? { departamentoId } : {}),
             },
           });
           const result = await sendWhatsAppMessage(phone, ackMsg);

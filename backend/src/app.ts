@@ -8,6 +8,7 @@ import authRoutes from './modules/auth/auth.routes';
 import crmRoutes from './modules/crm/crm.routes';
 import ordersRoutes from './modules/orders/orders.routes';
 import whatsappRoutes from './modules/integrations/whatsapp/whatsapp.routes';
+import whatsappConnectionsRoutes from './modules/integrations/whatsapp/whatsapp-connections.routes';
 import analyticsRoutes from './modules/analytics/analytics.routes';
 import kanbanRoutes from './modules/kanban/kanban.routes';
 import alertsRoutes from './modules/alerts/alerts.routes';
@@ -59,6 +60,7 @@ app.use('/api/notificacoes', notificacoesRoutes);
 app.use('/api/permissions', permissionsRoutes);
 app.use('/api/feriados', feriadosRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/whatsapp', whatsappConnectionsRoutes);
 app.use('/api', searchRoutes);
 
 if (!isVercel) {
