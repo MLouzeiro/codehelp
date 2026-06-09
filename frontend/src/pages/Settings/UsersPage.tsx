@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
-import { Plus, X, User, Shield, Mail, Phone, ChevronDown, Check, AlertCircle } from 'lucide-react';
+import { Plus, X, User, Shield, Mail, Phone, ChevronDown, Check, AlertCircle, Building2 } from 'lucide-react';
+import type { Departamento } from '../../types';
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; permissions: string[] }> = {
   admin: {
@@ -56,9 +57,18 @@ export default function UsersPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [roleInfo, setRoleInfo] = useState<string | null>(null);
+  const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
+  const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
   const initialLoadedRef = useRef(false);
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => { loadUsers(); loadDepartamentos(); }, []);
+
+  const loadDepartamentos = async () => {
+    try {
+      const { data } = await api.get('/helpdesk/departamentos?includeInativos=true');
+      setDepartamentos(Array.isArray(data) ? data : []);
+    } catch {}
+  };
 
   const loadUsers = async () => {
     setError('');
@@ -81,6 +91,7 @@ export default function UsersPage() {
   const openNew = () => {
     setEditingId(null);
     setForm(INITIAL_FORM);
+    setSelectedDepts([]);
     setError('');
     setShowModal(true);
   };
@@ -88,6 +99,7 @@ export default function UsersPage() {
   const openEdit = (u: any) => {
     setEditingId(u.id);
     setForm({ name: u.name, email: u.email, password: '', phone: u.phone || '', role: u.role });
+    setSelectedDepts(u.departamentos?.map((d: Departamento) => d.id) || []);
     setError('');
     setShowModal(true);
   };
@@ -105,11 +117,11 @@ export default function UsersPage() {
     setSaving(true);
     try {
       if (editingId) {
-        const payload: any = { name: form.name, email: form.email, role: form.role, phone: form.phone };
+        const payload: any = { name: form.name, email: form.email, role: form.role, phone: form.phone, departamentoIds: selectedDepts };
         if (form.password) payload.password = form.password;
         await api.put(`/auth/users/${editingId}`, payload);
       } else {
-        await api.post('/auth/users', form);
+        await api.post('/auth/users', { ...form, departamentoIds: selectedDepts });
       }
       setShowModal(false);
       loadUsers();
@@ -170,6 +182,16 @@ export default function UsersPage() {
                         <span className="flex items-center gap-1"><Mail size={12} /> {u.email}</span>
                         {u.phone && <span className="flex items-center gap-1"><Phone size={12} /> {u.phone}</span>}
                       </div>
+                      {u.departamentos && u.departamentos.length > 0 && (
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                          {u.departamentos.map((d: Departamento) => (
+                            <span key={d.id} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.cor }} />
+                              {d.nome}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -263,6 +285,38 @@ export default function UsersPage() {
                     ))}
                   </div>
                 </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-neutral-500 mb-1 block">
+                  <Building2 size={12} className="inline mr-1" />
+                  Departamentos (pode pertencer a mais de um)
+                </label>
+                <div className="border border-gray-200 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1">
+                  {departamentos.filter(d => d.ativo).map((d) => (
+                    <label key={d.id} className="flex items-center gap-2 text-xs text-gray-700 hover:bg-gray-50 rounded px-2 py-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedDepts.includes(d.id)}
+                        onChange={(e) => {
+                          setSelectedDepts(prev =>
+                            e.target.checked
+                              ? [...prev, d.id]
+                              : prev.filter(id => id !== d.id)
+                          );
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.cor }} />
+                      {d.nome}
+                    </label>
+                  ))}
+                  {departamentos.filter(d => d.ativo).length === 0 && (
+                    <p className="text-xs text-neutral-400 py-2 text-center">Nenhum departamento cadastrado</p>
+                  )}
+                </div>
+                {selectedDepts.length > 0 && (
+                  <p className="text-[10px] text-neutral-400 mt-1">{selectedDepts.length} selecionado(s)</p>
+                )}
               </div>
             </div>
 

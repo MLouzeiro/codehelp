@@ -20,6 +20,7 @@ import AlertsPage from './pages/Settings/AlertsPage';
 import HelpdeskStagesPage from './pages/Settings/HelpdeskStagesPage';
 import HelpdeskConfigPage from './pages/Settings/HelpdeskConfigPage';
 import HelpdeskDepartamentosPage from './pages/Settings/HelpdeskDepartamentosPage';
+import HelpdeskFilasPage from './pages/Settings/HelpdeskFilasPage';
 import HelpdeskNiveisPage from './pages/Settings/HelpdeskNiveisPage';
 import PermissionsPage from './pages/Settings/PermissionsPage';
 import FeriadosPage from './pages/Settings/FeriadosPage';
@@ -72,6 +73,7 @@ export default function App() {
           <Route path="settings/helpdesk-stages" element={<HelpdeskStagesPage />} />
           <Route path="settings/helpdesk-config" element={<HelpdeskConfigPage />} />
           <Route path="settings/helpdesk-departamentos" element={<HelpdeskDepartamentosPage />} />
+          <Route path="settings/helpdesk-filas" element={<HelpdeskFilasPage />} />
           <Route path="settings/helpdesk-niveis" element={<HelpdeskNiveisPage />} />
           <Route path="settings/permissions" element={<PermissionsPage />} />
           <Route path="settings/feriados" element={<FeriadosPage />} />

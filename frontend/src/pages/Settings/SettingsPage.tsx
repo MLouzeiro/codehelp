@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Bell, Inbox, Shield, Settings2, Lock, CalendarOff, MessageSquare, Clock, Building2, Layers } from 'lucide-react';
+import { Users, Bell, Inbox, Shield, Settings2, Lock, CalendarOff, MessageSquare, Clock, Building2, Layers, ListTodo } from 'lucide-react';
 
 export default function SettingsPage() {
   const location = useLocation();
@@ -10,6 +10,7 @@ export default function SettingsPage() {
     { path: '/app/settings/helpdesk-config', label: 'Helpdesk', icon: MessageSquare, desc: 'Mensagens automáticas, menu e horário de funcionamento' },
     { path: '/app/settings/helpdesk-stages', label: 'Etapas do Helpdesk', icon: Inbox, desc: 'Criar, renomear, ativar ou desativar etapas (somente admin master)' },
     { path: '/app/settings/helpdesk-departamentos', label: 'Departamentos', icon: Building2, desc: 'Gerenciar setores: Suporte, Comercial, Desenvolvimento, Demandas Internas' },
+    { path: '/app/settings/helpdesk-filas', label: 'Filas', icon: ListTodo, desc: 'Gerenciar filas de atendimento por departamento e nível' },
     { path: '/app/settings/helpdesk-niveis', label: 'Níveis de Suporte', icon: Layers, desc: 'Configurar níveis: N1, N2, N3, Supervisor, etc.' },
     { path: '/app/settings/feriados', label: 'Feriados', icon: CalendarOff, desc: 'Cadastrar feriados para bloquear atendimento fora do horário comercial' },
     { path: '/app/settings/alerts', label: 'Alertas', icon: Bell, desc: 'Configurar alertas semanais e destinatários' },
