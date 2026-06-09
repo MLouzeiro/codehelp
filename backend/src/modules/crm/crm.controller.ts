@@ -52,8 +52,9 @@ export async function getClient(req: AuthRequest, res: Response) {
         contacts: { include: { usuario: { select: { name: true } } }, orderBy: { data: 'desc' } },
         opportunities: { include: { responsavel: { select: { name: true } } }, orderBy: { createdAt: 'desc' } },
         serviceOrders: { orderBy: { createdAt: 'desc' }, take: 10 },
-        tickets: { orderBy: { createdAt: 'desc' }, take: 10 },
+        tickets: { orderBy: { createdAt: 'desc' }, take: 20, select: { id: true, protocolo: true, contactName: true, assunto: true, status: true, etapa: true, prioridade: true, categoria: true, dataAbertura: true, updatedAt: true, assignee: { select: { name: true } } } },
         colaboradores: { orderBy: [{ principal: 'desc' }, { nome: 'asc' }] },
+        ativos: { orderBy: { createdAt: 'desc' } },
       },
     });
     if (!client) return res.status(404).json({ error: 'Cliente não encontrado' });
