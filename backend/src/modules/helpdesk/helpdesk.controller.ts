@@ -21,10 +21,20 @@ export async function getKanban(req: AuthRequest, res: Response) {
 
     const where: any = { status: { not: 'arquivado' } };
     if (req.user?.role === 'tecnico') {
-      where.OR = [
-        { assigneeId: req.user.id },
-        { etapa: 'fila', departamentoId: req.user.departamentoId, assigneeId: null },
-      ];
+      if (req.user.departamentoId) {
+        // Tecnicos com departamento: veem seus tickets + fila do departamento + fila sem departamento
+        where.OR = [
+          { assigneeId: req.user.id },
+          { etapa: 'fila', departamentoId: req.user.departamentoId, assigneeId: null },
+          { etapa: 'fila', departamentoId: null, assigneeId: null },
+        ];
+      } else {
+        // Tecnicos sem departamento: veem seus tickets + toda fila
+        where.OR = [
+          { assigneeId: req.user.id },
+          { etapa: 'fila', assigneeId: null },
+        ];
+      }
     }
     const tickets = await prisma.ticket.findMany({
       where,
@@ -233,6 +243,9 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
     if (atribuirParaMim && req.user) {
       updateData.assigneeId = req.user.id;
       updateData.usuarioId = req.user.id;
+      if (!ticket.departamentoId && req.user.departamentoId) {
+        updateData.departamentoId = req.user.departamentoId;
+      }
     }
     if (clientId !== undefined) {
       updateData.clientId = clientId || null;
