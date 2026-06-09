@@ -5,7 +5,7 @@ import {
   RefreshCw, MessageSquare, User, Clock, Tag, FileText, Inbox, Bot,
   Headphones, CheckCircle, AlertTriangle, Phone, X, Send, ArrowRight,
   UserPlus, ClipboardList, History, Stethoscope, Building2, ArrowUpDown,
-  Search, Plus, MoreVertical, Pencil,
+  Search, Plus, MoreVertical, Pencil, ArrowRightLeft,
 } from 'lucide-react';
 import type { HelpdeskKanbanData, HelpdeskEtapa, EtapaSlug } from '../../types';
 
@@ -870,8 +870,11 @@ export default function HelpdeskKanban() {
                 </span>
               )}
               {ticketDetail.ticket.assignee ? (
-                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded font-medium">
+                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded font-medium flex items-center gap-1">
                   {ticketDetail.ticket.assignee.name}
+                  <button onClick={() => setShowAssignModal(true)} className="text-emerald-500 hover:text-emerald-700 ml-0.5" title="Transferir para outro analista">
+                    <ArrowRightLeft size={10} />
+                  </button>
                 </span>
               ) : (
                 <button onClick={() => setShowAssignModal(true)} className="text-[10px] text-amber-700 bg-amber-50 px-2 py-1 rounded font-medium hover:bg-amber-100 flex items-center gap-0.5">
@@ -987,14 +990,23 @@ export default function HelpdeskKanban() {
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => setShowAssignModal(false)}>
           <div className="bg-white rounded-xl p-5 w-full max-w-md mx-4 space-y-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-navy-900 flex items-center gap-2"><UserPlus size={16} /> Atribuir Analista</h3>
+              <h3 className="font-bold text-navy-900 flex items-center gap-2">
+                <UserPlus size={16} /> {ticketDetail?.ticket?.assignee ? 'Transferir Chamado' : 'Atribuir Analista'}
+              </h3>
               <button onClick={() => setShowAssignModal(false)} className="text-neutral-400 hover:text-neutral-600"><X size={18} /></button>
             </div>
+            {ticketDetail?.ticket?.assignee && (
+              <p className="text-xs text-neutral-500 bg-neutral-50 px-3 py-2 rounded-lg">
+                Atual: <span className="font-medium text-neutral-700">{ticketDetail.ticket.assignee.name}</span>
+              </p>
+            )}
             <select value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5">
               <option value="">Selecione um analista</option>
               {agents.map((a) => <option key={a.id} value={a.id}>{a.name} — {a.role}</option>)}
             </select>
-            <button onClick={handleAssign} disabled={!assignTo} className="btn-primary w-full disabled:opacity-50">Atribuir</button>
+            <button onClick={handleAssign} disabled={!assignTo} className="btn-primary w-full disabled:opacity-50">
+              {ticketDetail?.ticket?.assignee ? 'Transferir' : 'Atribuir'}
+            </button>
           </div>
         </div>
       )}
