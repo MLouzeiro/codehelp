@@ -18,6 +18,9 @@ import SettingsPage from './pages/Settings/SettingsPage';
 import UsersPage from './pages/Settings/UsersPage';
 import AlertsPage from './pages/Settings/AlertsPage';
 import HelpdeskStagesPage from './pages/Settings/HelpdeskStagesPage';
+import HelpdeskConfigPage from './pages/Settings/HelpdeskConfigPage';
+import HelpdeskDepartamentosPage from './pages/Settings/HelpdeskDepartamentosPage';
+import HelpdeskNiveisPage from './pages/Settings/HelpdeskNiveisPage';
 import PermissionsPage from './pages/Settings/PermissionsPage';
 import FeriadosPage from './pages/Settings/FeriadosPage';
 import RobosPage from './pages/Robos/RobosPage';
@@ -31,7 +34,7 @@ import Layout from './components/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div></div>;
+  if (loading) return <div className="flex items-center justify-center min-h-screen bg-slate-50"><div className="flex flex-col items-center gap-3"><div className="w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin" /><span className="text-sm text-slate-500" style={{ fontFamily: 'Lexend, sans-serif' }}>Carregando...</span></div></div>;
   return user ? <>{children}</> : <Navigate to="/login" />;
 }
 
@@ -67,11 +70,14 @@ export default function App() {
           <Route path="settings/users" element={<UsersPage />} />
           <Route path="settings/alerts" element={<AlertsPage />} />
           <Route path="settings/helpdesk-stages" element={<HelpdeskStagesPage />} />
+          <Route path="settings/helpdesk-config" element={<HelpdeskConfigPage />} />
+          <Route path="settings/helpdesk-departamentos" element={<HelpdeskDepartamentosPage />} />
+          <Route path="settings/helpdesk-niveis" element={<HelpdeskNiveisPage />} />
           <Route path="settings/permissions" element={<PermissionsPage />} />
           <Route path="settings/feriados" element={<FeriadosPage />} />
           <Route path="robos" element={<RobosPage />} />
         </Route>
-      </Routes>
-    </AuthProvider>
+        </Routes>
+      </AuthProvider>
   );
 }

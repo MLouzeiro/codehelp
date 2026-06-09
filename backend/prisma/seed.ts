@@ -39,6 +39,69 @@ async function main() {
     create: { name: 'Pedro Comercial', email: 'comercial@codemed.com.br', password: techPassword, role: 'comercial' },
   });
 
+  // ── Departamentos ──────────────────────────────────────────────
+  console.log('  ↳ Departamentos...');
+
+  const deptSuporte = await prisma.departamento.upsert({
+    where: { slug: 'suporte-tecnico' },
+    update: {},
+    create: { slug: 'suporte-tecnico', nome: 'Suporte Técnico', descricao: 'Atendimento técnico, dúvidas e correção de bugs', cor: '#3b82f6', icone: 'headphones', ordem: 0 },
+  });
+
+  const deptComercial = await prisma.departamento.upsert({
+    where: { slug: 'comercial' },
+    update: {},
+    create: { slug: 'comercial', nome: 'Comercial', descricao: 'Vendas, orçamentos e pré-vendas', cor: '#10b981', icone: 'trending-up', ordem: 1 },
+  });
+
+  const deptDesenvolvimento = await prisma.departamento.upsert({
+    where: { slug: 'desenvolvimento' },
+    update: {},
+    create: { slug: 'desenvolvimento', nome: 'Desenvolvimento', descricao: 'Demandas de desenvolvimento de software', cor: '#8b5cf6', icone: 'code', ordem: 2 },
+  });
+
+  const deptDemandasInternas = await prisma.departamento.upsert({
+    where: { slug: 'demandas-internas' },
+    update: {},
+    create: { slug: 'demandas-internas', nome: 'Demandas Internas', descricao: 'Chamados internos (TI, RH, administrativo)', cor: '#f59e0b', icone: 'building', ordem: 3 },
+  });
+
+  // ── Níveis de Suporte ──────────────────────────────────────────
+  console.log('  ↳ Níveis de suporte...');
+
+  const nivelN1 = await prisma.nivelSuporte.upsert({
+    where: { slug: 'n1' },
+    update: {},
+    create: { slug: 'n1', nome: 'N1 — Primeiro Atendimento', descricao: 'Atendimento inicial, triagem e resolução de questões simples', cor: '#22c55e', icone: 'user', ordem: 0, slaMinutos: 30 },
+  });
+
+  const nivelN2 = await prisma.nivelSuporte.upsert({
+    where: { slug: 'n2' },
+    update: {},
+    create: { slug: 'n2', nome: 'N2 — Especialista', descricao: 'Suporte especializado para problemas mais complexos', cor: '#f59e0b', icone: 'user-check', ordem: 1, slaMinutos: 120 },
+  });
+
+  const nivelN3 = await prisma.nivelSuporte.upsert({
+    where: { slug: 'n3' },
+    update: {},
+    create: { slug: 'n3', nome: 'N3 — Engenharia / Crítico', descricao: 'Chamados críticos, bugs de sistema e emergências', cor: '#ef4444', icone: 'shield-alert', ordem: 2, slaMinutos: 240 },
+  });
+
+  const nivelSupervisor = await prisma.nivelSuporte.upsert({
+    where: { slug: 'supervisor' },
+    update: {},
+    create: { slug: 'supervisor', nome: 'Supervisor', descricao: 'Gestão e supervisão geral do atendimento', cor: '#6366f1', icone: 'crown', ordem: 3, slaMinutos: null },
+  });
+
+  // Vincular filas existentes aos departamentos e níveis
+  await prisma.fila.updateMany({ where: { slug: 'fila' }, data: { departamentoId: deptSuporte.id, nivelSuporteId: nivelN1.id } });
+  await prisma.fila.updateMany({ where: { slug: 'em_atendimento' }, data: { departamentoId: deptSuporte.id, nivelSuporteId: nivelN1.id } });
+
+  // Vincular usuários aos departamentos
+  await prisma.user.update({ where: { id: tecnico1.id }, data: { departamentoId: deptSuporte.id } });
+  await prisma.user.update({ where: { id: tecnico2.id }, data: { departamentoId: deptSuporte.id } });
+  await prisma.user.update({ where: { id: comercial.id }, data: { departamentoId: deptComercial.id } });
+
   const client1 = await prisma.client.create({
     data: {
       razaoSocial: 'Laboratório São Lucas Ltda',

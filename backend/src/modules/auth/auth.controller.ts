@@ -41,7 +41,7 @@ export async function login(req: Request, res: Response) {
     const tokens = generateTokens(user);
     return res.json({
       ...tokens,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, isMaster: user.isMaster },
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -77,7 +77,7 @@ export async function me(req: AuthRequest, res: Response) {
 export async function listUsers(req: Request, res: Response) {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, active: true, phone: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, active: true, isMaster: true, phone: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     });
     return res.json(users);
@@ -88,7 +88,7 @@ export async function listUsers(req: Request, res: Response) {
 
 export async function createUser(req: Request, res: Response) {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, isMaster } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
     }
@@ -98,8 +98,15 @@ export async function createUser(req: Request, res: Response) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, role: role || 'tecnico', phone: req.body.phone || null },
-      select: { id: true, name: true, email: true, role: true, active: true, phone: true },
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: role || 'tecnico',
+        phone: req.body.phone || null,
+        isMaster: isMaster || false,
+      },
+      select: { id: true, name: true, email: true, role: true, active: true, isMaster: true, phone: true },
     });
 
     return res.status(201).json(user);
@@ -111,7 +118,7 @@ export async function createUser(req: Request, res: Response) {
 export async function updateUser(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const { name, email, role, active, password } = req.body;
+    const { name, email, role, active, password, isMaster } = req.body;
 
     const data: any = {};
     if (name) data.name = name;
@@ -120,11 +127,12 @@ export async function updateUser(req: Request, res: Response) {
     if (active !== undefined) data.active = active;
     if (password) data.password = await bcrypt.hash(password, 12);
     if (req.body.phone !== undefined) data.phone = req.body.phone;
+    if (isMaster !== undefined) data.isMaster = isMaster;
 
     const user = await prisma.user.update({
       where: { id },
       data,
-      select: { id: true, name: true, email: true, role: true, active: true, phone: true },
+      select: { id: true, name: true, email: true, role: true, active: true, isMaster: true, phone: true },
     });
 
     return res.json(user);

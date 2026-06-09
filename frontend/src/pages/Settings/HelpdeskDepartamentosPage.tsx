@@ -1,0 +1,255 @@
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Plus, Edit2, Power, PowerOff, GripVertical, Save, X, RefreshCw,
+  Building2,
+} from 'lucide-react';
+import api from '../../services/api';
+import { useAuth } from '../../services/auth';
+
+interface Departamento {
+  id: string;
+  slug: string;
+  nome: string;
+  descricao: string | null;
+  cor: string;
+  icone: string;
+  ordem: number;
+  ativo: boolean;
+  _count?: { tickets: number; usuarios: number; filas: number };
+}
+
+const CORES_OPCOES = [
+  '#3b82f6', '#10b981', '#8b5cf6', '#f59e0b',
+  '#ef4444', '#ec4899', '#06b6d4', '#64748b',
+];
+
+const ICONES_OPCOES = [
+  { value: 'building', label: 'Edificio' },
+  { value: 'headphones', label: 'Suporte' },
+  { value: 'trending-up', label: 'Comercial' },
+  { value: 'code', label: 'Codigo' },
+  { value: 'users', label: 'Equipe' },
+  { value: 'wrench', label: 'Manutencao' },
+  { value: 'shield', label: 'Seguranca' },
+  { value: 'server', label: 'Servidor' },
+];
+
+export default function HelpdeskDepartamentosPage() {
+  const { user } = useAuth();
+  const isMaster = user?.isMaster || user?.role === 'admin';
+  const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Departamento | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [showInativos, setShowInativos] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'ok' | 'err'; msg: string } | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const { data } = await api.get(`/helpdesk/departamentos?includeInativos=${showInativos}`);
+      setDepartamentos(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [showInativos]);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!feedback) return;
+    const t = setTimeout(() => setFeedback(null), 4000);
+    return () => clearTimeout(t);
+  }, [feedback]);
+
+  const handleToggle = async (dept: Departamento) => {
+    try {
+      const { data } = await api.patch(`/helpdesk/departamentos/${dept.id}/toggle`);
+      setFeedback({ type: 'ok', msg: `Departamento "${data.nome}" ${data.ativo ? 'reativado' : 'desativado'}` });
+      load();
+    } catch (err: any) {
+      setFeedback({ type: 'err', msg: err?.response?.data?.error || 'Erro' });
+    }
+  };
+
+  const handleSave = async (data: Partial<Departamento>) => {
+    setSaving(true);
+    try {
+      if (editing) {
+        await api.put(`/helpdesk/departamentos/${editing.id}`, data);
+        setFeedback({ type: 'ok', msg: 'Departamento atualizado' });
+      } else {
+        await api.post('/helpdesk/departamentos', data);
+        setFeedback({ type: 'ok', msg: 'Departamento criado' });
+      }
+      setEditing(null);
+      setCreating(false);
+      load();
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Erro ao salvar';
+      const field = err?.response?.data?.field;
+      setFeedback({ type: 'err', msg: field ? `${field}: ${msg}` : msg });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[60vh]"><RefreshCw className="animate-spin text-blue-600" size={32} /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Building2 className="text-blue-600" size={24} /> Departamentos
+          </h1>
+          <p className="text-gray-500 text-sm">
+            {departamentos.length} departamento(s) {showInativos && '(incluindo inativos)'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowInativos(!showInativos)}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${showInativos ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 text-neutral-600'}`}>
+            {showInativos ? 'Mostrando inativas' : 'Mostrar inativas'}
+          </button>
+          {isMaster && (
+            <button onClick={() => { setCreating(true); setEditing(null); }}
+              className="btn-primary text-sm flex items-center gap-1.5">
+              <Plus size={14} /> Novo departamento
+            </button>
+          )}
+        </div>
+      </div>
+
+      {feedback && (
+        <div className={`text-sm px-3 py-2 rounded-lg ${feedback.type === 'ok' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+          {feedback.msg}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {departamentos.length === 0 && (
+          <p className="text-center text-neutral-400 py-8 text-sm">Nenhum departamento cadastrado.</p>
+        )}
+        {departamentos.map((dept) => (
+          <div key={dept.id} className={`card flex items-center gap-3 p-3 ${!dept.ativo ? 'opacity-60' : ''}`}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white flex-shrink-0" style={{ backgroundColor: dept.cor }}>
+              <Building2 size={14} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm text-gray-900 truncate">{dept.nome}</h3>
+                <code className="text-[10px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded font-mono">{dept.slug}</code>
+                {!dept.ativo && (
+                  <span className="text-[10px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded font-medium uppercase">Inativo</span>
+                )}
+              </div>
+              {dept.descricao && <p className="text-xs text-neutral-500 truncate mt-0.5">{dept.descricao}</p>}
+              <div className="flex gap-3 mt-1 text-[10px] text-neutral-400">
+                {dept._count && <span>{dept._count.tickets} ticket(s)</span>}
+                {dept._count && <span>{dept._count.usuarios} usuario(s)</span>}
+                {dept._count && <span>{dept._count.filas} fila(s)</span>}
+              </div>
+            </div>
+            {isMaster && (
+              <div className="flex items-center gap-1">
+                <button onClick={() => { setEditing(dept); setCreating(false); }} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-600" title="Editar">
+                  <Edit2 size={14} />
+                </button>
+                <button onClick={() => handleToggle(dept)} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-600" title={dept.ativo ? 'Desativar' : 'Reativar'}>
+                  {dept.ativo ? <PowerOff size={14} className="text-red-500" /> : <Power size={14} className="text-emerald-500" />}
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {(editing || creating) && isMaster && (
+        <DepartamentoEditor
+          dept={editing}
+          onClose={() => { setEditing(null); setCreating(false); }}
+          onSave={handleSave}
+          saving={saving}
+        />
+      )}
+    </div>
+  );
+}
+
+interface EditorProps {
+  dept: Departamento | null;
+  onClose: () => void;
+  onSave: (data: Partial<Departamento>) => Promise<void>;
+  saving: boolean;
+}
+
+function DepartamentoEditor({ dept, onClose, onSave, saving }: EditorProps) {
+  const isNew = !dept;
+  const [form, setForm] = useState<Partial<Departamento>>(
+    dept || { slug: '', nome: '', descricao: '', cor: '#3b82f6', icone: 'building' }
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl p-5 w-full max-w-lg space-y-3" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-gray-900">{isNew ? 'Novo Departamento' : `Editar "${dept!.nome}"`}</h3>
+          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600"><X size={18} /></button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-medium text-gray-700 block mb-1">Slug (kebab-case) *</label>
+            <input type="text" value={form.slug || ''} onChange={(e) => setForm({ ...form, slug: e.target.value })}
+              disabled={!isNew} placeholder="suporte-tecnico"
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 disabled:bg-gray-50 disabled:text-gray-500 font-mono" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-700 block mb-1">Nome *</label>
+            <input type="text" value={form.nome || ''} onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-gray-700 block mb-1">Descricao</label>
+          <input type="text" value={form.descricao || ''} onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-medium text-gray-700 block mb-1">Cor</label>
+            <div className="flex flex-wrap gap-1.5">
+              {CORES_OPCOES.map((c) => (
+                <button key={c} type="button" onClick={() => setForm({ ...form, cor: c })}
+                  className={`w-7 h-7 rounded border-2 ${form.cor === c ? 'border-gray-900' : 'border-transparent'}`}
+                  style={{ backgroundColor: c }} />
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-700 block mb-1">Icone</label>
+            <select value={form.icone} onChange={(e) => setForm({ ...form, icone: e.target.value })}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2">
+              {ICONES_OPCOES.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-3 border-t">
+          <button onClick={onClose} disabled={saving} className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+          <button onClick={() => onSave(form)} disabled={saving || !form.nome?.trim() || !form.slug?.trim()}
+            className="flex-1 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-1.5">
+            <Save size={14} /> {saving ? 'Salvando...' : isNew ? 'Criar' : 'Salvar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

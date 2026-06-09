@@ -141,21 +141,25 @@ export default function HelpdeskStagesPage() {
         await api.put(`/helpdesk/stages/${editing.id}`, data);
         setFeedback({ type: 'ok', msg: 'Etapa atualizada' });
       } else {
-        await api.post('/helpdesk/stages', data);
-        setFeedback({ type: 'ok', msg: 'Etapa criada' });
+        const response = await api.post('/helpdesk/stages', data);
+        console.log('[Stages] Etapa criada:', response.data);
+        setFeedback({ type: 'ok', msg: 'Etapa criada com sucesso' });
       }
       setEditing(null);
       setCreating(false);
       load();
     } catch (err: any) {
-      setFeedback({ type: 'err', msg: err?.response?.data?.error || 'Erro ao salvar' });
+      const msg = err?.response?.data?.error || err?.message || 'Erro ao salvar';
+      const field = err?.response?.data?.field;
+      console.error('[Stages] Erro ao salvar:', { msg, field, status: err?.response?.status, data: err?.response?.data });
+      setFeedback({ type: 'err', msg: field ? `${field}: ${msg}` : msg });
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[60vh]"><RefreshCw className="animate-spin text-emerald-600" size={32} /></div>;
+    return <div className="flex items-center justify-center min-h-[60vh]"><RefreshCw className="animate-spin text-blue-600" size={32} /></div>;
   }
 
   return (

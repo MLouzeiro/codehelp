@@ -3,24 +3,26 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("tecnico")
-  isMaster  Boolean  @default(false)
-  phone     String?
-  avatar    String?
-  active    Boolean  @default(true)
-  online    Boolean  @default(false)
-  lastSeenAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  id             String        @id @default(uuid())
+  name           String
+  email          String        @unique
+  password       String
+  role           String        @default("tecnico")
+  isMaster       Boolean       @default(false)
+  phone          String?
+  avatar         String?
+  active         Boolean       @default(true)
+  online         Boolean       @default(false)
+  lastSeenAt     DateTime?
+  departamentoId String?
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
 
   contacts         Contact[]
   opportunities    Opportunity[]
@@ -198,6 +200,12 @@ model Ticket {
   fila                Fila?    @relation(fields: [idFila], references: [id])
   ativoId             String?
   ativo               Ativo?   @relation(fields: [ativoId], references: [id])
+  departamentoId      String?
+  departamento        Departamento? @relation(fields: [departamentoId], references: [id])
+  nivelSuporteId      String?
+  nivelSuporte        NivelSuporte? @relation(fields: [nivelSuporteId], references: [id])
+  whatsappConnectionId String?
+  whatsappConnection  WhatsAppConnection? @relation(fields: [whatsappConnectionId], references: [id])
   dataAbertura        DateTime @default(now())
   dataFechamento      DateTime?
   dataPrimeiraResposta DateTime?
@@ -408,20 +416,76 @@ model TicketHistory {
 
 /// Fila de atendimento (escalonamento multinivel: N1, N2, N3)
 model Fila {
-  id         String   @id @default(uuid())
-  slug       String   @unique
-  nome       String
-  descricao  String?
-  nivel      String   @default("N1")
-  slaMinutos Int      @default(60)
-  cor        String   @default("#3b82f6")
-  icone      String   @default("inbox")
-  ordem      Int      @default(0)
-  ativo      Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now())
+  id             String        @id @default(uuid())
+  slug           String        @unique
+  nome           String
+  descricao      String?
+  nivel          String        @default("N1")
+  slaMinutos     Int           @default(60)
+  cor            String        @default("#3b82f6")
+  icone          String        @default("inbox")
+  ordem          Int           @default(0)
+  ativo          Boolean       @default(true)
+  departamentoId String?
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+  nivelSuporteId String?
+  nivelSuporte   NivelSuporte? @relation(fields: [nivelSuporteId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
 
-  tickets    Ticket[]
+  tickets        Ticket[]
+}
+
+/// Departamento / Setor da empresa
+model Departamento {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  nome      String
+  descricao String?
+  cor       String   @default("#3b82f6")
+  icone     String   @default("building")
+  ordem     Int      @default(0)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  filas              Fila[]
+  tickets            Ticket[]
+  usuarios           User[]
+  whatsappConnections WhatsAppConnection[]
+}
+
+/// Nivel de suporte (customizavel: N1, N2, N3, N4, Supervisor, etc.)
+model NivelSuporte {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  nome      String
+  descricao String?
+  cor       String   @default("#3b82f6")
+  icone     String   @default("layers")
+  ordem     Int      @default(0)
+  slaMinutos Int?    // SLA alvo para este nivel
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  filas   Fila[]
+  tickets Ticket[]
+}
+
+/// Conexao WhatsApp (multi-numero)
+model WhatsAppConnection {
+  id              String       @id @default(uuid())
+  nome            String
+  numero          String       // +5511999999999
+  slug            String       @unique
+  departamentoId  String?
+  departamento    Departamento? @relation(fields: [departamentoId], references: [id])
+  ativo           Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @default(now())
+
+  tickets Ticket[]
 }
 
 /// Configuracao de SLA por prioridade

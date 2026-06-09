@@ -158,6 +158,7 @@ describe('Auth Controller — Task 2.1', () => {
         phone: null,
         online: false,
         lastSeenAt: null,
+        departamentoId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
