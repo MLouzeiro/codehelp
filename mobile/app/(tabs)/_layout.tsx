@@ -62,9 +62,14 @@ export default function TabsLayout() {
             <Ionicons name="home-outline" size={size} color={color} />
           ),
           headerRight: () => (
-            <Pressable onPress={handleLogout} style={{ marginRight: 16 }}>
-              <Ionicons name="log-out-outline" size={22} color={colors.textSecondary} />
-            </Pressable>
+            <View style={{ flexDirection: 'row', marginRight: 16, gap: 12 }}>
+              <Pressable onPress={() => router.push('/(modals)/settings')}>
+                <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
+              </Pressable>
+              <Pressable onPress={handleLogout}>
+                <Ionicons name="log-out-outline" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -92,6 +97,15 @@ export default function TabsLayout() {
           title: 'OS',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="clipboard-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="approvals"
+        options={{
+          title: 'Aprovacoes',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="checkmark-done-outline" size={size} color={color} />
           ),
         }}
       />
