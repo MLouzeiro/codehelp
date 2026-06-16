@@ -1,7 +1,13 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../shared/middleware/auth';
 import { sendWeeklyAlert } from './alerts.service';
+import {
+  getAlertConfigs,
+  saveAlertConfigs,
+  getAlertasNaoLidos,
+  getResumoAlertas,
+} from './alerts.service';
 
 export async function listRecipients(req: AuthRequest, res: Response) {
   try {
@@ -64,5 +70,45 @@ export async function triggerNow(req: AuthRequest, res: Response) {
     return res.json({ message: 'Alerta semanal disparado com sucesso' });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao disparar alerta' });
+  }
+}
+
+export async function getConfigHandler(req: AuthRequest, res: Response) {
+  try {
+    const configs = await getAlertConfigs(req.user!.id);
+    res.json(configs);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Erro ao carregar configurações' });
+  }
+}
+
+export async function saveConfigHandler(req: AuthRequest, res: Response) {
+  try {
+    const { configs } = req.body;
+    if (!Array.isArray(configs)) {
+      return res.status(400).json({ error: 'configs deve ser um array' });
+    }
+    await saveAlertConfigs(req.user!.id, configs);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Erro ao salvar configurações' });
+  }
+}
+
+export async function getNaoLidosHandler(req: AuthRequest, res: Response) {
+  try {
+    const count = await getAlertasNaoLidos(req.user!.id);
+    res.json({ count });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Erro ao contar alertas' });
+  }
+}
+
+export async function getResumoHandler(req: AuthRequest, res: Response) {
+  try {
+    const resumo = await getResumoAlertas(req.user!.id);
+    res.json(resumo);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Erro ao gerar resumo' });
   }
 }

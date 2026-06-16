@@ -19,6 +19,7 @@ model User {
   active         Boolean       @default(true)
   online         Boolean       @default(false)
   lastSeenAt     DateTime?
+  sessionToken   String?       @unique
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @default(now())
 
@@ -36,6 +37,8 @@ model User {
   stageMovements     TicketStageEvent[]
   notificacoes       Notificacao[]
   kbArticlesAutor    KBArticle[]     @relation("KBArticleAutor")
+  aprovacoesSolicitadas Aprovacao[] @relation("AprovacaoSolicitante")
+  aprovacoesDecididas   Aprovacao[] @relation("AprovacaoAprovador")
 }
 
 model Client {
@@ -213,6 +216,7 @@ model Ticket {
   dataConclusao       DateTime?
   dataResolucao       DateTime?
   dataCSAT            DateTime?
+  assumedAt           DateTime?
   slaTotalMinutos     Int?
   slaPausadoEm        DateTime?
   slaPausadoTotalMin  Int      @default(0)
@@ -221,6 +225,8 @@ model Ticket {
   resumoFinal         String?
   tipo                String?
   observacoes         String?
+  lastAgentMessageAt  DateTime?
+  filaOrder           Int?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @default(now())
 
@@ -230,6 +236,7 @@ model Ticket {
   orders        ServiceOrder[] @relation("OrderTicket")
   csatResposta  CSATResposta?
   notificacoes  Notificacao[]
+  aprovacoes    Aprovacao[]
 }
 
 model Message {
@@ -239,6 +246,9 @@ model Message {
   fromMe    Boolean  @default(false)
   content   String?
   mediaUrl  String?
+  mimeType  String?
+  source    String?  @default("agent")
+  tipo      String?  @default("message")
   usuarioId String?
   usuario   User?    @relation(fields: [usuarioId], references: [id])
   sentAt    DateTime @default(now())
@@ -442,16 +452,17 @@ model Fila {
 
 /// Departamento / Setor da empresa
 model Departamento {
-  id        String   @id @default(uuid())
-  slug      String   @unique
-  nome      String
-  descricao String?
-  cor       String   @default("#3b82f6")
-  icone     String   @default("building")
-  ordem     Int      @default(0)
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  nome          String
+  descricao     String?
+  cor           String   @default("#3b82f6")
+  icone         String   @default("building")
+  ordem         Int      @default(0)
+  slaMinutos    Int      @default(240)
+  ativo         Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
 
   filas              Fila[]
   tickets            Ticket[]
@@ -586,6 +597,26 @@ model Notificacao {
   dados          String?
   lida           Boolean  @default(false)
   createdAt      DateTime @default(now())
+}
+
+/// Fluxo de autorização formal para ações que exigem aprovação
+model Aprovacao {
+  id              String   @id @default(uuid())
+  ticketId        String
+  ticket          Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  solicitadoPorId String
+  solicitadoPor   User     @relation("AprovacaoSolicitante", fields: [solicitadoPorId], references: [id])
+  aprovadoPorId   String?
+  aprovadoPor     User?    @relation("AprovacaoAprovador", fields: [aprovadoPorId], references: [id])
+  tipo            String   @default("geral")
+  motivo          String
+  observacao      String?
+  status          String   @default("pendente")
+  valorAprovado   Float?
+  dataSolicitacao DateTime @default(now())
+  dataDecisao     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now())
 }
 
 /// Regra de automacao WHEN/IF/THEN

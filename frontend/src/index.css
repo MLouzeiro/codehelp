@@ -5,15 +5,30 @@
 @layer base {
   :root {
     --bg-app: #F8FAFC;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F8FAFC;
+    --bg-input: #FFFFFF;
     --fg-primary: #1E293B;
+    --fg-secondary: #64748B;
+    --fg-muted: #94A3B8;
+    --border: #E2E8F0;
+    --border-light: #F1F5F9;
     --accent: #3B82F6;
     --accent-light: #60A5FA;
     --accent-dark: #1D4ED8;
+    --font-scale: 1;
   }
 
   .dark {
     --bg-app: #0F172A;
+    --bg-card: #1E293B;
+    --bg-card-hover: #334155;
+    --bg-input: #1E293B;
     --fg-primary: #F1F5F9;
+    --fg-secondary: #94A3B8;
+    --fg-muted: #64748B;
+    --border: #334155;
+    --border-light: #1E293B;
     --accent: #60A5FA;
     --accent-light: #93C5FD;
     --accent-dark: #3B82F6;
@@ -23,11 +38,11 @@
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-size: calc(var(--font-scale, 1) * 16px);
   }
 
   body {
     font-family: 'Dosis', sans-serif;
-    font-size: 1rem;
     font-weight: 400;
     color: var(--fg-primary);
     line-height: 1.6;
@@ -41,7 +56,7 @@
   }
 
   ::selection {
-    background-color: #3B82F6;
+    background-color: var(--accent);
     color: #FFFFFF;
   }
 
@@ -66,73 +81,83 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-blue-600 text-white font-semibold px-6 py-3 rounded-xl
-           hover:bg-blue-700 hover:shadow-brand
-           active:bg-blue-800
+    @apply font-semibold px-6 py-3 rounded-xl
            transition-all duration-200 ease-out
            disabled:opacity-50 disabled:cursor-not-allowed
-           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
+    background-color: var(--accent);
+    color: #fff;
     font-family: 'Khand', sans-serif;
     font-size: 1rem;
     letter-spacing: 0.02em;
   }
+  .btn-primary:hover {
+    background-color: var(--accent-dark);
+  }
+  .btn-primary:focus {
+    ring-color: var(--accent);
+  }
 
   .btn-secondary {
-    @apply bg-white text-blue-700 border-2 border-blue-200 px-6 py-3 rounded-xl font-semibold
-           hover:bg-blue-50 hover:border-blue-300
-           active:bg-blue-100
+    @apply bg-white border-2 px-6 py-3 rounded-xl font-semibold
            transition-all duration-200 ease-out
-           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
+    color: var(--accent-dark);
+    border-color: var(--accent-light);
     font-family: 'Khand', sans-serif;
-    box-shadow: 0 1px 3px rgba(59,130,246,0.1), 0 1px 2px rgba(59,130,246,0.06);
   }
   .btn-secondary:hover {
-    box-shadow: 0 4px 14px rgba(59,130,246,0.25);
+    background-color: var(--bg-card-hover);
   }
 
   .btn-outline {
-    @apply bg-transparent text-blue-600 border-2 border-blue-300 px-6 py-3 rounded-xl font-semibold
-           hover:bg-blue-50 hover:border-blue-400
-           active:bg-blue-100
+    @apply bg-transparent border-2 px-6 py-3 rounded-xl font-semibold
            transition-all duration-200 ease-out
-           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
+    color: var(--accent);
+    border-color: var(--accent-light);
     font-family: 'Khand', sans-serif;
+  }
+  .btn-outline:hover {
+    background-color: var(--bg-card-hover);
   }
 
   .btn-ghost {
-    @apply bg-transparent text-blue-600 px-6 py-3 rounded-xl font-semibold
-           hover:bg-blue-50
-           active:bg-blue-100
+    @apply bg-transparent px-6 py-3 rounded-xl font-semibold
            transition-all duration-200 ease-out
-           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
+    color: var(--accent);
     font-family: 'Khand', sans-serif;
+  }
+  .btn-ghost:hover {
+    background-color: var(--bg-card-hover);
   }
 
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-6
-           transition-shadow duration-300;
-    box-shadow: 0 1px 2px rgba(15,23,42,0.04);
-  }
-  .card:hover {
-    box-shadow: 0 4px 14px rgba(59,130,246,0.1), 0 4px 6px rgba(59,130,246,0.06);
+    @apply rounded-2xl shadow-sm p-6 transition-shadow duration-300;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
   }
 
   .card-premium {
-    @apply bg-white rounded-2xl border border-blue-100/50 p-6
-           backdrop-blur-sm;
-    box-shadow: 0 10px 15px -3px rgba(59,130,246,0.1), 0 4px 6px rgba(59,130,246,0.05);
+    @apply rounded-2xl p-6 backdrop-blur-sm;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
   }
 
   .input {
-    @apply w-full px-4 py-3.5 border border-slate-200 rounded-xl
-           focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+    @apply w-full px-4 py-3.5 rounded-xl
+           focus:ring-2 focus:ring-offset-2
            outline-none transition-all duration-200
-           placeholder:text-slate-400
-           bg-white text-slate-800;
+           placeholder:opacity-50;
+    background-color: var(--bg-input);
+    border-color: var(--border);
+    color: var(--fg-primary);
     font-family: 'Dosis', sans-serif;
   }
 
   .input:focus {
+    border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
   }
 
@@ -142,35 +167,46 @@
   }
 
   .badge-blue {
-    @apply bg-blue-50 text-blue-700 border border-blue-100;
+    background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+    color: var(--accent-dark);
+    border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
   }
 
   .section-badge {
-    @apply inline-flex items-center gap-2 bg-blue-50 text-blue-600
+    @apply inline-flex items-center gap-2
            text-xs font-bold tracking-widest uppercase
-           px-4 py-2 rounded-full border border-blue-100;
+           px-4 py-2 rounded-full;
     font-family: 'Khand', sans-serif;
+    background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
   }
 
   .section-title {
-    @apply text-3xl md:text-4xl font-bold text-slate-900 tracking-tight;
+    @apply text-3xl md:text-4xl font-bold tracking-tight;
     font-family: 'Khand', sans-serif;
+    color: var(--fg-primary);
   }
 
   .section-desc {
-    @apply text-lg text-slate-500 max-w-2xl leading-relaxed;
+    @apply text-lg max-w-2xl leading-relaxed;
+    color: var(--fg-secondary);
   }
 
   .glass {
-    @apply bg-white/80 backdrop-blur-xl border border-white/20;
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.2);
+    background-color: color-mix(in srgb, var(--bg-card) 80%, transparent);
   }
 
   .glass-dark {
-    @apply bg-slate-900/80 backdrop-blur-xl border border-white/10;
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.1);
+    background-color: color-mix(in srgb, var(--bg-app) 80%, transparent);
   }
 
   .premium-gradient {
-    background: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 50%, #60A5FA 100%);
+    background: linear-gradient(135deg, var(--accent-dark) 0%, var(--accent) 50%, var(--accent-light) 100%);
   }
 }
 
@@ -188,4 +224,59 @@
   .stagger-3 { animation-delay: 0.3s; }
   .stagger-4 { animation-delay: 0.4s; }
   .stagger-5 { animation-delay: 0.5s; }
+}
+
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+@media (max-width: 768px) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .mobile-full-width {
+    width: 100%;
+  }
+
+  .mobile-stack {
+    flex-direction: column;
+  }
+
+  .mobile-p-2 {
+    padding: 0.5rem;
+  }
+
+  .mobile-text-sm {
+    font-size: 0.875rem;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .touch-device {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .touch-device:active {
+    opacity: 0.8;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  .ios-safe-area {
+    padding-bottom: env(safe-area-inset-bottom);
+    -webkit-overflow-scrolling: touch;
+  }
 }

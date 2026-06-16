@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard/Dashboard';
 import ClientList from './pages/CRM/ClientList';
 import ClientForm from './pages/CRM/ClientForm';
 import ClientDetail from './pages/CRM/ClientDetail';
+import CRMThemes from './pages/CRM/CRMThemes';
 import OpportunityPipeline from './pages/CRM/OpportunityPipeline';
 import OrderList from './pages/Orders/OrderList';
 import OrderForm from './pages/Orders/OrderForm';
@@ -24,11 +25,14 @@ import HelpdeskFilasPage from './pages/Settings/HelpdeskFilasPage';
 import HelpdeskNiveisPage from './pages/Settings/HelpdeskNiveisPage';
 import PermissionsPage from './pages/Settings/PermissionsPage';
 import FeriadosPage from './pages/Settings/FeriadosPage';
+import AlertSettings from './pages/Settings/AlertSettings';
 import RobosPage from './pages/Robos/RobosPage';
 import HelpdeskKanban from './pages/Helpdesk/HelpdeskKanban';
 import HelpdeskDashboard from './pages/Helpdesk/HelpdeskDashboard';
 import HelpdeskMetrics from './pages/Helpdesk/HelpdeskMetrics';
 import HelpdeskStatusBoard from './pages/Helpdesk/HelpdeskStatusBoard';
+import AuditStatsPage from './pages/Helpdesk/AuditStatsPage';
+import Aprovacoes from './pages/Helpdesk/Aprovacoes';
 import KBList from './pages/KB/KBList';
 import AutomationsPage from './pages/Automations/AutomationsPage';
 import Layout from './components/Layout';
@@ -54,6 +58,7 @@ export default function App() {
           <Route path="crm/new" element={<ClientForm />} />
           <Route path="crm/:id/edit" element={<ClientForm />} />
           <Route path="crm/pipeline" element={<OpportunityPipeline />} />
+          <Route path="crm/temas" element={<CRMThemes />} />
           <Route path="orders" element={<OrderList />} />
           <Route path="orders/new" element={<OrderForm />} />
           <Route path="orders/:id" element={<OrderDetail />} />
@@ -65,6 +70,8 @@ export default function App() {
           <Route path="helpdesk/painel" element={<HelpdeskDashboard />} />
           <Route path="helpdesk/metrics" element={<HelpdeskMetrics />} />
           <Route path="helpdesk/board" element={<HelpdeskStatusBoard />} />
+          <Route path="helpdesk/audit" element={<AuditStatsPage />} />
+          <Route path="helpdesk/aprovacoes" element={<Aprovacoes />} />
           <Route path="kb" element={<KBList />} />
           <Route path="automations" element={<AutomationsPage />} />
           <Route path="settings" element={<SettingsPage />} />
@@ -77,6 +84,7 @@ export default function App() {
           <Route path="settings/helpdesk-niveis" element={<HelpdeskNiveisPage />} />
           <Route path="settings/permissions" element={<PermissionsPage />} />
           <Route path="settings/feriados" element={<FeriadosPage />} />
+          <Route path="settings/alert-settings" element={<AlertSettings />} />
           <Route path="robos" element={<RobosPage />} />
         </Route>
         </Routes>
