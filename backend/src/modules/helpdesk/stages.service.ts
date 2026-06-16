@@ -51,7 +51,10 @@ function badRequest(msg: string, field?: string): never {
 
 export async function listStages(options: { includeInativas?: boolean } = {}) {
   return prisma.helpdeskConfig.findMany({
-    where: options.includeInativas ? {} : { ativo: true },
+    where: {
+      ...(options.includeInativas ? {} : { ativo: true }),
+      slug: { not: { startsWith: 'alert_' } },
+    },
     orderBy: [{ ordem: 'asc' }, { nome: 'asc' }],
   });
 }
