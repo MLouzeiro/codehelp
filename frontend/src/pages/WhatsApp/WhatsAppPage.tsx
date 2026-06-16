@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { useAuth } from '../../services/auth';
+import { playSound } from '../../services/soundAlerts';
+import { isAlertSoundEnabled, getAlertColor } from '../Settings/AlertSettings';
 import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X, FileText, Building2, Calendar, DollarSign, Tag, ArrowRightLeft, Bot, ClipboardList, ArrowUpDown, XCircle } from 'lucide-react';
 import QRCode from 'qrcode';
 
 export default function WhatsAppPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [connected, setConnected] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -49,6 +53,8 @@ export default function WhatsAppPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const msgPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const initialLoadedRef = useRef(false);
+  const prevTicketsCountRef = useRef(0);
+  const prevMessagesCountRef = useRef(0);
 
   const CATEGORIAS = [
     { value: 'suporte_tecnico', label: 'Suporte Tecnico' },
@@ -110,15 +116,15 @@ export default function WhatsAppPage() {
         setQrCode(data.qrCode);
         const url = await QRCode.toDataURL(data.qrCode, { width: 256, margin: 1 });
         setQrDataUrl(url);
-      } else {
+      } else if (data.connected) {
         setQrCode(null);
         setQrDataUrl(null);
       }
-      if (data.connected && connecting) {
+      if (data.connected) {
         setConnecting(false);
       }
     } catch (err) { console.error(err); }
-  }, [connecting]);
+  }, []);
 
   const loadTickets = useCallback(async () => {
     try {
@@ -143,10 +149,12 @@ export default function WhatsAppPage() {
 
   const loadDepartamentos = useCallback(async () => {
     try {
-      const { data } = await api.get('/helpdesk/departamentos');
+      const params: any = {};
+      if (user?.role === 'tecnico') params.mine = 'true';
+      const { data } = await api.get('/helpdesk/departamentos', { params });
       setDepartamentos(data.filter((d: any) => d.ativo));
     } catch { }
-  }, []);
+  }, [user?.role]);
 
   useEffect(() => {
     loadStatus();
@@ -155,18 +163,32 @@ export default function WhatsAppPage() {
   }, [loadStatus, loadTickets, loadDepartamentos]);
 
   useEffect(() => {
-    if (!connected) {
-      if (pollRef.current) clearInterval(pollRef.current);
-      pollRef.current = setInterval(() => { loadStatus(); loadTickets(); }, 5000);
-    } else if (connected && pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+    if (initialLoadedRef.current && tickets.length > prevTicketsCountRef.current) {
+      if (isAlertSoundEnabled('novo_ticket')) {
+        playSound('cliente_entrou');
+      }
     }
-    if (connected && !pollRef.current) {
-      pollRef.current = setInterval(() => { loadStatus(); loadTickets(); }, 5000);
+    prevTicketsCountRef.current = tickets.length;
+  }, [tickets]);
+
+  useEffect(() => {
+    if (initialLoadedRef.current && messages.length > prevMessagesCountRef.current) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg && !lastMsg.fromMe) {
+        if (isAlertSoundEnabled('cliente_resposta')) {
+          playSound('nova_mensagem');
+        }
+      }
     }
+    prevMessagesCountRef.current = messages.length;
+  }, [messages]);
+
+  useEffect(() => {
+    const interval = (!connected || connecting) ? 2000 : 5000;
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => { loadStatus(); loadTickets(); }, interval);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [connected, loadStatus, loadTickets]);
+  }, [connected, connecting, loadStatus, loadTickets]);
 
   useEffect(() => {
     if (selectedTicketId) {
@@ -186,7 +208,16 @@ export default function WhatsAppPage() {
   }, [messages]);
 
   useEffect(() => {
-    if (!clientSearch.trim()) { setClientResults([]); return; }
+    if (!showAbrirChamado) { setClientResults([]); return; }
+    if (!clientSearch.trim()) {
+      const t = setTimeout(async () => {
+        try {
+          const { data } = await api.get('/crm/clients', { params: { limit: 20 } });
+          setClientResults(Array.isArray(data) ? data : data?.clients || data?.items || []);
+        } catch { setClientResults([]); }
+      }, 100);
+      return () => clearTimeout(t);
+    }
     const t = setTimeout(async () => {
       try {
         const { data } = await api.get('/crm/clients', { params: { search: clientSearch, limit: 8 } });
@@ -194,7 +225,7 @@ export default function WhatsAppPage() {
       } catch { setClientResults([]); }
     }, 300);
     return () => clearTimeout(t);
-  }, [clientSearch]);
+  }, [clientSearch, showAbrirChamado]);
 
   const handleSelectTicket = (ticket: any) => {
     setSelectedTicketId(ticket.id);
@@ -203,8 +234,12 @@ export default function WhatsAppPage() {
   const connectWhatsApp = async () => {
     try {
       setConnecting(true);
+      setConnectionError(null);
       await api.post('/whatsapp/connect');
-      setTimeout(() => loadStatus(), 2500);
+      loadStatus();
+      setTimeout(loadStatus, 1500);
+      setTimeout(loadStatus, 3000);
+      setTimeout(loadStatus, 5000);
     } catch (err) { console.error(err); setConnecting(false); }
   };
 
@@ -223,7 +258,10 @@ export default function WhatsAppPage() {
       setConnecting(true);
       setConnectionError(null);
       await api.post('/whatsapp/reconnect');
-      setTimeout(() => loadStatus(), 3000);
+      loadStatus();
+      setTimeout(loadStatus, 1500);
+      setTimeout(loadStatus, 3000);
+      setTimeout(loadStatus, 5000);
     } catch (err) { console.error(err); setConnecting(false); }
   };
 
@@ -419,7 +457,7 @@ export default function WhatsAppPage() {
       </div>
 
       {connectionError && !connected && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
           <AlertCircle size={16} className="flex-shrink-0" />
           <div className="flex-1">
             <p className="font-medium">{connectionError}</p>
@@ -431,21 +469,38 @@ export default function WhatsAppPage() {
         </div>
       )}
 
-      {qrDataUrl && !connected && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => { setQrCode(null); setQrDataUrl(null); if (!connecting) setConnecting(false); }}>
-          <div className="bg-white rounded-2xl p-6 shadow-xl text-center max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+      {(connecting || (qrDataUrl && !connected)) && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => { if (!connecting) { setQrCode(null); setQrDataUrl(null); } }}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl text-center max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold text-lg text-gray-900 mb-1">Conectar WhatsApp</h3>
-            <p className="text-sm text-gray-500 mb-4">Abra o WhatsApp no celular<br />Menu → WhatsApp Web → Escanear</p>
-            <img src={qrDataUrl} alt="QR Code" className="mx-auto w-56 h-56" />
-            <p className="text-xs text-gray-400 mt-3">O QR Code expira em alguns segundos</p>
-            <button onClick={() => { setQrCode(null); setQrDataUrl(null); if (!connecting) setConnecting(false); }} className="mt-4 text-sm text-gray-500 hover:text-gray-700">Fechar</button>
+            {qrDataUrl ? (
+              <>
+                <p className="text-sm text-gray-500 mb-4">Abra o WhatsApp no celular<br />Menu &rarr; Dispositivos conectados &rarr; Conectar dispositivo</p>
+                <img src={qrDataUrl} alt="QR Code" className="mx-auto w-56 h-56" />
+                <p className="text-xs text-gray-400 mt-3">Escaneie o QR Code acima com o WhatsApp</p>
+              </>
+            ) : (
+              <div className="py-8">
+                <div className="flex justify-center mb-3">
+                  <RefreshCw size={32} className="animate-spin text-green-500" />
+                </div>
+                <p className="text-sm text-gray-500">Gerando QR Code...</p>
+                <p className="text-xs text-gray-400 mt-1">Aguarde alguns segundos</p>
+              </div>
+            )}
+            {connectionError && (
+              <div className="mt-3 bg-red-50 dark:bg-red-900/30 border border-red-200 rounded-lg px-3 py-2">
+                <p className="text-xs text-red-600">{connectionError}</p>
+              </div>
+            )}
+            <button onClick={() => { if (!connecting) { setQrCode(null); setQrDataUrl(null); } }} className="mt-4 text-sm text-gray-500 hover:text-gray-700">Fechar</button>
           </div>
         </div>
       )}
 
-      <div className="flex-1 flex min-h-0 bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="flex-1 flex min-h-0 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 overflow-hidden">
         <div className={`${selectedTicket ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-gray-200 flex flex-col bg-gray-50/50`}>
-          <div className="p-3 border-b border-gray-200 bg-white space-y-2">
+          <div className="p-3 border-b border-gray-200 bg-white dark:bg-slate-800 space-y-2">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input type="text" placeholder="Pesquisar conversa..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none" />
@@ -455,7 +510,7 @@ export default function WhatsAppPage() {
               <select
                 value={orderBy}
                 onChange={(e) => setOrderBy(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none appearance-none bg-white cursor-pointer"
+                className="w-full pl-8 pr-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none appearance-none bg-white dark:bg-slate-800 cursor-pointer"
               >
                 <option value="updatedAt_desc">Mais recente primeiro</option>
                 <option value="updatedAt_asc">Mais antigo primeiro</option>
@@ -515,7 +570,7 @@ export default function WhatsAppPage() {
         <div className={`${selectedTicket ? 'flex' : 'hidden md:flex'} flex-1 flex-col`}>
           {selectedTicket ? (
             <>
-              <div className="flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-gray-200 bg-white flex-shrink-0">
+              <div className="flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-gray-200 bg-white dark:bg-slate-800 flex-shrink-0">
                 <button onClick={() => setSelectedTicketId(null)} className="md:hidden p-1 hover:bg-neutral-100 rounded text-neutral-500 mr-1">
                   <ArrowRightLeft size={16} className="rotate-180" />
                 </button>
@@ -561,7 +616,7 @@ export default function WhatsAppPage() {
               </div>
 
               {selectedTicket.client && (
-                <div className="px-3 sm:px-5 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50/40 to-green-50/40 flex-shrink-0">
+                <div className="px-3 sm:px-5 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50/40 to-green-50/40 dark:from-blue-900/30 dark:to-emerald-900/30 flex-shrink-0">
                   <div className="flex items-start gap-2 mb-2">
                     <Building2 size={14} className="text-blue-600 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -595,30 +650,88 @@ export default function WhatsAppPage() {
               )}
 
               <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-2 bg-gray-50/30">
-                {messages.map((msg: any) => (
-                  <div key={msg.id} className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${msg.fromMe ? 'bg-green-500 text-white rounded-br-sm' : 'bg-white border border-neutral-200 text-neutral-900 rounded-bl-sm'}`}>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                      <div className={`flex items-center gap-2 mt-1 ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
-                        <span className={`text-[10px] ${msg.fromMe ? 'text-white/70' : 'text-gray-400'}`}>
-                          {msg.sentAt ? new Date(msg.sentAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
-                        </span>
-                        {msg.usuario?.name && <span className={`text-[10px] ${msg.fromMe ? 'text-white/70' : 'text-gray-400'}`}>{msg.usuario.name}</span>}
+                {messages.map((msg: any) => {
+                  const isAudio = msg.mimeType?.startsWith('audio/');
+                  const isImage = msg.mimeType?.startsWith('image/');
+                  const isVideo = msg.mimeType?.startsWith('video/');
+                  const mediaSrc = msg.mediaUrl && msg.mimeType
+                    ? `data:${msg.mimeType};base64,${msg.mediaUrl}`
+                    : null;
+                  const isBot = msg.source === 'bot';
+                  const isSystem = msg.tipo === 'system' || isBot;
+
+                  if (isSystem) {
+                    return (
+                      <div key={msg.id} className="flex justify-center">
+                        <div className="max-w-[85%] bg-violet-50 border border-violet-200 rounded-xl px-4 py-2 text-center">
+                          <p className="text-[10px] font-bold text-violet-500 mb-0.5 uppercase">🤖 Sistema</p>
+                          <p className="text-xs text-violet-700 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                          <p className="text-[10px] text-violet-400 mt-1">
+                            {msg.sentAt ? new Date(msg.sentAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={msg.id} className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                        msg.fromMe
+                          ? 'bg-green-500 text-white rounded-br-sm'
+                          : 'bg-white dark:bg-slate-800 border border-neutral-200 text-neutral-900 rounded-bl-sm'
+                      }`}>
+                        {isAudio && mediaSrc && (
+                          <div className="mb-1">
+                            <audio controls preload="none" className="w-full h-9 max-w-[220px]">
+                              <source src={mediaSrc} type={msg.mimeType} />
+                            </audio>
+                          </div>
+                        )}
+                        {isImage && mediaSrc && (
+                          <div className="mb-1">
+                            <img src={mediaSrc} alt="Imagem" className="max-w-[220px] max-h-[160px] rounded-lg cursor-pointer" onClick={() => window.open(mediaSrc, '_blank')} />
+                          </div>
+                        )}
+                        {isVideo && mediaSrc && (
+                          <div className="mb-1">
+                            <video controls preload="none" className="max-w-[220px] max-h-[160px] rounded-lg">
+                              <source src={mediaSrc} type={msg.mimeType} />
+                            </video>
+                          </div>
+                        )}
+                        {!isAudio && !isImage && !isVideo && msg.mediaUrl && mediaSrc && (
+                          <div className="mb-1">
+                            <a href={mediaSrc} target="_blank" rel="noopener noreferrer" className="underline text-blue-300 hover:text-blue-100">📎 Arquivo</a>
+                          </div>
+                        )}
+                        {msg.content && msg.content !== '(mídia)' && (
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                        )}
+                        {msg.content === '(mídia)' && !mediaSrc && (
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap italic opacity-60">{msg.content}</p>
+                        )}
+                        <div className={`flex items-center gap-2 mt-1 ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
+                          <span className={`text-[10px] ${msg.fromMe ? 'text-white/70' : 'text-gray-400'}`}>
+                            {msg.sentAt ? new Date(msg.sentAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                          {msg.usuario?.name && <span className={`text-[10px] ${msg.fromMe ? 'text-white/70' : 'text-gray-400'}`}>{msg.usuario.name}</span>}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {messages.length === 0 && (
                   <div className="text-center py-12 text-gray-400 text-sm">Nenhuma mensagem ainda</div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="px-3 sm:px-5 py-2 bg-white flex-shrink-0">
+              <div className="px-3 sm:px-5 py-2 bg-white dark:bg-slate-800 flex-shrink-0">
                 {sendError && <p className="text-xs text-red-600 mb-1 flex items-center gap-1"><AlertCircle size={12} /> {sendError}</p>}
                 {!connected && <p className="text-xs text-amber-600 mb-1 flex items-center gap-1"><AlertCircle size={12} /> WhatsApp desconectado — conecte-se para enviar mensagens</p>}
               </div>
-              <div className="flex items-center gap-2 px-3 sm:px-5 py-3 border-t border-gray-200 bg-white flex-shrink-0">
+              <div className="flex items-center gap-2 px-3 sm:px-5 py-3 border-t border-gray-200 bg-white dark:bg-slate-800 flex-shrink-0">
                 <input type="text" value={messageText} onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                   placeholder="Digite sua mensagem..."
@@ -640,7 +753,7 @@ export default function WhatsAppPage() {
 
       {showNewTicket && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setShowNewTicket(false)}>
-          <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-gray-900">Nova Conversa</h3>
               <button onClick={() => setShowNewTicket(false)} className="text-neutral-400 hover:text-neutral-600 p-1"><X size={20} /></button>
@@ -655,8 +768,8 @@ export default function WhatsAppPage() {
 
       {showAbrirChamado && selectedTicket && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => !abrirSaving && setShowAbrirChamado(false)}>
-          <div className="bg-white rounded-t-2xl sm:rounded-xl sm:max-w-lg w-full max-h-[92vh] sm:max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white z-10 px-4 sm:px-5 pt-4 sm:pt-5 pb-3 border-b border-neutral-100">
+          <div className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-xl sm:max-w-lg w-full max-h-[92vh] sm:max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white dark:bg-slate-800 z-10 px-4 sm:px-5 pt-4 sm:pt-5 pb-3 border-b border-neutral-100">
               <div className="flex justify-between items-center">
                 <h3 className="font-semibold text-gray-900 text-base">Abrir Chamado</h3>
                 <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>
@@ -672,7 +785,7 @@ export default function WhatsAppPage() {
               <div>
                 <label className="text-xs font-medium text-gray-700 mb-1.5 block">Cliente vinculado</label>
                 {selectedClientId ? (
-                  <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 rounded-lg px-3 py-2">
                     <Building2 size={14} className="text-emerald-600 flex-shrink-0" />
                     <span className="text-sm text-emerald-800 font-medium flex-1 truncate">{clientSearch}</span>
                     <button onClick={() => { setSelectedClientId(null); setClientSearch(''); }} className="text-emerald-600 hover:text-emerald-800 p-0.5" title="Remover"><X size={14} /></button>
@@ -776,7 +889,7 @@ export default function WhatsAppPage() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-white px-4 sm:px-5 py-3 border-t border-neutral-100 flex gap-2">
+            <div className="sticky bottom-0 bg-white dark:bg-slate-800 px-4 sm:px-5 py-3 border-t border-neutral-100 flex gap-2">
               <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="flex-1 px-4 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
               <button onClick={confirmarAbrirChamado} disabled={!abrirChamado.assunto.trim() || !abrirChamado.departamentoId || abrirSaving} className="flex-1 px-4 py-2.5 min-h-[44px] text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-1.5">
                 {abrirSaving ? <><RefreshCw size={14} className="animate-spin" /> Abrindo...</> : selectedTicket.protocolo ? 'Salvar alteracoes' : 'Abrir Chamado'}
@@ -788,7 +901,7 @@ export default function WhatsAppPage() {
 
       {showCreateClient && (
         <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => !creatingClient && setShowCreateClient(false)}>
-          <div className="bg-white rounded-t-2xl sm:rounded-xl sm:max-w-md w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-xl sm:max-w-md w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 sm:px-5 pt-4 sm:pt-5 pb-3 border-b border-neutral-100">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-gray-900 flex items-center gap-2 text-base"><Building2 size={18} className="text-green-600" /> Novo Cliente</h3>
@@ -815,7 +928,7 @@ export default function WhatsAppPage() {
                 </div>
               </div>
             </div>
-            <div className="sticky bottom-0 bg-white px-4 sm:px-5 py-3 border-t border-neutral-100 flex gap-2">
+            <div className="sticky bottom-0 bg-white dark:bg-slate-800 px-4 sm:px-5 py-3 border-t border-neutral-100 flex gap-2">
               <button onClick={() => setShowCreateClient(false)} disabled={creatingClient} className="flex-1 px-4 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50">Cancelar</button>
               <button onClick={criarClienteInline} disabled={creatingClient || !newClient.razaoSocial.trim()} className="flex-1 px-4 py-2.5 min-h-[44px] text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-1.5">
                 {creatingClient ? <><RefreshCw size={14} className="animate-spin" /> Criando...</> : 'Criar e Vincular'}
@@ -827,7 +940,7 @@ export default function WhatsAppPage() {
 
       {showTransferir && selectedTicket && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => !transferirSaving && setShowTransferir(false)}>
-          <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-gray-900">Transferir Atendimento</h3>
               <button onClick={() => setShowTransferir(false)} disabled={transferirSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>

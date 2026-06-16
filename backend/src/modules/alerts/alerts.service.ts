@@ -22,32 +22,40 @@ const DEFAULT_ALERTS: AlertConfig[] = [
 ];
 
 export async function getAlertConfigs(userId: string): Promise<AlertConfig[]> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) return DEFAULT_ALERTS;
-
-  const savedConfig = await prisma.helpdeskConfig.findUnique({ where: { slug: `alert_config_${userId}` } });
-  if (savedConfig) {
-    try {
-      return JSON.parse(savedConfig.descricao || '[]');
-    } catch {}
+  try {
+    const savedConfig = await prisma.helpdeskConfig.findUnique({ where: { slug: `alert_${userId}` } });
+    if (savedConfig && savedConfig.descricao) {
+      const parsed = JSON.parse(savedConfig.descricao);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('[Alerts] Erro ao carregar configs:', err);
   }
-
   return DEFAULT_ALERTS;
 }
 
 export async function saveAlertConfigs(userId: string, configs: AlertConfig[]): Promise<void> {
-  const slug = `alert_config_${userId}`;
-  const existing = await prisma.helpdeskConfig.findUnique({ where: { slug } });
-  const data = {
-    slug,
-    nome: `Alertas de ${userId}`,
-    descricao: JSON.stringify(configs),
-  };
+  const slug = `alert_${userId}`;
+  const json = JSON.stringify(configs);
 
-  if (existing) {
-    await prisma.helpdeskConfig.update({ where: { id: existing.id }, data });
-  } else {
-    await prisma.helpdeskConfig.create({ data });
+  try {
+    const existing = await prisma.helpdeskConfig.findUnique({ where: { slug } });
+    if (existing) {
+      await prisma.helpdeskConfig.update({ where: { id: existing.id }, data: { descricao: json } });
+    } else {
+      await prisma.helpdeskConfig.create({
+        data: {
+          slug,
+          nome: `Alertas ${userId}`,
+          descricao: json,
+        },
+      });
+    }
+  } catch (err) {
+    console.error('[Alerts] Erro ao salvar configs:', err);
+    throw err;
   }
 }
 

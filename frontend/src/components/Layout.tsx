@@ -252,11 +252,11 @@ export default function Layout() {
 
   if (isHorizontal) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-screen" style={{ backgroundColor: 'var(--bg-app)' }}>
         <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center px-4 lg:px-6 pt-[env(safe-area-inset-top)] z-[100]">
           {headerContent}
         </header>
-        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6">
+        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6" style={{ backgroundColor: 'var(--bg-app)' }}>
           <Outlet />
         </main>
       </div>
@@ -265,7 +265,7 @@ export default function Layout() {
 
   if (isCollapsed) {
     return (
-      <div className="flex h-screen">
+      <div className="flex h-screen" style={{ backgroundColor: 'var(--bg-app)' }}>
         {/* Collapsed sidebar — icons only, always visible */}
         <aside
           className="fixed inset-y-0 left-0 z-40 w-[70px] bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col"
@@ -347,7 +347,7 @@ export default function Layout() {
           <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between px-4 lg:px-6 pt-[env(safe-area-inset-top)] z-[100]">
             {headerContent}
           </header>
-          <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6">
+          <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6" style={{ backgroundColor: 'var(--bg-app)' }}>
             <Outlet />
           </main>
         </div>
@@ -357,7 +357,7 @@ export default function Layout() {
 
   /* Vertical sidebar (default) */
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen" style={{ backgroundColor: 'var(--bg-app)' }}>
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-30 w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 transform transition-all duration-300 ease-out lg:translate-x-0 lg:static lg:inset-auto ${
@@ -383,7 +383,7 @@ export default function Layout() {
         <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between px-4 lg:px-6 pt-[env(safe-area-inset-top)] z-[100]">
           {headerContent}
         </header>
-        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6">
+        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6" style={{ backgroundColor: 'var(--bg-app)' }}>
           <Outlet />
         </main>
       </div>
