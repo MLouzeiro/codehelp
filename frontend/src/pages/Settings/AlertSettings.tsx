@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../services/auth';
+import { playSound, SOUND_LABELS } from '../../services/soundAlerts';
 import {
   Bell, Volume2, VolumeX, Save, Check, AlertCircle,
-  Settings, Palette,
+  Settings, Palette, Loader,
 } from 'lucide-react';
 
 interface AlertConfig {
@@ -26,6 +27,18 @@ const ALERT_LABELS: Record<string, string> = {
   aprovacao_pendente: 'Aprovação Pendente',
 };
 
+const ALERT_ICONS: Record<string, string> = {
+  novo_ticket: '🎫',
+  ticket_atribuido: '👤',
+  sla_alerta_75: '⚠️',
+  sla_alerta_90: '🔶',
+  sla_violado: '🔴',
+  cliente_resposta: '💬',
+  ticket_escalacao: '📈',
+  csat_recebido: '⭐',
+  aprovacao_pendente: '🛡️',
+};
+
 const PRIORIDADE_LABELS: Record<string, { label: string; color: string }> = {
   baixa: { label: 'Baixa', color: 'text-slate-500 bg-slate-100 dark:bg-slate-700' },
   media: { label: 'Média', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
@@ -46,6 +59,7 @@ export default function AlertSettings() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [testSound, setTestSound] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     carregarConfigs();
@@ -54,53 +68,60 @@ export default function AlertSettings() {
   const carregarConfigs = async () => {
     try {
       const { data } = await api.get('/alerts/agent/config');
-      setConfigs(data);
+      if (Array.isArray(data) && data.length > 0) {
+        setConfigs(data);
+      }
     } catch (err) {
-      console.error(err);
+      console.error('[AlertSettings] Erro ao carregar:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const salvar = async () => {
+  const salvarConfigs = useCallback(async (novosConfigs: AlertConfig[]) => {
     setSaving(true);
     setError('');
     setSuccess('');
     try {
-      await api.post('/alerts/agent/config', { configs });
-      setSuccess('Configurações salvas com sucesso');
+      await api.post('/alerts/agent/config', { configs: novosConfigs });
+      setSuccess('Salvo com sucesso');
+      setTimeout(() => setSuccess(''), 2000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao salvar');
+      console.error('[AlertSettings] Erro ao salvar:', err);
+      setError(err.response?.data?.error || 'Erro ao salvar configurações');
     } finally {
       setSaving(false);
     }
-  };
+  }, []);
 
-  const toggleAlert = (tipo: string, field: 'habilitado' | 'comSom') => {
-    setConfigs(prev => prev.map(c =>
+  const toggleAlert = async (tipo: string, field: 'habilitado' | 'comSom') => {
+    const novosConfigs = configs.map(c =>
       c.tipo === tipo ? { ...c, [field]: !c[field] } : c
-    ));
+    );
+    setConfigs(novosConfigs);
+    await salvarConfigs(novosConfigs);
   };
 
-  const setCor = (tipo: string, cor: string) => {
-    setConfigs(prev => prev.map(c =>
+  const setCor = async (tipo: string, cor: string) => {
+    const novosConfigs = configs.map(c =>
       c.tipo === tipo ? { ...c, cor } : c
-    ));
+    );
+    setConfigs(novosConfigs);
+    await salvarConfigs(novosConfigs);
   };
 
-  const setPrioridade = (tipo: string, prioridade: AlertConfig['prioridade']) => {
-    setConfigs(prev => prev.map(c =>
+  const setPrioridade = async (tipo: string, prioridade: AlertConfig['prioridade']) => {
+    const novosConfigs = configs.map(c =>
       c.tipo === tipo ? { ...c, prioridade } : c
-    ));
+    );
+    setConfigs(novosConfigs);
+    await salvarConfigs(novosConfigs);
   };
 
-  const testarSom = (tipo: string) => {
+  const testarSom = async (tipo: string) => {
     setTestSound(tipo);
-    const audio = new Audio('/sounds/notification.mp3');
-    audio.play().catch(() => {
-      console.log('Som de teste não disponível');
-    });
-    setTimeout(() => setTestSound(null), 1000);
+    await playSound('nova_mensagem', true);
+    setTimeout(() => setTestSound(null), 1500);
   };
 
   if (loading) {
@@ -122,18 +143,17 @@ export default function AlertSettings() {
             Configuração de Alertas
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1" style={{ fontFamily: 'Lexend, sans-serif' }}>
-            Personalize como receiving notifications de alertas
+            Configure notificações e sons para cada tipo de alerta
           </p>
         </div>
-        <button
-          onClick={salvar}
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl transition-colors shadow-sm min-h-[44px]"
-          style={{ fontFamily: 'Lexend, sans-serif' }}
-        >
-          <Save size={18} />
-          {saving ? 'Salvando...' : 'Salvar'}
-        </button>
+        <div className="flex items-center gap-2">
+          {saving && <Loader size={16} className="animate-spin text-blue-500" />}
+          {success && (
+            <span className="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
+              <Check size={16} /> Salvo
+            </span>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -142,38 +162,49 @@ export default function AlertSettings() {
           <span className="text-sm" style={{ fontFamily: 'Lexend, sans-serif' }}>{error}</span>
         </div>
       )}
-      {success && (
-        <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-700 dark:text-green-400">
-          <Check size={18} />
-          <span className="text-sm" style={{ fontFamily: 'Lexend, sans-serif' }}>{success}</span>
-        </div>
-      )}
 
       <div className="space-y-3">
         {configs.map((config) => {
           const priorInfo = PRIORIDADE_LABELS[config.prioridade];
+          const isExpanded = expanded === config.tipo;
           return (
             <div
               key={config.tipo}
-              className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 p-5"
+              className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: config.cor }}
-                    />
+              <div
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors"
+                onClick={() => setExpanded(isExpanded ? null : config.tipo)}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">{ALERT_ICONS[config.tipo] || '🔔'}</span>
+                  <div
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: config.cor }}
+                  />
+                  <div>
                     <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Lexend, sans-serif' }}>
                       {ALERT_LABELS[config.tipo] || config.tipo}
                     </h3>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${priorInfo.color}`} style={{ fontFamily: 'Lexend, sans-serif' }}>
-                      {priorInfo.label}
-                    </span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${priorInfo.color}`} style={{ fontFamily: 'Lexend, sans-serif' }}>
+                        {priorInfo.label}
+                      </span>
+                      {config.habilitado && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                          Ativo
+                        </span>
+                      )}
+                      {config.comSom && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                          🔊 Som
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => testarSom(config.tipo)}
                     className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg"
@@ -191,6 +222,7 @@ export default function AlertSettings() {
                     className={`relative w-12 h-6 rounded-full transition-colors ${
                       config.comSom ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
                     }`}
+                    title={config.comSom ? 'Som ativado' : 'Som desativado'}
                   >
                     <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
                       config.comSom ? 'translate-x-6' : 'translate-x-0.5'
@@ -202,6 +234,7 @@ export default function AlertSettings() {
                     className={`relative w-12 h-6 rounded-full transition-colors ${
                       config.habilitado ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'
                     }`}
+                    title={config.habilitado ? 'Alerta ativado' : 'Alerta desativado'}
                   >
                     <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
                       config.habilitado ? 'translate-x-6' : 'translate-x-0.5'
@@ -210,40 +243,44 @@ export default function AlertSettings() {
                 </div>
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <Palette size={14} className="text-slate-400" />
-                  <span className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Cor:</span>
-                </div>
-                {COR_OPTIONS.map((cor) => (
-                  <button
-                    key={cor}
-                    onClick={() => setCor(config.tipo, cor)}
-                    className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                      config.cor === cor ? 'border-slate-800 dark:border-slate-200 scale-110' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: cor }}
-                  />
-                ))}
+              {isExpanded && (
+                <div className="px-4 pb-4 border-t border-slate-100 dark:border-slate-700 pt-3" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <Palette size={14} className="text-slate-400" />
+                      <span className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Cor:</span>
+                    </div>
+                    {COR_OPTIONS.map((cor) => (
+                      <button
+                        key={cor}
+                        onClick={() => setCor(config.tipo, cor)}
+                        className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                          config.cor === cor ? 'border-slate-800 dark:border-slate-200 scale-110' : 'border-transparent'
+                        }`}
+                        style={{ backgroundColor: cor }}
+                      />
+                    ))}
 
-                <div className="ml-4 flex items-center gap-1.5">
-                  <span className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Prioridade:</span>
-                  {(Object.keys(PRIORIDADE_LABELS) as Array<AlertConfig['prioridade']>).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPrioridade(config.tipo, p)}
-                      className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
-                        config.prioridade === p
-                          ? PRIORIDADE_LABELS[p].color + ' font-semibold'
-                          : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                      }`}
-                      style={{ fontFamily: 'Lexend, sans-serif' }}
-                    >
-                      {PRIORIDADE_LABELS[p].label}
-                    </button>
-                  ))}
+                    <div className="ml-2 flex items-center gap-1.5">
+                      <span className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Prioridade:</span>
+                      {(Object.keys(PRIORIDADE_LABELS) as Array<AlertConfig['prioridade']>).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setPrioridade(config.tipo, p)}
+                          className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
+                            config.prioridade === p
+                              ? PRIORIDADE_LABELS[p].color + ' font-semibold'
+                              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                          }`}
+                          style={{ fontFamily: 'Lexend, sans-serif' }}
+                        >
+                          {PRIORIDADE_LABELS[p].label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           );
         })}
@@ -267,6 +304,9 @@ export default function AlertSettings() {
             <div className="w-3 h-3 rounded-full bg-slate-300" /> Cor do badge
           </span>
         </div>
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2" style={{ fontFamily: 'Lexend, sans-serif' }}>
+          Todas as alterações são salvas automaticamente ao clicar nos controles.
+        </p>
       </div>
     </div>
   );

@@ -1,42 +1,76 @@
-const SOUNDS: Record<string, string> = {
-  nova_mensagem: '/sounds/message.mp3',
-  cliente_entrou: '/sounds/notify.mp3',
-  sla_alerta: '/sounds/alert.mp3',
-  aprovacao: '/sounds/success.mp3',
-};
+let audioCtx: AudioContext | null = null;
 
-let audioContext: AudioContext | null = null;
-
-function getAudioContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+function getCtx(): AudioContext {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
-  return audioContext;
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
 }
 
-export async function playSound(tipo: string, enabled: boolean = true): Promise<void> {
-  if (!enabled) return;
-
+function playTone(frequency: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.3) {
   try {
-    const soundUrl = SOUNDS[tipo];
-    if (!soundUrl) return;
+    const ctx = getCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
 
-    const audio = new Audio(soundUrl);
-    audio.volume = 0.5;
-    await audio.play();
+    osc.type = type;
+    osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
   } catch (err) {
-    console.warn(`[SoundAlert] Erro ao reproduzir som ${tipo}:`, err);
+    console.warn('[SoundAlert] Erro ao reproduzir som:', err);
+  }
+}
+
+const SOUND_PATTERNS: Record<string, () => void> = {
+  nova_mensagem: () => {
+    playTone(880, 0.12, 'sine', 0.25);
+    setTimeout(() => playTone(1100, 0.15, 'sine', 0.25), 120);
+  },
+  cliente_entrou: () => {
+    playTone(523, 0.15, 'sine', 0.25);
+    setTimeout(() => playTone(659, 0.15, 'sine', 0.25), 150);
+    setTimeout(() => playTone(784, 0.2, 'sine', 0.25), 300);
+  },
+  sla_alerta: () => {
+    playTone(800, 0.1, 'square', 0.15);
+    setTimeout(() => playTone(600, 0.1, 'square', 0.15), 120);
+    setTimeout(() => playTone(800, 0.1, 'square', 0.15), 240);
+  },
+  aprovacao: () => {
+    playTone(660, 0.15, 'sine', 0.25);
+    setTimeout(() => playTone(880, 0.2, 'sine', 0.25), 160);
+  },
+};
+
+export function playSound(tipo: string, _enabled: boolean = true): void {
+  const pattern = SOUND_PATTERNS[tipo];
+  if (pattern) {
+    pattern();
+  } else {
+    playTone(800, 0.2, 'sine', 0.25);
   }
 }
 
 export function initAudioContext(): void {
   const handler = () => {
-    getAudioContext();
+    getCtx();
     document.removeEventListener('click', handler);
     document.removeEventListener('keydown', handler);
+    document.removeEventListener('touchstart', handler);
   };
   document.addEventListener('click', handler);
   document.addEventListener('keydown', handler);
+  document.addEventListener('touchstart', handler);
 }
 
 export const SOUND_LABELS: Record<string, string> = {

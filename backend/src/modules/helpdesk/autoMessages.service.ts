@@ -127,14 +127,27 @@ export async function listAutoMessages(): Promise<(AutoMessageConfig & { mensage
 }
 
 export async function updateAutoMessage(slug: string, novaMensagem: string): Promise<void> {
-  const config = await prisma.helpdeskConfig.findUnique({ where: { slug } });
-  if (!config) throw new Error('Configuração não encontrada');
+  const msg = AUTO_MESSAGES.find(m => m.slug === slug);
+  if (!msg) throw new Error('Mensagem não encontrada');
+
+  const existing = await prisma.helpdeskConfig.findUnique({ where: { slug } });
 
   const field = getFieldForSlug(slug);
-  const data: any = {};
-  data[field] = novaMensagem;
+  const updateData: any = {};
+  updateData[field] = novaMensagem;
 
-  await prisma.helpdeskConfig.update({ where: { id: config.id }, data });
+  if (existing) {
+    await prisma.helpdeskConfig.update({ where: { id: existing.id }, data: updateData });
+  } else {
+    await prisma.helpdeskConfig.create({
+      data: {
+        slug,
+        nome: msg.nome,
+        descricao: msg.descricao,
+        ...updateData,
+      },
+    });
+  }
 }
 
 export async function resetAutoMessage(slug: string): Promise<void> {
