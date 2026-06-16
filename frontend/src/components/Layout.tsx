@@ -253,7 +253,7 @@ export default function Layout() {
   if (isHorizontal) {
     return (
       <div className="flex flex-col h-screen">
-        <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center px-4 lg:px-6 pt-[env(safe-area-inset-top)] z-30">
+        <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center px-4 lg:px-6 pt-[env(safe-area-inset-top)] z-[100]">
           {headerContent}
         </header>
         <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6">
@@ -344,7 +344,7 @@ export default function Layout() {
 
         {/* Main content */}
         <div className="flex-1 flex flex-col min-w-0 ml-[70px]">
-          <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between px-4 lg:px-6 pt-[env(safe-area-inset-top)]">
+          <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between px-4 lg:px-6 pt-[env(safe-area-inset-top)] z-[100]">
             {headerContent}
           </header>
           <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6">
@@ -380,7 +380,7 @@ export default function Layout() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between px-4 lg:px-6 pt-[env(safe-area-inset-top)]">
+        <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between px-4 lg:px-6 pt-[env(safe-area-inset-top)] z-[100]">
           {headerContent}
         </header>
         <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6">
