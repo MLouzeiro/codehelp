@@ -183,13 +183,6 @@ export default function Layout() {
       </div>
       <div className="flex-1" />
       <ThemeSettings />
-      <button
-        onClick={toggleTheme}
-        title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-        className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-      >
-        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-      </button>
       <div className="relative" ref={notifRef}>
         <button onClick={() => setNotifOpen(!notifOpen)} className="relative p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
           <Bell size={18} />

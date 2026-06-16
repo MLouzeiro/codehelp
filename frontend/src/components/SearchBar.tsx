@@ -27,10 +27,10 @@ const TIPO_ICONE: Record<string, any> = {
 };
 
 const TIPO_COR: Record<string, string> = {
-  cliente: 'bg-emerald-100 text-emerald-700',
-  ticket: 'bg-blue-100 text-blue-700',
-  usuario: 'bg-purple-100 text-purple-700',
-  kb: 'bg-amber-100 text-amber-700',
+  cliente: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
+  ticket: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+  usuario: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
+  kb: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
 };
 
 const TIPO_LABEL: Record<string, string> = {
@@ -137,9 +137,9 @@ export default function SearchBar({ onSearch, compact, className = '' }: SearchB
   };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
-      <div className={`flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 ${compact ? '' : 'shadow-sm'} focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all`}>
-        <Search size={compact ? 14 : 16} className="text-gray-400 flex-shrink-0" />
+    <div ref={containerRef} className={`relative z-[50] ${className}`}>
+      <div className={`flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-3 py-2 ${compact ? '' : 'shadow-sm'} focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 dark:focus-within:ring-blue-900/30 transition-all`}>
+        <Search size={compact ? 14 : 16} className="text-gray-400 dark:text-slate-500 flex-shrink-0" />
         <input
           ref={inputRef}
           type="text"
@@ -148,27 +148,27 @@ export default function SearchBar({ onSearch, compact, className = '' }: SearchB
           onFocus={() => { if (query.length >= 2) setOpen(true); }}
           onKeyDown={handleKeyDown}
           placeholder="Buscar clientes, tickets, usuarios, KB..."
-          className={`flex-1 outline-none bg-transparent text-sm text-gray-900 placeholder-gray-400 ${compact ? 'text-xs' : ''}`}
+          className={`flex-1 outline-none bg-transparent text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 ${compact ? 'text-xs' : ''}`}
         />
         {query && (
           <button onClick={() => { setQuery(''); setSuggestions([]); setResults([]); setShowResults(false); }}
-            className="text-gray-400 hover:text-gray-600">
+            className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">
             <X size={compact ? 12 : 14} />
           </button>
         )}
-        {loading && <Loader2 size={14} className="text-blue-500 animate-spin" />}
+        {loading && <Loader2 size={14} className="text-blue-500 dark:text-blue-400 animate-spin" />}
       </div>
 
       {open && !showResults && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-          <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-lg z-50 overflow-hidden">
+          <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700">
             Sugestoes
           </div>
           {suggestions.map((s, i) => (
             <button key={i}
               onClick={() => { setQuery(s.titulo); fetchResults(s.titulo); }}
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-2 transition-colors">
-              <Search size={12} className="text-gray-400" />
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-2 transition-colors">
+              <Search size={12} className="text-gray-400 dark:text-slate-500" />
               {s.titulo}
             </button>
           ))}
@@ -176,17 +176,17 @@ export default function SearchBar({ onSearch, compact, className = '' }: SearchB
       )}
 
       {open && showResults && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden max-h-[70vh] overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-lg z-50 overflow-hidden max-h-[70vh] overflow-y-auto">
           {results.length === 0 ? (
-            <div className="px-4 py-8 text-center text-gray-400 text-sm">
+            <div className="px-4 py-8 text-center text-gray-400 dark:text-slate-500 text-sm">
               Nenhum resultado para "{query}"
             </div>
           ) : (
             <>
-              <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 flex items-center justify-between">
+              <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
                 <span>{results.length} resultado(s)</span>
                 <button onClick={() => { setOpen(false); setShowResults(false); }}
-                  className="text-blue-600 hover:text-blue-700 normal-case tracking-normal font-medium">
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 normal-case tracking-normal font-medium">
                   Fechar
                 </button>
               </div>
@@ -195,19 +195,19 @@ export default function SearchBar({ onSearch, compact, className = '' }: SearchB
                 return (
                   <button key={`${r.tipo}-${r.id}`}
                     onClick={() => handleSelect(r)}
-                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 flex items-start gap-3 transition-colors border-b border-gray-50 last:border-0">
+                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-start gap-3 transition-colors border-b border-gray-50 dark:border-slate-700/50 last:border-0">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${TIPO_COR[r.tipo]}`}>
                       <Icon size={14} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900 truncate">{r.titulo}</span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{r.titulo}</span>
                         <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${TIPO_COR[r.tipo]}`}>
                           {TIPO_LABEL[r.tipo]}
                         </span>
                       </div>
-                      {r.subtitulo && <p className="text-xs text-gray-500 truncate">{r.subtitulo}</p>}
-                      {r.detalhes && <p className="text-[10px] text-gray-400 truncate mt-0.5">{r.detalhes}</p>}
+                      {r.subtitulo && <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{r.subtitulo}</p>}
+                      {r.detalhes && <p className="text-[10px] text-gray-400 dark:text-slate-500 truncate mt-0.5">{r.detalhes}</p>}
                     </div>
                   </button>
                 );
