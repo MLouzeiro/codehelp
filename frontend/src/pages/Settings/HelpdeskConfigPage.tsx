@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { ArrowLeft, Save, Clock, MessageSquare, RefreshCw, Info } from 'lucide-react';
@@ -31,6 +31,8 @@ export default function HelpdeskConfigPage() {
     mensagemFollowup: '',
     horarioInicio: '08:00',
     horarioFim: '18:00',
+    horarioSabadoInicio: '07:00',
+    horarioSabadoFim: '12:00',
     diasAtendimento: '1,2,3,4,5',
     tempoInatividadeMin: 5,
   });
@@ -41,7 +43,7 @@ export default function HelpdeskConfigPage() {
 
   const loadConfig = async () => {
     try {
-      const { data } = await api.get('/helpdesk/stages');
+      const { data } = await api.get('/helpdesk/etapas');
       const fila = data.find((s: any) => s.slug === 'fila');
       if (fila) {
         setConfig({
@@ -53,6 +55,8 @@ export default function HelpdeskConfigPage() {
           mensagemFollowup: fila.mensagemFollowup || '',
           horarioInicio: fila.horarioInicio || '08:00',
           horarioFim: fila.horarioFim || '18:00',
+          horarioSabadoInicio: fila.horarioSabadoInicio || '07:00',
+          horarioSabadoFim: fila.horarioSabadoFim || '12:00',
           diasAtendimento: fila.diasAtendimento || '1,2,3,4,5',
           tempoInatividadeMin: fila.tempoInatividadeMin ?? 5,
         });
@@ -67,11 +71,11 @@ export default function HelpdeskConfigPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data: stages } = await api.get('/helpdesk/stages');
+      const { data: stages } = await api.get('/helpdesk/etapas');
       const fila = stages.find((s: any) => s.slug === 'fila');
       if (!fila) return;
 
-      await api.patch(`/helpdesk/stages/${fila.id}`, {
+      await api.patch(`/helpdesk/etapas/${fila.id}`, {
         mensagemBoasVindas: config.mensagemBoasVindas || null,
         mensagemAckSuporte: config.mensagemAckSuporte || null,
         mensagemAckComercial: config.mensagemAckComercial || null,
@@ -80,6 +84,8 @@ export default function HelpdeskConfigPage() {
         mensagemFollowup: config.mensagemFollowup || null,
         horarioInicio: config.horarioInicio || null,
         horarioFim: config.horarioFim || null,
+        horarioSabadoInicio: config.horarioSabadoInicio || null,
+        horarioSabadoFim: config.horarioSabadoFim || null,
         diasAtendimento: config.diasAtendimento || null,
         tempoInatividadeMin: config.tempoInatividadeMin || null,
       });
@@ -107,7 +113,7 @@ export default function HelpdeskConfigPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <RefreshCw className="animate-spin text-blue-600" size={32} />
+        <RefreshCw className="animate-spin text-blue-600 dark:text-blue-400" size={32} />
       </div>
     );
   }
@@ -115,28 +121,28 @@ export default function HelpdeskConfigPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/app/settings')} className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors">
+        <button onClick={() => navigate('/app/settings')} className="w-9 h-9 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
           <ArrowLeft size={18} className="text-slate-600" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>
             Configurações do Helpdesk
           </h1>
-          <p className="text-sm text-slate-500" style={{ fontFamily: 'Lexend, sans-serif' }}>
+          <p className="text-sm text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
             Mensagens automáticas, horário de funcionamento e menu
           </p>
         </div>
       </div>
 
       {/* Variáveis disponíveis */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+      <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Info size={16} className="text-blue-600" />
+          <Info size={16} className="text-blue-600 dark:text-blue-400" />
           <span className="text-sm font-semibold text-blue-800" style={{ fontFamily: 'Lexend, sans-serif' }}>Variáveis disponíveis nas mensagens</span>
         </div>
         <div className="flex flex-wrap gap-3">
           {VARS_DISPONIVEIS.map((v) => (
-            <code key={v.var} className="text-xs bg-white border border-blue-200 text-blue-700 px-2 py-1 rounded-lg">
+            <code key={v.var} className="text-xs bg-white dark:bg-slate-800 border border-blue-200 text-blue-700 px-2 py-1 rounded-lg">
               {v.var} <span className="text-blue-400">— {v.desc}</span>
             </code>
           ))}
@@ -144,15 +150,15 @@ export default function HelpdeskConfigPage() {
       </div>
 
       {/* Horário de Funcionamento */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4" style={{ fontFamily: 'Khand, sans-serif' }}>
-          <Clock size={20} className="text-blue-600" />
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <Clock size={20} className="text-blue-600 dark:text-blue-400" />
           Horário de Funcionamento
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de início</label>
+            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de início (Seg-Sex)</label>
             <input
               type="time"
               value={config.horarioInicio}
@@ -161,11 +167,32 @@ export default function HelpdeskConfigPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de fim</label>
+            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de fim (Seg-Sex)</label>
             <input
               type="time"
               value={config.horarioFim}
               onChange={(e) => setConfig({ ...config, horarioFim: e.target.value })}
+              className="input"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de início (Sábado)</label>
+            <input
+              type="time"
+              value={config.horarioSabadoInicio}
+              onChange={(e) => setConfig({ ...config, horarioSabadoInicio: e.target.value })}
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de fim (Sábado)</label>
+            <input
+              type="time"
+              value={config.horarioSabadoFim}
+              onChange={(e) => setConfig({ ...config, horarioSabadoFim: e.target.value })}
               className="input"
             />
           </div>
@@ -181,7 +208,7 @@ export default function HelpdeskConfigPage() {
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   diasAtivos.includes(d.value)
                     ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200'
                 }`}
               >
                 {d.label}
@@ -206,9 +233,9 @@ export default function HelpdeskConfigPage() {
       </div>
 
       {/* Mensagens Automáticas */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4" style={{ fontFamily: 'Khand, sans-serif' }}>
-          <MessageSquare size={20} className="text-blue-600" />
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <MessageSquare size={20} className="text-blue-600 dark:text-blue-400" />
           Mensagens Automáticas
         </h2>
 
@@ -224,7 +251,7 @@ export default function HelpdeskConfigPage() {
               placeholder="Olá!! {{nome}} {{saudacao}} 👋&#10;&#10;Que bom ter você por aqui!&#10;&#10;Como podemos te ajudar hoje(Apenas números)?&#10;1️⃣ Suporte&#10;2️⃣ Comercial"
               className="input resize-none"
             />
-            <p className="text-[11px] text-slate-400 mt-1" style={{ fontFamily: 'Lexend, sans-serif' }}>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1" style={{ fontFamily: 'Lexend, sans-serif' }}>
               Enviada quando um cliente entra em contato pela primeira vez
             </p>
           </div>

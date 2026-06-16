@@ -387,6 +387,8 @@ model HelpdeskConfig {
   mensagemCsat String?
   horarioInicio String?
   horarioFim String?
+  horarioSabadoInicio String?
+  horarioSabadoFim String?
   diasAtendimento String?
   ordenacaoFila String  @default("updatedAt_desc")
   ativo     Boolean  @default(true)

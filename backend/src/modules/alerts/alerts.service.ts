@@ -36,9 +36,10 @@ export async function getAlertConfigs(userId: string): Promise<AlertConfig[]> {
 }
 
 export async function saveAlertConfigs(userId: string, configs: AlertConfig[]): Promise<void> {
-  const existing = await prisma.helpdeskConfig.findUnique({ where: { slug: `alert_config_${userId}` } });
+  const slug = `alert_config_${userId}`;
+  const existing = await prisma.helpdeskConfig.findUnique({ where: { slug } });
   const data = {
-    slug: `alert_config_${userId}`,
+    slug,
     nome: `Alertas de ${userId}`,
     descricao: JSON.stringify(configs),
   };

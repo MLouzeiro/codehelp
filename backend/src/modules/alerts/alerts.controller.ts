@@ -91,6 +91,7 @@ export async function saveConfigHandler(req: AuthRequest, res: Response) {
     await saveAlertConfigs(req.user!.id, configs);
     res.json({ success: true });
   } catch (err: any) {
+    console.error('[Alerts] Erro ao salvar config:', err);
     res.status(500).json({ error: err.message || 'Erro ao salvar configurações' });
   }
 }

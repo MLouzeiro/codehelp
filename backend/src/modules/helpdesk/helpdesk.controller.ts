@@ -332,7 +332,7 @@ export async function getEtapas(req: AuthRequest, res: Response) {
 export async function updateEtapaConfig(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { nome, descricao, cor, icone, autoMessage, enviarAuto, notificarEquipe, ativo, ordem, ordenacaoFila, mensagemBoasVindas, mensagemForaHorario, horarioInicio, horarioFim, diasAtendimento, mensagemFollowup, tempoInatividadeMin, mensagemAckSuporte, mensagemAckComercial, mensagemOpcaoInvalida } = req.body;
+    const { nome, descricao, cor, icone, autoMessage, enviarAuto, notificarEquipe, ativo, ordem, ordenacaoFila, mensagemBoasVindas, mensagemForaHorario, horarioInicio, horarioFim, horarioSabadoInicio, horarioSabadoFim, diasAtendimento, mensagemFollowup, tempoInatividadeMin, mensagemAckSuporte, mensagemAckComercial, mensagemOpcaoInvalida } = req.body;
     const data: any = {};
     if (nome !== undefined) data.nome = nome;
     if (descricao !== undefined) data.descricao = descricao;
@@ -348,6 +348,8 @@ export async function updateEtapaConfig(req: AuthRequest, res: Response) {
     if (mensagemForaHorario !== undefined) data.mensagemForaHorario = mensagemForaHorario;
     if (horarioInicio !== undefined) data.horarioInicio = horarioInicio;
     if (horarioFim !== undefined) data.horarioFim = horarioFim;
+    if (horarioSabadoInicio !== undefined) data.horarioSabadoInicio = horarioSabadoInicio;
+    if (horarioSabadoFim !== undefined) data.horarioSabadoFim = horarioSabadoFim;
     if (diasAtendimento !== undefined) data.diasAtendimento = diasAtendimento;
     if (mensagemFollowup !== undefined) data.mensagemFollowup = mensagemFollowup;
     if (tempoInatividadeMin !== undefined) data.tempoInatividadeMin = tempoInatividadeMin;
