@@ -1,18 +1,25 @@
 let audioCtx: AudioContext | null = null;
+let initialized = false;
 
-function getCtx(): AudioContext {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+function getCtx(): AudioContext | null {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
+  } catch {
+    return null;
   }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
-  return audioCtx;
 }
 
 function playTone(frequency: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.3) {
+  const ctx = getCtx();
+  if (!ctx) return;
+
   try {
-    const ctx = getCtx();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -27,50 +34,70 @@ function playTone(frequency: number, duration: number, type: OscillatorType = 's
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + duration);
   } catch (err) {
-    console.warn('[SoundAlert] Erro ao reproduzir som:', err);
+    console.warn('[Sound] Erro ao tocar:', err);
   }
 }
 
 const SOUND_PATTERNS: Record<string, () => void> = {
   nova_mensagem: () => {
-    playTone(880, 0.12, 'sine', 0.25);
-    setTimeout(() => playTone(1100, 0.15, 'sine', 0.25), 120);
+    playTone(880, 0.15, 'sine', 0.4);
+    setTimeout(() => playTone(1100, 0.2, 'sine', 0.4), 150);
   },
   cliente_entrou: () => {
-    playTone(523, 0.15, 'sine', 0.25);
-    setTimeout(() => playTone(659, 0.15, 'sine', 0.25), 150);
-    setTimeout(() => playTone(784, 0.2, 'sine', 0.25), 300);
+    playTone(523, 0.15, 'sine', 0.4);
+    setTimeout(() => playTone(659, 0.15, 'sine', 0.4), 150);
+    setTimeout(() => playTone(784, 0.25, 'sine', 0.4), 300);
   },
   sla_alerta: () => {
-    playTone(800, 0.1, 'square', 0.15);
-    setTimeout(() => playTone(600, 0.1, 'square', 0.15), 120);
-    setTimeout(() => playTone(800, 0.1, 'square', 0.15), 240);
+    playTone(800, 0.12, 'square', 0.2);
+    setTimeout(() => playTone(600, 0.12, 'square', 0.2), 130);
+    setTimeout(() => playTone(800, 0.15, 'square', 0.2), 260);
   },
   aprovacao: () => {
-    playTone(660, 0.15, 'sine', 0.25);
-    setTimeout(() => playTone(880, 0.2, 'sine', 0.25), 160);
+    playTone(660, 0.15, 'sine', 0.4);
+    setTimeout(() => playTone(880, 0.25, 'sine', 0.4), 160);
   },
 };
 
-export function playSound(tipo: string, _enabled: boolean = true): void {
+export function playSound(tipo: string): void {
+  if (!initialized) {
+    initAudioContext();
+  }
+
   const pattern = SOUND_PATTERNS[tipo];
   if (pattern) {
     pattern();
   } else {
-    playTone(800, 0.2, 'sine', 0.25);
+    playTone(800, 0.25, 'sine', 0.4);
   }
 }
 
 export function initAudioContext(): void {
+  if (initialized) return;
+
   const handler = () => {
-    getCtx();
+    const ctx = getCtx();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().then(() => {
+        initialized = true;
+      }).catch(() => {});
+    } else {
+      initialized = true;
+    }
     document.removeEventListener('click', handler);
     document.removeEventListener('keydown', handler);
     document.removeEventListener('touchstart', handler);
   };
-  document.addEventListener('click', handler);
-  document.addEventListener('keydown', handler);
-  document.addEventListener('touchstart', handler);
+
+  document.addEventListener('click', handler, { once: true });
+  document.addEventListener('keydown', handler, { once: true });
+  document.addEventListener('touchstart', handler, { once: true });
+
+  // Also try to init immediately if already interacted
+  const ctx = getCtx();
+  if (ctx && ctx.state === 'running') {
+    initialized = true;
+  }
 }
 
 export const SOUND_LABELS: Record<string, string> = {

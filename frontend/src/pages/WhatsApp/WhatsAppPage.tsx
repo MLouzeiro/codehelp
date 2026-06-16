@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../services/auth';
-import { playSound } from '../../services/soundAlerts';
+import { playSound, initAudioContext } from '../../services/soundAlerts';
 import { isAlertSoundEnabled, getAlertColor } from '../Settings/AlertSettings';
 import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X, FileText, Building2, Calendar, DollarSign, Tag, ArrowRightLeft, Bot, ClipboardList, ArrowUpDown, XCircle } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -55,6 +55,9 @@ export default function WhatsAppPage() {
   const initialLoadedRef = useRef(false);
   const prevTicketsCountRef = useRef(0);
   const prevMessagesCountRef = useRef(0);
+  const firstLoadDoneRef = useRef(false);
+
+  useEffect(() => { initAudioContext(); }, []);
 
   const CATEGORIAS = [
     { value: 'suporte_tecnico', label: 'Suporte Tecnico' },
@@ -163,16 +166,25 @@ export default function WhatsAppPage() {
   }, [loadStatus, loadTickets, loadDepartamentos]);
 
   useEffect(() => {
-    if (initialLoadedRef.current && tickets.length > prevTicketsCountRef.current) {
+    if (!firstLoadDoneRef.current) {
+      prevTicketsCountRef.current = tickets.length;
+      prevMessagesCountRef.current = messages.length;
+      if (tickets.length > 0 || messages.length > 0) {
+        firstLoadDoneRef.current = true;
+      }
+      return;
+    }
+    if (tickets.length > prevTicketsCountRef.current) {
       if (isAlertSoundEnabled('novo_ticket')) {
         playSound('cliente_entrou');
       }
     }
     prevTicketsCountRef.current = tickets.length;
-  }, [tickets]);
+  }, [tickets, messages]);
 
   useEffect(() => {
-    if (initialLoadedRef.current && messages.length > prevMessagesCountRef.current) {
+    if (!firstLoadDoneRef.current) return;
+    if (messages.length > prevMessagesCountRef.current) {
       const lastMsg = messages[messages.length - 1];
       if (lastMsg && !lastMsg.fromMe) {
         if (isAlertSoundEnabled('cliente_resposta')) {
