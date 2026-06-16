@@ -1,8 +1,12 @@
 import prisma from '../../config/database';
 import { sendWhatsAppMessage } from '../integrations/whatsapp/whatsapp.service';
+import { getHorarioConfig, isHorarioAtendimento } from './horario';
+import { getEstatisticasCsat } from '../csat/csat.service';
+import { getDashboardMetrics } from '../metrics/metrics.service';
 
 export const ETAPAS_PADRAO = [
-  { slug: 'fila', nome: 'Fila de Espera', descricao: 'Tickets recém-chegados aguardando atendente decidir se abre o chamado', cor: '#f59e0b', icone: 'inbox', ordem: 0, enviarAuto: false, notificarEquipe: true, tempoInatividadeMin: 5 },
+  { slug: 'triagem', nome: 'Triagem', descricao: 'Tickets aguardando direcionamento para o setor correto', cor: '#8b5cf6', icone: 'filter', ordem: -1, enviarAuto: false, notificarEquipe: true, tempoInatividadeMin: 10 },
+  { slug: 'fila', nome: 'Fila de Espera', descricao: 'Tickets aguardando atendente do setor', cor: '#f59e0b', icone: 'inbox', ordem: 0, enviarAuto: false, notificarEquipe: true, tempoInatividadeMin: 5 },
   { slug: 'em_atendimento', nome: 'Em Atendimento', descricao: 'Analista responsável conduzindo o atendimento', cor: '#10b981', icone: 'headphones', ordem: 1, enviarAuto: true, notificarEquipe: true },
   { slug: 'aguardando_cliente', nome: 'Aguardando Cliente', descricao: 'Aguardando retorno do cliente', cor: '#0ea5e9', icone: 'clock', ordem: 2, enviarAuto: false, notificarEquipe: false },
   { slug: 'aguardando_os', nome: 'Aguardando OS', descricao: 'Necessária geração de Ordem de Serviço', cor: '#ec4899', icone: 'file-text', ordem: 3, enviarAuto: true, notificarEquipe: false },
@@ -195,6 +199,7 @@ export async function sendStageAutoMessage(ticketId: string, etapaSlug: string) 
           fromMe: true,
           content: message,
           mediaUrl: null,
+          source: 'bot',
         },
       });
     }
@@ -236,4 +241,236 @@ export async function saveConversationSnapshot(ticketId: string, etapa: string, 
       geradoPor,
     },
   });
+}
+
+export async function isClientWithoutResponse(ticketId: string): Promise<boolean> {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: {
+      id: true,
+      contactPhone: true,
+      dataPrimeiraResposta: true,
+      etapa: true,
+      status: true,
+      assigneeId: true,
+      messages: {
+        where: { fromMe: false },
+        select: { createdAt: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+    },
+  });
+
+  if (!ticket) return false;
+
+  const lastClientMessage = ticket.messages[0];
+  if (!lastClientMessage) return true;
+
+  const now = new Date();
+  const lastClientMessageTime = lastClientMessage.createdAt;
+  const hoursSinceLastMessage = (now.getTime() - lastClientMessageTime.getTime()) / (1000 * 60 * 60);
+
+  if (hoursSinceLastMessage > 24) {
+    return true;
+  }
+
+  return false;
+}
+
+export async function isClientOffline(ticketId: string): Promise<boolean> {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: {
+      id: true,
+      etapa: true,
+      status: true,
+      assigneeId: true,
+    },
+  });
+
+  if (!ticket) return false;
+
+  const horarioCfg = await getHorarioConfig();
+  const horarioOk = isHorarioAtendimento(horarioCfg);
+
+  if (horarioOk) {
+    return false;
+  }
+
+  const lastAgentMessageAt = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: { lastAgentMessageAt: true },
+  });
+
+  if (!lastAgentMessageAt?.lastAgentMessageAt) {
+    return true;
+  }
+
+  const now = new Date();
+  const hoursSinceLastAgentMessage = (now.getTime() - lastAgentMessageAt.lastAgentMessageAt.getTime()) / (1000 * 60 * 60);
+
+  return hoursSinceLastAgentMessage > 2;
+}
+
+export async function isClientAbsent(ticketId: string): Promise<boolean> {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: {
+      id: true,
+      etapa: true,
+      status: true,
+      assigneeId: true,
+    },
+  });
+
+  if (!ticket) return false;
+
+  const horarioCfg = await getHorarioConfig();
+  const horarioOk = isHorarioAtendimento(horarioCfg);
+
+  if (horarioOk) {
+    return false;
+  }
+
+  const lastAgentMessageAt = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: { lastAgentMessageAt: true },
+  });
+
+  if (!lastAgentMessageAt?.lastAgentMessageAt) {
+    return true;
+  }
+
+  const now = new Date();
+  const hoursSinceLastAgentMessage = (now.getTime() - lastAgentMessageAt.lastAgentMessageAt.getTime()) / (1000 * 60 * 60);
+
+  return hoursSinceLastAgentMessage > 4;
+}
+
+export async function isClientInactive(ticketId: string): Promise<boolean> {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: {
+      id: true,
+      etapa: true,
+      status: true,
+      assigneeId: true,
+    },
+  });
+
+  if (!ticket) return false;
+
+  const horarioCfg = await getHorarioConfig();
+  const horarioOk = isHorarioAtendimento(horarioCfg);
+
+  if (horarioOk) {
+    return false;
+  }
+
+  const lastAgentMessageAt = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: { lastAgentMessageAt: true },
+  });
+
+  if (!lastAgentMessageAt?.lastAgentMessageAt) {
+    return true;
+  }
+
+  const now = new Date();
+  const hoursSinceLastAgentMessage = (now.getTime() - lastAgentMessageAt.lastAgentMessageAt.getTime()) / (1000 * 60 * 60);
+
+  return hoursSinceLastAgentMessage > 8;
+}
+
+export async function pauseClientCounters(ticketId: string) {
+  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+  if (!ticket) return;
+
+  const updateData: any = {
+    slaPausadoEm: new Date(),
+  };
+
+  await prisma.ticket.update({
+    where: { id: ticketId },
+    data: updateData,
+  });
+}
+
+export async function resumeClientCounters(ticketId: string) {
+  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+  if (!ticket) return;
+
+  const updateData: any = {
+    slaPausadoEm: null,
+    dataInicioAtendimento: new Date(),
+  };
+
+  await prisma.ticket.update({
+    where: { id: ticketId },
+    data: updateData,
+  });
+}
+
+export async function updateClientStatusCounters(ticketId: string) {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    include: {
+      assignee: { select: { id: true } },
+    },
+  });
+
+  if (!ticket) return;
+
+  const etapa = ticket.etapa;
+  const status = ticket.status;
+
+  const isWithoutResponse = await isClientWithoutResponse(ticketId);
+  const isOffline = await isClientOffline(ticketId);
+  const isAbsent = await isClientAbsent(ticketId);
+  const isInactive = await isClientInactive(ticketId);
+
+  const isAwaitingAttention = etapa === 'em_atendimento' || etapa === 'fila';
+
+  if (isAwaitingAttention && (isWithoutResponse || isOffline || isAbsent || isInactive)) {
+    await pauseClientCounters(ticketId);
+  } else if (isAwaitingAttention && !isWithoutResponse && !isOffline && !isAbsent && !isInactive) {
+    await resumeClientCounters(ticketId);
+  }
+}
+
+export async function getClientStatusInfo(ticketId: string) {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    include: {
+      assignee: { select: { id: true, name: true } },
+    },
+  });
+
+  if (!ticket) return null;
+
+  const etapa = ticket.etapa;
+  const status = ticket.status;
+
+  const isAwaitingAttention = etapa === 'em_atendimento' || etapa === 'fila';
+
+  const isWithoutResponse = await isClientWithoutResponse(ticketId);
+  const isOffline = await isClientOffline(ticketId);
+  const isAbsent = await isClientAbsent(ticketId);
+  const isInactive = await isClientInactive(ticketId);
+
+  const counters = {
+    withoutResponse: isWithoutResponse,
+    offline: isOffline,
+    absent: isAbsent,
+    inactive: isInactive,
+    isAwaitingAttention,
+    slaPausadoEm: ticket.slaPausadoEm,
+    dataInicioAtendimento: ticket.dataInicioAtendimento,
+  };
+
+  return {
+    ticket,
+    counters,
+  };
 }

@@ -7,12 +7,26 @@ import {
   getEtapaConfig,
   sendStageAutoMessage,
   saveConversationSnapshot,
+  updateClientStatusCounters,
 } from './helpdesk.service';
 import { logAction, getIpFromRequest } from '../audit/audit.service';
 import { gerenciarPausaSlaPorEtapa } from './slaPausa.service';
+import { calcularPosicaoFila, recalcularFilaDepartamento } from './fila.service';
+import { normalizeRole } from '../auth/rbac';
+import { sendWhatsAppMessage } from '../integrations/whatsapp/whatsapp.service';
+
+const PRIORIDADE_ORDEM: Record<string, number> = {
+  urgente: 0,
+  critica: 0,
+  alta: 1,
+  media: 2,
+  baixa: 3,
+};
 
 export async function getKanban(req: AuthRequest, res: Response) {
   try {
+    if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
+
     await ensureHelpdeskConfigs();
     const etapas = await listEtapas();
     const orderBy = (req.query.orderBy as string) || 'updatedAt_desc';
@@ -20,23 +34,26 @@ export async function getKanban(req: AuthRequest, res: Response) {
     const ordenacaoFila = configFila?.ordenacaoFila || 'updatedAt_desc';
 
     const where: any = { status: { not: 'arquivado' } };
-    if (req.user?.role === 'tecnico') {
+
+    if (normalizeRole(req.user.role) === 'agente') {
       const deptIds = req.user.departamentos.map((d) => d.id);
       if (deptIds.length > 0) {
-        // Tecnicos com departamento: veem seus tickets + fila dos departamentos + fila sem departamento
+        // Tecnicos: triagem + fila do seu setor + fila sem depto + seus tickets
         where.OR = [
-          { assigneeId: req.user.id },
+          { etapa: 'triagem' },
           { etapa: 'fila', departamentoId: { in: deptIds }, assigneeId: null },
           { etapa: 'fila', departamentoId: null, assigneeId: null },
+          { assigneeId: req.user.id },
         ];
       } else {
-        // Tecnicos sem departamento: veem seus tickets + toda fila
         where.OR = [
-          { assigneeId: req.user.id },
+          { etapa: 'triagem' },
           { etapa: 'fila', assigneeId: null },
+          { assigneeId: req.user.id },
         ];
       }
     }
+
     const tickets = await prisma.ticket.findMany({
       where,
       include: {
@@ -65,6 +82,15 @@ export async function getKanban(req: AuthRequest, res: Response) {
         const bt = (b as any).lastClienteAt || 0;
         return bt - at;
       }
+      if (key === 'fifo') {
+        const aPri = PRIORIDADE_ORDEM[a.prioridade || 'media'] ?? 2;
+        const bPri = PRIORIDADE_ORDEM[b.prioridade || 'media'] ?? 2;
+        if (aPri !== bPri) return aPri - bPri;
+        const aFila = a.filaOrder ?? 999999;
+        const bFila = b.filaOrder ?? 999999;
+        if (aFila !== bFila) return aFila - bFila;
+        return new Date(a.dataAbertura).getTime() - new Date(b.dataAbertura).getTime();
+      }
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     };
 
@@ -90,7 +116,7 @@ export async function getKanban(req: AuthRequest, res: Response) {
           ...t,
           lastMessage: t.messages?.[0] || null,
         }));
-      const sortKey = etapa.slug === 'fila' ? ordenacaoFila : orderBy;
+      const sortKey = etapa.slug === 'fila' ? 'fifo' : orderBy;
       items = items.sort((a, b) => sortBy(a, b, sortKey));
       board[etapa.slug] = {
         id: etapa.id,
@@ -112,11 +138,128 @@ export async function getKanban(req: AuthRequest, res: Response) {
   }
 }
 
+export async function triageTicket(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { departamentoId, prioridade, observacoes } = req.body;
+    if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
+    if (!departamentoId) return res.status(400).json({ error: 'departamentoId obrigatório' });
+
+    const dept = await prisma.departamento.findUnique({ where: { id: departamentoId } });
+    if (!dept || !dept.ativo) return res.status(400).json({ error: 'Departamento inválido' });
+
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
+    if (ticket.etapa !== 'triagem') return res.status(400).json({ error: 'Ticket não está na triagem' });
+
+    const filaOrder = await calcularPosicaoFila(departamentoId);
+
+    const updateData: any = {
+      departamentoId,
+      etapa: 'fila',
+      filaOrder,
+      triagemFeitaPorId: req.user.id,
+      triagemEm: new Date(),
+    };
+    if (prioridade) updateData.prioridade = prioridade;
+    if (observacoes) updateData.observacoes = observacoes;
+
+    const updated = await prisma.ticket.update({ where: { id }, data: updateData });
+
+    await prisma.ticketStageEvent.create({
+      data: {
+        ticketId: id,
+        etapaAnterior: 'triagem',
+        etapaNova: 'fila',
+        origem: 'manual',
+        usuarioId: req.user.id,
+      },
+    });
+
+    await updateClientStatusCounters(id);
+
+    await logAction({
+      usuarioId: req.user.id,
+      acao: 'mover_etapa',
+      entidade: 'Ticket',
+      entidadeId: id,
+      detalhes: { etapaAnterior: 'triagem', etapaNova: 'fila', departamentoId, filaOrder, prioridade, observacoes },
+      ip: getIpFromRequest(req),
+    });
+
+    if (ticket.contactPhone) {
+      const clientName = ticket.contactName ? ticket.contactName.split(' ')[0] : 'Cliente';
+      const posText = filaOrder > 0 ? `\n\nSua posição na fila: *#${filaOrder}º*` : '';
+      await sendWhatsAppMessage(ticket.contactPhone, `${clientName}, obrigado por aguardar! Sua demanda foi direcionada ao departamento *${dept.nome}* e já está na fila de atendimento. Aguarde um agente disponível! 🏢${posText}`).catch(() => {});
+    }
+
+    return res.json({ message: 'Ticket direcionado para a fila', ticket: updated, posicaoNaFila: filaOrder });
+  } catch (error: any) {
+    console.error('[Triagem] Erro:', error?.message || error);
+    return res.status(500).json({ error: 'Erro ao direcionar ticket' });
+  }
+}
+
+export async function assumeTicket(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
+
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
+    if (ticket.etapa !== 'fila') return res.status(400).json({ error: 'Ticket não está na fila' });
+
+    const updateData: any = {
+      assigneeId: req.user.id,
+      usuarioId: req.user.id,
+      assumedAt: new Date(),
+      filaOrder: null,
+    };
+
+    if (!ticket.departamentoId && req.user.departamentos.length > 0) {
+      updateData.departamentoId = req.user.departamentos[0].id;
+    }
+
+    const updated = await prisma.ticket.update({ where: { id }, data: updateData });
+
+    const deptRecalc = updateData.departamentoId || ticket.departamentoId || null;
+    await recalcularFilaDepartamento(deptRecalc);
+
+    await prisma.ticketStageEvent.create({
+      data: {
+        ticketId: id,
+        etapaAnterior: 'fila',
+        etapaNova: 'em_atendimento',
+        origem: 'manual',
+        usuarioId: req.user.id,
+      },
+    });
+
+    await updateClientStatusCounters(id);
+
+    await logAction({
+      usuarioId: req.user.id,
+      acao: 'atribuir',
+      entidade: 'Ticket',
+      entidadeId: id,
+      detalhes: { etapaAnterior: 'fila', etapaNova: 'em_atendimento', assigneeId: req.user.id },
+      ip: getIpFromRequest(req),
+    });
+
+    return res.json(updated);
+  } catch (error: any) {
+    console.error('[Helpdesk] Erro no getKanban:', error?.message || error);
+    return res.status(500).json({ error: 'Erro ao buscar kanban' });
+  }
+}
+
 export async function getStatusBoard(req: AuthRequest, res: Response) {
   try {
+    if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
+
     const orderBy = (req.query.orderBy as string) || 'updatedAt_desc';
     const where: any = { status: { not: 'arquivado' } };
-    if (req.user?.role === 'tecnico') {
+    if (normalizeRole(req.user.role) === 'agente') {
       where.OR = [{ assigneeId: req.user.id }, { assigneeId: null }];
     }
     const tickets = await prisma.ticket.findMany({
@@ -221,6 +364,9 @@ export async function updateEtapaConfig(req: AuthRequest, res: Response) {
       detalhes: { campos: Object.keys(data) },
       ip: getIpFromRequest(req),
     });
+
+    await updateClientStatusCounters(id);
+
     return res.json(etapa);
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao atualizar etapa' });
@@ -263,6 +409,18 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
     if (etapa === 'descartado') {
       updateData.dataConclusao = new Date();
       updateData.status = 'cancelado';
+    }
+    if (etapa === 'em_atendimento' && req.user) {
+      updateData.lastAgentMessageAt = new Date();
+    }
+    if (etapa === 'em_atendimento' && etapaAnterior !== 'em_atendimento') {
+      updateData.filaOrder = null;
+    }
+    if (etapa === 'fila' && etapaAnterior !== 'fila') {
+      const deptId = updateData.departamentoId || ticket.departamentoId || null;
+      if (deptId) {
+        updateData.filaOrder = await calcularPosicaoFila(deptId);
+      }
     }
 
     const updated = await prisma.ticket.update({ where: { id }, data: updateData });
@@ -328,6 +486,8 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
       await saveConversationSnapshot(id, etapa, req.user?.id || 'sistema');
     }
 
+    await updateClientStatusCounters(id);
+
     const acaoLog =
       etapa === 'concluido' ? 'concluir' :
       etapa === 'descartado' ? 'descartar' :
@@ -359,6 +519,7 @@ export async function atribuirTicket(req: AuthRequest, res: Response) {
         usuarioId: usuarioId || req.user?.id,
       },
     });
+    await updateClientStatusCounters(id);
     await logAction({
       usuarioId: req.user?.id,
       acao: 'atribuir',
@@ -391,6 +552,8 @@ export async function updateTicketClient(req: AuthRequest, res: Response) {
       data: { clientId: clientId || null },
       include: { client: { select: { id: true, razaoSocial: true, nomeFantasia: true } } },
     });
+
+    await updateClientStatusCounters(id);
 
     await logAction({
       usuarioId: req.user?.id,
@@ -597,5 +760,54 @@ export async function getTickets(req: AuthRequest, res: Response) {
     return res.json({ tickets });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao listar tickets' });
+  }
+}
+
+export async function getTicketPosition(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
+
+    const posicao = await calcularPosicaoFila(ticket.departamentoId || null);
+
+    const slaConfig = await prisma.sLAConfig.findUnique({
+      where: { prioridade: ticket.prioridade || 'media' },
+    });
+
+    const totalNaFila = await prisma.ticket.count({
+      where: { etapa: 'fila', departamentoId: ticket.departamentoId || undefined },
+    });
+
+    const slaMinutos = slaConfig?.slaMinutosResolucao || 240;
+    const tempoMedioChamadas = totalNaFila > 1 ? Math.floor(slaMinutos / Math.max(totalNaFila, 1)) : 0;
+    const tempoEstimadoMin = Math.max(0, (posicao - 1) * tempoMedioChamadas);
+
+    return res.json({
+      ticketId: id,
+      protocolo: ticket.protocolo,
+      etapa: ticket.etapa,
+      prioridade: ticket.prioridade,
+      posicao,
+      totalNaFila,
+      tempoEstimadoMin,
+      slaMinutos,
+    });
+  } catch (error) {
+    console.error('Erro ao calcular posição:', error);
+    return res.status(500).json({ error: 'Erro ao calcular posição' });
+  }
+}
+
+export async function recalcQueue(req: AuthRequest, res: Response) {
+  try {
+    const { departamentoId } = req.query;
+    const total = await recalcularFilaDepartamento(
+      departamentoId ? String(departamentoId) : null
+    );
+    return res.json({ total, message: `${total} tickets reordenados na fila` });
+  } catch (error) {
+    console.error('Erro ao recalcular fila:', error);
+    return res.status(500).json({ error: 'Erro ao recalcular fila' });
   }
 }
