@@ -52,6 +52,13 @@ export const AUTO_MESSAGES: AutoMessageConfig[] = [
     variaveis: ['{{nome_contato}}', '{{numero_protocolo}}'],
   },
   {
+    slug: 'csat',
+    nome: 'Avaliação (CSAT)',
+    descricao: 'Mensagem de avaliação enviada após concluir o atendimento',
+    mensagem: 'Olá! 👋\n\nSeu atendimento foi concluído.\n\nPor favor, avalie de 1 a 5 estrelas como foi sua experiência:\n\n⭐ 1 - Péssimo\n⭐⭐ 2 - Ruim\n⭐⭐⭐ 3 - Regular\n⭐⭐⭐⭐ 4 - Bom\n⭐⭐⭐⭐⭐ 5 - Excelente\n\nResponda esta mensagem com o número de estrelas (1 a 5).\n\nObrigado pelo feedback! 🙏\n\nEquipe Codemed',
+    variaveis: [],
+  },
+  {
     slug: 'followup',
     nome: 'Follow-up',
     descricao: 'Mensagem de acompanhamento para clientes offline',
@@ -62,24 +69,47 @@ export const AUTO_MESSAGES: AutoMessageConfig[] = [
     slug: 'boas_vindas',
     nome: 'Boas-vindas',
     descricao: 'Mensagem de boas-vindas ao iniciar conversa',
-    mensagem: 'Ola!! {{nome}} {{saudacao}} 👋\n\nQue bom ter voce por aqui!\n\nComo podemos te ajudar hoje? Descreva por aqui mesmo que um de nossos analistas te atendera em instantes.',
+    mensagem: 'Olá! {{nome}} {{saudacao}} 👋\n\nQue bom ter você por aqui!\n\nComo podemos te ajudar hoje? Descreva por aqui mesmo que um de nossos analistas te atenderá em instantes.',
     variaveis: ['{{nome}}', '{{saudacao}}'],
   },
   {
     slug: 'opcao_invalida',
     nome: 'Opção Inválida',
     descricao: 'Mensagem quando o cliente envia opção inválida',
-    mensagem: 'Hmm, nao entendi sua resposta, {{nome}} 😅\n\nPor favor, descreva com mais detalhes o que voce precisa.',
+    mensagem: 'Hmm, não entendi sua resposta, {{nome}} 😅\n\nPor favor, descreva com mais detalhes o que você precisa.',
     variaveis: ['{{nome}}'],
   },
   {
     slug: 'fora_horario',
     nome: 'Fora de Horário',
     descricao: 'Mensagem quando cliente fora do horário comercial',
-    mensagem: 'Ola! Nosso horario de atendimento e de segunda a sexta, das 08:00 as 18:00. Deixamos seu contato registrado e um atendente human o respondera assim que possivel. 🙏',
+    mensagem: 'Olá! Nosso horário de atendimento é de segunda a sexta, das 08:00 às 18:00. Deixamos seu contato registrado e um atendente humano o responderá assim que possível. 🙏',
     variaveis: [],
   },
 ];
+
+const FIELD_MAP: Record<string, string> = {
+  fila: 'autoMessage',
+  triagem: 'mensagemTriagem',
+  em_atendimento: 'mensagemEmAtendimento',
+  aguardando_cliente: 'mensagemAguardandoCliente',
+  aguardando_os: 'mensagemAguardandoOs',
+  concluido: 'mensagemConcluido',
+  csat: 'mensagemCsat',
+  followup: 'mensagemFollowup',
+  boas_vindas: 'mensagemBoasVindas',
+  opcao_invalida: 'mensagemOpcaoInvalida',
+  fora_horario: 'mensagemForaHorario',
+};
+
+function getFieldForSlug(slug: string): string {
+  return FIELD_MAP[slug] || 'autoMessage';
+}
+
+function getMessageFromConfig(config: any, slug: string): string {
+  const field = getFieldForSlug(slug);
+  return config?.[field] || '';
+}
 
 export async function listAutoMessages(): Promise<(AutoMessageConfig & { mensagemAtual: string })[]> {
   const configs = await prisma.helpdeskConfig.findMany({
@@ -88,9 +118,10 @@ export async function listAutoMessages(): Promise<(AutoMessageConfig & { mensage
 
   return AUTO_MESSAGES.map(msg => {
     const config = configs.find(c => c.slug === msg.slug);
+    const mensagemAtual = config ? getMessageFromConfig(config, msg.slug) : '';
     return {
       ...msg,
-      mensagemAtual: config?.autoMessage || config?.mensagemBoasVindas || config?.mensagemFollowup || config?.mensagemOpcaoInvalida || config?.mensagemForaHorario || msg.mensagem,
+      mensagemAtual: mensagemAtual || msg.mensagem,
     };
   });
 }
@@ -99,13 +130,9 @@ export async function updateAutoMessage(slug: string, novaMensagem: string): Pro
   const config = await prisma.helpdeskConfig.findUnique({ where: { slug } });
   if (!config) throw new Error('Configuração não encontrada');
 
+  const field = getFieldForSlug(slug);
   const data: any = {};
-  if (slug === 'fila') data.autoMessage = novaMensagem;
-  else if (slug === 'followup') data.mensagemFollowup = novaMensagem;
-  else if (slug === 'boas_vindas') data.mensagemBoasVindas = novaMensagem;
-  else if (slug === 'opcao_invalida') data.mensagemOpcaoInvalida = novaMensagem;
-  else if (slug === 'fora_horario') data.mensagemForaHorario = novaMensagem;
-  else data.autoMessage = novaMensagem;
+  data[field] = novaMensagem;
 
   await prisma.helpdeskConfig.update({ where: { id: config.id }, data });
 }

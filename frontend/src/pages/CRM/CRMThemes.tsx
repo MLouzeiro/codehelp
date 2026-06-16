@@ -385,6 +385,7 @@ export default function CRMThemes() {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider" style={{ fontFamily: 'Lexend, sans-serif' }}>Ícone</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider" style={{ fontFamily: 'Lexend, sans-serif' }}>Nome</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider" style={{ fontFamily: 'Lexend, sans-serif' }}>Cor</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider" style={{ fontFamily: 'Lexend, sans-serif' }}>Slug</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider" style={{ fontFamily: 'Lexend, sans-serif' }}>Ordem</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider" style={{ fontFamily: 'Lexend, sans-serif' }}>Status</th>
@@ -405,9 +406,12 @@ export default function CRMThemes() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 rounded-full mr-3" style={{ backgroundColor: tema.cor }}></div>
-                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100" style={{ fontFamily: 'Lexend, sans-serif' }}>{tema.nome}</div>
+                      <div className="text-sm font-medium text-slate-900 dark:text-slate-100" style={{ fontFamily: 'Lexend, sans-serif' }}>{tema.nome}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full border-2 border-slate-200 dark:border-slate-600 shadow-inner" style={{ backgroundColor: tema.cor || '#3b82f6' }}></div>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">{tema.cor || '#3b82f6'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

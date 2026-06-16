@@ -373,12 +373,18 @@ model HelpdeskConfig {
   enviarAuto  Boolean  @default(false)
   notificarEquipe Boolean @default(false)
   tempoInatividadeMin Int?
+  mensagemTriagem String?
+  mensagemEmAtendimento String?
+  mensagemAguardandoCliente String?
+  mensagemAguardandoOs String?
+  mensagemConcluido String?
   mensagemFollowup String?
   mensagemBoasVindas String?
   mensagemAckSuporte String?
   mensagemAckComercial String?
   mensagemOpcaoInvalida String?
   mensagemForaHorario String?
+  mensagemCsat String?
   horarioInicio String?
   horarioFim String?
   diasAtendimento String?
