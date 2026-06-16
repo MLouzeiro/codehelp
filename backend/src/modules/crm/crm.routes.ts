@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../../shared/middleware/auth';
 import { auditLog } from '../../shared/middleware/audit';
+import { auditLog as auditLogGeneric } from '../../shared/middleware/audit';
 import {
   listClients, getClient, createClient, updateClient, deleteClient,
   listContacts, createContact,
   listOpportunities, createOpportunity, updateOpportunity,
-  getPipeline
+  getPipeline,
+  listThemes, createTheme, updateTheme, deleteTheme,
 } from './crm.controller';
 import {
   getColaboradoresPorCliente,
@@ -38,5 +40,10 @@ router.post('/opportunities', authorize('admin', 'gerente', 'comercial'), auditL
 router.put('/opportunities/:id', authorize('admin', 'gerente', 'comercial'), auditLog('editar_oportunidade', 'Opportunity'), updateOpportunity);
 
 router.get('/pipeline', getPipeline);
+
+router.get('/temas', listThemes);
+router.post('/temas', authorize('admin', 'gerente'), auditLogGeneric('criar_tema', 'HelpdeskConfig'), createTheme);
+router.put('/temas/:id', authorize('admin', 'gerente'), auditLogGeneric('editar_tema', 'HelpdeskConfig'), updateTheme);
+router.delete('/temas/:id', authorize('admin'), auditLogGeneric('deletar_tema', 'HelpdeskConfig'), deleteTheme);
 
 export default router;

@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../shared/middleware/auth';
 
@@ -220,4 +220,116 @@ export async function getPipeline(req: AuthRequest, res: Response) {
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao buscar pipeline' });
   }
+}
+
+export async function listThemes(req: AuthRequest, res: Response) {
+  try {
+    const where: any = { ativo: true };
+    if (req.user?.role === 'vendedor') {
+      where.ativo = true;
+    }
+    const temas = await prisma.helpdeskConfig.findMany({
+      where,
+      orderBy: { ordem: 'asc' },
+    });
+    return res.json(temas);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao listar temas' });
+  }
+}
+
+export async function createTheme(req: AuthRequest, res: Response) {
+  try {
+    if (!req.user?.isMaster && req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Acesso não autorizado' });
+    }
+
+    const { slug, nome, descricao, cor, icone, ordem, ativo } = req.body;
+    if (!slug || !nome) {
+      return res.status(400).json({ error: 'Slug e nome são obrigatórios' });
+    }
+
+    const existing = await prisma.helpdeskConfig.findUnique({ where: { slug } });
+    if (existing) {
+      return res.status(409).json({ error: 'Tema com este slug já existe' });
+    }
+
+    const tema = await prisma.helpdeskConfig.create({
+      data: {
+        slug,
+        nome,
+        descricao,
+        cor,
+        icone,
+        ordem,
+        ativo,
+      },
+    });
+
+    return res.status(201).json(tema);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao criar tema' });
+  }
+}
+
+export async function updateTheme(req: AuthRequest, res: Response) {
+  try {
+    if (!req.user?.isMaster && req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Acesso não autorizado' });
+    }
+
+    const { id } = req.params;
+    const { slug, nome, descricao, cor, icone, ordem, ativo } = req.body;
+
+    const existing = await prisma.helpdeskConfig.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Tema não encontrado' });
+    }
+
+    if (slug && slug !== existing.slug) {
+      const slugExists = await prisma.helpdeskConfig.findUnique({ where: { slug } });
+      if (slugExists) {
+        return res.status(409).json({ error: 'Tema com este slug já existe' });
+      }
+    }
+
+    const tema = await prisma.helpdeskConfig.update({
+      where: { id },
+      data: {
+        slug: slug ?? existing.slug,
+        nome: nome ?? existing.nome,
+        descricao: descricao ?? existing.descricao,
+        cor: cor ?? existing.cor,
+        icone: icone ?? existing.icone,
+        ordem: ordem ?? existing.ordem,
+        ativo: ativo ?? existing.ativo,
+      },
+    });
+
+    return res.json(tema);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao atualizar tema' });
+  }
+}
+
+export async function deleteTheme(req: AuthRequest, res: Response) {
+  try {
+    if (!req.user?.isMaster && req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Acesso não autorizado' });
+    }
+
+    const { id } = req.params;
+
+    const existing = await prisma.helpdeskConfig.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Tema não encontrado' });
+    }
+
+    await prisma.helpdeskConfig.delete({ where: { id } });
+
+    return res.json({ message: 'Tema excluído com sucesso' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao excluir tema' });
+  }
+}
 }
