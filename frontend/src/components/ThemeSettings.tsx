@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
-import { Settings, Sun, Moon, Minus, Plus, PanelLeftClose, PanelLeftOpen, Rows3, Columns3 } from 'lucide-react';
-import { useThemeSettings, COLOR_SCHEMES, type FontScale, type ColorScheme, type SidebarLayout } from '../services/ThemeContext';
+import { Settings, Sun, Moon, Minus, Plus, PanelLeftClose, PanelLeftOpen, Rows3, Columns3, Palette } from 'lucide-react';
+import { useThemeSettings, COLOR_SCHEMES, BG_MODES, type FontScale, type ColorScheme, type SidebarLayout, type BgMode } from '../services/ThemeContext';
 
 const COLOR_LABELS: Record<ColorScheme, string> = {
   blue: 'Azul',
@@ -23,7 +23,7 @@ const SIDEBAR_OPTIONS: { value: SidebarLayout; label: string; icon: typeof Rows3
 ];
 
 export default function ThemeSettings() {
-  const { theme, fontScale, colorScheme, sidebarLayout, toggleTheme, setFontScale, setColorScheme, setSidebarLayout } = useThemeSettings();
+  const { theme, fontScale, colorScheme, sidebarLayout, bgMode, toggleTheme, setFontScale, setColorScheme, setSidebarLayout, setBgMode } = useThemeSettings();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -126,6 +126,38 @@ export default function ThemeSettings() {
                   <Moon size={16} />
                   <span className="text-sm font-medium">Escuro</span>
                 </button>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Palette size={12} />
+                Fundo
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {([
+                  { mode: 'white' as BgMode, label: 'Branco', preview: '#E2E8F0' },
+                  { mode: 'ice' as BgMode, label: 'Gelo', preview: '#BAE6FD' },
+                  { mode: 'gray' as BgMode, label: 'Cinza', preview: '#94A3B8' },
+                  { mode: 'blue' as BgMode, label: 'Azul Claro', preview: '#93C5FD' },
+                ]).map(({ mode, label, preview }) => (
+                    <button
+                      key={mode}
+                      onClick={() => setBgMode(mode)}
+                      title={label}
+                      className={`flex flex-col items-center gap-1.5 p-2 rounded-lg transition-all ${
+                        bgMode === mode
+                          ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-800 shadow-md'
+                          : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-lg border-2 ${bgMode === mode ? 'border-slate-900 dark:border-white' : 'border-slate-200 dark:border-slate-600'}`}
+                        style={{ backgroundColor: preview }}
+                      />
+                      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">{label}</span>
+                    </button>
+                  ))}
               </div>
             </div>
 
