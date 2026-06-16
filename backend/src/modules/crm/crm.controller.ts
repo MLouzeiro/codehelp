@@ -332,4 +332,3 @@ export async function deleteTheme(req: AuthRequest, res: Response) {
     return res.status(500).json({ error: 'Erro ao excluir tema' });
   }
 }
-}
