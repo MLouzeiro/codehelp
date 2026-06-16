@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Users, Bell, Inbox, Shield, Settings2, Lock, CalendarOff, MessageSquare, Clock, Building2, Layers, ListTodo } from 'lucide-react';
+﻿import { Link, useLocation } from 'react-router-dom';
+import { Users, Bell, Inbox, Shield, Settings2, Lock, CalendarOff, MessageSquare, Clock, Building2, Layers, ListTodo, FileText } from 'lucide-react';
 
 export default function SettingsPage() {
   const location = useLocation();
@@ -8,19 +8,21 @@ export default function SettingsPage() {
     { path: '/app/settings/users', label: 'Usuários', icon: Users, desc: 'Gerenciar usuários e permissões' },
     { path: '/app/settings/permissions', label: 'Permissões', icon: Shield, desc: 'Matriz de permissões por role (somente admin master)' },
     { path: '/app/settings/helpdesk-config', label: 'Helpdesk', icon: MessageSquare, desc: 'Mensagens automáticas, menu e horário de funcionamento' },
+    { path: '/app/settings/auto-messages', label: 'Mensagens Automáticas', icon: FileText, desc: 'Editar todas as mensagens enviadas pela plataforma' },
     { path: '/app/settings/helpdesk-stages', label: 'Etapas do Helpdesk', icon: Inbox, desc: 'Criar, renomear, ativar ou desativar etapas (somente admin master)' },
     { path: '/app/settings/helpdesk-departamentos', label: 'Departamentos', icon: Building2, desc: 'Gerenciar setores: Suporte, Comercial, Desenvolvimento, Demandas Internas' },
     { path: '/app/settings/helpdesk-filas', label: 'Filas', icon: ListTodo, desc: 'Gerenciar filas de atendimento por departamento e nível' },
     { path: '/app/settings/helpdesk-niveis', label: 'Níveis de Suporte', icon: Layers, desc: 'Configurar níveis: N1, N2, N3, Supervisor, etc.' },
     { path: '/app/settings/feriados', label: 'Feriados', icon: CalendarOff, desc: 'Cadastrar feriados para bloquear atendimento fora do horário comercial' },
     { path: '/app/settings/alerts', label: 'Alertas', icon: Bell, desc: 'Configurar alertas semanais e destinatários' },
+    { path: '/app/settings/alert-settings', label: 'Alertas Atendente', icon: Bell, desc: 'Configurar alertas sonoros e notificações' },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
-        <p className="text-gray-500">Gerencie as configurações do sistema</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Configurações</h1>
+        <p className="text-gray-500 dark:text-slate-400">Gerencie as configurações do sistema</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
@@ -31,8 +33,8 @@ export default function SettingsPage() {
               <link.icon size={24} className="text-codemed-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">{link.label}</h3>
-              <p className="text-sm text-gray-500">{link.desc}</p>
+              <h3 className="font-semibold text-gray-900 dark:text-slate-100">{link.label}</h3>
+              <p className="text-sm text-gray-500 dark:text-slate-400">{link.desc}</p>
             </div>
           </Link>
         ))}

@@ -13,6 +13,10 @@ import {
   getTicketHistory,
   setAgentPresence,
   getTickets,
+  triageTicket,
+  assumeTicket,
+  getTicketPosition,
+  recalcQueue,
 } from './helpdesk.controller';
 import {
   getStages,
@@ -34,6 +38,11 @@ import {
   getCategorias,
 } from './sla.controller';
 import { getMetrics } from './metrics.controller';
+import {
+  listAutoMessagesHandler,
+  updateAutoMessageHandler,
+  resetAutoMessageHandler,
+} from './autoMessages.controller';
 
 const router = Router();
 router.use(authenticate);
@@ -46,8 +55,12 @@ router.get('/etapas', getEtapas);
 router.patch('/etapas/:id', authorize('admin', 'gerente'), updateEtapaConfig);
 router.post('/tickets/:id/move', requireTicketAccess('edit'), moveTicketEtapa);
 router.patch('/tickets/:id/atribuir', requireTicketAccess('assign'), atribuirTicket);
+router.post('/tickets/:id/triage', requireTicketAccess('edit'), triageTicket);
+router.post('/tickets/:id/assume', requireTicketAccess('edit'), assumeTicket);
 router.patch('/tickets/:id/client', requireTicketAccess('edit'), updateTicketClient);
 router.get('/tickets/:id/history', requireTicketAccess('view'), getTicketHistory);
+router.get('/tickets/:id/position', requireTicketAccess('view'), getTicketPosition);
+router.post('/queue/recalc', authorize('admin', 'gerente', 'supervisor'), recalcQueue);
 router.post('/presence', setAgentPresence);
 
 router.get('/stages', getStages);
@@ -67,5 +80,9 @@ router.get('/filas', getFilas);
 router.get('/sla-configs', getSlaConfigs);
 router.get('/categorias', getCategorias);
 router.get('/metrics', authorize('admin', 'gerente', 'supervisor'), getMetrics);
+
+router.get('/auto-messages', authorize('admin', 'gerente'), listAutoMessagesHandler);
+router.put('/auto-messages/:slug', authorize('admin', 'gerente'), updateAutoMessageHandler);
+router.post('/auto-messages/:slug/reset', authorize('admin', 'gerente'), resetAutoMessageHandler);
 
 export default router;
