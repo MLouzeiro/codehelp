@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../services/api';
+import { offlineService } from '../services/offline';
 import type { HelpdeskKanbanData, HelpdeskTicket, TicketDetail, EtapaSlug } from '../types';
 
 interface HelpdeskState {
@@ -33,10 +34,11 @@ export const useHelpdeskStore = create<HelpdeskState>((set, get) => ({
   loadKanban: async () => {
     set({ loading: true });
     try {
-      const { data } = await api.get('/helpdesk/kanban', {
-        params: { orderBy: get().orderBy },
-      });
-      set({ kanbanData: data, loading: false });
+      const data = await offlineService.cachedGet<HelpdeskKanbanData>(
+        `/helpdesk/kanban?orderBy=${get().orderBy}`,
+        30000 // 30s cache
+      );
+      if (data) set({ kanbanData: data, loading: false });
     } catch (err) {
       console.error('Erro ao carregar kanban:', err);
       set({ loading: false });
@@ -53,8 +55,11 @@ export const useHelpdeskStore = create<HelpdeskState>((set, get) => ({
   loadTicketDetail: async (id) => {
     set({ detailLoading: true });
     try {
-      const { data } = await api.get(`/helpdesk/tickets/${id}/history`);
-      set({ selectedTicket: data, detailLoading: false });
+      const data = await offlineService.cachedGet<TicketDetail>(
+        `/helpdesk/tickets/${id}/history`,
+        15000 // 15s cache
+      );
+      if (data) set({ selectedTicket: data, detailLoading: false });
     } catch (err) {
       console.error('Erro ao carregar detalhe:', err);
       set({ detailLoading: false });
@@ -62,8 +67,13 @@ export const useHelpdeskStore = create<HelpdeskState>((set, get) => ({
   },
 
   moveTicket: async (ticketId, toStage) => {
+    if (!offlineService.isNetworkOnline()) {
+      await offlineService.addToQueue('POST', `/helpdesk/tickets/${ticketId}/move`, { etapaDestino: toStage });
+      return;
+    }
     try {
       await api.post(`/helpdesk/tickets/${ticketId}/move`, { etapaDestino: toStage });
+      await offlineService.clearCache('kanban');
       await get().loadKanban();
       if (get().selectedTicketId === ticketId) {
         await get().loadTicketDetail(ticketId);
@@ -74,8 +84,13 @@ export const useHelpdeskStore = create<HelpdeskState>((set, get) => ({
   },
 
   assignTicket: async (ticketId, userId) => {
+    if (!offlineService.isNetworkOnline()) {
+      await offlineService.addToQueue('PATCH', `/helpdesk/tickets/${ticketId}/atribuir`, { assigneeId: userId });
+      return;
+    }
     try {
       await api.patch(`/helpdesk/tickets/${ticketId}/atribuir`, { assigneeId: userId });
+      await offlineService.clearCache('kanban');
       await get().loadKanban();
       if (get().selectedTicketId === ticketId) {
         await get().loadTicketDetail(ticketId);
@@ -86,8 +101,13 @@ export const useHelpdeskStore = create<HelpdeskState>((set, get) => ({
   },
 
   assumeTicket: async (ticketId) => {
+    if (!offlineService.isNetworkOnline()) {
+      await offlineService.addToQueue('POST', `/helpdesk/tickets/${ticketId}/assume`);
+      return;
+    }
     try {
       await api.post(`/helpdesk/tickets/${ticketId}/assume`);
+      await offlineService.clearCache('kanban');
       await get().loadKanban();
       if (get().selectedTicketId === ticketId) {
         await get().loadTicketDetail(ticketId);
@@ -98,8 +118,13 @@ export const useHelpdeskStore = create<HelpdeskState>((set, get) => ({
   },
 
   resolveTicket: async (ticketId) => {
+    if (!offlineService.isNetworkOnline()) {
+      await offlineService.addToQueue('POST', `/helpdesk/tickets/${ticketId}/resolver`);
+      return;
+    }
     try {
       await api.post(`/helpdesk/tickets/${ticketId}/resolver`);
+      await offlineService.clearCache('kanban');
       await get().loadKanban();
       if (get().selectedTicketId === ticketId) {
         await get().loadTicketDetail(ticketId);
@@ -110,8 +135,13 @@ export const useHelpdeskStore = create<HelpdeskState>((set, get) => ({
   },
 
   triageTicket: async (ticketId, triageData) => {
+    if (!offlineService.isNetworkOnline()) {
+      await offlineService.addToQueue('POST', `/helpdesk/tickets/${ticketId}/triage`, triageData);
+      return;
+    }
     try {
       await api.post(`/helpdesk/tickets/${ticketId}/triage`, triageData);
+      await offlineService.clearCache('kanban');
       await get().loadKanban();
     } catch (err: any) {
       throw new Error(err.response?.data?.error || 'Erro ao triar ticket');
@@ -119,8 +149,13 @@ export const useHelpdeskStore = create<HelpdeskState>((set, get) => ({
   },
 
   sendMessage: async (ticketId, content) => {
+    if (!offlineService.isNetworkOnline()) {
+      await offlineService.addToQueue('POST', '/whatsapp/send', { ticketId, message: content });
+      return;
+    }
     try {
       await api.post('/whatsapp/send', { ticketId, message: content });
+      await offlineService.clearCache(`tickets/${ticketId}`);
       await get().loadTicketDetail(ticketId);
     } catch (err: any) {
       throw new Error(err.response?.data?.error || 'Erro ao enviar mensagem');
