@@ -8,12 +8,17 @@ import {
   sendStageAutoMessage,
   saveConversationSnapshot,
   updateClientStatusCounters,
+  getTicketTags,
+  addTicketTag,
+  removeTicketTag,
+  setTicketTags,
 } from './helpdesk.service';
 import { logAction, getIpFromRequest } from '../audit/audit.service';
 import { gerenciarPausaSlaPorEtapa } from './slaPausa.service';
 import { calcularPosicaoFila, recalcularFilaDepartamento } from './fila.service';
 import { normalizeRole } from '../auth/rbac';
 import { sendWhatsAppMessage } from '../integrations/whatsapp/whatsapp.service';
+import { notificarAtendentesFila } from '../alerts/alerts.service';
 
 const PRIORIDADE_ORDEM: Record<string, number> = {
   urgente: 0,
@@ -28,7 +33,8 @@ export async function getKanban(req: AuthRequest, res: Response) {
     if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
 
     await ensureHelpdeskConfigs();
-    const etapas = await listEtapas();
+    const allEtapas = await listEtapas();
+    const etapas = allEtapas.filter((e) => e.ativo);
     const orderBy = (req.query.orderBy as string) || 'updatedAt_desc';
     const configFila = etapas.find((e) => e.slug === 'fila') as any;
     const ordenacaoFila = configFila?.ordenacaoFila || 'updatedAt_desc';
@@ -60,6 +66,7 @@ export async function getKanban(req: AuthRequest, res: Response) {
         client: { select: { id: true, razaoSocial: true, nomeFantasia: true, telefone: true } },
         assignee: { select: { id: true, name: true, email: true } },
         departamento: { select: { id: true, nome: true, slug: true, cor: true } },
+        channel: { select: { id: true, nome: true, tipo: true, slug: true, cor: true, avatar: true } },
         messages: { orderBy: { createdAt: 'desc' }, take: 1 },
         _count: { select: { messages: true, orders: true } },
       },
@@ -189,8 +196,9 @@ export async function triageTicket(req: AuthRequest, res: Response) {
 
     if (ticket.contactPhone) {
       const clientName = ticket.contactName ? ticket.contactName.split(' ')[0] : 'Cliente';
-      const posText = filaOrder > 0 ? `\n\nSua posição na fila: *#${filaOrder}º*` : '';
-      await sendWhatsAppMessage(ticket.contactPhone, `${clientName}, obrigado por aguardar! Sua demanda foi direcionada ao departamento *${dept.nome}* e já está na fila de atendimento. Aguarde um agente disponível! 🏢${posText}`).catch(() => {});
+      const { montarPosicaoFilaComInfo } = await import('./menu');
+      const posMsg = await montarPosicaoFilaComInfo(clientName, filaOrder, false, false);
+      await sendWhatsAppMessage(ticket.contactPhone, `${clientName}, obrigado por aguardar! Sua demanda foi direcionada ao departamento *${dept.nome}* e já está na fila de atendimento. 🏢\n\n${posMsg}`, undefined, ticket.contactJid || undefined).catch(() => {});
     }
 
     return res.json({ message: 'Ticket direcionado para a fila', ticket: updated, posicaoNaFila: filaOrder });
@@ -275,7 +283,7 @@ export async function getStatusBoard(req: AuthRequest, res: Response) {
 
     const STATUS_COLUNAS: Array<{ slug: string; titulo: string; cor: string; icone: string }> = [
       { slug: 'aberto', titulo: 'Aberto', cor: '#3b82f6', icone: 'inbox' },
-      { slug: 'em_andamento', titulo: 'Em Atendimento', cor: '#10b981', icone: 'headphones' },
+      { slug: 'em_atendimento', titulo: 'Em Atendimento', cor: '#10b981', icone: 'headphones' },
       { slug: 'pendente', titulo: 'Pendente', cor: '#f59e0b', icone: 'clock' },
       { slug: 'escalonado', titulo: 'Escalonado', cor: '#ef4444', icone: 'arrow-up-circle' },
       { slug: 'resolvido', titulo: 'Resolvido', cor: '#22c55e', icone: 'check-circle' },
@@ -474,6 +482,12 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
       }
     }
 
+    if (etapa === 'fila' && etapaAnterior !== 'fila') {
+      notificarAtendentesFila(id, updated.departamentoId).catch((e) =>
+        console.warn('[Helpdesk] Falha ao notificar atendentes sobre fila:', e?.message || e)
+      );
+    }
+
     if (observacao) {
       await prisma.message.create({
         data: {
@@ -597,7 +611,7 @@ export async function getDashboard(req: AuthRequest, res: Response) {
       prisma.ticket.count({
         where: { etapa: 'concluido', dataFechamento: { gte: inicioDia } },
       }),
-      prisma.ticket.count({ where: { status: { in: ['aberto', 'em_andamento'] } } }),
+      prisma.ticket.count({ where: { status: { in: ['aberto', 'em_atendimento'] } } }),
       prisma.ticketStageEvent.findMany({
         take: 15,
         orderBy: { createdAt: 'desc' },
@@ -714,10 +728,40 @@ export async function getTicketHistory(req: AuthRequest, res: Response) {
           client: true,
           assignee: { select: { id: true, name: true, email: true } },
           messages: { orderBy: { createdAt: 'asc' } },
+          channel: true,
         },
       }),
     ]);
-    return res.json({ ticket, stageEvents, snapshots });
+
+    // Buscar histórico de tickets anteriores do mesmo contato
+    let historicoContato: any[] = [];
+    if (ticket?.contactPhone) {
+      const phoneDigits = ticket.contactPhone.replace(/[^\d]/g, '');
+      const phoneLookup = phoneDigits.slice(-11);
+      historicoContato = await prisma.ticket.findMany({
+        where: {
+          id: { not: id },
+          OR: [
+            { contactPhone: { contains: phoneLookup } },
+          ],
+        },
+        select: {
+          id: true,
+          protocolo: true,
+          assunto: true,
+          status: true,
+          etapa: true,
+          prioridade: true,
+          createdAt: true,
+          dataFechamento: true,
+          assignee: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+    }
+
+    return res.json({ ticket, stageEvents, snapshots, historicoContato });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao buscar histórico' });
   }
@@ -811,5 +855,179 @@ export async function recalcQueue(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('Erro ao recalcular fila:', error);
     return res.status(500).json({ error: 'Erro ao recalcular fila' });
+  }
+}
+
+// ── GET /tickets/:id/analytics ──────────────────────────────────
+export async function getTicketAnalytics(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const agora = new Date();
+
+    const [ticket, messages, stageEvents] = await Promise.all([
+      prisma.ticket.findUnique({
+        where: { id },
+        select: {
+          id: true, dataAbertura: true, dataInicioAtendimento: true, dataFechamento: true,
+          dataPrimeiraResposta: true, dataResolucao: true,
+          slaPausadoTotalMin: true, etapa: true, status: true, prioridade: true,
+          resolvidoPorIa: true, iaMensagensEnviadas: true,
+          iaClassificacao: true, iaResumoProblema: true, iaNotaEncerramento: true,
+          iaAvaliacaoQualidade: true,
+        },
+      }),
+      prisma.message.findMany({
+        where: { ticketId: id },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, fromMe: true, tipo: true, source: true, createdAt: true },
+      }),
+      prisma.ticketStageEvent.findMany({
+        where: { ticketId: id },
+        orderBy: { createdAt: 'asc' },
+        select: { etapaAnterior: true, etapaNova: true, createdAt: true },
+      }),
+    ]);
+
+    if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
+
+    // ── Tempo de vida (abertura ate agora ou fechamento) ──
+    const fimReferencia = ticket.dataFechamento || agora;
+    const tempoTotalMin = Math.max(0, Math.round((fimReferencia.getTime() - new Date(ticket.dataAbertura).getTime()) / 60000));
+
+    // ── Tempo de primeira resposta ──
+    let tempoPrimeiraRespostaMin: number | null = null;
+    if (ticket.dataPrimeiraResposta) {
+      tempoPrimeiraRespostaMin = Math.max(0, Math.round(
+        (new Date(ticket.dataPrimeiraResposta).getTime() - new Date(ticket.dataAbertura).getTime()) / 60000
+      ));
+    } else {
+      // Calcular da primeira mensagem fromMe
+      const primeiraResposta = messages.find((m) => m.fromMe);
+      if (primeiraResposta) {
+        tempoPrimeiraRespostaMin = Math.max(0, Math.round(
+          (new Date(primeiraResposta.createdAt).getTime() - new Date(ticket.dataAbertura).getTime()) / 60000
+        ));
+      }
+    }
+
+    // ── Tempo em atendimento ──
+    let tempoEmAtendimentoMin = 0;
+    if (ticket.etapa === 'em_atendimento' && ticket.dataInicioAtendimento) {
+      tempoEmAtendimentoMin = Math.max(0, Math.round(
+        (agora.getTime() - new Date(ticket.dataInicioAtendimento).getTime()) / 60000
+      ));
+    } else if (ticket.dataInicioAtendimento && ticket.dataFechamento) {
+      tempoEmAtendimentoMin = Math.max(0, Math.round(
+        (new Date(ticket.dataFechamento).getTime() - new Date(ticket.dataInicioAtendimento).getTime()) / 60000
+      ));
+    }
+
+    // ── Tempo aguardando cliente ──
+    let tempoAguardandoClienteMin = 0;
+    const eventosAguardando = stageEvents.filter((e) => e.etapaNova === 'aguardando_cliente');
+    for (const evt of eventosAguardando) {
+      const proximoEvento = stageEvents.find(
+        (e) => e.createdAt > evt.createdAt && e.etapaAnterior === 'aguardando_cliente'
+      );
+      const fim = proximoEvento?.createdAt || agora;
+      tempoAguardandoClienteMin += Math.max(0, Math.round(
+        (new Date(fim).getTime() - new Date(evt.createdAt).getTime()) / 60000
+      ));
+    }
+
+    // ── Distribuicao de mensagens ──
+    const msgsCliente = messages.filter((m) => !m.fromMe).length;
+    const msgsAgente = messages.filter((m) => m.fromMe && m.source !== 'bot' && m.source !== 'sistema').length;
+    const msgsBot = messages.filter((m) => m.fromMe && (m.source === 'bot' || m.source === 'sistema')).length;
+    const totalMensagens = messages.length;
+
+    // ── Tempo medio de resposta do agente ──
+    let tempoMedioRespostaMin = 0;
+    const temposResposta: number[] = [];
+    let ultimoHorarioCliente: Date | null = null;
+    for (const msg of messages) {
+      if (!msg.fromMe) {
+        ultimoHorarioCliente = new Date(msg.createdAt);
+      } else if (ultimoHorarioCliente && msg.source !== 'bot' && msg.source !== 'sistema') {
+        const diff = Math.round((new Date(msg.createdAt).getTime() - ultimoHorarioCliente.getTime()) / 60000);
+        if (diff >= 0 && diff < 1440) temposResposta.push(diff); // ignorar gaps > 24h
+        ultimoHorarioCliente = null;
+      }
+    }
+    if (temposResposta.length > 0) {
+      tempoMedioRespostaMin = Math.round(temposResposta.reduce((a, b) => a + b, 0) / temposResposta.length);
+    }
+
+    return res.json({
+      ticketId: id,
+      tempoTotalMin,
+      tempoPrimeiraRespostaMin,
+      tempoEmAtendimentoMin,
+      tempoAguardandoClienteMin,
+      tempoMedioRespostaMin,
+      distribuicaoMensagens: {
+        total: totalMensagens,
+        cliente: msgsCliente,
+        agente: msgsAgente,
+        bot: msgsBot,
+      },
+      resolvidoPorIa: ticket.resolvidoPorIa,
+      iaMensagensEnviadas: ticket.iaMensagensEnviadas,
+      classificacaoIa: ticket.iaClassificacao ? JSON.parse(ticket.iaClassificacao) : null,
+      resumoIa: ticket.iaResumoProblema,
+      notaEncerramentoIa: ticket.iaNotaEncerramento,
+      avaliacaoIa: ticket.iaAvaliacaoQualidade ? JSON.parse(ticket.iaAvaliacaoQualidade) : null,
+    });
+  } catch (error) {
+    console.error('Erro ao calcular analytics do ticket:', error);
+    return res.status(500).json({ error: 'Erro ao calcular analytics' });
+  }
+}
+
+export async function getTicketTagsController(req: AuthRequest, res: Response) {
+  try {
+    const tags = await getTicketTags(req.params.id);
+    return res.json(tags);
+  } catch (error: any) {
+    if (error.message?.includes('não encontrado')) {
+      return res.status(404).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Erro ao buscar tags' });
+  }
+}
+
+export async function addTicketTagController(req: AuthRequest, res: Response) {
+  try {
+    const tags = await addTicketTag(req.params.id, req.body.tag);
+    return res.json(tags);
+  } catch (error: any) {
+    if (error.message?.includes('não encontrado') || error.message?.includes('vazia')) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Erro ao adicionar tag' });
+  }
+}
+
+export async function removeTicketTagController(req: AuthRequest, res: Response) {
+  try {
+    const tags = await removeTicketTag(req.params.id, req.params.tag);
+    return res.json(tags);
+  } catch (error: any) {
+    if (error.message?.includes('não encontrado')) {
+      return res.status(404).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Erro ao remover tag' });
+  }
+}
+
+export async function setTicketTagsController(req: AuthRequest, res: Response) {
+  try {
+    const tags = await setTicketTags(req.params.id, req.body.tags);
+    return res.json(tags);
+  } catch (error: any) {
+    if (error.message?.includes('não encontrado')) {
+      return res.status(404).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Erro ao definir tags' });
   }
 }

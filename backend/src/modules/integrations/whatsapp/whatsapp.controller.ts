@@ -4,22 +4,57 @@ import { env } from '../../../config/env';
 import { AuthRequest } from '../../../shared/middleware/auth';
 import {
   isClientConnected, getQrCodeData, getConnectionError,
-  initializeClient, disconnectClient,
+  initializeClient, disconnectClient, clearSession,
   sendWhatsAppMessage, generateProtocolo, getChatsList,
   getClient, sendProtocolReply, SUBJECTS, classifyMessage, getSubjectLabel,
   getLastMessageAt, pingHeartbeat, getWhatsAppState,
 } from './whatsapp.service';
+import { whatsappConnectionManager } from './whatsapp.service';
+import { baileysProviderService } from './baileys-provider.service';
+import { whatsappWebJSProviderService } from './whatsapp-webjs.service';
+import { evolutionApiService } from './evolution-api.service';
+import { unifiedWhatsAppService } from './unified-whatsapp.service';
 import path from 'path';
 
 export async function getStatus(req: Request, res: Response) {
   pingHeartbeat();
   const state = await getWhatsAppState();
+  
+  // Check Evolution API health
+  let evolutionAvailable = false;
+  let evolutionHealthy = false;
+  try {
+    evolutionAvailable = !!env.evolutionApiUrl;
+    if (evolutionAvailable) {
+      evolutionHealthy = await evolutionApiService.checkHealth();
+    }
+  } catch { /* ignore */ }
+
+  // Check Cloud API availability
+  const cloudAvailable = !!(env.whatsappCloudPhoneNumberId && env.whatsappCloudAccessToken);
+
+  // Check WhatsAppWebJS health
+  let whatsappWebJSConnected = false;
+  try {
+    const allWebJSStates = whatsappWebJSProviderService.getAllMultiStates();
+    for (const [, state] of allWebJSStates) {
+      if (state.connected) { whatsappWebJSConnected = true; break; }
+    }
+  } catch { /* ignore */ }
+
   return res.json({
     connected: isClientConnected(),
     qrCode: getQrCodeData(),
     error: getConnectionError(),
     ultimaMensagem: getLastMessageAt(),
     state,
+    providers: {
+      'baileys': { available: true, connected: isClientConnected() },
+      'whatsapp-webjs': { available: true, connected: whatsappWebJSConnected },
+      'evolution': { available: evolutionAvailable, connected: evolutionHealthy },
+      'cloud': { available: cloudAvailable, connected: cloudAvailable },
+    },
+    activeProvider: unifiedWhatsAppService.getActiveProvider(),
   });
 }
 
@@ -30,17 +65,43 @@ export async function getQrCode(req: Request, res: Response) {
 }
 
 export async function connect(req: Request, res: Response) {
-  if (isClientConnected()) return res.json({ message: 'WhatsApp já conectado' });
+  if (isClientConnected()) return res.json({ message: 'WhatsApp ja conectado' });
+  
+  // Check if Evolution API is available and healthy
+  const evolutionAvailable = !!env.evolutionApiUrl;
+  let evolutionHealthy = false;
+  try {
+    if (evolutionAvailable) {
+      evolutionHealthy = await evolutionApiService.checkHealth();
+    }
+  } catch { /* ignore */ }
+
+  if (evolutionAvailable && evolutionHealthy) {
+    return res.json({ 
+      message: 'Use a Evolution API para conectar. Acesse /api/whatsapp/evolution/instance/connect/:instanceName',
+      provider: 'evolution',
+      hint: 'Evolution API detectada e saudavel. Use o endpoint Evolution para conectar.'
+    });
+  }
+
   try {
     await disconnectClient();
   } catch { /* ignore */ }
   initializeClient().catch(console.error);
-  return res.json({ message: 'Iniciando conexão WhatsApp. Verifique o QR Code.' });
+  return res.json({ 
+    message: 'Conexao WhatsApp iniciada via Baileys. Escaneie o QR Code.',
+    provider: 'baileys'
+  });
 }
 
 export async function disconnect(req: Request, res: Response) {
   await disconnectClient();
   return res.json({ message: 'WhatsApp desconectado' });
+}
+
+export async function clearSessionEndpoint(req: Request, res: Response) {
+  await clearSession();
+  return res.json({ message: 'Sessao WhatsApp limpa. Reconecte escaneando o QR Code.' });
 }
 
 export async function listTickets(req: AuthRequest, res: Response) {
@@ -153,7 +214,7 @@ export async function createTicketFromChat(req: AuthRequest, res: Response) {
         categoria,
         usuarioId: usuarioId || req.user?.id,
         status: 'aberto',
-        etapa: 'fila',
+        etapa: departamentoId ? 'fila' : 'triagem',
         canal: 'whatsapp',
         departamentoId: departamentoId || null,
       },
@@ -171,7 +232,7 @@ export async function getDebugStatus(req: Request, res: Response) {
   let state: string | null = null;
   try {
     const c = getClient();
-    if (c) state = await c.getState();
+    if (c) state = typeof c.getState === 'function' ? await c.getState() : 'connected';
   } catch (err: any) {
     state = `erro: ${err?.message || err}`;
   }
@@ -179,22 +240,18 @@ export async function getDebugStatus(req: Request, res: Response) {
     connected: isClientConnected(),
     qrCode: getQrCodeData() ? 'QR code present' : null,
     error: getConnectionError(),
-    chromePath: env.whatsappChromePath || '(auto)',
-    sessionPath: path.resolve(__dirname, '../../../../whatsapp-session'),
     clientExists: getClient() !== null,
     state,
     ultimaMensagem: getLastMessageAt(),
-    whatsappWebJsVersion: (() => { try { return require('whatsapp-web.js/package.json').version; } catch { return 'unknown'; } })(),
+    provider: 'baileys',
   });
 }
 
 export async function reconnectWhatsApp(req: AuthRequest, res: Response) {
   try {
     await disconnectClient();
-    setTimeout(() => {
-      initializeClient().catch((e) => console.error('[WhatsApp] reconnect error:', e?.message || e));
-    }, 1000);
-    return res.json({ message: 'Reconexão iniciada. Verifique o QR Code.' });
+    initializeClient().catch((e) => console.error('[WhatsApp] reconnect error:', e?.message || e));
+    return res.json({ message: 'Reconexao iniciada. Verifique o QR Code.' });
   } catch (error: any) {
     return res.status(500).json({ error: error?.message || 'Erro ao reconectar' });
   }
@@ -216,9 +273,26 @@ export async function closeTicket(req: AuthRequest, res: Response) {
     if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
     if (ticket.status === 'fechado') return res.status(400).json({ error: 'Ticket já está fechado' });
 
+    const etapaAnterior = ticket.etapa;
     await prisma.ticket.update({
       where: { id },
-      data: { status: 'fechado', dataFechamento: new Date(), usuarioId: req.user?.id },
+      data: {
+        status: 'fechado',
+        etapa: 'concluido',
+        dataFechamento: new Date(),
+        dataConclusao: new Date(),
+        usuarioId: req.user?.id,
+      },
+    });
+
+    await prisma.ticketStageEvent.create({
+      data: {
+        ticketId: id,
+        etapaAnterior,
+        etapaNova: 'concluido',
+        origem: 'manual',
+        usuarioId: req.user?.id,
+      },
     });
 
     if (ticket.contactPhone && ticket.protocolo) {
@@ -356,14 +430,125 @@ export async function getSubjects(req: Request, res: Response) {
 
 export async function sendMessage(req: AuthRequest, res: Response) {
   try {
-    const { to, message, ticketId } = req.body;
-    if (!to || !message) return res.status(400).json({ error: 'Destinatário e mensagem são obrigatórios' });
+    const { to, message, ticketId, whatsappConnectionId } = req.body;
+    if (!message || !message.trim()) return res.status(400).json({ error: 'Mensagem é obrigatória' });
 
-    if (!isClientConnected()) {
-      return res.status(503).json({ error: 'WhatsApp não está conectado. Conecte-se antes de enviar mensagens.' });
+    // Resolve phone from ticket if not provided
+    let phone = to;
+    let contactJid: string | null = null;
+    if (!phone && ticketId) {
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { contactPhone: true, contactJid: true } });
+      if (ticket?.contactPhone) {
+        phone = ticket.contactPhone.replace(/[^\d]/g, '');
+      }
+      contactJid = ticket?.contactJid || null;
+    } else if (ticketId) {
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { contactJid: true } });
+      contactJid = ticket?.contactJid || null;
+    }
+    if (!phone) return res.status(400).json({ error: 'Destinatário é obrigatório (to ou ticketId com telefone)' });
+
+    // Try Baileys first (WebSocket, no Chrome needed)
+    if (whatsappConnectionId) {
+      const baileysState = baileysProviderService.getMultiState(whatsappConnectionId);
+      if (baileysState?.connected && baileysState.socket) {
+        const result = await baileysProviderService.sendTextMulti(whatsappConnectionId, phone, message, contactJid || undefined);
+        if (!result.success) return res.status(500).json({ error: result.error || 'Falha ao enviar via Baileys' });
+
+        if (ticketId) {
+          await prisma.message.create({
+            data: {
+              ticketId,
+              fromMe: true,
+              content: message,
+              source: 'agent',
+              usuarioId: req.user?.id,
+            },
+          });
+        }
+        return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });
+      }
+
+      // Fallback to Baileys multi-connection
+      const rt = whatsappConnectionManager.getConnectionRuntime(whatsappConnectionId);
+      if (!rt?.connected) {
+        return res.status(503).json({ error: 'A conexao WhatsApp selecionada nao esta conectada.' });
+      }
+    } else {
+      // No specific connection — try Baileys legacy first
+      if (baileysProviderService.isLegacyConnected()) {
+        const result = await baileysProviderService.sendTextLegacy(phone, message, contactJid || undefined);
+        if (!result.success) return res.status(500).json({ error: result.error || 'Falha ao enviar via Baileys' });
+
+        if (ticketId) {
+          await prisma.message.create({
+            data: {
+              ticketId,
+              fromMe: true,
+              content: message,
+              source: 'agent',
+              usuarioId: req.user?.id,
+            },
+          });
+        }
+        return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });
+      }
+
+      // Try any connected Baileys multi-connection
+      const allBaileysStates = baileysProviderService.getAllMultiStates();
+      for (const [connId, state] of allBaileysStates) {
+        if (state.connected && state.socket) {
+          const result = await baileysProviderService.sendTextMulti(connId, phone, message, contactJid || undefined);
+          if (!result.success) continue;
+
+          if (ticketId) {
+            await prisma.message.create({
+              data: {
+                ticketId,
+                fromMe: true,
+                content: message,
+                source: 'agent',
+                usuarioId: req.user?.id,
+              },
+            });
+          }
+          return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys', connectionId: connId });
+        }
+      }
+
+      // Try any connected WhatsAppWebJS multi-connection
+      const allWebJSStates = whatsappWebJSProviderService.getAllMultiStates();
+      for (const [connId, state] of allWebJSStates) {
+        if (state.connected && state.client) {
+          const result = await whatsappWebJSProviderService.sendTextMulti(connId, phone, message);
+          if (!result.success) continue;
+
+          if (ticketId) {
+            await prisma.message.create({
+              data: {
+                ticketId,
+                fromMe: true,
+                content: message,
+                source: 'agent',
+                usuarioId: req.user?.id,
+              },
+            });
+          }
+          return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'whatsapp-webjs', connectionId: connId });
+        }
+      }
+
+      // Fallback to Baileys legacy
+      if (!isClientConnected()) {
+        const allStatus = whatsappConnectionManager.getAllConnectionsStatus();
+        const connected = allStatus.find(c => c.connected);
+        if (!connected) {
+          return res.status(503).json({ error: 'WhatsApp não está conectado. Conecte-se antes de enviar mensagens.' });
+        }
+      }
     }
 
-    const result = await sendWhatsAppMessage(to, message);
+    const result = await sendWhatsAppMessage(phone, message, whatsappConnectionId);
     if (!result.success) return res.status(500).json({ error: result.error || 'Falha ao enviar mensagem WhatsApp' });
 
     if (ticketId) {
@@ -372,12 +557,13 @@ export async function sendMessage(req: AuthRequest, res: Response) {
           ticketId,
           fromMe: true,
           content: message,
+          source: 'agent',
           usuarioId: req.user?.id,
         },
       });
     }
 
-    return res.json({ success: true, message: 'Mensagem enviada com sucesso' });
+    return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao enviar mensagem' });
   }

@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { env } from '../../config/env';
 import { logAction } from '../audit/audit.service';
 
 const CSAT_DELAY_MINUTOS = 30;
@@ -27,11 +28,27 @@ export async function agendarCsat(ticketId: string): Promise<AgendamentoResult> 
   return { criado: true, csat };
 }
 
+const CSAT_DEFAULT_MESSAGE = `Olá! 👋\n\nSeu atendimento foi concluído.\n\nPor favor, avalie de 1 a 5 estrelas como foi sua experiência:\n\n⭐ 1 - Péssimo\n⭐⭐ 2 - Ruim\n⭐⭐⭐ 3 - Regular\n⭐⭐⭐⭐ 4 - Bom\n⭐⭐⭐⭐⭐ 5 - Excelente\n\nResponda esta mensagem com o número de estrelas (1 a 5).\nOu acesse: {{url}}\n\nObrigado pelo feedback! 🙏\n\nEquipe Codemed`;
+
 export function montarMensagemCsat(token: string, baseUrl?: string): string {
   const url = baseUrl
     ? `${baseUrl}/csat/${token}`
-    : `https://app.codemed.com.br/csat/${token}`;
-  return `Ola! 👋\n\nSeu atendimento foi concluido.\n\nPor favor, avalie de 1 a 5 estrelas como foi sua experiencia:\n\n⭐ 1 - Pessimo\n⭐⭐ 2 - Ruim\n⭐⭐⭐ 3 - Regular\n⭐⭐⭐⭐ 4 - Bom\n⭐⭐⭐⭐⭐ 5 - Excelente\n\nResponda esta mensagem com o numero de estrelas (1 a 5).\nOu acesse: ${url}\n\nObrigado pelo feedback! 🙏\n\nEquipe Codemed`;
+    : `${env.appUrl}/csat/${token}`;
+  return CSAT_DEFAULT_MESSAGE.replace(/\{\{url\}\}/g, url);
+}
+
+export async function montarMensagemCsatCustomizada(token: string): Promise<string> {
+  const url = `${env.appUrl}/csat/${token}`;
+
+  try {
+    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'csat' } });
+    const customMsg = (config as any)?.mensagemCsat;
+    if (customMsg) {
+      return customMsg.replace(/\{\{url\}\}/g, url);
+    }
+  } catch {}
+
+  return CSAT_DEFAULT_MESSAGE.replace(/\{\{url\}\}/g, url);
 }
 
 export interface EnviarResult {
@@ -49,10 +66,10 @@ export async function enviarMensagemCsat(csatId: string): Promise<EnviarResult> 
   if (!csat.ticket.contactPhone) {
     return { enviado: false, erro: 'Ticket sem telefone', csat };
   }
-  const mensagem = montarMensagemCsat(csat.tokenResposta);
+  const mensagem = await montarMensagemCsatCustomizada(csat.tokenResposta);
   try {
     const { sendWhatsAppMessage } = await import('../integrations/whatsapp/whatsapp.service');
-    const result = await sendWhatsAppMessage(csat.ticket.contactPhone, mensagem);
+    const result = await sendWhatsAppMessage(csat.ticket.contactPhone, mensagem, undefined, (csat.ticket as any).contactJid || undefined);
     if (result.success) {
       await prisma.cSATResposta.update({
         where: { id: csatId },
@@ -63,6 +80,7 @@ export async function enviarMensagemCsat(csatId: string): Promise<EnviarResult> 
           ticketId: csat.ticketId,
           fromMe: true,
           content: mensagem,
+          source: 'bot',
         },
       }).catch(() => {});
       return { enviado: true, csat: { ...csat, enviadoEm: new Date() } };

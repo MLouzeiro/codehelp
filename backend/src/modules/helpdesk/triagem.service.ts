@@ -41,17 +41,24 @@ export function triagemFollowupEnviado(ticketId: string): boolean {
 
 export async function enviarMenuInicial(ticketId: string) {
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
-  if (!ticket || !ticket.contactPhone) return;
+  if (!ticket || !ticket.contactPhone) {
+    console.warn(`[Fila] Menu inicial: ticket ${ticketId} nao encontrado ou sem telefone`);
+    return;
+  }
+  if (ticket.etapa !== 'triagem' || ticket.departamentoId) {
+    console.log(`[Fila] Menu inicial ignorado: ticket ${ticketId} etapa=${ticket.etapa} depto=${ticket.departamentoId}`);
+    return;
+  }
   const texto = await montarBoasVindas(ticket.contactName || '');
   const phone = sanitizePhoneNumber(ticket.contactPhone).replace(/@c\.us$/i, '');
-  const result = await sendWhatsAppMessage(phone, texto);
+  const result = await sendWhatsAppMessage(phone, texto, undefined, ticket.contactJid || undefined);
   if (result.success) {
     await prisma.message.create({
-      data: { ticketId, fromMe: true, content: texto },
+      data: { ticketId, fromMe: true, content: texto, source: 'bot', tipo: 'system' },
     });
     console.log(`[Fila] Saudacao enviada para ticket ${ticketId}`);
   } else {
-    console.warn(`[Fila] Falha ao enviar saudacao: ${result.error}`);
+    console.warn(`[Fila] Falha ao enviar saudacao para ticket ${ticketId}: ${result.error}`);
   }
 }
 
@@ -59,7 +66,7 @@ export async function iniciarOuResetarTriagem(ticketId: string) {
   await ensureHelpdeskConfigs();
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket) return;
-  if (ticket.protocolo || ticket.etapa !== 'fila') {
+  if (ticket.protocolo || (ticket.etapa !== 'triagem' && ticket.etapa !== 'fila')) {
     cancelarTriagem(ticketId);
     return;
   }
@@ -71,13 +78,13 @@ export async function iniciarOuResetarTriagem(ticketId: string) {
     ? config.tempoInatividadeMin
     : 5;
   const ms = minutos * 60 * 1000;
-  console.log(`[Fila] ticket=${ticketId} em fila, follow-up agendado em ${minutos}min`);
+  console.log(`[Fila] ticket=${ticketId} etapa=${ticket.etapa}, follow-up agendado em ${minutos}min`);
 
   const handle = setTimeout(async () => {
     timersAtivos.delete(ticketId);
     if (followupEnviado.has(ticketId)) return;
     const t = await prisma.ticket.findUnique({ where: { id: ticketId } });
-    if (!t || t.protocolo || t.etapa !== 'fila' || t.status === 'fechado') return;
+    if (!t || t.protocolo || (t.etapa !== 'triagem' && t.etapa !== 'fila') || t.status === 'fechado') return;
     await enviarFollowUp(ticketId);
   }, ms);
 
@@ -125,7 +132,7 @@ export async function abrirChamadoPorAtendente(
           tipo: dados.tipo || ticket.tipo,
           observacoes: dados.observacoes?.trim() || ticket.observacoes,
           etapa: etapaNova,
-          status: 'em_andamento',
+          status: 'em_atendimento',
           assigneeId: atendenteId,
           dataInicioAtendimento: new Date(),
         };
@@ -251,12 +258,27 @@ async function enviarFollowUp(ticketId: string) {
       contactName: ticket.contactName,
       clientName: ticket.client?.razaoSocial,
     });
-    const mensagem = interpolate(template, vars);
+    let mensagem = interpolate(template, vars);
+
+    // Adicionar posicao na fila e informacoes pendentes
+    if (ticket.departamentoId) {
+      const { calcularPosicaoFila } = await import('./fila.service');
+      const posicao = await calcularPosicaoFila(ticket.departamentoId);
+      const { montarPosicaoFilaComInfo } = await import('./menu');
+      const posMsg = await montarPosicaoFilaComInfo(
+        ticket.contactName || 'cliente',
+        posicao,
+        !!ticket.assunto,
+        !!ticket.clientId,
+      );
+      mensagem = `${mensagem}\n\n${posMsg}`;
+    }
+
     const phone = sanitizePhoneNumber(ticket.contactPhone).replace(/@c\.us$/i, '');
-    const result = await sendWhatsAppMessage(phone, mensagem);
+    const result = await sendWhatsAppMessage(phone, mensagem, undefined, ticket.contactJid || undefined);
     if (result.success) {
       await prisma.message.create({
-        data: { ticketId, fromMe: true, content: mensagem },
+        data: { ticketId, fromMe: true, content: mensagem, source: 'bot' },
       });
       followupEnviado.add(ticketId);
       console.log(`[Fila] Follow-up enviado para ticket ${ticketId}`);

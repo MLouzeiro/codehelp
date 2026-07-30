@@ -8,69 +8,88 @@ datasource db {
 }
 
 model User {
-  id             String        @id @default(uuid())
-  name           String
-  email          String        @unique
-  password       String
-  role           String        @default("tecnico")
-  isMaster       Boolean       @default(false)
-  phone          String?
-  avatar         String?
-  active         Boolean       @default(true)
-  online         Boolean       @default(false)
-  lastSeenAt     DateTime?
-  sessionToken   String?       @unique
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @default(now())
-
-  departamentos      UserDepartamento[]
-  contacts           Contact[]
-  opportunities      Opportunity[]
-  tasks              Task[]
-  tickets            Ticket[]
-  ticketsAtendidos   Ticket[]        @relation("TicketAssignee")
-  messages           Message[]
-  auditLogs          AuditLog[]
-  clientTechnician   Client[]     @relation("ClientTechnician")
-  orderTechnician    ServiceOrder[] @relation("OrderTechnician")
-  orderCreator       ServiceOrder[] @relation("OrderCreator")
-  stageMovements     TicketStageEvent[]
-  notificacoes       Notificacao[]
-  kbArticlesAutor    KBArticle[]     @relation("KBArticleAutor")
-  aprovacoesSolicitadas Aprovacao[] @relation("AprovacaoSolicitante")
-  aprovacoesDecididas   Aprovacao[] @relation("AprovacaoAprovador")
+  id                    String              @id @default(uuid())
+  name                  String
+  email                 String              @unique
+  password              String
+  role                  String              @default("tecnico")
+  isMaster              Boolean             @default(false)
+  phone                 String?
+  avatar                String?
+  active                Boolean             @default(true)
+  online                Boolean             @default(false)
+  lastSeenAt            DateTime?
+  sessionToken          String?             @unique
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @default(now())
+  aiCorrections         AICorrection[]
+  aprovacoesDecididas   Aprovacao[]         @relation("AprovacaoAprovador")
+  aprovacoesSolicitadas Aprovacao[]         @relation("AprovacaoSolicitante")
+  auditLogs             AuditLog[]
+  billingHistory        BillingHistory[]
+  clientTechnician      Client[]            @relation("ClientTechnician")
+  contacts              Contact[]
+  kbArticlesAutor       KBArticle[]         @relation("KBArticleAutor")
+  kbVersionsAutor       KBArticleVersion[]  @relation("KBArticleVersionAutor")
+  kanbanActivities      KanbanActivity[]    @relation("KanbanActivityUsuario")
+  kanbanAttachments     KanbanAttachment[]  @relation("KanbanAttachmentUsuario")
+  kanbanBoardsCreated   KanbanBoard[]       @relation("KanbanBoardCriador")
+  kanbanSubtasks        KanbanSubtask[]     @relation("KanbanSubtaskResponsavel")
+  kanbanTasks           KanbanTask[]        @relation("KanbanTaskResponsavel")
+  kanbanTemplates       KanbanTemplate[]    @relation("KanbanTemplateCriador")
+  messages              Message[]
+  notificacoes          Notificacao[]
+  opportunities         Opportunity[]
+  orderCreator          ServiceOrder[]      @relation("OrderCreator")
+  orderTechnician       ServiceOrder[]      @relation("OrderTechnician")
+  tasks                 Task[]
+  ticketsAtendidos      Ticket[]            @relation("TicketAssignee")
+  tickets               Ticket[]
+  ticketActivities      TicketActivity[]
+  ticketEvents          TicketEvent[]
+  ticketPerformance     TicketPerformance[]
+  ticketSlaLogs         TicketSlaLog[]
+  stageMovements        TicketStageEvent[]
+  timelineAnterior      TicketTimeline[]    @relation("TimelineResponsavelAnterior")
+  timelineNovo          TicketTimeline[]    @relation("TimelineResponsavelNovo")
+  ticketWaitTimes       TicketWaitTime[]
+  timeEntries           TimeEntry[]
+  departamentos         UserDepartamento[]
 }
 
 model Client {
-  id                    String   @id @default(uuid())
-  razaoSocial           String
-  nomeFantasia          String?
-  cnpjCpf               String?
-  segmento              String   @default("laboratorio")
-  responsavelTecnicoId  String?
-  responsavelTecnico    User?    @relation("ClientTechnician", fields: [responsavelTecnicoId], references: [id])
-  telefone              String?
-  email                 String?
-  cidade                String?
-  estado                String?
-  status                String   @default("ativo")
-  origem                String   @default("manual")
-  tipoContrato          String?
-  valorMensalidade      Float?
-  diaVencimento         Int?
-  dataInicioContrato    DateTime?
-  dataFimContrato       DateTime?
-  whatsappContactId     String?
-  ativo                 Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @default(now())
-
-  contacts       Contact[]
-  colaboradores  Colaborador[]
-  opportunities  Opportunity[]
-  serviceOrders  ServiceOrder[]
-  tickets        Ticket[]
-  ativos         Ativo[]
+  id                   String            @id @default(uuid())
+  razaoSocial          String
+  nomeFantasia         String?
+  cnpjCpf              String?
+  segmento             String            @default("laboratorio")
+  responsavelTecnicoId String?
+  telefone             String?
+  email                String?
+  cidade               String?
+  estado               String?
+  status               String            @default("ativo")
+  origem               String            @default("manual")
+  tipoContrato         String?
+  valorMensalidade     Float?
+  diaVencimento        Int?
+  dataInicioContrato   DateTime?
+  dataFimContrato      DateTime?
+  whatsappContactId    String?
+  ativo                Boolean           @default(true)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @default(now())
+  ativos               Ativo[]
+  billingHistory       BillingHistory[]
+  billingPendencies    BillingPendency[]
+  responsavelTecnico   User?             @relation("ClientTechnician", fields: [responsavelTecnicoId], references: [id])
+  billings             ClientBilling[]
+  colaboradores        Colaborador[]
+  contacts             Contact[]
+  kanbanTasks          KanbanTask[]
+  opportunities        Opportunity[]
+  serviceOrders        ServiceOrder[]
+  tickets              Ticket[]
 }
 
 /// Colaborador de um cliente (pessoa que trabalha na empresa cliente)
@@ -79,7 +98,6 @@ model Client {
 model Colaborador {
   id          String   @id @default(uuid())
   clientId    String
-  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   nome        String
   cargo       String?
   setor       String?
@@ -91,158 +109,285 @@ model Colaborador {
   ativo       Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now())
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
 }
 
 model Contact {
-  id            String   @id @default(uuid())
-  clientId      String
-  client        Client   @relation(fields: [clientId], references: [id])
-  tipo          String
-  descricao     String?
-  data          DateTime @default(now())
-  usuarioId     String
-  usuario       User     @relation(fields: [usuarioId], references: [id])
+  id             String   @id @default(uuid())
+  clientId       String
+  tipo           String
+  descricao      String?
+  data           DateTime @default(now())
+  usuarioId      String
   duracaoMinutos Int?
-  createdAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+  client         Client   @relation(fields: [clientId], references: [id])
+  usuario        User     @relation(fields: [usuarioId], references: [id])
 }
 
 model Opportunity {
-  id                      String   @id @default(uuid())
-  clientId                String
-  client                  Client   @relation(fields: [clientId], references: [id])
-  titulo                  String
-  valorEstimado           Float?
-  etapa                   String   @default("prospeccao")
-  probabilidade           Int?     @default(50)
-  dataFechamentoPrevista  DateTime?
-  responsavelId           String
-  responsavel             User     @relation(fields: [responsavelId], references: [id])
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @default(now())
+  id                     String    @id @default(uuid())
+  clientId               String
+  titulo                 String
+  valorEstimado          Float?
+  etapa                  String    @default("prospeccao")
+  probabilidade          Int?      @default(50)
+  dataFechamentoPrevista DateTime?
+  responsavelId          String
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @default(now())
+  client                 Client    @relation(fields: [clientId], references: [id])
+  responsavel            User      @relation(fields: [responsavelId], references: [id])
+
+  @@index([etapa])
 }
 
 model ServiceOrder {
-  id                   String   @id @default(uuid())
-  numeroOs             String   @unique
-  clientId             String
-  client               Client   @relation(fields: [clientId], references: [id])
-  tipoServico          String
-  descricaoServico     String?
-  sistemasEnvolvidos   String   @default("[]")
-  equipamentos         String?
-  tecnicoResponsavelId String
-  tecnicoResponsavel   User     @relation("OrderTechnician", fields: [tecnicoResponsavelId], references: [id])
-  valorServico         Float?
-  dataEmissao          DateTime @default(now())
-  dataPrevistaEntrega  DateTime?
-  status               String   @default("rascunho")
-  ticketId             String?
-  ticket               Ticket?  @relation("OrderTicket", fields: [ticketId], references: [id])
-  observacoes          String?
-  criadoPorId          String
-  criadoPor            User     @relation("OrderCreator", fields: [criadoPorId], references: [id])
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @default(now())
+  id                    String       @id @default(uuid())
+  numeroOs              String       @unique
+  clientId              String
+  tipoServico           String
+  descricaoServico      String?
+  sistemasEnvolvidos    String       @default("[]")
+  equipamentos          String?
+  tecnicoResponsavelId  String
+  valorServico          Float?
+  dataEmissao           DateTime     @default(now())
+  dataPrevistaEntrega   DateTime?
+  status                String       @default("rascunho")
+  ticketId              String?
+  observacoes           String?
+  criadoPorId           String
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @default(now())
+  dataFimImplantacao    DateTime?
+  dataInicioImplantacao DateTime?
+  horasDev              Float?       @default(0)
+  horasSuporte          Float?       @default(0)
+  implantacaoConcluida  Boolean      @default(false)
+  precoImplantacao      Float?       @default(0)
+  tipoImplantacao       String?
+  attachments           Attachment[]
+  client                Client       @relation(fields: [clientId], references: [id])
+  criadoPor             User         @relation("OrderCreator", fields: [criadoPorId], references: [id])
+  tecnicoResponsavel    User         @relation("OrderTechnician", fields: [tecnicoResponsavelId], references: [id])
+  ticket                Ticket?      @relation("OrderTicket", fields: [ticketId], references: [id])
+  signature             Signature?
+  timeEntries           TimeEntry[]
 
-  signature   Signature?
-  attachments Attachment[]
+  @@index([status])
+  @@index([createdAt])
+  @@index([tipoImplantacao])
+  @@index([implantacaoConcluida])
 }
 
 model Signature {
-  id               String   @id @default(uuid())
-  orderId          String   @unique
-  order            ServiceOrder @relation(fields: [orderId], references: [id])
+  id               String       @id @default(uuid())
+  orderId          String       @unique
   assinanteNome    String
   assinanteCpf     String
   assinanteCargo   String
   assinaturaBase64 String
   ipAssinante      String?
   userAgent        String?
-  assinadoEm       DateTime @default(now())
-  tokenAssinatura  String   @unique
+  assinadoEm       DateTime     @default(now())
+  tokenAssinatura  String       @unique
   tokenExpiresAt   DateTime
   pdfPath          String?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime     @default(now())
+  order            ServiceOrder @relation(fields: [orderId], references: [id])
 }
 
 model Attachment {
-  id           String   @id @default(uuid())
+  id           String       @id @default(uuid())
   orderId      String
-  order        ServiceOrder @relation(fields: [orderId], references: [id])
   filename     String
   originalName String
   mimetype     String
   size         Int
   path         String
-  uploadedAt   DateTime @default(now())
+  uploadedAt   DateTime     @default(now())
+  order        ServiceOrder @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
 }
 
 model Ticket {
-  id                  String   @id @default(uuid())
-  protocolo           String?  @unique
-  externalId          String?  @unique
-  clientId            String?
-  client              Client?  @relation(fields: [clientId], references: [id])
-  contactName         String?
-  contactPhone        String?
-  assunto             String?
-  categoria           String?
-  categoriaId         String?
-  categoriaRef        Categoria? @relation(fields: [categoriaId], references: [id])
-  status              String   @default("aberto")
-  canal               String   @default("whatsapp")
-  etapa               String   @default("fila")
-  prioridade          String   @default("media")
-  assigneeId          String?
-  assignee            User?    @relation("TicketAssignee", fields: [assigneeId], references: [id])
-  usuarioId           String?
-  usuario             User?    @relation(fields: [usuarioId], references: [id])
-  idFila              String?
-  fila                Fila?    @relation(fields: [idFila], references: [id])
-  ativoId             String?
-  ativo               Ativo?   @relation(fields: [ativoId], references: [id])
-  departamentoId      String?
-  departamento        Departamento? @relation(fields: [departamentoId], references: [id])
-  nivelSuporteId      String?
-  nivelSuporte        NivelSuporte? @relation(fields: [nivelSuporteId], references: [id])
-  whatsappConnectionId String?
-  whatsappConnection  WhatsAppConnection? @relation(fields: [whatsappConnectionId], references: [id])
-  dataAbertura        DateTime @default(now())
-  dataFechamento      DateTime?
-  dataPrimeiraResposta DateTime?
+  id                    String                @id @default(uuid())
+  protocolo             String?               @unique
+  externalId            String?               @unique
+  clientId              String?
+  contactName           String?
+  contactPhone          String?
+  contactJid            String?
+  assunto               String?
+  categoria             String?
+  categoriaId           String?
+  status                String                @default("aberto")
+  canal                 String                @default("whatsapp")
+  etapa                 String                @default("fila")
+  prioridade            String                @default("media")
+  assigneeId            String?
+  usuarioId             String?
+  idFila                String?
+  ativoId               String?
+  departamentoId        String?
+  nivelSuporteId        String?
+  whatsappConnectionId  String?
+  dataAbertura          DateTime              @default(now())
+  dataFechamento        DateTime?
+  dataPrimeiraResposta  DateTime?
   dataInicioAtendimento DateTime?
-  dataConclusao       DateTime?
-  dataResolucao       DateTime?
-  dataCSAT            DateTime?
-  assumedAt           DateTime?
-  slaTotalMinutos     Int?
-  slaPausadoEm        DateTime?
-  slaPausadoTotalMin  Int      @default(0)
-  motivoStatus        String?
-  satisfacao          Int?
-  resumoFinal         String?
-  tipo                String?
-  observacoes         String?
-  lastAgentMessageAt  DateTime?
-  filaOrder           Int?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @default(now())
+  dataConclusao         DateTime?
+  dataResolucao         DateTime?
+  dataCSAT              DateTime?
+  assumedAt             DateTime?
+  slaTotalMinutos       Int?
+  slaPausadoEm          DateTime?
+  slaPausadoTotalMin    Int                   @default(0)
+  motivoStatus          String?
+  satisfacao            Int?
+  resumoFinal           String?
+  tipo                  String?
+  observacoes           String?
+  lastAgentMessageAt    DateTime?
+  filaOrder             Int?
+  resolvidoPorIa        Boolean               @default(false)
+  iaClassificacao       String?
+  iaResumoProblema      String?
+  iaSugestaoResposta    String?
+  iaNotaEncerramento    String?
+  iaAvaliacaoQualidade  String?
+  iaCorrecaoOperador    String?
+  iaMensagensEnviadas   Int                   @default(0)
+  iaPrimeiraRespostaEm  DateTime?
+  iaUltimaRespostaEm    DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @default(now())
+  tags                  String?
+  channelId             String?
+  aiClassifications     AIClassification[]
+  aiCorrections         AICorrection[]
+  aiEvaluations         AIEvaluation[]
+  aiValidacoes          AIRespostaValidacao[]
+  aprovacoes            Aprovacao[]
+  csatResposta          CSATResposta?
+  channelMessages       ChannelMessage[]
+  messages              Message[]
+  notificacoes          Notificacao[]
+  orders                ServiceOrder[]        @relation("OrderTicket")
+  assignee              User?                 @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  ativo                 Ativo?                @relation(fields: [ativoId], references: [id])
+  categoriaRef          Categoria?            @relation(fields: [categoriaId], references: [id])
+  channel               Channel?              @relation(fields: [channelId], references: [id])
+  client                Client?               @relation(fields: [clientId], references: [id])
+  departamento          Departamento?         @relation(fields: [departamentoId], references: [id])
+  fila                  Fila?                 @relation(fields: [idFila], references: [id])
+  nivelSuporte          NivelSuporte?         @relation(fields: [nivelSuporteId], references: [id])
+  usuario               User?                 @relation(fields: [usuarioId], references: [id])
+  whatsappConnection    WhatsAppConnection?   @relation(fields: [whatsappConnectionId], references: [id])
+  activities            TicketActivity[]
+  aiLogs                TicketAiLog[]
+  events                TicketEvent[]
+  snapshots             TicketHistory[]
+  metrics               TicketMetrics?
+  slaLogs               TicketSlaLog[]
+  stageHistory          TicketStageEvent[]
+  timeline              TicketTimeline[]
+  waitTimes             TicketWaitTime[]
+  timeEntries           TimeEntry[]
 
-  messages      Message[]
-  stageHistory  TicketStageEvent[]
-  snapshots     TicketHistory[]
-  orders        ServiceOrder[] @relation("OrderTicket")
-  csatResposta  CSATResposta?
-  notificacoes  Notificacao[]
-  aprovacoes    Aprovacao[]
+  @@index([status])
+  @@index([etapa])
+  @@index([createdAt])
+  @@index([dataAbertura])
+  @@index([dataFechamento])
+  @@index([assigneeId])
+  @@index([categoria])
+  @@index([prioridade])
+  @@index([usuarioId])
+  @@index([departamentoId])
+  @@index([idFila])
+  @@index([resolvidoPorIa])
+  @@index([channelId])
+  @@index([contactPhone])
+  @@index([contactJid])
+}
+
+/// Classificacao de IA atribuida a um ticket (historico)
+model AIClassification {
+  id          String   @id @default(uuid())
+  ticketId    String
+  categoria   String?
+  prioridade  String?
+  confianca   Int?
+  metodo      String   @default("regex")
+  rawResponse String?
+  createdAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([categoria])
+}
+
+/// Avaliacao de qualidade feita pela IA apos encerramento
+model AIEvaluation {
+  id             String   @id @default(uuid())
+  ticketId       String
+  notaQualidade  Int
+  pontosForts    String?
+  pontosMelhoria String?
+  resumo         String?
+  modeloUsado    String?
+  custoTokens    Float?
+  createdAt      DateTime @default(now())
+  ticket         Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([notaQualidade])
+}
+
+/// Correcao de resposta incorreta do operador (treinamento da IA)
+model AICorrection {
+  id               String   @id @default(uuid())
+  ticketId         String
+  mensagemId       String?
+  mensagemOriginal String
+  tipoErro         String
+  correcao         String
+  corrigidoPorId   String?
+  treinada         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  corrigidoPor     User?    @relation(fields: [corrigidoPorId], references: [id])
+  ticket           Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([tipoErro])
+}
+
+/// Metricas consolidadas de IA por periodo
+model AIMetricas {
+  id                        String   @id @default(uuid())
+  periodo                   String   @unique
+  totalChamados             Int      @default(0)
+  chamadosIaResolveu        Int      @default(0)
+  taxaResolucaoIa           Float    @default(0)
+  tempoMedioResolucaoIa     Float    @default(0)
+  tempoMedioResolucaoHumano Float    @default(0)
+  totalCorrecoes            Int      @default(0)
+  taxaSucessoIa             Float    @default(0)
+  custoTotalIa              Float    @default(0)
+  documentosCriados         Int      @default(0)
+  confiancaMediaIa          Float    @default(0)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @default(now())
 }
 
 model Message {
   id        String   @id @default(uuid())
   ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id])
   fromMe    Boolean  @default(false)
   content   String?
   mediaUrl  String?
@@ -250,27 +395,193 @@ model Message {
   source    String?  @default("agent")
   tipo      String?  @default("message")
   usuarioId String?
-  usuario   User?    @relation(fields: [usuarioId], references: [id])
   sentAt    DateTime @default(now())
   createdAt DateTime @default(now())
+  phone     String?
+  provider  String?
+  status    String?  @default("sent")
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  usuario   User?    @relation(fields: [usuarioId], references: [id])
+
+  @@index([ticketId])
+  @@index([fromMe])
+  @@index([status])
 }
 
 model Task {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   titulo         String
   descricao      String?
-  status         String   @default("aberta")
-  prioridade     String   @default("media")
+  status         String    @default("aberta")
+  prioridade     String    @default("media")
   responsavelId  String?
-  responsavel    User?    @relation(fields: [responsavelId], references: [id])
   projeto        String?
   sprint         String?
   dataVencimento DateTime?
   dataConclusao  DateTime?
   ordem          Int?
-  ativo          Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @default(now())
+  ativo          Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now())
+  responsavel    User?     @relation(fields: [responsavelId], references: [id])
+
+  @@index([responsavelId])
+  @@index([status])
+}
+
+model KanbanBoard {
+  id         String         @id @default(uuid())
+  nome       String         @unique
+  descricao  String?
+  icone      String?        @default("layout")
+  cor        String?        @default("#3b82f6")
+  criadorId  String?
+  ativo      Boolean        @default(true)
+  ordem      Int            @default(0)
+  templateId String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @default(now())
+  criador    User?          @relation("KanbanBoardCriador", fields: [criadorId], references: [id])
+  columns    KanbanColumn[]
+  tags       KanbanTag[]
+  tasks      KanbanTask[]
+}
+
+model KanbanColumn {
+  id        String       @id @default(uuid())
+  boardId   String
+  nome      String
+  cor       String?      @default("#6b7280")
+  icone     String?
+  ordem     Int          @default(0)
+  wipLimit  Int?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @default(now())
+  hidden    Boolean      @default(false)
+  board     KanbanBoard  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks     KanbanTask[]
+
+  @@index([boardId])
+}
+
+model KanbanTask {
+  id               String             @id @default(uuid())
+  numero           Int                @default(0)
+  titulo           String
+  descricao        String?
+  columnId         String
+  boardId          String
+  responsavelId    String?
+  clientId         String?
+  ticketId         String?
+  prioridade       String             @default("media")
+  categoria        String?
+  classificacao    String?
+  dataInicio       DateTime?
+  prazoEntrega     DateTime?
+  dataConclusao    DateTime?
+  estimativaHoras  Float?
+  horasTrabalhadas Float?             @default(0)
+  ordem            Int                @default(0)
+  ativo            Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @default(now())
+  activities       KanbanActivity[]
+  attachments      KanbanAttachment[]
+  subtasks         KanbanSubtask[]
+  board            KanbanBoard        @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  client           Client?            @relation(fields: [clientId], references: [id])
+  column           KanbanColumn       @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  responsavel      User?              @relation("KanbanTaskResponsavel", fields: [responsavelId], references: [id])
+  tags             KanbanTaskTag[]
+
+  @@index([boardId])
+  @@index([columnId])
+  @@index([responsavelId])
+  @@index([prioridade])
+}
+
+model KanbanSubtask {
+  id            String     @id @default(uuid())
+  taskId        String
+  titulo        String
+  concluida     Boolean    @default(false)
+  ordem         Int        @default(0)
+  responsavelId String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now())
+  responsavel   User?      @relation("KanbanSubtaskResponsavel", fields: [responsavelId], references: [id])
+  task          KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model KanbanTag {
+  id        String          @id @default(uuid())
+  nome      String
+  cor       String          @default("#6366f1")
+  boardId   String?
+  createdAt DateTime        @default(now())
+  board     KanbanBoard?    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks     KanbanTaskTag[]
+
+  @@unique([nome, boardId])
+}
+
+model KanbanTaskTag {
+  id     String     @id @default(uuid())
+  taskId String
+  tagId  String
+  tag    KanbanTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  task   KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, tagId])
+}
+
+model KanbanActivity {
+  id             String     @id @default(uuid())
+  taskId         String
+  usuarioId      String?
+  tipo           String
+  descricao      String
+  deColuna       String?
+  paraColuna     String?
+  dados          String?
+  visivelCliente Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  task           KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  usuario        User?      @relation("KanbanActivityUsuario", fields: [usuarioId], references: [id])
+
+  @@index([taskId])
+  @@index([usuarioId])
+}
+
+model KanbanAttachment {
+  id          String     @id @default(uuid())
+  taskId      String
+  nomeArquivo String
+  url         String
+  tipoMime    String?
+  tamanho     Int?
+  privado     Boolean    @default(true)
+  usuarioId   String?
+  createdAt   DateTime   @default(now())
+  task        KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  usuario     User?      @relation("KanbanAttachmentUsuario", fields: [usuarioId], references: [id])
+
+  @@index([taskId])
+}
+
+model KanbanTemplate {
+  id         String   @id @default(uuid())
+  nome       String
+  descricao  String?
+  categoria  String?
+  icone      String?
+  colunas    String
+  tagsPadrao String?
+  publico    Boolean  @default(false)
+  criadorId  String?
+  createdAt  DateTime @default(now())
+  criador    User?    @relation("KanbanTemplateCriador", fields: [criadorId], references: [id])
 }
 
 model AlertRecipient {
@@ -294,52 +605,57 @@ model AlertHistory {
 }
 
 model Robot {
-  id        String   @id @default(uuid())
-  slug      String   @unique
-  nome      String
-  descricao String
-  icone     String   @default("bot")
-  ativo     Boolean  @default(true)
-  inteligente Boolean @default(false)
-  ordem     Int      @default(0)
-  horarioAtivo Boolean @default(false)
-  diasSemana String  @default("1,2,3,4,5")
-  horaInicio String  @default("08:00")
-  horaFim   String   @default("18:00")
-  fusoHorario String @default("America/Fortaleza")
-  config    String   @default("{}")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-
-  rules     RobotRule[]
+  id           String      @id @default(uuid())
+  slug         String      @unique
+  nome         String
+  descricao    String
+  icone        String      @default("bot")
+  ativo        Boolean     @default(true)
+  inteligente  Boolean     @default(false)
+  ordem        Int         @default(0)
+  horarioAtivo Boolean     @default(false)
+  diasSemana   String      @default("1,2,3,4,5")
+  horaInicio   String      @default("08:00")
+  horaFim      String      @default("18:00")
+  fusoHorario  String      @default("America/Fortaleza")
+  config       String      @default("{}")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @default(now())
+  rules        RobotRule[]
 }
 
 model RobotRule {
-  id        String   @id @default(uuid())
-  robotId   String
-  robot     Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
-  nome      String
-  descricao String?
-  ativo     Boolean  @default(true)
-  ordem     Int      @default(0)
-  trigger   String   @default("{\"type\":\"new_ticket\"}")
-  conditions String  @default("[]")
-  actions   String   @default("[]")
-  logicOperator String @default("all")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  robotId       String
+  nome          String
+  descricao     String?
+  ativo         Boolean  @default(true)
+  ordem         Int      @default(0)
+  trigger       String   @default("{\"type\":\"new_ticket\"}")
+  conditions    String   @default("[]")
+  actions       String   @default("[]")
+  logicOperator String   @default("all")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+  robot         Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
+
+  @@index([robotId])
 }
 
 model AuditLog {
   id         String   @id @default(uuid())
   usuarioId  String?
-  usuario    User?    @relation(fields: [usuarioId], references: [id])
   acao       String
   entidade   String
   entidadeId String?
   detalhes   String?
   ip         String?
   createdAt  DateTime @default(now())
+  usuario    User?    @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([entidade])
+  @@index([createdAt])
 }
 
 model SyncLog {
@@ -361,154 +677,228 @@ model WhatsAppSession {
 }
 
 model HelpdeskConfig {
-  id        String   @id @default(uuid())
-  slug      String   @unique
-  nome      String
-  descricao String?
-  cor       String   @default("#3b82f6")
-  icone     String   @default("inbox")
-  ordem     Int      @default(0)
-  etapaInicial Boolean @default(false)
-  autoMessage String?
-  enviarAuto  Boolean  @default(false)
-  notificarEquipe Boolean @default(false)
-  tempoInatividadeMin Int?
-  mensagemTriagem String?
-  mensagemEmAtendimento String?
-  mensagemAguardandoCliente String?
-  mensagemAguardandoOs String?
-  mensagemConcluido String?
-  mensagemFollowup String?
-  mensagemBoasVindas String?
-  mensagemAckSuporte String?
-  mensagemAckComercial String?
-  mensagemOpcaoInvalida String?
-  mensagemForaHorario String?
-  mensagemCsat String?
-  horarioInicio String?
-  horarioFim String?
-  horarioSabadoInicio String?
-  horarioSabadoFim String?
-  diasAtendimento String?
-  ordenacaoFila String  @default("updatedAt_desc")
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  id                          String   @id @default(uuid())
+  slug                        String   @unique
+  nome                        String
+  descricao                   String?
+  cor                         String   @default("#3b82f6")
+  icone                       String   @default("inbox")
+  ordem                       Int      @default(0)
+  etapaInicial                Boolean  @default(false)
+  autoMessage                 String?
+  enviarAuto                  Boolean  @default(false)
+  notificarEquipe             Boolean  @default(false)
+  tempoInatividadeMin         Int?
+  mensagemTriagem             String?
+  mensagemEmAtendimento       String?
+  mensagemAguardandoCliente   String?
+  mensagemAguardandoOs        String?
+  mensagemConcluido           String?
+  mensagemFollowup            String?
+  mensagemBoasVindas          String?
+  mensagemAckSuporte          String?
+  mensagemAckComercial        String?
+  mensagemOpcaoInvalida       String?
+  mensagemForaHorario         String?
+  mensagemCsat                String?
+  horarioInicio               String?
+  horarioFim                  String?
+  horarioSabadoInicio         String?
+  horarioSabadoFim            String?
+  diasAtendimento             String?
+  ordenacaoFila               String   @default("updatedAt_desc")
+  ativo                       Boolean  @default(true)
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @default(now())
+  autoAtendimentoAtivo        Boolean  @default(false)
+  maxInteracoesIa             Int      @default(5)
+  mensagemDescricaoProblema   String?
+  mensagemEmpresaDetectada    String?
+  mensagemEmpresaNaoDetectada String?
+  thresholdValidacoes         Int      @default(3)
 }
 
 model HelpdeskRule {
-  id          String   @id @default(uuid())
-  nome        String
-  categoria   String
-  prioridade   Int      @default(100)
+  id            String   @id @default(uuid())
+  nome          String
+  categoria     String
+  prioridade    Int      @default(100)
   palavrasChave String
-  ativo       Boolean  @default(true)
-  ordem       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now())
+  ativo         Boolean  @default(true)
+  ordem         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+
+  @@index([categoria])
+  @@index([ativo])
 }
 
 model TicketStageEvent {
-  id         String   @id @default(uuid())
-  ticketId   String
-  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  etapaAnterior String?
-  etapaNova  String
-  origem     String   @default("manual")
-  usuarioId  String?
-  usuario    User?    @relation(fields: [usuarioId], references: [id])
+  id                 String   @id @default(uuid())
+  ticketId           String
+  etapaAnterior      String?
+  etapaNova          String
+  origem             String   @default("manual")
+  usuarioId          String?
   mensagemAutomatica String?
-  mensagemEnviada Boolean @default(false)
-  createdAt  DateTime @default(now())
+  mensagemEnviada    Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  ticket             Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuario            User?    @relation(fields: [usuarioId], references: [id])
+
+  @@index([ticketId])
+  @@index([createdAt])
 }
 
 model TicketHistory {
-  id           String   @id @default(uuid())
-  ticketId     String
-  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  etapa        String
-  snapshotJson String
-  totalMensagens Int    @default(0)
-  geradoPor    String   @default("sistema")
-  createdAt    DateTime @default(now())
+  id             String   @id @default(uuid())
+  ticketId       String
+  etapa          String
+  snapshotJson   String
+  totalMensagens Int      @default(0)
+  geradoPor      String   @default("sistema")
+  createdAt      DateTime @default(now())
+  ticket         Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
 }
 
 /// Fila de atendimento (escalonamento multinivel: N1, N2, N3)
 model Fila {
-  id             String        @id @default(uuid())
-  slug           String        @unique
-  nome           String
-  descricao      String?
-  nivel          String        @default("N1")
-  slaMinutos     Int           @default(60)
-  cor            String        @default("#3b82f6")
-  icone          String        @default("inbox")
-  ordem          Int           @default(0)
-  ativo          Boolean       @default(true)
-  departamentoId String?
-  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
-  nivelSuporteId String?
-  nivelSuporte   NivelSuporte? @relation(fields: [nivelSuporteId], references: [id])
-  proximaFilaId  String?
-  proximaFila    Fila?         @relation("EscalacaoFila", fields: [proximaFilaId], references: [id])
-  filasAnteriores Fila[]       @relation("EscalacaoFila")
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @default(now())
-
-  tickets        Ticket[]
+  id              String        @id @default(uuid())
+  slug            String        @unique
+  nome            String
+  descricao       String?
+  nivel           String        @default("N1")
+  slaMinutos      Int           @default(60)
+  cor             String        @default("#3b82f6")
+  icone           String        @default("inbox")
+  ordem           Int           @default(0)
+  ativo           Boolean       @default(true)
+  departamentoId  String?
+  nivelSuporteId  String?
+  proximaFilaId   String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @default(now())
+  departamento    Departamento? @relation(fields: [departamentoId], references: [id])
+  nivelSuporte    NivelSuporte? @relation(fields: [nivelSuporteId], references: [id])
+  proximaFila     Fila?         @relation("EscalacaoFila", fields: [proximaFilaId], references: [id])
+  filasAnteriores Fila[]        @relation("EscalacaoFila")
+  tickets         Ticket[]
 }
 
 /// Departamento / Setor da empresa
 model Departamento {
-  id            String   @id @default(uuid())
-  slug          String   @unique
-  nome          String
-  descricao     String?
-  cor           String   @default("#3b82f6")
-  icone         String   @default("building")
-  ordem         Int      @default(0)
-  slaMinutos    Int      @default(240)
-  ativo         Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now())
-
-  filas              Fila[]
-  tickets            Ticket[]
-  usuarios           UserDepartamento[]
+  id                  String               @id @default(uuid())
+  slug                String               @unique
+  nome                String
+  descricao           String?
+  cor                 String               @default("#3b82f6")
+  icone               String               @default("building")
+  ordem               Int                  @default(0)
+  slaMinutos          Int                  @default(240)
+  ativo               Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @default(now())
+  channels            Channel[]
+  filas               Fila[]
+  tickets             Ticket[]
+  usuarios            UserDepartamento[]
   whatsappConnections WhatsAppConnection[]
 }
 
 /// Nivel de suporte (customizavel: N1, N2, N3, N4, Supervisor, etc.)
 model NivelSuporte {
-  id        String   @id @default(uuid())
-  slug      String   @unique
-  nome      String
-  descricao String?
-  cor       String   @default("#3b82f6")
-  icone     String   @default("layers")
-  ordem     Int      @default(0)
-  slaMinutos Int?    // SLA alvo para este nivel
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-
-  filas   Fila[]
-  tickets Ticket[]
+  id         String   @id @default(uuid())
+  slug       String   @unique
+  nome       String
+  descricao  String?
+  cor        String   @default("#3b82f6")
+  icone      String   @default("layers")
+  ordem      Int      @default(0)
+  slaMinutos Int?
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
+  filas      Fila[]
+  tickets    Ticket[]
 }
 
 /// Conexao WhatsApp (multi-numero)
 model WhatsAppConnection {
-  id              String       @id @default(uuid())
-  nome            String
-  numero          String       // +5511999999999
-  slug            String       @unique
-  departamentoId  String?
-  departamento    Departamento? @relation(fields: [departamentoId], references: [id])
-  ativo           Boolean      @default(true)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @default(now())
+  id             String        @id @default(uuid())
+  nome           String
+  numero         String
+  slug           String        @unique
+  departamentoId String?
+  ativo          Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
+  provider       String        @default("baileys")
+  tickets        Ticket[]
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+}
 
-  tickets Ticket[]
+/// Canal de atendimento unificado (WhatsApp, Email, Instagram, Facebook, Telegram, etc.)
+model Channel {
+  id              String           @id @default(uuid())
+  nome            String
+  tipo            String
+  slug            String           @unique
+  provider        String?
+  config          String?
+  departamentoId  String?
+  ativo           Boolean          @default(true)
+  avatar          String?
+  cor             String?
+  metadata        String?
+  lastSyncAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  departamento    Departamento?    @relation(fields: [departamentoId], references: [id])
+  channelMessages ChannelMessage[]
+  riskLogs        ChannelRiskLog[]
+  tickets         Ticket[]
+}
+
+/// Mensagens unificadas de qualquer canal
+model ChannelMessage {
+  id          String   @id @default(uuid())
+  channelId   String
+  externalId  String?
+  ticketId    String?
+  fromMe      Boolean  @default(false)
+  contactName String?
+  contactId   String?
+  content     String?
+  mediaUrl    String?
+  mimeType    String?
+  status      String?  @default("received")
+  rawPayload  String?
+  createdAt   DateTime @default(now())
+  channel     Channel  @relation(fields: [channelId], references: [id])
+  ticket      Ticket?  @relation(fields: [ticketId], references: [id])
+
+  @@index([channelId])
+  @@index([ticketId])
+  @@index([externalId])
+  @@index([createdAt])
+}
+
+/// Log de riscos e estabilidade por canal
+model ChannelRiskLog {
+  id          String    @id @default(uuid())
+  channelId   String
+  tipo        String
+  severidade  String    @default("info")
+  mensagem    String
+  resolvido   Boolean   @default(false)
+  resolvidoEm DateTime?
+  createdAt   DateTime  @default(now())
+  channel     Channel   @relation(fields: [channelId], references: [id])
+
+  @@index([channelId])
+  @@index([tipo])
 }
 
 /// Configuracao de SLA por prioridade
@@ -526,19 +916,18 @@ model SLAConfig {
 
 /// Categoria de ticket (formalizacao das categorias existentes)
 model Categoria {
-  id        String   @id @default(uuid())
-  slug      String   @unique
+  id        String      @id @default(uuid())
+  slug      String      @unique
   nome      String
   descricao String?
-  cor       String   @default("#3b82f6")
-  icone     String   @default("tag")
-  ordem     Int      @default(0)
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-
-  tickets   Ticket[]
+  cor       String      @default("#3b82f6")
+  icone     String      @default("tag")
+  ordem     Int         @default(0)
+  ativo     Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @default(now())
   articles  KBArticle[]
+  tickets   Ticket[]
 }
 
 /// Ativo (asset) - software/hardware/servico/sistema vinculado a um cliente
@@ -549,48 +938,76 @@ model Ativo {
   descricao String?
   serial    String?
   clienteId String?
-  cliente   Client?  @relation(fields: [clienteId], references: [id])
   metadata  String?
   ativo     Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
-
+  cliente   Client?  @relation(fields: [clienteId], references: [id])
   tickets   Ticket[]
 }
 
 /// Artigo da Base de Conhecimento
 model KBArticle {
-  id            String     @id @default(uuid())
-  slug          String     @unique
+  id            String             @id @default(uuid())
+  slug          String             @unique
   titulo        String
   conteudo      String
   resumo        String?
   categoriaId   String?
-  categoria     Categoria? @relation(fields: [categoriaId], references: [id])
-  tags          String     @default("")
+  tags          String             @default("")
   autorId       String?
-  autor         User?      @relation("KBArticleAutor", fields: [autorId], references: [id])
-  visualizacoes Int        @default(0)
-  util          Int        @default(0)
-  inutil        Int        @default(0)
-  publicado     Boolean    @default(false)
-  ordem         Int        @default(0)
-  ativo         Boolean    @default(true)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @default(now())
+  passos        String?
+  imagens       String?
+  versaoAtual   Int                @default(1)
+  visualizacoes Int                @default(0)
+  util          Int                @default(0)
+  inutil        Int                @default(0)
+  publicado     Boolean            @default(false)
+  ordem         Int                @default(0)
+  ativo         Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @default(now())
+  autor         User?              @relation("KBArticleAutor", fields: [autorId], references: [id])
+  categoria     Categoria?         @relation(fields: [categoriaId], references: [id])
+  versoes       KBArticleVersion[]
+
+  @@index([categoriaId])
+  @@index([autorId])
+  @@index([publicado])
+}
+
+/// Historico de versoes do artigo KB
+model KBArticleVersion {
+  id        String    @id @default(uuid())
+  articleId String
+  versao    Int
+  titulo    String
+  conteudo  String
+  resumo    String?
+  passos    String?
+  imagens   String?
+  autorId   String?
+  createdAt DateTime  @default(now())
+  article   KBArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  autor     User?     @relation("KBArticleVersionAutor", fields: [autorId], references: [id])
+
+  @@unique([articleId, versao])
 }
 
 /// Resposta CSAT (pesquisa de satisfacao)
 model CSATResposta {
   id            String    @id @default(uuid())
   ticketId      String    @unique
-  ticket        Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   nota          Int?
   comentario    String?
   tokenResposta String    @unique @default(uuid())
   enviadoEm     DateTime  @default(now())
   respondidoEm  DateTime?
   createdAt     DateTime  @default(now())
+  ticket        Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([respondidoEm])
+  @@index([nota])
 }
 
 /// Notificacao interna para usuario
@@ -599,32 +1016,36 @@ model Notificacao {
   tipo           String
   mensagem       String
   destinatarioId String
-  destinatario   User     @relation(fields: [destinatarioId], references: [id])
   ticketId       String?
-  ticket         Ticket?  @relation(fields: [ticketId], references: [id])
   dados          String?
   lida           Boolean  @default(false)
   createdAt      DateTime @default(now())
+  destinatario   User     @relation(fields: [destinatarioId], references: [id])
+  ticket         Ticket?  @relation(fields: [ticketId], references: [id])
+
+  @@index([destinatarioId])
+  @@index([ticketId])
+  @@index([lida])
 }
 
 /// Fluxo de autorização formal para ações que exigem aprovação
 model Aprovacao {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   ticketId        String
-  ticket          Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   solicitadoPorId String
-  solicitadoPor   User     @relation("AprovacaoSolicitante", fields: [solicitadoPorId], references: [id])
   aprovadoPorId   String?
-  aprovadoPor     User?    @relation("AprovacaoAprovador", fields: [aprovadoPorId], references: [id])
-  tipo            String   @default("geral")
+  tipo            String    @default("geral")
   motivo          String
   observacao      String?
-  status          String   @default("pendente")
+  status          String    @default("pendente")
   valorAprovado   Float?
-  dataSolicitacao DateTime @default(now())
+  dataSolicitacao DateTime  @default(now())
   dataDecisao     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now())
+  aprovadoPor     User?     @relation("AprovacaoAprovador", fields: [aprovadoPorId], references: [id])
+  solicitadoPor   User      @relation("AprovacaoSolicitante", fields: [solicitadoPorId], references: [id])
+  ticket          Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 }
 
 /// Regra de automacao WHEN/IF/THEN
@@ -661,14 +1082,14 @@ model RolePermission {
 /// Feriado nacional/estadual/municipal para bloqueio do horario comercial
 /// data: se recorrente=true, considera apenas mes/dia; senao considera data completa
 model Feriado {
-  id        String   @id @default(uuid())
-  data      DateTime
-  nome      String
-  tipo      String   @default("nacional")
-  recorrente Boolean @default(false)
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  data       DateTime
+  nome       String
+  tipo       String   @default("nacional")
+  recorrente Boolean  @default(false)
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
 
   @@index([data])
 }
@@ -678,10 +1099,346 @@ model UserDepartamento {
   id             String       @id @default(uuid())
   userId         String
   departamentoId String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  departamento   Departamento @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
   createdAt      DateTime     @default(now())
+  departamento   Departamento @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, departamentoId])
   @@index([departamentoId])
+}
+
+/// Configuracao de cobranca do cliente (terminais, hostlinks, interfaces, exames)
+model ClientBilling {
+  id            String           @id @default(uuid())
+  clientId      String
+  tipo          String
+  quantidade    Int              @default(0)
+  valorUnitario Float            @default(0)
+  ativo         Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @default(now())
+  historico     BillingHistory[]
+  client        Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, tipo])
+  @@index([clientId])
+  @@index([tipo])
+}
+
+/// Historico de alteracoes de quantidade (audit trail)
+model BillingHistory {
+  id                 String        @id @default(uuid())
+  billingId          String
+  clienteId          String
+  tipo               String
+  quantidadeAnterior Int
+  quantidadeNova     Int
+  valorUnitario      Float
+  usuarioId          String?
+  motivo             String?
+  createdAt          DateTime      @default(now())
+  billing            ClientBilling @relation(fields: [billingId], references: [id], onDelete: Cascade)
+  client             Client        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  usuario            User?         @relation(fields: [usuarioId], references: [id])
+
+  @@index([billingId])
+  @@index([clienteId])
+  @@index([createdAt])
+}
+
+/// Pendencia de cobranca mensal
+model BillingPendency {
+  id           String    @id @default(uuid())
+  clienteId    String
+  tipo         String
+  periodo      String
+  quantidade   Int
+  valorTotal   Float
+  status       String    @default("pendente")
+  notificadoEm DateTime?
+  resolvidoEm  DateTime?
+  resolvidoPor String?
+  observacao   String?
+  createdAt    DateTime  @default(now())
+  client       Client    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@unique([clienteId, tipo, periodo])
+  @@index([clienteId])
+  @@index([status])
+  @@index([periodo])
+}
+
+/// Evento atomico do ticket (criacao, mensagem, atribuicao, movimentacao, SLA, IA, etc.)
+/// Cada linha e imutavel — audit trail completo do lifetime do ticket.
+model TicketEvent {
+  id         String   @id @default(uuid())
+  ticketId   String
+  tipo       String
+  descricao  String?
+  dados      String?
+  usuarioId  String?
+  isSystem   Boolean  @default(false)
+  isAi       Boolean  @default(false)
+  mensagemId String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuario    User?    @relation(fields: [usuarioId], references: [id])
+
+  @@index([ticketId])
+  @@index([tipo])
+  @@index([createdAt])
+  @@index([usuarioId])
+  @@index([ticketId, tipo])
+}
+
+/// Timeline horizontal do ticket — eventos pre-calculados com delta times entre etapas.
+/// Atualizado a cada movimentacao para evitar calculos em runtime.
+model TicketTimeline {
+  id                    String    @id @default(uuid())
+  ticketId              String
+  etapa                 String
+  dataEntrada           DateTime
+  dataSaida             DateTime?
+  duracaoMinutos        Int?
+  duracaoBusinessMin    Int?
+  responsavelAnteriorId String?
+  responsavelNovoId     String?
+  motivoMudanca         String?
+  isPaused              Boolean   @default(false)
+  pausaTotalMinutos     Int       @default(0)
+  createdAt             DateTime  @default(now())
+  responsavelAnterior   User?     @relation("TimelineResponsavelAnterior", fields: [responsavelAnteriorId], references: [id])
+  responsavelNovo       User?     @relation("TimelineResponsavelNovo", fields: [responsavelNovoId], references: [id])
+  ticket                Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([etapa])
+  @@index([dataEntrada])
+  @@index([ticketId, dataEntrada])
+}
+
+/// Metricas consolidadas do ticket — 15 tempos calculados e cacheados.
+/// Atualizado quando o ticket e movimentado ou fechado.
+model TicketMetrics {
+  id                          String    @id @default(uuid())
+  ticketId                    String    @unique
+  tempoTotalMin               Int       @default(0)
+  tempoPrimeiraRespostaMin    Int?
+  tempoPrimeiraRespostaIaMin  Int?
+  tempoPrimeiraRespostaHumMin Int?
+  tempoEmAtendimentoMin       Int       @default(0)
+  tempoAguardandoClienteMin   Int       @default(0)
+  tempoAguardandoTerceiroMin  Int       @default(0)
+  tempoFilaMin                Int       @default(0)
+  tempoResolucaoIaMin         Int?
+  tempoResolucaoHumanoMin     Int?
+  tempoLeadTimeMin            Int       @default(0)
+  tempoUtilMin                Int       @default(0)
+  tempoCorridoMin             Int       @default(0)
+  tempoForaExpedienteMin      Int       @default(0)
+  tempoParadoMin              Int       @default(0)
+  totalMensagens              Int       @default(0)
+  mensagensCliente            Int       @default(0)
+  mensagensAgente             Int       @default(0)
+  mensagensBot                Int       @default(0)
+  totalReaberturas            Int       @default(0)
+  totalEscalonamentos         Int       @default(0)
+  slaPrazoMinutos             Int?
+  slaConsumidoMinutos         Int       @default(0)
+  slaRestanteMinutos          Int       @default(0)
+  slaPercentualConsumido      Float     @default(0)
+  slaStatus                   String?
+  csatNota                    Int?
+  csatRespondido              Boolean   @default(false)
+  resolvidoPorIa              Boolean   @default(false)
+  iaConfiancaMedia            Float?
+  iaTotalInteracoes           Int       @default(0)
+  iaCustoTotalUsd             Float     @default(0)
+  iaCustoTotalBrl             Float     @default(0)
+  primeiraRespostaEm          DateTime?
+  ultimoAtendimentoEm         DateTime?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @default(now())
+  ticket                      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([slaStatus])
+  @@index([resolvidoPorIa])
+}
+
+/// Log de lifecycle do SLA — cada transicao de estado e registrada.
+model TicketSlaLog {
+  id           String   @id @default(uuid())
+  ticketId     String
+  acao         String
+  slaMinutos   Int
+  percentual   Float?
+  restantesMin Int?
+  motivo       String?
+  dados        String?
+  usuarioId    String?
+  isSystem     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuario      User?    @relation(fields: [usuarioId], references: [id])
+
+  @@index([ticketId])
+  @@index([acao])
+  @@index([createdAt])
+}
+
+/// Atividade de usuario no ticket — visualizacoes, edicoes, notas internas.
+model TicketActivity {
+  id        String   @id @default(uuid())
+  ticketId  String
+  usuarioId String?
+  tipo      String
+  descricao String?
+  dados     String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuario   User?    @relation(fields: [usuarioId], references: [id])
+
+  @@index([ticketId])
+  @@index([usuarioId])
+  @@index([tipo])
+  @@index([createdAt])
+}
+
+/// Tempo de espera do ticket em cada etapa — registro granular.
+model TicketWaitTime {
+  id          String    @id @default(uuid())
+  ticketId    String
+  etapa       String
+  dataEntrada DateTime
+  dataSaida   DateTime?
+  duracaoMin  Int?
+  motivo      String?
+  usuarioId   String?
+  createdAt   DateTime  @default(now())
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuario     User?     @relation(fields: [usuarioId], references: [id])
+
+  @@index([ticketId])
+  @@index([etapa])
+  @@index([dataEntrada])
+  @@index([ticketId, etapa])
+}
+
+/// Log de processamento de IA no ticket — cada interacao com a IA e registrada.
+model TicketAiLog {
+  id                     String   @id @default(uuid())
+  ticketId               String
+  tipo                   String
+  modelo                 String?
+  inputTokens            Int?
+  outputTokens           Int?
+  custoUsd               Float?
+  custoBrl               Float?
+  latenciaMs             Int?
+  confianca              Float?
+  resultado              String?
+  correcaoId             String?
+  erro                   String?
+  duracaoProcessamentoMs Int?
+  createdAt              DateTime @default(now())
+  ticket                 Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([tipo])
+  @@index([modelo])
+  @@index([createdAt])
+}
+
+/// Performance consolidada por agente/equipe — metricas agregadas por periodo.
+model TicketPerformance {
+  id                      String   @id @default(uuid())
+  periodo                 String
+  tipoPeriodo             String   @default("mensal")
+  usuarioId               String?
+  departamentoId          String?
+  ticketsRecebidos        Int      @default(0)
+  ticketsResolvidos       Int      @default(0)
+  ticketsEscalonados      Int      @default(0)
+  ticketsReabertos        Int      @default(0)
+  ticketsCancelados       Int      @default(0)
+  mttrMin                 Float    @default(0)
+  mttaMin                 Float    @default(0)
+  mtfaMin                 Float    @default(0)
+  mtFilaMin               Float    @default(0)
+  slaCompliancePct        Float    @default(0)
+  slaViolados             Int      @default(0)
+  slaNoPrazo              Int      @default(0)
+  csatMedio               Float?
+  csatTotalRespostas      Int      @default(0)
+  fcrPct                  Float    @default(0)
+  iaResolveu              Int      @default(0)
+  iaConfiancaMedia        Float?
+  iaCustoTotalUsd         Float    @default(0)
+  totalMensagensEnviadas  Int      @default(0)
+  totalMensagensRecebidas Int      @default(0)
+  tempoAtivoMinutos       Float    @default(0)
+  createdAt               DateTime @default(now())
+  usuario                 User?    @relation(fields: [usuarioId], references: [id])
+
+  @@unique([periodo, tipoPeriodo, usuarioId, departamentoId])
+  @@index([periodo])
+  @@index([usuarioId])
+  @@index([departamentoId])
+}
+
+/// Respostas propostas pela IA aguardando validação de atendentes humanos
+model AIRespostaValidacao {
+  id               String    @id @default(uuid())
+  ticketId         String
+  mensagemCliente  String
+  respostaProposta String
+  assunto          String?
+  prioridade       String?
+  confianca        Float?
+  status           String    @default("pendente")
+  validacoesCount  Int       @default(0)
+  validacaoIds     String[]
+  respostaFinal    String?
+  enviadaEm        DateTime?
+  criadaPorIaEm    DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  ticket           Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// ── Time Tracking: registro de horas por atividade ───────────────────
+model TimeEntry {
+  id         String        @id @default(uuid())
+  usuarioId  String
+  ticketId   String?
+  orderId    String?
+  projectId  String?
+  tipo       String        @default("suporte")
+  descricao  String?
+  dataInicio DateTime      @default(now())
+  dataFim    DateTime?
+  duracaoMin Int?
+  billable   Boolean       @default(true)
+  faturado   Boolean       @default(false)
+  tags       String[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  order      ServiceOrder? @relation(fields: [orderId], references: [id])
+  ticket     Ticket?       @relation(fields: [ticketId], references: [id])
+  usuario    User          @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([ticketId])
+  @@index([orderId])
+  @@index([tipo])
+  @@index([dataInicio])
+  @@index([billable])
 }

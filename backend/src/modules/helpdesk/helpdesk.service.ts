@@ -2,7 +2,6 @@ import prisma from '../../config/database';
 import { sendWhatsAppMessage } from '../integrations/whatsapp/whatsapp.service';
 import { getHorarioConfig, isHorarioAtendimento } from './horario';
 import { getEstatisticasCsat } from '../csat/csat.service';
-import { getDashboardMetrics } from '../metrics/metrics.service';
 
 export const ETAPAS_PADRAO = [
   { slug: 'triagem', nome: 'Triagem', descricao: 'Tickets aguardando direcionamento para o setor correto', cor: '#8b5cf6', icone: 'filter', ordem: -1, enviarAuto: false, notificarEquipe: true, tempoInatividadeMin: 10 },
@@ -191,7 +190,7 @@ export async function sendStageAutoMessage(ticketId: string, etapaSlug: string) 
       tecnicoNome: ticket.assignee?.name,
     });
     const message = interpolate(config.autoMessage, vars);
-    const result = await sendWhatsAppMessage(ticket.contactPhone, message);
+    const result = await sendWhatsAppMessage(ticket.contactPhone, message, undefined, (ticket as any).contactJid || undefined);
     if (result.success) {
       await prisma.message.create({
         data: {
@@ -278,7 +277,9 @@ export async function isClientWithoutResponse(ticketId: string): Promise<boolean
   return false;
 }
 
-export async function isClientOffline(ticketId: string): Promise<boolean> {
+const ETAPAS_EM_ATENDIMENTO = ['em_atendimento', 'aguardando_cliente', 'aguardando_os'];
+
+async function getClientActivityStatus(ticketId: string) {
   const ticket = await prisma.ticket.findUnique({
     where: { id: ticketId },
     select: {
@@ -286,101 +287,35 @@ export async function isClientOffline(ticketId: string): Promise<boolean> {
       etapa: true,
       status: true,
       assigneeId: true,
+      lastAgentMessageAt: true,
     },
   });
 
-  if (!ticket) return false;
-
-  const horarioCfg = await getHorarioConfig();
-  const horarioOk = isHorarioAtendimento(horarioCfg);
-
-  if (horarioOk) {
-    return false;
+  if (!ticket) {
+    return { offline: false, absent: false, inactive: false };
   }
 
-  const lastAgentMessageAt = await prisma.ticket.findUnique({
-    where: { id: ticketId },
-    select: { lastAgentMessageAt: true },
-  });
+  if (!ETAPAS_EM_ATENDIMENTO.includes(ticket.etapa)) {
+    return { offline: false, absent: false, inactive: false };
+  }
 
-  if (!lastAgentMessageAt?.lastAgentMessageAt) {
-    return true;
+  const horarioCfg = await getHorarioConfig();
+  if (isHorarioAtendimento(horarioCfg)) {
+    return { offline: false, absent: false, inactive: false };
+  }
+
+  if (!ticket.lastAgentMessageAt) {
+    return { offline: true, absent: true, inactive: true };
   }
 
   const now = new Date();
-  const hoursSinceLastAgentMessage = (now.getTime() - lastAgentMessageAt.lastAgentMessageAt.getTime()) / (1000 * 60 * 60);
+  const hoursSince = (now.getTime() - ticket.lastAgentMessageAt.getTime()) / (1000 * 60 * 60);
 
-  return hoursSinceLastAgentMessage > 2;
-}
-
-export async function isClientAbsent(ticketId: string): Promise<boolean> {
-  const ticket = await prisma.ticket.findUnique({
-    where: { id: ticketId },
-    select: {
-      id: true,
-      etapa: true,
-      status: true,
-      assigneeId: true,
-    },
-  });
-
-  if (!ticket) return false;
-
-  const horarioCfg = await getHorarioConfig();
-  const horarioOk = isHorarioAtendimento(horarioCfg);
-
-  if (horarioOk) {
-    return false;
-  }
-
-  const lastAgentMessageAt = await prisma.ticket.findUnique({
-    where: { id: ticketId },
-    select: { lastAgentMessageAt: true },
-  });
-
-  if (!lastAgentMessageAt?.lastAgentMessageAt) {
-    return true;
-  }
-
-  const now = new Date();
-  const hoursSinceLastAgentMessage = (now.getTime() - lastAgentMessageAt.lastAgentMessageAt.getTime()) / (1000 * 60 * 60);
-
-  return hoursSinceLastAgentMessage > 4;
-}
-
-export async function isClientInactive(ticketId: string): Promise<boolean> {
-  const ticket = await prisma.ticket.findUnique({
-    where: { id: ticketId },
-    select: {
-      id: true,
-      etapa: true,
-      status: true,
-      assigneeId: true,
-    },
-  });
-
-  if (!ticket) return false;
-
-  const horarioCfg = await getHorarioConfig();
-  const horarioOk = isHorarioAtendimento(horarioCfg);
-
-  if (horarioOk) {
-    return false;
-  }
-
-  const lastAgentMessageAt = await prisma.ticket.findUnique({
-    where: { id: ticketId },
-    select: { lastAgentMessageAt: true },
-  });
-
-  if (!lastAgentMessageAt?.lastAgentMessageAt) {
-    return true;
-  }
-
-  const now = new Date();
-  const hoursSinceLastAgentMessage = (now.getTime() - lastAgentMessageAt.lastAgentMessageAt.getTime()) / (1000 * 60 * 60);
-
-  return hoursSinceLastAgentMessage > 8;
+  return {
+    offline: hoursSince > 2,
+    absent: hoursSince > 4,
+    inactive: hoursSince > 8,
+  };
 }
 
 export async function pauseClientCounters(ticketId: string) {
@@ -425,16 +360,13 @@ export async function updateClientStatusCounters(ticketId: string) {
   const etapa = ticket.etapa;
   const status = ticket.status;
 
+  const activityStatus = await getClientActivityStatus(ticketId);
   const isWithoutResponse = await isClientWithoutResponse(ticketId);
-  const isOffline = await isClientOffline(ticketId);
-  const isAbsent = await isClientAbsent(ticketId);
-  const isInactive = await isClientInactive(ticketId);
-
   const isAwaitingAttention = etapa === 'em_atendimento' || etapa === 'fila';
 
-  if (isAwaitingAttention && (isWithoutResponse || isOffline || isAbsent || isInactive)) {
+  if (isAwaitingAttention && (isWithoutResponse || activityStatus.offline || activityStatus.absent || activityStatus.inactive)) {
     await pauseClientCounters(ticketId);
-  } else if (isAwaitingAttention && !isWithoutResponse && !isOffline && !isAbsent && !isInactive) {
+  } else if (isAwaitingAttention && !isWithoutResponse && !activityStatus.offline && !activityStatus.absent && !activityStatus.inactive) {
     await resumeClientCounters(ticketId);
   }
 }
@@ -454,16 +386,14 @@ export async function getClientStatusInfo(ticketId: string) {
 
   const isAwaitingAttention = etapa === 'em_atendimento' || etapa === 'fila';
 
+  const activityStatus = await getClientActivityStatus(ticketId);
   const isWithoutResponse = await isClientWithoutResponse(ticketId);
-  const isOffline = await isClientOffline(ticketId);
-  const isAbsent = await isClientAbsent(ticketId);
-  const isInactive = await isClientInactive(ticketId);
 
   const counters = {
     withoutResponse: isWithoutResponse,
-    offline: isOffline,
-    absent: isAbsent,
-    inactive: isInactive,
+    offline: activityStatus.offline,
+    absent: activityStatus.absent,
+    inactive: activityStatus.inactive,
     isAwaitingAttention,
     slaPausadoEm: ticket.slaPausadoEm,
     dataInicioAtendimento: ticket.dataInicioAtendimento,
@@ -473,4 +403,63 @@ export async function getClientStatusInfo(ticketId: string) {
     ticket,
     counters,
   };
+}
+
+export async function getTicketTags(ticketId: string): Promise<string[]> {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: { tags: true },
+  });
+  if (!ticket) throw new Error('Ticket não encontrado');
+  if (!ticket.tags) return [];
+  return ticket.tags.split(',').map(t => t.trim()).filter(Boolean);
+}
+
+export async function addTicketTag(ticketId: string, tag: string): Promise<string[]> {
+  const trimmed = tag.trim();
+  if (!trimmed) throw new Error('Tag não pode ser vazia');
+
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: { tags: true },
+  });
+  if (!ticket) throw new Error('Ticket não encontrado');
+
+  const currentTags = ticket.tags ? ticket.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+  if (currentTags.includes(trimmed)) return currentTags;
+
+  const newTags = [...currentTags, trimmed];
+  await prisma.ticket.update({
+    where: { id: ticketId },
+    data: { tags: newTags.join(',') },
+  });
+
+  return newTags;
+}
+
+export async function removeTicketTag(ticketId: string, tag: string): Promise<string[]> {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: { tags: true },
+  });
+  if (!ticket) throw new Error('Ticket não encontrado');
+
+  const currentTags = ticket.tags ? ticket.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+  const newTags = currentTags.filter(t => t !== tag.trim());
+
+  await prisma.ticket.update({
+    where: { id: ticketId },
+    data: { tags: newTags.length > 0 ? newTags.join(',') : null },
+  });
+
+  return newTags;
+}
+
+export async function setTicketTags(ticketId: string, tags: string[]): Promise<string[]> {
+  const cleaned = tags.map(t => t.trim()).filter(Boolean);
+  await prisma.ticket.update({
+    where: { id: ticketId },
+    data: { tags: cleaned.length > 0 ? cleaned.join(',') : null },
+  });
+  return cleaned;
 }

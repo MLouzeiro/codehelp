@@ -1,558 +1,45 @@
-﻿import { Client, LocalAuth, Message as WAMessage } from 'whatsapp-web.js';
-import qrcode from 'qrcode-terminal';
-import path from 'path';
-import os from 'os';
-import prisma from '../../../config/database';
+﻿import prisma from '../../../config/database';
 import { env } from '../../../config/env';
-import {
-  ensureHelpdeskConfigs,
-  getEtapaConfig,
-  buildMessageVars,
-  interpolate,
-  sendStageAutoMessage,
-} from '../../helpdesk/helpdesk.service';
-import {
-  iniciarOuResetarTriagem,
-  cancelarTriagem,
-  enviarMenuInicial,
-} from '../../helpdesk/triagem.service';
-import {
-  isHorarioAtendimento,
-  getHorarioConfig,
-} from '../../helpdesk/horario';
-import { montarForaHorario, detectarOpcaoMenu, montarAckSuporte, montarAckComercial, montarOpcaoInvalida } from '../../helpdesk/menu';
-import { classificarPorPalavrasChave } from '../../helpdesk/rules.service';
+import { baileysProviderService } from './baileys-provider.service';
 
-let whatsappClient: Client | null = null;
-let qrCodeData: string | null = null;
-let isConnected = false;
-let connectionError: string | null = null;
-let initializing = false;
-let lastHeartbeat = Date.now();
-let lastMessageAt: Date | null = null;
-let reconnectTimer: NodeJS.Timeout | null = null;
-let healthCheckTimer: NodeJS.Timeout | null = null;
+// ── WhatsApp Service ──────────────────────────────────────────────────
+// Sends messages via Baileys (WebSocket, no Chrome needed).
+// All bot/triage logic lives in whatsapp-message-handler.ts.
 
-const SESSION_DIR = path.resolve(__dirname, '../../../../whatsapp-session');
-const processingLocks = new Set<string>();
-let protocoloLock: Promise<unknown> = Promise.resolve();
+// Re-exports for compatibility
+export type { WhatsAppConnection } from './types';
 
-function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+// ── Protocolo Lock ──────────────────────────────────────────────────────
+let protocoloLockQueue: Array<{ resolve: () => void }> = [];
 
-function withProtocoloLock<T>(fn: () => Promise<T>): Promise<T> {
-  const next = protocoloLock.then(fn, fn);
-  protocoloLock = next.catch(() => undefined);
-  return next;
-}
-
-function clearReconnectTimer() {
-  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-}
-
-function scheduleReconnect(reason: string) {
-  clearReconnectTimer();
-  console.warn(`[WhatsApp] Reagendando reconexão em 15s — motivo: ${reason}`);
-  reconnectTimer = setTimeout(async () => {
-    reconnectTimer = null;
-    if (whatsappClient) {
-      try { await whatsappClient.destroy(); } catch { }
-      whatsappClient = null;
+async function acquireProtocoloLock(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    if (protocoloLockQueue.length === 0) {
+      protocoloLockQueue.push({ resolve });
+      resolve();
+    } else {
+      protocoloLockQueue.push({ resolve });
     }
-    initializing = false;
-    initializeClient().catch((e) => console.error('[WhatsApp] Erro na reconexão:', e?.message || e));
-  }, 15000);
+  });
 }
 
-function startHealthCheck() {
-  if (healthCheckTimer) clearInterval(healthCheckTimer);
-  healthCheckTimer = setInterval(async () => {
-    if (!whatsappClient) return;
-    if (!isConnected) return;
-    pingHeartbeat();
-    try {
-      const state = await whatsappClient.getState();
-      if (state && (state === 'CONFLICT' || state === 'UNLAUNCHED' || state === 'UNPAIRED')) {
-        console.warn(`[WhatsApp] Estado invÃ¡lido detectado: ${state} â€” reconectando`);
-        connectionError = `Estado: ${state}`;
-        isConnected = false;
-        try { await whatsappClient.destroy(); } catch { }
-        whatsappClient = null;
-        scheduleReconnect(`state_${state}`);
-      }
-    } catch (err: any) {
-      console.warn(`[WhatsApp] Erro no health check: ${err?.message || err}`);
-    }
-  }, 60000);
-}
-
-export function pingHeartbeat() {
-  lastHeartbeat = Date.now();
-}
-
-export function getLastMessageAt() {
-  return lastMessageAt;
-}
-
-export async function getWhatsAppState(): Promise<string | null> {
-  if (!whatsappClient) return null;
-  try {
-    return await whatsappClient.getState();
-  } catch {
-    return null;
+function releaseProtocoloLock() {
+  protocoloLockQueue.shift();
+  if (protocoloLockQueue.length > 0) {
+    protocoloLockQueue[0].resolve();
   }
 }
 
-export function getClient(): Client | null {
-  return whatsappClient;
-}
-
-export function isClientConnected(): boolean {
-  return isConnected;
-}
-
-export function getQrCodeData(): string | null {
-  return qrCodeData;
-}
-
-export function getConnectionError(): string | null {
-  return connectionError;
-}
-
-export async function initializeClient(): Promise<void> {
-  if (whatsappClient || initializing) return;
-  initializing = true;
-  clearReconnectTimer();
-
-  whatsappClient = new Client({
-    authStrategy: new LocalAuth({ dataPath: SESSION_DIR, clientId: 'code-help' }),
-    puppeteer: {
-      headless: true,
-      executablePath: env.whatsappChromePath || undefined,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--disable-extensions',
-        '--disable-background-networking',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-breakpad',
-        '--disable-client-side-phishing-detection',
-        '--disable-default-apps',
-        '--disable-domain-reliability',
-        '--disable-hang-monitor',
-        '--disable-ipc-flooding-protection',
-        '--disable-popup-blocking',
-        '--disable-prompt-on-repost',
-        '--disable-renderer-backgrounding',
-        '--disable-sync',
-        '--metrics-recording-only',
-        '--no-first-run',
-        '--password-store=basic',
-        '--use-gl=swiftshader',
-      ],
-    },
-  });
-
-  whatsappClient.on('qr', (qr) => {
-    qrCodeData = qr;
-    connectionError = null;
-    qrcode.generate(qr, { small: true });
-    console.log('[WhatsApp] QR Code gerado. Escaneie com o celular.');
-  });
-
-  whatsappClient.on('authenticated', () => {
-    console.log('[WhatsApp] Autenticado com sucesso');
-    connectionError = null;
-  });
-
-  whatsappClient.on('auth_failure', (msg) => {
-    isConnected = false;
-    connectionError = `Falha de autenticaÃ§Ã£o: ${msg}`;
-    console.error('[WhatsApp] Falha de autenticaÃ§Ã£o:', msg);
-    scheduleReconnect('auth_failure');
-  });
-
-  whatsappClient.on('ready', () => {
-    isConnected = true;
-    qrCodeData = null;
-    connectionError = null;
-    lastHeartbeat = Date.now();
-    startHealthCheck();
-    console.log('[WhatsApp] Cliente pronto e conectado!');
-  });
-
-  whatsappClient.on('loading_screen', (percent, message) => {
-    console.log(`[WhatsApp] Carregando ${percent}% â€” ${message}`);
-    lastHeartbeat = Date.now();
-  });
-
-  whatsappClient.on('change_state', (state) => {
-    console.log('[WhatsApp] Estado alterado:', state);
-    lastHeartbeat = Date.now();
-    if (state === 'CONFLICT' || state === 'UNLAUNCHED' || state === 'UNPAIRED') {
-      isConnected = false;
-      connectionError = `Estado: ${state}`;
-      scheduleReconnect(`state_${state}`);
-    }
-  });
-
-  whatsappClient.on('disconnected', (reason) => {
-    isConnected = false;
-    connectionError = `Desconectado: ${reason}`;
-    console.log('[WhatsApp] Desconectado:', reason);
-    if (healthCheckTimer) { clearInterval(healthCheckTimer); healthCheckTimer = null; }
-    scheduleReconnect(`disconnected_${reason}`);
-  });
-
-  whatsappClient.on('browser_crashed', (error: any) => {
-    isConnected = false;
-    connectionError = `Browser crashou: ${error?.message || 'desconhecido'}`;
-    console.error('[WhatsApp] Browser do Puppeteer crashou:', error?.message || error);
-    if (healthCheckTimer) { clearInterval(healthCheckTimer); healthCheckTimer = null; }
-    try { whatsappClient?.destroy(); } catch { }
-    whatsappClient = null;
-    scheduleReconnect('browser_crashed');
-  });
-
-  whatsappClient.on('message', async (message: any) => {
-    try {
-      pingHeartbeat();
-      lastMessageAt = new Date();
-      if (message.fromMe) return;
-      await handleIncomingMessage(message);
-    } catch (err) {
-      console.error('[WhatsApp] Erro no message:', err);
-    }
-  });
-
+async function withProtocoloLock<T>(fn: () => Promise<T>): Promise<T> {
+  await acquireProtocoloLock();
   try {
-    connectionError = null;
-    await whatsappClient.initialize();
-    console.log('[WhatsApp] InicializaÃ§Ã£o concluÃ­da');
-  } catch (error: any) {
-    connectionError = error?.message || 'Erro ao inicializar WhatsApp';
-    console.error('[WhatsApp] Falha na inicializaÃ§Ã£o:', error?.message || error);
-    whatsappClient = null;
-    scheduleReconnect('initialize_failed');
+    return await fn();
   } finally {
-    initializing = false;
+    releaseProtocoloLock();
   }
 }
 
-async function handleIncomingMessage(message: any, connectionId?: string) {
-  try {
-    if (!message || !message.from) return;
-    const fromMe = !!message.fromMe;
-    if (fromMe) return;
-    let contact: any = null;
-    try { contact = await message.getContact(); } catch { /* fallback abaixo */ }
-    const chatId = sanitizePhoneNumber(message.from);
-    const phoneDigits = chatId.replace(/[^\d]/g, '');
-    const phoneLookup = phoneDigits.slice(-11);
-    const phoneSemSufixo = phoneDigits;
-    lastMessageAt = new Date();
-
-    while (processingLocks.has(chatId)) await sleep(50);
-    processingLocks.add(chatId);
-
-    try {
-      const horarioCfg = await getHorarioConfig();
-      const horarioOk = isHorarioAtendimento(horarioCfg);
-
-      let ticket = await prisma.ticket.findFirst({
-        where: {
-          OR: [
-            { contactPhone: chatId },
-            { contactPhone: phoneSemSufixo },
-            { contactPhone: { contains: phoneLookup } },
-          ],
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (ticket) {
-        if (ticket.status === 'fechado') {
-          ticket = await prisma.ticket.update({
-            where: { id: ticket.id },
-            data: { status: 'em_andamento', etapa: 'fila', dataFechamento: null },
-          });
-          await prisma.ticketStageEvent.create({
-            data: {
-              ticketId: ticket.id,
-              etapaAnterior: 'concluido',
-              etapaNova: 'fila',
-              origem: 'automatico',
-            },
-          });
-          sendStageAutoMessage(ticket.id, 'fila').catch((e) =>
-            console.warn('Failed to send fila auto message:', e)
-          );
-        }
-      } else {
-        if (!horarioOk) {
-          const contactName = (contact?.pushname || contact?.name || chatId) as string;
-          const msg = await montarForaHorario(contactName);
-          const phone = chatId.replace(/@c\.us$/i, '');
-          await sendWhatsAppMessage(phone, msg);
-          return;
-        }
-
-        let client = null;
-        if (phoneLookup) {
-          client = await prisma.client.findFirst({
-            where: { telefone: { contains: phoneLookup } },
-          });
-          if (!client) {
-            const colaborador = await prisma.colaborador.findFirst({
-              where: {
-                OR: [
-                  { telefone: { contains: phoneLookup } },
-                  { whatsapp: { contains: phoneLookup } },
-                ],
-              },
-              include: { client: true },
-            });
-            if (colaborador?.client) {
-              client = colaborador.client;
-            }
-          }
-        }
-
-        const contactName = (contact?.pushname || contact?.name || chatId) as string;
-
-        await ensureHelpdeskConfigs();
-
-        const created = await prisma.ticket.create({
-          data: {
-            contactName,
-            contactPhone: phoneSemSufixo,
-            status: 'aberto',
-            etapa: 'fila',
-            canal: 'whatsapp',
-            clientId: client?.id,
-            whatsappConnectionId: connectionId || null,
-          },
-        });
-        ticket = created;
-
-        await prisma.ticketStageEvent.create({
-          data: {
-            ticketId: created.id,
-            etapaAnterior: 'novo',
-            etapaNova: 'fila',
-            origem: 'automatico',
-          },
-        });
-      }
-
-      let mediaUrl: string | null = null;
-      if (message.hasMedia) {
-        try {
-          const media = await message.getMedia();
-          mediaUrl = media.data;
-        } catch {
-          console.warn('Failed to download media for message');
-        }
-      }
-
-      await prisma.message.create({
-        data: {
-          ticketId: ticket!.id,
-          fromMe: false,
-          content: message.body || (mediaUrl ? '(mídia)' : ''),
-          mediaUrl,
-        },
-      });
-
-      // Processar opção do menu (1=Suporte, 2=Comercial)
-      if (message.body && ticket!.etapa === 'fila' && !ticket!.protocolo) {
-        const opcao = detectarOpcaoMenu(message.body);
-        if (opcao) {
-          const contactName = ticket!.contactName || 'cliente';
-          const phone = chatId.replace(/@c\.us$/i, '');
-          let ackMsg: string;
-          let categoria: string;
-          let departamentoSlug: string;
-          if (opcao === '1') {
-            ackMsg = await montarAckSuporte(contactName);
-            categoria = 'suporte_tecnico';
-            departamentoSlug = 'suporte-tecnico';
-          } else {
-            ackMsg = await montarAckComercial(contactName);
-            categoria = 'comercial';
-            departamentoSlug = 'comercial';
-          }
-
-          // Usar departamento da conexao se disponivel, senao buscar pelo slug
-          let departamentoId: string | undefined;
-          if (connectionId) {
-            const conn = await prisma.whatsAppConnection.findUnique({
-              where: { id: connectionId },
-              select: { departamentoId: true },
-            });
-            if (conn?.departamentoId) {
-              departamentoId = conn.departamentoId;
-            }
-          }
-          if (!departamentoId) {
-            const dept = await prisma.departamento.findUnique({ where: { slug: departamentoSlug }, select: { id: true } });
-            departamentoId = dept?.id;
-          }
-
-          await prisma.ticket.update({
-            where: { id: ticket!.id },
-            data: {
-              categoria,
-              ...(departamentoId ? { departamentoId } : {}),
-            },
-          });
-          const result = await sendWhatsAppMessage(phone, ackMsg);
-          if (result.success) {
-            await prisma.message.create({
-              data: { ticketId: ticket!.id, fromMe: true, content: ackMsg },
-            });
-          }
-          console.log(`[WhatsApp] Opção ${opcao} selecionada no ticket ${ticket!.id}, categoria=${categoria}`);
-          return;
-        }
-
-        // Se já tem mensagem do bot e o usuário digitou algo que não é opção válida
-        const temAlgumaMsgDoBot = await prisma.message.count({
-          where: { ticketId: ticket!.id, fromMe: true },
-        });
-        if (temAlgumaMsgDoBot > 0 && !ticket!.categoria) {
-          const opcaoInvalida = await montarOpcaoInvalida(ticket!.contactName || 'cliente');
-          const phone = chatId.replace(/@c\.us$/i, '');
-          const result = await sendWhatsAppMessage(phone, opcaoInvalida);
-          if (result.success) {
-            await prisma.message.create({
-              data: { ticketId: ticket!.id, fromMe: true, content: opcaoInvalida },
-            });
-          }
-          return;
-        }
-      }
-
-      if (message.body && !ticket!.categoria) {
-        const match = await classificarPorPalavrasChave(message.body);
-        if (match) {
-          await prisma.ticket.update({
-            where: { id: ticket!.id },
-            data: { categoria: match.categoria },
-          });
-          console.log(`[Regras] Ticket ${ticket!.id} classificado como "${match.categoria}" pela regra "${match.regraNome}" (match: "${match.matchedKeyword}")`);
-        }
-      }
-
-      if (ticket!.etapa === 'fila' && !ticket!.protocolo) {
-        const temAlgumaMsgDoBot = await prisma.message.count({
-          where: { ticketId: ticket!.id, fromMe: true },
-        });
-        if (temAlgumaMsgDoBot === 0) {
-          enviarMenuInicial(ticket!.id).catch((e) =>
-            console.error('[WhatsApp] Erro ao enviar saudacao inicial:', e?.message || e)
-          );
-        }
-        iniciarOuResetarTriagem(ticket!.id).catch((e) =>
-          console.error('[WhatsApp] Erro ao iniciar follow-up:', e?.message || e)
-        );
-      }
-    } finally {
-      processingLocks.delete(chatId);
-    }
-  } catch (error) {
-    console.error('[WhatsApp] Erro ao processar mensagem recebida:', error);
-  }
-}
-
-async function createTicketWithUniqueProtocolo(
-  ticketData: Record<string, any>,
-  maxRetries = 5
-): Promise<any> {
-  return withProtocoloLock(async () => {
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      const protocolo = await generateProtocolo();
-      try {
-        return await prisma.ticket.create({ data: { ...ticketData, protocolo } });
-      } catch (err: any) {
-        const target = err?.meta?.target;
-        const isProtocoloConflict =
-          err?.code === 'P2002' &&
-          (Array.isArray(target) ? target.includes('protocolo') : target === 'protocolo');
-        if (isProtocoloConflict && attempt < maxRetries - 1) continue;
-        throw err;
-      }
-    }
-    throw new Error('Não foi possível gerar protocolo único após múltiplas tentativas');
-  });
-}
-
-export async function disconnectClient(): Promise<void> {
-  clearReconnectTimer();
-  if (healthCheckTimer) { clearInterval(healthCheckTimer); healthCheckTimer = null; }
-  if (whatsappClient) {
-    try {
-      await whatsappClient.logout();
-    } catch (e) {
-      console.warn('[WhatsApp] Erro no logout:', e);
-    }
-    try {
-      await whatsappClient.destroy();
-    } catch (e) {
-      console.warn('[WhatsApp] Erro no destroy:', e);
-    }
-    whatsappClient = null;
-    isConnected = false;
-    qrCodeData = null;
-    connectionError = null;
-  }
-}
-
-export const SUBJECTS = [
-  { value: 'suporte_tecnico', label: 'Suporte TÃ©cnico' },
-  { value: 'duvida_faturamento', label: 'DÃºvida/Faturamento' },
-  { value: 'solicitacao_mudanca', label: 'SolicitaÃ§Ã£o de MudanÃ§a' },
-  { value: 'treinamento', label: 'Treinamento' },
-  { value: 'reclamacao', label: 'ReclamaÃ§Ã£o' },
-  { value: 'orcamento', label: 'OrÃ§amento' },
-  { value: 'agendamento', label: 'Agendamento' },
-  { value: 'outro', label: 'Outro' },
-];
-
-export function classifyMessage(text: string): string {
-  const lower = text.toLowerCase();
-  if (/(erro|bug|nÃ£o funciona|quebrou|falha|problema|travou|parou)/.test(lower)) return 'suporte_tecnico';
-  if (/(boleto|fatura|nota|pagamento|cobranÃ§a|preÃ§o|valor|contrato|dinheiro|pix)/.test(lower)) return 'duvida_faturamento';
-  if (/(quero|preciso|mudar|adicionar|novo|implementar|sugestÃ£o|melhoria|gostaria)/.test(lower)) return 'solicitacao_mudanca';
-  if (/(como|ajuda|ensinar|aprender|dÃºvida|funciona|tutorial|manual|orientaÃ§Ã£o)/.test(lower)) return 'treinamento';
-  if (/(insatisfeito|pÃ©ssimo|horrÃ­vel|reclamaÃ§Ã£o|chateado|decepÃ§Ã£o|ruim)/.test(lower)) return 'reclamacao';
-  if (/(orÃ§amento|quanto custa|preÃ§o|valor|quero contratar)/.test(lower)) return 'orcamento';
-  if (/(agendar|visita|horÃ¡rio|quando|pode ir|vir aqui)/.test(lower)) return 'agendamento';
-  return 'outro';
-}
-
-export function getSubjectLabel(value: string): string {
-  return SUBJECTS.find((s) => s.value === value)?.label || value;
-}
-
-export async function sendProtocolReply(contactPhone: string, protocolo: string, tipo: 'abertura' | 'fechamento'): Promise<void> {
-  const msg = tipo === 'abertura'
-    ? `OlÃ¡! ðŸ‘‹\n\nSeu chamado foi aberto com sucesso.\nðŸ“‹ Protocolo: *${protocolo}*\n\nEm breve nossa equipe entrarÃ¡ em contato.\n\nAtenciosamente,\nEquipe Codemed`
-    : `OlÃ¡! ðŸ‘‹\n\nSeu chamado foi finalizado.\nðŸ“‹ Protocolo: *${protocolo}*\n\nAgradecemos pelo contato!\n\nAtenciosamente,\nEquipe Codemed`;
-
-  await sendWhatsAppMessage(contactPhone, msg);
-}
-
-export function sanitizePhoneNumber(phone: string): string {
-  const digits = phone.replace(/[^\d]/g, '');
-  if (digits.length < 7) return `${phone}@c.us`;
-  return `${digits}@c.us`;
-}
-
+// ── Protocolo Generation ────────────────────────────────────────────────
 export async function generateProtocolo(): Promise<string> {
   return withProtocoloLock(async () => {
     const hoje = new Date();
@@ -571,64 +58,214 @@ export async function generateProtocolo(): Promise<string> {
     }
 
     const proto = `${prefixo}-${String(seq).padStart(4, '0')}`;
-    console.log(`[Protocolo] Gerado: ${proto} (prefixo=${prefixo}, ultimo=${ultimo?.protocolo || 'nenhum'}, seq=${seq})`);
+    console.log(`[Protocolo] Gerado: ${proto}`);
     return proto;
   });
 }
 
-export async function sendWhatsAppMessage(to: string, message: string): Promise<{ success: boolean; error?: string }> {
-  if (!whatsappClient || !isConnected) {
-    return { success: false, error: 'WhatsApp nÃ£o conectado' };
+// ── Message Classification ──────────────────────────────────────────────
+export const SUBJECTS = [
+  { value: 'suporte_tecnico', label: 'Suporte Tecnico' },
+  { value: 'duvida_faturamento', label: 'Duvida/Faturamento' },
+  { value: 'solicitacao_mudanca', label: 'Solicitacao de Mudanca' },
+  { value: 'treinamento', label: 'Treinamento' },
+  { value: 'reclamacao', label: 'Reclamacao' },
+  { value: 'orcamento', label: 'Orcamento' },
+  { value: 'agendamento', label: 'Agendamento' },
+  { value: 'outro', label: 'Outro' },
+];
+
+export function classifyMessage(text: string): string {
+  const lower = text.toLowerCase();
+  if (/(erro|bug|nao funciona|quebrou|falha|problema|travou|parou)/.test(lower)) return 'suporte_tecnico';
+  if (/(boleto|fatura|nota|pagamento|cobranca|preco|valor|contrato|dinheiro|pix)/.test(lower)) return 'duvida_faturamento';
+  if (/(quero|preciso|mudar|adicionar|novo|implementar|sugestao|melhoria|gostaria)/.test(lower)) return 'solicitacao_mudanca';
+  if (/(como|ajuda|ensinar|aprender|duvida|funciona|tutorial|manual|orientacao)/.test(lower)) return 'treinamento';
+  if (/(insatisfeito|pessimo|horivel|reclamacao|chateado|decepcao|ruim)/.test(lower)) return 'reclamacao';
+  if (/(orcamento|quanto custa|preco|valor|quero contratar)/.test(lower)) return 'orcamento';
+  if (/(agendar|visita|horario|quando|pode ir|vir aqui)/.test(lower)) return 'agendamento';
+  return 'outro';
+}
+
+export function getSubjectLabel(value: string): string {
+  return SUBJECTS.find((s) => s.value === value)?.label || value;
+}
+
+// ── Phone Number Utilities ──────────────────────────────────────────────
+export function sanitizePhoneNumber(phone: string): string {
+  const digits = phone.replace(/[^\d]/g, '');
+  if (digits.length < 7) return `${phone}@s.whatsapp.net`;
+  return `${digits}@s.whatsapp.net`;
+}
+
+// ── Send Protocol Reply ─────────────────────────────────────────────────
+export async function sendProtocolReply(contactPhone: string, protocolo: string, tipo: 'abertura' | 'fechamento'): Promise<void> {
+  const msg = tipo === 'abertura'
+    ? `Ola!\n\nSeu chamado foi aberto com sucesso.\nProtocolo: *${protocolo}*\n\nEm breve nossa equipe entrara em contato.\n\nAtenciosamente,\nEquipe Codemed`
+    : `Ola!\n\nSeu chamado foi finalizado.\nProtocolo: *${protocolo}*\n\nAgradecemos pelo contato!\n\nAtenciosamente,\nEquipe Codemed`;
+
+  await sendWhatsAppMessage(contactPhone, msg);
+}
+
+// ── Send Message (unified provider) ─────────────────────────────────────
+export async function sendWhatsAppMessage(
+  to: string,
+  message: string,
+  connectionId?: string,
+  jid?: string,
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  const phone = to.replace(/[^\d]/g, '');
+
+  // Try specific Baileys connection
+  if (connectionId) {
+    const baileysState = baileysProviderService.getMultiState(connectionId);
+    if (baileysState?.connected && baileysState.socket) {
+      return baileysProviderService.sendTextMulti(connectionId, phone, message, jid);
+    }
   }
-  const digits = to.replace(/[^\d]/g, '').slice(-13);
-  const formattedNumber = `${digits}@c.us`;
+
+  // Try Baileys legacy
+  if (baileysProviderService.isLegacyConnected()) {
+    return baileysProviderService.sendTextLegacy(phone, message, jid);
+  }
+
+  // Try any connected Baileys multi-connection
+  const allBaileysStates = baileysProviderService.getAllMultiStates();
+  for (const [connId, state] of allBaileysStates) {
+    if (state.connected && state.socket) {
+      const result = await baileysProviderService.sendTextMulti(connId, phone, message, jid);
+      if (result.success) return result;
+    }
+  }
+
+  return { success: false, error: 'Nenhum provider WhatsApp disponivel' };
+}
+
+// ── Status Functions (compatibility) ──────────────────────────────────
+export function isClientConnected(): boolean {
+  if (baileysProviderService.isLegacyConnected()) return true;
+  const allBaileys = baileysProviderService.getAllMultiStates();
+  for (const [, state] of allBaileys) {
+    if (state.connected) return true;
+  }
+  return false;
+}
+
+export function getQrCodeData(): string | null {
+  return baileysProviderService.getLegacyQrCode();
+}
+
+export function getConnectionError(): string | null {
+  return baileysProviderService.getLegacyError();
+}
+
+export function getLastMessageAt(): Date | null {
+  const legacy = baileysProviderService.getLegacySocket();
+  if (legacy) return new Date();
+  return null;
+}
+
+export function pingHeartbeat(): void {
+  // No-op for Baileys (WebSocket handles this)
+}
+
+export async function getWhatsAppState(): Promise<string | null> {
+  if (baileysProviderService.isLegacyConnected()) return 'connected';
 
   try {
-    let chat: any;
+    const activeConnections = await prisma.whatsAppConnection.findMany({
+      where: { ativo: true },
+      select: { id: true },
+    });
 
-    try {
-      const chats = await whatsappClient.getChats();
-      chat = chats.find((c: any) => {
-        const num = c.id?.user?.replace(/[^\d]/g, '') || '';
-        return num.includes(digits) || digits.includes(num);
-      });
-    } catch { /* ignore */ }
-
-    if (chat) {
-      await chat.sendMessage(message);
-      console.log(`Message sent via chat to ${chat.id._serialized}`);
-      return { success: true };
+    for (const conn of activeConnections) {
+      const state = baileysProviderService.getMultiState(conn.id);
+      if (state?.connected) return 'connected';
     }
+  } catch {}
 
-    try {
-      await whatsappClient.sendMessage(formattedNumber, message);
-      console.log(`Message sent to ${formattedNumber}`);
-      return { success: true };
-    } catch (err1: any) {
-      if (err1?.message?.includes('LID') || err1?.message?.includes('No LID')) {
-        const numberId = await whatsappClient.getNumberId(digits);
-        if (numberId?._serialized) {
-          await whatsappClient.sendMessage(numberId._serialized, message);
-          console.log(`Message sent via getNumberId to ${numberId._serialized}`);
-          return { success: true };
-        }
-        return { success: false, error: `Contato nÃ£o encontrado no WhatsApp. Envie uma mensagem para este nÃºmero pelo celular primeiro.` };
-      }
-      throw err1;
-    }
-  } catch (error: any) {
-    console.warn(`Failed to send to ${digits}:`, error?.message);
-    return { success: false, error: `Falha ao enviar: ${error?.message || 'erro desconhecido'}` };
+  return 'disconnected';
+}
+
+export function getClient(): any {
+  return baileysProviderService.getLegacySocket();
+}
+
+// ── Legacy functions (kept for compatibility) ───────────────────────────
+export async function initializeClient(): Promise<void> {
+  if (!baileysProviderService.isLegacyConnected()) {
+    await baileysProviderService.connectLegacy();
   }
 }
 
-export async function getChatsList() {
-  if (!whatsappClient || !isConnected) return [];
-  const chats = await whatsappClient.getChats();
-  return chats.map((chat) => ({
-    id: chat.id._serialized,
-    name: chat.name,
-    unreadCount: chat.unreadCount,
-    timestamp: chat.timestamp,
-  }));
+export async function disconnectClient(): Promise<void> {
+  await baileysProviderService.disconnectLegacy();
 }
+
+export async function clearSession(): Promise<void> {
+  await disconnectClient();
+  const fs = await import('fs');
+  const path = await import('path');
+  const sessionPath = path.resolve(env.whatsappSessionPath || './whatsapp-session', 'baileys', 'legacy');
+  try {
+    if (fs.existsSync(sessionPath)) {
+      fs.rmSync(sessionPath, { recursive: true, force: true });
+      console.log('[WhatsApp] Sessao removida:', sessionPath);
+    }
+  } catch (e) {
+    console.warn('[WhatsApp] Erro ao remover sessao:', e);
+  }
+}
+
+export async function getChatsList(): Promise<any[]> {
+  return [];
+}
+
+// ── Multi-connection status ─────────────────────────────────────────────
+export const whatsappConnectionManager = {
+  getConnectionRuntime: (id: string) => {
+    const state = baileysProviderService.getMultiState(id);
+    if (!state) return null;
+    return {
+      id,
+      connected: state.connected,
+      qrCode: state.qrCode,
+      error: state.error,
+      client: state.socket,
+    };
+  },
+  getClient: (id: string) => {
+    const state = baileysProviderService.getMultiState(id);
+    return state?.socket || null;
+  },
+  getAllConnectionsStatus: () => {
+    const allStates = baileysProviderService.getAllMultiStates();
+    return Array.from(allStates.entries()).map(([id, state]) => ({
+      id,
+      connected: state.connected,
+      scanning: !!state.qrCode,
+      state: state.connected ? 'CONNECTED' : 'DISCONNECTED',
+      error: state.error,
+      qrCode: state.qrCode,
+      lastMessageAt: state.lastMessageAt,
+      lastHeartbeat: Date.now(),
+    }));
+  },
+  disconnectConnection: async (id: string) => {
+    await baileysProviderService.disconnectMulti(id);
+  },
+  getConnectionStatus: async (id: string) => {
+    const state = baileysProviderService.getMultiState(id);
+    if (!state) throw new Error(`Connection ${id} not found`);
+    return {
+      id,
+      connected: state.connected,
+      scanning: !!state.qrCode,
+      state: state.connected ? 'CONNECTED' : 'DISCONNECTED',
+      error: state.error,
+      qrCode: state.qrCode,
+      lastMessageAt: state.lastMessageAt,
+      lastHeartbeat: Date.now(),
+    };
+  },
+};

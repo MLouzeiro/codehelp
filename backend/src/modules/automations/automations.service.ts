@@ -172,7 +172,7 @@ async function executarAcao(acao: RegraAcao, contexto: Record<string, any>): Pro
         const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
         if (!ticket || !ticket.contactPhone) return { sucesso: false, erro: 'sem telefone' };
         const { sendWhatsAppMessage } = await import('../integrations/whatsapp/whatsapp.service');
-        const r = await sendWhatsAppMessage(ticket.contactPhone, acao.parametros.mensagem);
+        const r = await sendWhatsAppMessage(ticket.contactPhone, acao.parametros.mensagem, undefined, (ticket as any).contactJid || undefined);
         return { sucesso: r.success, erro: r.error };
       }
       case 'adicionar_tag': {
