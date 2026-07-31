@@ -16,6 +16,42 @@ import { evolutionApiService } from './evolution-api.service';
 import { unifiedWhatsAppService } from './unified-whatsapp.service';
 import path from 'path';
 
+async function autoMoveTicketOnAgentReply(ticketId: string, userId: string): Promise<void> {
+  try {
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { etapa: true, assigneeId: true } });
+    if (!ticket) return;
+
+    if (ticket.etapa === 'fila' || ticket.etapa === 'aguardando_cliente') {
+      const updateData: any = {
+        etapa: 'em_atendimento',
+        dataInicioAtendimento: ticket.etapa === 'fila' ? new Date() : undefined,
+        lastAgentMessageAt: new Date(),
+        filaOrder: null,
+      };
+      if (!ticket.assigneeId) {
+        updateData.assigneeId = userId;
+        updateData.usuarioId = userId;
+      }
+
+      await prisma.ticket.update({ where: { id: ticketId }, data: updateData });
+
+      await prisma.ticketStageEvent.create({
+        data: {
+          ticketId,
+          etapaAnterior: ticket.etapa,
+          etapaNova: 'em_atendimento',
+          origem: 'automatico',
+          usuarioId: userId,
+        },
+      });
+    } else if (ticket.etapa === 'em_atendimento') {
+      await prisma.ticket.update({ where: { id: ticketId }, data: { lastAgentMessageAt: new Date() } });
+    }
+  } catch (err) {
+    console.error('[WhatsApp] Erro auto-move:', err);
+  }
+}
+
 export async function getStatus(req: Request, res: Response) {
   pingHeartbeat();
   const state = await getWhatsAppState();
@@ -465,6 +501,7 @@ export async function sendMessage(req: AuthRequest, res: Response) {
               usuarioId: req.user?.id,
             },
           });
+          if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
         }
         return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });
       }
@@ -490,6 +527,7 @@ export async function sendMessage(req: AuthRequest, res: Response) {
               usuarioId: req.user?.id,
             },
           });
+          if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
         }
         return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });
       }
@@ -511,6 +549,7 @@ export async function sendMessage(req: AuthRequest, res: Response) {
                 usuarioId: req.user?.id,
               },
             });
+            if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
           }
           return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys', connectionId: connId });
         }
@@ -533,6 +572,7 @@ export async function sendMessage(req: AuthRequest, res: Response) {
                 usuarioId: req.user?.id,
               },
             });
+            if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
           }
           return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'whatsapp-webjs', connectionId: connId });
         }
@@ -561,6 +601,7 @@ export async function sendMessage(req: AuthRequest, res: Response) {
           usuarioId: req.user?.id,
         },
       });
+      if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
     }
 
     return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });
