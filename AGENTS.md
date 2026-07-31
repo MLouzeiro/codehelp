@@ -1,205 +1,254 @@
-# AGENTS.md — code-help CRM Kanban
-
-## Versionamento (regra absoluta)
-
-| Branch / Tag | Significado | Pode mexer? |
-|--------------|-------------|-------------|
-| `main`       | Versão **em uso** (estável)            | **NÃO** sem autorização explícita do usuário |
-| `develop`    | Próxima versão em desenvolvimento      | SIM — todo trabalho novo vai aqui |
-| `v1.x`       | Tag de marco estável                   | NÃO — apenas referência histórica |
-| `v1.x.y`     | Tag de patch/bugfix                   | NÃO — apenas referência histórica |
-
-### Fluxo de desenvolvimento
-
-1. Usuário marca uma versão como "em uso" (ex: v1.3)
-2. Tag `v1.3` é criada e o usuário é avisado: "v1.3 estável, a partir de agora desenvolver em `develop`"
-3. Próximas features/bugs vão em branch `develop` (commits com prefixo `v1.4-dev:`)
-4. Quando o usuário testar e aprovar a `develop`:
-   - Cria tag `v1.4` na develop
-   - Merge da develop em main
-   - Próximo ciclo recomeça
-
-### Regra de ouro
-
-> **NUNCA commitar em `main` sem que o usuário diga "pode atualizar" / "merge em main" / "tag v1.4" / similar.**
->
-> **NUNCA alterar tag já existente (v1.0, v1.1, v1.2, v1.3, etc) — tags são imutáveis.**
-
-### Checklist antes de commitar em `develop`
-
-- [ ] Branch atual é `develop` (não `main`)
-- [ ] `npx tsc --noEmit` limpo no backend e frontend
-- [ ] `npm test` backend: 32/32 OK
-- [ ] Mudança escopada (não mexe em código que está funcionando, ver regra abaixo)
-- [ ] Commit message começa com `v1.4-dev:` (ou versão atual da develop)
-
-### Exceções (únicas situações em que posso mexer em main sem autorização)
-
-- **Bugs críticos de segurança** (vazamento de token, SQL injection, etc) — posso corrigir direto em main E na develop
-- **Pedido explícito do usuário** — quando ele disser "pode commitar em main" / "merge em main agora"
-
-## Stack
+# CodeHelp CRM/Helpdesk
+> Sistema de CRM/Helpdesk com integração WhatsApp, kanban, CRM, analytics e app mobile.
 
 ## Stack
 
 | Camada | Tecnologia |
-|--------|-----------|
-| Backend | Node.js + Express + TypeScript |
-| ORM | Prisma + SQLite |
-| Auth | JWT (access 15min + refresh 7d) + bcrypt cost 12 |
-| Frontend | React 18 + Vite + TypeScript |
-| Estilização | Tailwind CSS |
-| Gráficos | Recharts |
-| Ícones | Lucide React |
-| Roteamento | React Router DOM |
-| HTTP | Axios com interceptor de refresh |
+|--------|------------|
+| **Backend** | Node.js + Express + TypeScript |
+| **Frontend Web** | React 18 + Vite + TypeScript + Tailwind CSS |
+| **Mobile** | React Native + Expo SDK 51 + Expo Router |
+| **Banco de dados** | Prisma + SQLite (dev) / PostgreSQL (prod) |
+| **ORM** | Prisma |
+| **Auth** | JWT (access 15min + refresh 7d) + bcryptjs |
+| **WhatsApp** | Baileys (primário) / Evolution API / Cloud API |
+| **Estado** | React Query (web) / Zustand (mobile) |
+| **Ícones** | Lucide React (web) |
 
-## Estrutura do projeto
+## Estrutura de pastas
 
 ```
 code-help/
 ├── backend/
-│   ├── prisma/          # Schema + migrations + seed
+│   ├── prisma/
+│   │   ├── schema.prisma        # Schema do banco
+│   │   ├── seed.ts              # Dados iniciais
+│   │   └── migrations/          # Migracoes
 │   ├── src/
-│   │   ├── config/      # database.ts, env.ts, redis.ts
-│   │   ├── modules/     # auth, users, clients, tasks, dashboard
-│   │   ├── shared/      # middleware (auth, error)
-│   │   └── server.ts    # Entry point
-│   ├── storage/pdfs/    # Uploads (gitignored)
-│   ├── whatsapp-session/ # Sessão WhatsApp (gitignored)
-│   └── dist/            # Build (gitignored)
+│   │   ├── config/              # database.ts, env.ts
+│   │   ├── modules/             # Modulos por dominio
+│   │   │   ├── auth/            # auth.controller.ts, rbac.ts
+│   │   │   ├── helpdesk/        # helpdesk.service.ts, autoMessages.service.ts
+│   │   │   ├── crm/             # crm.controller.ts
+│   │   │   ├── orders/          # orders.controller.ts
+│   │   │   ├── whatsapp/        # providers, handler compartilhado
+│   │   │   ├── ai/              # aiTriage.service.ts, aiValidation.service.ts
+│   │   │   ├── billing/         # billing.service.ts
+│   │   │   ├── alerts/          # alerts.service.ts
+│   │   │   ├── aprovacoes/      # aprovacao.controller.ts
+│   │   │   ├── kanban/          # kanban.controller.ts
+│   │   │   ├── analytics/       # analytics.controller.ts
+│   │   │   ├── kb/              # knowledge base
+│   │   │   ├── csat/            # customer satisfaction
+│   │   │   ├── automations/     # regras de automacao
+│   │   │   ├── notificacoes/    # notificacoes internas
+│   │   │   ├── permissions/     # RBAC avancado
+│   │   │   ├── feriados/        # feriados nacionais
+│   │   │   ├── audit/           # log de auditoria
+│   │   │   └── users/           # gestao de usuarios
+│   │   ├── shared/middleware/   # auth.ts (authenticate, authorize, ticketAccess)
+│   │   └── server.ts            # Entry point
+│   ├── storage/pdfs/            # Uploads (gitignored)
+│   └── dist/                    # Build (gitignored)
 ├── frontend/
 │   ├── src/
-│   │   ├── components/  # UI components, KanbanBoard, Layout
-│   │   ├── pages/       # Login, Dashboard, Clients, Kanban, Users
-│   │   ├── services/    # api.ts, auth.tsx (context)
-│   │   └── types/       # TypeScript interfaces
-│   └── dist/            # Build (gitignored)
-├── squads/              # ExpxAgents (estado/output gitignored)
-├── agents/              # Catálogo de agentes ExpxAgents
-├── mcps/                # Configs MCP
-├── .claude/             # Skills
-├── SPEC.md              # Documento de especificação
-├── AGENTS.md            # Este arquivo
-├── .claudeignore        # Exclusão de contexto Claude Code
-└── .gitignore           # Exclusão git/OpenCode
+│   │   ├── components/          # UI components reutilizaveis
+│   │   │   ├── ui/              # Button, Input, Card, Modal, etc.
+│   │   │   ├── KanbanBoard.tsx  # Board de kanban generico
+│   │   │   ├── Layout.tsx       # Layout principal (sidebar + content)
+│   │   │   └── ThemeSettings.tsx # Configuracoes de tema
+│   │   ├── pages/               # Paginas por rota
+│   │   │   ├── Login/
+│   │   │   ├── Dashboard/
+│   │   │   ├── CRM/             # ClientList, ClientForm, ClientDetail
+│   │   │   ├── Helpdesk/        # HelpdeskKanban, TicketAtendimentoPage
+│   │   │   ├── WhatsApp/        # WhatsAppPage, WhatsAppConnectionsPage
+│   │   │   ├── Kanban/          # KanbanPage (tarefas internas)
+│   │   │   ├── Orders/          # OrderList, OrderForm, SignPage
+│   │   │   └── Settings/        # HelpdeskConfigPage, Departamentos, Filas
+│   │   ├── services/            # api.ts, auth.tsx, ThemeContext.tsx
+│   │   └── types/               # index.ts (interfaces)
+│   └── dist/                    # Build (gitignored)
+├── mobile/                      # App React Native + Expo
+│   ├── app/                     # Expo Router (file-based)
+│   │   ├── (auth)/              # login.tsx
+│   │   ├── (tabs)/              # index, helpdesk, crm, orders, approvals, notifications
+│   │   └── (modals)/            # ticket/[id], client/[id], order/[id], settings
+│   └── src/                     # services, stores, screens, components, types
+├── .claude/                     # Skills e scripts RAG
+├── .opencode/                   # Config opencode, skills
+└── AGENTS.md                    # Este arquivo
 ```
 
-## Comandos principais
+## Como rodar localmente
 
 ```bash
-npm run dev               # Backend + frontend em paralelo
-npm run dev:backend       # Apenas backend (tsx watch, porta 3001)
-npm run dev:frontend      # Apenas frontend (vite, porta 5173)
-npm run build             # Build de ambos
-npm run db:migrate        # Prisma migrate dev
-npm run db:push           # Prisma db push
-npm run db:seed           # Executar seed
-npm run db:studio         # Prisma Studio
-npm run reset             # Encerra node, libera portas, limpa sessão WA e inicia dev (requer Admin)
-npm run reset:keep-session # Reset sem apagar sessão WA
-```
+# Instalar dependencias
+npm install
 
-> `reset-dev.ps1` precisa ser executado como **Administrador** (encerra processos node e remove locks do Chrome na pasta `backend/whatsapp-session`).
+# Backend
+npm run dev:backend          # Backend (tsx watch, porta 3001)
+
+# Frontend
+npm run dev:frontend         # Frontend (vite, porta 5173)
+
+# Mobile
+cd mobile
+npm install --legacy-peer-deps
+npx expo start               # Iniciar Expo
+
+# Banco de dados
+npm run db:push              # Prisma db push
+npm run db:seed              # Executar seed
+npm run db:studio            # Prisma Studio
+```
 
 ## Padrões de código
 
-- **Rotas Express:** `authenticate` global, `authorize('admin')` para rotas restritas
-- **Controllers:** `async (req: AuthRequest, res: Response)` com try/catch retornando `{ error: "mensagem" }`
-- **Contexto do usuário:** `req.user` tipado como `AuthRequest['user']` (id, email, role)
-- **Frontend:** Componentes funcionais, Axios com interceptor 401 → refresh → retry
-- **RBAC:** admin (tudo) / vendedor (próprios dados apenas) — filtro no WHERE do Prisma
+- **Backend**: Controllers com `async handler + try/catch`, services com `AppError` para erros, Prisma para queries
+- **Frontend**: Componentes funcionais com hooks, `useCallback` para funções, `usePolling` para refresh automático
+- **Mobile**: Expo Router (file-based), Zustand para state, NativeWind para estilos
+- **Nomenclatura**: kebab-case para arquivos React, camelCase para funções, PascalCase para componentes e tipos
+- **Endpoints**: `/api/{recurso}` para lista/criação, `/api/{recurso}/[id]` para item específico
 
-## Regra de Implementação: Não Mexer no Que Funciona
+## TDD
 
-> **Princípio absoluto:** ao implementar uma feature nova ou corrigir um bug, **não tocar em código que já está funcionando** sem necessidade. Cada linha alterada é uma linha que pode quebrar algo que estava verde.
+- **Backend**: Jest
+- **Frontend**: Jest + React Testing Library
+- **Mobile**: Jest + React Native Testing Library
+- **Onde ficam os testes**: `__tests__/api/` (integração), `__tests__/lib/` (unitários)
 
-### Checklist pré-mudança (obrigatório)
+## Regras de Proteção (SEMPRE SEGUIR)
 
-Antes de abrir o editor, responder por escrito:
+### 1. Antes de editar
+- **Leia o código ao redor** — entenda o contexto antes de modificar qualquer arquivo
+- **Entenda o fluxo** — rastreie como os dados chegam e saem do ponto que você vai alterar
+- **Verifique dependências** — outros arquivos importam ou chamam o que você vai mudar?
 
-1. **Qual é o escopo?** — Listar arquivo(s) e linha(s) que serão alteradas
-2. **Por que cada linha fora do escopo precisa mudar?** — Se não souber responder, **não mexe**
-3. **Existe alternativa que adiciona código sem editar o existente?** — Preferir SEMPRE essa via
-4. **Se quebrar, como detecto?** — Teste cobrindo o comportamento anterior existe? Se não, **criar antes**
+### 2. Durante a edição
+- **Edite o mínimo possível** — não refatore código funcional sem necessidade
+- **Mantenha compatibilidade** — se alterar uma assinatura de função, atualize todos os chamadores
+- **Não remova filtros existentes** — se adicionar um novo, não remova os anteriores
+- **Use os mesmos padrões** — se o código usa `prisma.model.findFirst`, não mude para `findUnique` sem motivo
+- **Não quebre tipos TypeScript** — mantenha interfaces existentes, adicione novas propriedades como opcionais
 
-### Checklist pós-mudança (obrigatório)
+### 3. Após a edição
+- **Rode `npx tsc --noEmit`** — verifique se não há erros de tipagem
+- **Rode `npm test`** — verifique se testes existentes não quebraram
+- **Não adicione `console.log`** em código de produção, use `console.warn` ou `console.error` apenas para erros
 
-1. `npx tsc --noEmit` limpo no backend e frontend
-2. `npm test` no backend: **todos** os testes passam (atualmente 32/32)
-3. `npm test` no frontend: **todos** os testes passam (atualmente 5/5)
-4. Se mudou biblioteca externa: validar que a API usada ainda existe no `node_modules/<lib>/index.d.ts`
-5. Se mudou schema Prisma: `npx prisma generate` + `npx prisma db push`
+### 4. Regras específicas por módulo
 
-### Anti-padrões proibidos (lista negra)
+#### WhatsApp
+- **NUNCA remover filtros de `fromMe`, `status_update`, `@g.us`, `status@broadcast`** — eles impedem mensagens indesejadas
+- **Ao adicionar novo provider**, adicione os MESMOS filtros que existem nos outros providers
+- **Handler compartilhado** (`whatsapp-message-handler.ts`) é o canonical — mudanças afetam Evolution E Cloud API
+- **Handler legado** (`whatsapp.service.ts`) é independente — mudanças NÃO afetam o shared handler
+- **NUNCA usar `Stop-Process -Name chrome`** — isso mata TODOS os Chrome do usuário. SEMPRE usar `killPuppeteerChrome(sessionDir)` do `whatsapp.service.ts`
 
-- "Já que estou aqui, vou melhorar X" — **proibido**
-- "Esse código está feio, vou reformatar" — **proibido**
-- "Vou unificar Y e Z" sem que Y ou Z tenha bug — **proibido**
-- Mudar de `var` para `const` em arquivo funcional sem motivo — **proibido**
-- Adicionar "proteções" extras em código validado por testes — **proibido**
-- "Vou só consertar esse typo que vi de passagem" sem ser o escopo — **proibido**
-- Trocar versão de biblioteca para "atualizar" sem motivo de bug — **proibido**
+#### Auth
+- **NUNCA remover verificação de `sessionToken`** — ela previne login em múltiplos dispositivos
+- **NUNCA rotacionar `sessionToken` no refresh** — apenas no login (causa logout em cascade)
 
-### Hierarquia: estender > substituir > reformatar
+#### Helpdesk/Triagem
+- **Fluxo de empresa**: verificar SEMPRE se a última mensagem do bot perguntou empresa antes de processar resposta
+- **Etapas do pipeline**: 6 fixas (`fila`, `triagem`, `em_atendimento`, `aguardando_cliente`, `aguardando_os`, `concluido`) — não reordenar
 
-- **Estender (preferido):** criar nova função/arquivo e chamar do novo lugar
-- **Substituir (aceitável se justificado):** editar função existente quando é o ÚNICO caminho
-- **Reformatar (proibido):** renomear, mover, mudar estilo sem motivo funcional
+#### Banco de dados
+- **NUNCA usar `deleteMany`** em dados de produção — usar `update` com `active: false`
+- **NUNCA editar migrations geradas** — criar nova migration se necessário
+- **SEMPRE usar `upsert`** quando o dado pode ou não existir
 
-### Regras específicas por categoria
+## Regras por submódulo
 
-**Integrações externas (whatsapp-web.js, axios, etc.):**
-- Mudar de versão **só** se há bug confirmado na versão atual
-- Sempre validar API usada no `index.d.ts` da nova versão
-- Quando a integração envolve sessão/auth (ex: `whatsapp-session/`), mudanças podem exigir **reset completo da sessão** — avisar o usuário antes
+### M1 — Autenticação
+- **JWT**: token em `Authorization: Bearer` header; `localStorage` chave `crm_token`
+- **Hash**: bcryptjs com 10 rounds — nunca md5, sha1 ou plain text
+- **Registro**: só DONO/GESTOR podem criar usuários; VENDEDOR não pode criar outros vendedores
+- **Logout**: apenas limpar `localStorage` e redirect — sem invalidar token no backend
 
-**Geração de identificadores únicos (protocolo, código, sequence):**
-- Qualquer função que faça read-modify-write de sequência **deve ter lock** (JS mutex OU transação serializável)
-- Validar que o parse da string existente retorna o índice certo (off-by-one é fácil)
-- Testar com chamadas paralelas explícitas
+### M2 — Helpdesk & Kanban
+- **Leads/Tickets**: Kanban com 6 etapas fixas
+- **Movimentação**: `PATCH /api/helpdesk/tickets/:id/move` valida `targetStage`
+- **Multi-departamento**: tickets podem ser atribuídos a departamentos específicos
+- **Triagem automática**: classificação por palavras-chave e IA
 
-**Typo pré-existente:**
-- Se um typecheck começou a falhar por código que ninguém mexeu recentemente, **é bug pré-existente** — pode consertar **só o que está bloqueando o build**, nada mais
+### M3 — WhatsApp Multi-Provider
+- **Baileys**: Provider primário (WebSocket, sem Chrome/Puppeteer)
+- **Evolution API**: Self-hosted Docker, API REST
+- **Cloud API**: Meta oficial, free tier 1000 conversas/mês
+- **Handler compartilhado**: lógica de bot/triagem reaproveitada entre providers
 
-### Quando a mudança é inevitável
+### M4 — Dashboard & Métricas
+- **Acesso**: rota e páginas exclusivas para admin/gerente
+- **Gráficos**: Donut (status, prioridade, canal), Bar (prioridade), Area (tendência)
+- **Métricas**: total tickets, tempo médio resposta, taxa resolução, clientes ativos
 
-- Documentar no commit: "tocado arquivo X fora do escopo porque Y"
-- Garantir cobertura de teste do comportamento anterior **antes** da mudança
-- Se quebrar teste existente, **parar e questionar** antes de corrigir o teste
+### M5 — Mobile (React Native + Expo)
+- **File-based routing**: Expo Router
+- **State**: Zustand stores (auth, helpdesk, crm, orders, notifications)
+- **Offline**: AsyncStorage + sync
+- **Push**: Expo Notifications + FCM
+- **Biometria**: expo-local-authentication
+- **Assinatura**: react-native-svg (canvas de assinatura)
 
-### Casos reais desta jornada (não repetir)
+### M6 — IA
+- **AiTriage**: Análise inteligente de problemas com Claude API (fallback local regex)
+- **AiValidation**: Propostas de resposta com workflow de validação humana
+- **Auto-attendance**: Config threshold para envio automático
 
-| Data | Bug | Como foi introduzido | Como evitar |
-|------|-----|----------------------|-------------|
-| 2026-06 | `whatsapp-web.js@1.25.0` quebrou stream de mensagens silenciosamente | Lib desatualizada incompatível com protocolo WA 2024+ | Manter libs de integração atualizadas; reagir a `ultimaMensagem: null` como sinal de incompatibilidade |
-| 2026-06 | Race condition `P2002 protocolo` em paralelo | Lock per-chatId não cobre contatos distintos | Qualquer geração de ID sequencial precisa de lock global OU `prisma.$transaction` |
-| 2026-06 | Off-by-one `partes[3]` vs `partes[2]` | Bug pré-existente; só manifestou quando WA voltou a funcionar | Validar split com `console.log(partes)` antes de usar índice |
-| 2026-06 | Typo `setTimeout(r, r)` no `sleep` | Pré-existente; typecheck começou a reclamar após mudanças | Não ignorar typecheck errors mesmo em código "que funcionava" |
+### M7 — Billing
+- **CRUD de cobranças** por cliente (terminais, hostlinks, interfaces, exames)
+- **Cálculo mensal** com auto-count para tipo "exames"
+- **Dashboard**: pendentes, cobrados, erros, valor total
 
-### Frase de efeito
+## Comandos úteis
 
-> **"Funcionando é o estado natural. Quebrando é que precisa de motivo."**
+```bash
+# Backend
+npm run dev:backend          # Backend (tsx watch, porta 3001)
+npm run db:push              # Prisma db push
+npm run db:seed              # Executar seed
+npx tsc --noEmit             # Typecheck backend
 
-## Regras de segurança
+# Frontend
+npm run dev:frontend         # Frontend (vite, porta 5173)
+npx tsc --noEmit             # Typecheck frontend
 
-- Vendedor só vê/altera próprios registros (filtro `where.sellerId` ou `where.assigneeId`)
-- Vendedor não pode criar tasks para outros usuários (forçar `assigneeId = req.user.id`)
-- Vendedor não pode criar clientes para outros vendedores (forçar `sellerId = req.user.id`)
-- DELETE de clientes/tasks: somente admin (`authorize('admin')`)
-- Login com rate limit: 5 tentativas/hora
-- Senhas com bcrypt cost 12
+# Mobile
+cd mobile
+npx expo start               # Iniciar Expo
+npx expo run:android         # Build Android
+npx expo run:ios             # Build iOS
+```
 
-## TDD (se aplicável)
+## Decisões em aberto
 
-- Seed padrão: admin@codemed.com.br / admin123 (role: admin)
-- Seed padrão: vendedor@codemed.com.br / admin123 (role: vendedor)
-- Rodar seed antes de testar: `npm run db:seed`
+- [ ] Nome do sistema e logo/branding
+- [ ] Deploy do backend (Vercel não suporta Express nativamente)
 
-## Nunca fazer
+## Progresso Recente (SessãoAtual)
 
-- Usar nomes "Leticia" ou "Rafael" em qualquer saída do sistema
-- Usar JS puro no backend (sempre TypeScript)
-- Expor senhas ou tokens em logs ou respostas de erro
-- Dependências externas desnecessárias (preferir drag nativo do HTML5 a bibliotecas)
-- Mensagens, textos ou variáveis em inglês no output do sistema (sempre pt-BR)
+### Kanban Interno — Completo
+- [x] Modal flutuante centralizado (substituiu painel lateral)
+- [x] Aba Checklist com barra de progresso e importação de templates
+- [x] Campos Prioridade/Categoria/Classificação/Prazo editáveis direto na visualização
+- [x] Botão IA para auto-categorizar (prioridade, classificação, categoria)
+- [x] Backend: `ai-categorize.service.ts` (Claude API + fallback local por palavras-chave)
+- [x] Backend: Checklist template CRUD + import para tickets e kanban
+- [x] Backend: `department-integration.service.ts` (tempo por departamento)
+- [x] Backend: `fcr.service.ts` (First Contact Resolution)
+- [x] Frontend: proxy `/uploads` no vite.config (correção de imagens)
+- [x] Defesas de runtime para evitar tela branca
+
+### Helpdesk — Completo
+- [x] Sistema de checklist em tickets (CRUD + progress bar)
+- [x] Checklist template management (criar, editar, importar)
+- [x] Prazo de entrega com indicador visual (atrasado/próximo/no prazo)
+- [x] Horas de desenvolvimento
+- [x] Tempo por departamento (TicketDepartmentTime)
+- [x] Dashboard com card Taxa FCR
+
+### Próximos passos
+- [ ] Ordem de serviço (Orders)
+- [ ] Dark mode global (tema escuro para todo o sistema)
