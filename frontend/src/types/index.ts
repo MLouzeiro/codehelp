@@ -81,6 +81,30 @@ export interface Task {
   updatedAt: string;
 }
 
+export interface TicketChecklist {
+  id: string;
+  ticketId: string;
+  titulo: string;
+  concluida: boolean;
+  ordem: number;
+  responsavelId?: string;
+  responsavel?: { id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChecklistTemplate {
+  id: string;
+  nome: string;
+  descricao?: string;
+  categoria: string;
+  items: string; // JSON string: [{titulo, ordem}]
+  publico: boolean;
+  criadorId: string;
+  criador?: { id: string; name: string };
+  createdAt: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
@@ -138,6 +162,8 @@ export interface HelpdeskTicket {
   assignee?: { id: string; name: string; email: string } | null;
   departamentoId?: string;
   departamento?: Departamento;
+  channelId?: string;
+  channel?: { id: string; nome: string; tipo: string; slug: string; cor: string; avatar?: string } | null;
   nivelSuporteId?: string;
   nivel?: NivelSuporte;
   dataAbertura: string;
@@ -145,14 +171,28 @@ export interface HelpdeskTicket {
   dataFechamento?: string;
   updatedAt?: string;
   lastMessage?: { content?: string; fromMe?: boolean; createdAt?: string } | null;
-  _count?: { messages: number; orders: number };
+  _count?: { messages: number; orders: number; checklists?: number };
   emAtendimentoDesde?: string;
   tempoDecorridoMin?: number;
+  // ── IA ──
+  resolvidoPorIa?: boolean;
+  iaClassificacao?: string;
+  iaResumoProblema?: string;
+  iaSugestaoResposta?: string;
+  iaNotaEncerramento?: string;
+  iaAvaliacaoQualidade?: string;
+  iaMensagensEnviadas?: number;
+  prazoEntrega?: string;
+  semPrazo?: boolean;
+  horasDesenvolvimento?: number;
+  dataInicioImplantacao?: string;
+  dataFimImplantacao?: string;
+  checklists?: TicketChecklist[];
 }
 
 export type StatusSlug =
   | 'aberto'
-  | 'em_andamento'
+  | 'em_atendimento'
   | 'pendente'
   | 'escalonado'
   | 'resolvido'
@@ -367,4 +407,394 @@ export interface HelpdeskDashboardData {
       tempoDecorridoMin: number;
     }>;
   }>;
+}
+
+export interface AuditStats {
+  periodo: { inicio: string; fim: string };
+  totalAcoes: number;
+  porAcao: Array<{ acao: string; total: number; percentual: number }>;
+  porEntidade: Array<{ entidade: string; total: number; percentual: number }>;
+  porUsuario: Array<{ usuarioId: string; nome: string; total: number }>;
+  porDia: Array<{ data: string; total: number }>;
+  topEntidades: Array<{ entidade: string; entidadeId: string; total: number }>;
+}
+
+export interface TicketPosition {
+  ticketId: string;
+  protocolo?: string;
+  etapa: string;
+  prioridade?: string;
+  posicao: number;
+  totalNaFila: number;
+  tempoEstimadoMin: number;
+  slaMinutos: number;
+}
+
+// ── WhatsApp Connections ───────────────────────────────────────────────
+export interface WhatsAppConnection {
+  id: string;
+  nome: string;
+  numero: string;
+  slug: string;
+  provider?: string;
+  departamentoId?: string;
+  ativo: boolean;
+  createdAt: string;
+  updatedAt: string;
+  departamento?: {
+    id: string;
+    nome: string;
+    slug: string;
+    cor: string;
+  };
+  _count?: {
+    tickets: number;
+  };
+}
+
+export interface WhatsAppConnectionStatus {
+  id: string;
+  nome: string;
+  numero: string;
+  departamentoId?: string;
+  connected: boolean;
+  scanning: boolean;
+  state: string;
+  error: string | null;
+  lastMessageAt: string | null;
+  lastHeartbeat: number;
+  qrCode: string | null;
+}
+
+// ── Multi-Channel ─────────────────────────────────────────────────────
+export interface Channel {
+  id: string;
+  nome: string;
+  tipo: string;
+  slug: string;
+  provider?: string;
+  config?: string;
+  departamentoId?: string;
+  avatar?: string;
+  cor?: string;
+  metadata?: string;
+  ativo: boolean;
+  lastSyncAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  departamento?: {
+    id: string;
+    nome: string;
+    slug: string;
+    cor: string;
+  };
+  _count?: {
+    tickets: number;
+    channelMessages: number;
+  };
+  riskLogs?: ChannelRiskLog[];
+}
+
+export interface ChannelType {
+  tipo: string;
+  label: string;
+  icon: string;
+  color: string;
+  providers: string[];
+}
+
+export interface ChannelMessage {
+  id: string;
+  channelId: string;
+  ticketId?: string;
+  externalId?: string;
+  fromMe: boolean;
+  contactName?: string;
+  contactId?: string;
+  content?: string;
+  mediaUrl?: string;
+  mimeType?: string;
+  status?: string;
+  rawPayload?: string;
+  createdAt: string;
+}
+
+export interface ChannelRiskLog {
+  id: string;
+  channelId: string;
+  tipo: string;
+  severidade: string;
+  mensagem: string;
+  resolvido: boolean;
+  resolvidoEm?: string;
+  createdAt: string;
+}
+
+export interface ChannelStats {
+  totalTickets: number;
+  openTickets: number;
+  totalMessages: number;
+  messagesLast24h: number;
+}
+
+// ── IA Ticket Types ────────────────────────────────────────────
+
+export interface TicketAnalytics {
+  ticketId: string;
+  tempoTotalMin: number;
+  tempoPrimeiraRespostaMin: number | null;
+  tempoEmAtendimentoMin: number;
+  tempoAguardandoClienteMin: number;
+  tempoMedioRespostaMin: number;
+  distribuicaoMensagens: {
+    total: number;
+    cliente: number;
+    agente: number;
+    bot: number;
+  };
+  resolvidoPorIa: boolean;
+  iaMensagensEnviadas: number;
+  classificacaoIa: {
+    categoria: string;
+    prioridade: string;
+    confianca: number;
+    metodo: string;
+  } | null;
+  resumoIa: string | null;
+  notaEncerramentoIa: string | null;
+  avaliacaoIa: {
+    notaQualidade: number;
+    pontosForts: string[];
+    pontosMelhoria: string[];
+    resumo: string;
+  } | null;
+}
+
+export interface AiMetricas {
+  periodo: { inicio: string; fim: string };
+  totalChamados: number;
+  chamadosIaResolveu: number;
+  taxaResolucaoIa: number;
+  tempoMedioResolucaoIaMin: number;
+  tempoMedioResolucaoHumanoMin: number;
+  totalCorrecoes: number;
+  confiancaMediaClassificacao: number;
+  distribuicaoClassificacao: Array<{ categoria: string; total: number }>;
+}
+
+export interface AIClassification {
+  id: string;
+  ticketId: string;
+  categoria: string | null;
+  prioridade: string | null;
+  confianca: number | null;
+  metodo: string;
+  rawResponse: string | null;
+  createdAt: string;
+}
+
+export interface AIEvaluation {
+  id: string;
+  ticketId: string;
+  notaQualidade: number;
+  pontosForts: string | null;
+  pontosMelhoria: string | null;
+  resumo: string | null;
+  modeloUsado: string | null;
+  createdAt: string;
+}
+
+export interface AICorrection {
+  id: string;
+  ticketId: string;
+  mensagemOriginal: string;
+  tipoErro: string;
+  correcao: string;
+  corrigidoPor?: { id: string; name: string } | null;
+  treinada: boolean;
+  createdAt: string;
+}
+
+// ── Audit Tables Types ─────────────────────────────────────────
+
+export type TicketEventType =
+  | 'created' | 'message_sent' | 'message_received'
+  | 'stage_changed' | 'assignee_changed' | 'priority_changed'
+  | 'sla_started' | 'sla_paused' | 'sla_resumed' | 'sla_breached' | 'sla_completed'
+  | 'ai_classified' | 'ai_responded' | 'ai_evaluated'
+  | 'note_added' | 'escalated' | 'merged' | 'reopened' | 'closed';
+
+export interface TicketEvent {
+  id: string;
+  ticketId: string;
+  tipo: TicketEventType;
+  descricao?: string;
+  dados?: string;
+  usuarioId?: string;
+  usuario?: { id: string; name: string; avatar?: string };
+  isSystem: boolean;
+  isAi: boolean;
+  mensagemId?: string;
+  metadata?: string;
+  createdAt: string;
+}
+
+export interface TicketTimelineEntry {
+  id: string;
+  ticketId: string;
+  etapa: string;
+  dataEntrada: string;
+  dataSaida?: string;
+  duracaoMinutos?: number;
+  duracaoBusinessMin?: number;
+  responsavelAnteriorId?: string;
+  responsavelAnterior?: { id: string; name: string };
+  responsavelNovoId?: string;
+  responsavelNovo?: { id: string; name: string };
+  motivoMudanca?: string;
+  isPaused: boolean;
+  pausaTotalMinutos: number;
+  createdAt: string;
+}
+
+export interface TicketMetrics {
+  id: string;
+  ticketId: string;
+  tempoTotalMin: number;
+  tempoPrimeiraRespostaMin?: number;
+  tempoPrimeiraRespostaIaMin?: number;
+  tempoPrimeiraRespostaHumMin?: number;
+  tempoEmAtendimentoMin: number;
+  tempoAguardandoClienteMin: number;
+  tempoAguardandoTerceiroMin: number;
+  tempoFilaMin: number;
+  tempoResolucaoIaMin?: number;
+  tempoResolucaoHumanoMin?: number;
+  tempoLeadTimeMin: number;
+  tempoUtilMin: number;
+  tempoCorridoMin: number;
+  tempoForaExpedienteMin: number;
+  tempoParadoMin: number;
+  totalMensagens: number;
+  mensagensCliente: number;
+  mensagensAgente: number;
+  mensagensBot: number;
+  totalReaberturas: number;
+  totalEscalonamentos: number;
+  slaPrazoMinutos?: number;
+  slaConsumidoMinutos: number;
+  slaRestanteMinutos: number;
+  slaPercentualConsumido: number;
+  slaStatus?: string;
+  csatNota?: number;
+  csatRespondido: boolean;
+  resolvidoPorIa: boolean;
+  iaConfiancaMedia?: number;
+  iaTotalInteracoes: number;
+  iaCustoTotalUsd: number;
+  iaCustoTotalBrl: number;
+  primeiraRespostaEm?: string;
+  ultimoAtendimentoEm?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TicketSlaLog {
+  id: string;
+  ticketId: string;
+  acao: string;
+  slaMinutos: number;
+  percentual?: number;
+  restantesMin?: number;
+  motivo?: string;
+  dados?: string;
+  usuarioId?: string;
+  usuario?: { id: string; name: string };
+  isSystem: boolean;
+  createdAt: string;
+}
+
+export interface TicketActivity {
+  id: string;
+  ticketId: string;
+  usuarioId?: string;
+  usuario?: { id: string; name: string; avatar?: string };
+  tipo: string;
+  descricao?: string;
+  dados?: string;
+  ip?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
+export interface TicketWaitTime {
+  id: string;
+  ticketId: string;
+  etapa: string;
+  dataEntrada: string;
+  dataSaida?: string;
+  duracaoMin?: number;
+  motivo?: string;
+  usuarioId?: string;
+  usuario?: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface TicketAiLog {
+  id: string;
+  ticketId: string;
+  tipo: string;
+  modelo?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  custoUsd?: number;
+  custoBrl?: number;
+  latenciaMs?: number;
+  confianca?: number;
+  resultado?: string;
+  correcaoId?: string;
+  erro?: string;
+  duracaoProcessamentoMs?: number;
+  createdAt: string;
+}
+
+export interface TicketPerformance {
+  id: string;
+  periodo: string;
+  tipoPeriodo: string;
+  usuarioId?: string;
+  usuario?: { id: string; name: string };
+  departamentoId?: string;
+  ticketsRecebidos: number;
+  ticketsResolvidos: number;
+  ticketsEscalonados: number;
+  ticketsReabertos: number;
+  ticketsCancelados: number;
+  mttrMin: number;
+  mttaMin: number;
+  mtfaMin: number;
+  mtFilaMin: number;
+  slaCompliancePct: number;
+  slaViolados: number;
+  slaNoPrazo: number;
+  csatMedio?: number;
+  csatTotalRespostas: number;
+  fcrPct: number;
+  iaResolveu: number;
+  iaConfiancaMedia?: number;
+  iaCustoTotalUsd: number;
+  totalMensagensEnviadas: number;
+  totalMensagensRecebidas: number;
+  tempoAtivoMinutos: number;
+  createdAt: string;
+}
+
+export interface TicketReplayData {
+  events: TicketEvent[];
+  timeline: TicketTimelineEntry[];
+  metrics: TicketMetrics | null;
+  slaLogs: TicketSlaLog[];
+  activities: TicketActivity[];
+  waitTimes: TicketWaitTime[];
+  aiLogs: TicketAiLog[];
 }

@@ -19,6 +19,8 @@ import { calcularPosicaoFila, recalcularFilaDepartamento } from './fila.service'
 import { normalizeRole } from '../auth/rbac';
 import { sendWhatsAppMessage } from '../integrations/whatsapp/whatsapp.service';
 import { notificarAtendentesFila } from '../alerts/alerts.service';
+import { calcularFCR, metricasFCR } from './fcr.service';
+import { criarKanbanTaskDeTicket, tempoPorDepartamento } from './department-integration.service';
 
 const PRIORIDADE_ORDEM: Record<string, number> = {
   urgente: 0,
@@ -68,7 +70,7 @@ export async function getKanban(req: AuthRequest, res: Response) {
         departamento: { select: { id: true, nome: true, slug: true, cor: true } },
         channel: { select: { id: true, nome: true, tipo: true, slug: true, cor: true, avatar: true } },
         messages: { orderBy: { createdAt: 'desc' }, take: 1 },
-        _count: { select: { messages: true, orders: true } },
+        _count: { select: { messages: true, orders: true, checklists: true } },
       },
       orderBy: { updatedAt: 'desc' },
     });
@@ -386,7 +388,7 @@ export async function updateEtapaConfig(req: AuthRequest, res: Response) {
 export async function moveTicketEtapa(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { etapa, atribuirParaMim, observacao, clientId } = req.body;
+    const { etapa, atribuirParaMim, observacao, clientId, prazoEntrega, semPrazo, horasDesenvolvimento } = req.body;
     if (!etapa) return res.status(400).json({ error: 'Etapa é obrigatória' });
 
     const config = await getEtapaConfig(etapa);
@@ -426,6 +428,9 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
     if (etapa === 'em_atendimento' && etapaAnterior !== 'em_atendimento') {
       updateData.filaOrder = null;
     }
+    if (prazoEntrega !== undefined) updateData.prazoEntrega = prazoEntrega ? new Date(prazoEntrega) : null;
+    if (semPrazo !== undefined) updateData.semPrazo = !!semPrazo;
+    if (horasDesenvolvimento !== undefined) updateData.horasDesenvolvimento = horasDesenvolvimento !== null ? Number(horasDesenvolvimento) : null;
     if (etapa === 'fila' && etapaAnterior !== 'fila') {
       const deptId = updateData.departamentoId || ticket.departamentoId || null;
       if (deptId) {
@@ -1029,5 +1034,70 @@ export async function setTicketTagsController(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: error.message });
     }
     return res.status(500).json({ error: 'Erro ao definir tags' });
+  }
+}
+
+export async function getTicketFCR(req: AuthRequest, res: Response) {
+  try {
+    const fcr = await calcularFCR(req.params.id);
+    if (!fcr) return res.status(404).json({ error: 'Ticket não encontrado' });
+    return res.json(fcr);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao calcular FCR' });
+  }
+}
+
+export async function getMetricasFCR(req: AuthRequest, res: Response) {
+  try {
+    const { inicio, fim } = req.query;
+    const metricas = await metricasFCR({
+      inicio: inicio ? new Date(inicio as string) : undefined,
+      fim: fim ? new Date(fim as string) : undefined,
+    });
+    return res.json(metricas);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao calcular métricas FCR' });
+  }
+}
+
+export async function getTicketDepartmentTime(req: AuthRequest, res: Response) {
+  try {
+    const tempos = await tempoPorDepartamento(req.params.id);
+    return res.json(tempos);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao buscar tempo por departamento' });
+  }
+}
+
+export async function criarKanbanTaskHandler(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { departamentoId, titulo, descricao, prioridade, responsavelId, prazoEntrega } = req.body;
+    if (!departamentoId) return res.status(400).json({ error: 'departamentoId obrigatório' });
+
+    const kanbanTask = await criarKanbanTaskDeTicket({
+      ticketId: id,
+      departamentoId,
+      titulo: titulo || `Ticket #${id.slice(0, 8)}`,
+      descricao,
+      prioridade,
+      responsavelId,
+      prazoEntrega: prazoEntrega ? new Date(prazoEntrega) : undefined,
+    });
+
+    if (!kanbanTask) return res.status(400).json({ error: 'Não foi possível criar tarefa no Kanban' });
+
+    await logAction({
+      usuarioId: req.user?.id,
+      acao: 'criar_kanban_task',
+      entidade: 'Ticket',
+      entidadeId: id,
+      detalhes: { kanbanTaskId: kanbanTask.id, departamentoId },
+      ip: getIpFromRequest(req),
+    });
+
+    return res.json(kanbanTask);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao criar tarefa Kanban' });
   }
 }

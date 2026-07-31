@@ -15,6 +15,7 @@ import { whatsappWebJSProviderService } from './whatsapp-webjs.service';
 import { evolutionApiService } from './evolution-api.service';
 import { unifiedWhatsAppService } from './unified-whatsapp.service';
 import path from 'path';
+import { registrarInteracaoAgente } from '../../helpdesk/fcr.service';
 
 async function autoMoveTicketOnAgentReply(ticketId: string, userId: string): Promise<void> {
   try {
@@ -47,6 +48,12 @@ async function autoMoveTicketOnAgentReply(ticketId: string, userId: string): Pro
     } else if (ticket.etapa === 'em_atendimento') {
       await prisma.ticket.update({ where: { id: ticketId }, data: { lastAgentMessageAt: new Date() } });
     }
+
+    registrarInteracaoAgente({
+      ticketId,
+      usuarioId: userId,
+      tipo: 'resposta_whatsapp',
+    }).catch((e) => console.warn('[WhatsApp] FCR tracking falhou:', e?.message || e));
   } catch (err) {
     console.error('[WhatsApp] Erro auto-move:', err);
   }

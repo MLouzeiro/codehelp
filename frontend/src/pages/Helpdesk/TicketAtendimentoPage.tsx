@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Maximize2, Send, Loader2, ArrowLeft } from 'lucide-react';
+import { Maximize2, Send, Loader2, ArrowLeft, Calendar, Clock, AlertTriangle, ToggleLeft, ToggleRight, Building2 } from 'lucide-react';
 import api from '../../services/api';
 import TicketTopo from '../../components/TicketTopo';
 import TicketSidebar from '../../components/TicketSidebar';
 import TicketRodape from '../../components/TicketRodape';
+import TicketChecklist from '../../components/TicketChecklist';
 
 export default function TicketAtendimentoPage() {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -13,25 +14,36 @@ export default function TicketAtendimentoPage() {
   const [cliente, setCliente] = useState<any>(null);
   const [historicoContato, setHistoricoContato] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aba, setAba] = useState<'chat' | 'timeline'>('chat');
+  const [aba, setAba] = useState<'chat' | 'timeline' | 'checklist'>('chat');
   const [mensagens, setMensagens] = useState<any[]>([]);
   const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
   const [novaMsg, setNovaMsg] = useState('');
   const [enviando, setEnviando] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [prazoEntrega, setPrazoEntrega] = useState('');
+  const [semPrazo, setSemPrazo] = useState(false);
+  const [salvandoPrazo, setSalvandoPrazo] = useState(false);
+  const [horasDesenv, setHorasDesenv] = useState<number | ''>('');
+  const [salvandoHoras, setSalvandoHoras] = useState(false);
+  const [deptTempos, setDeptTempos] = useState<any[]>([]);
 
   const loadTicket = useCallback(async () => {
     if (!ticketId) return;
     try {
-      const [historyRes, timelineRes] = await Promise.all([
+      const [historyRes, timelineRes, deptTimeRes] = await Promise.all([
         api.get(`/helpdesk/tickets/${ticketId}/history`),
         api.get(`/audit-ticket/tickets/${ticketId}/events`).catch(() => ({ data: [] })),
+        api.get(`/helpdesk/tickets/${ticketId}/department-time`).catch(() => ({ data: [] })),
       ]);
       const t = historyRes.data.ticket || historyRes.data;
       setTicket(t);
       setMensagens(t.messages || []);
       setTimelineEvents(timelineRes.data);
       setHistoricoContato(historyRes.data.historicoContato || []);
+      setDeptTempos(deptTimeRes.data);
+      setPrazoEntrega(t.prazoEntrega ? new Date(t.prazoEntrega).toISOString().slice(0, 16) : '');
+      setSemPrazo(t.semPrazo || false);
+      setHorasDesenv(t.horasDesenvolvimento ?? '');
       if (t.clientId) {
         try {
           const { data: c } = await api.get(`/crm/clients/${t.clientId}`);
@@ -80,6 +92,47 @@ export default function TicketAtendimentoPage() {
       e.preventDefault();
       enviarMensagem();
     }
+  };
+
+  const salvarPrazo = async () => {
+    if (!ticketId) return;
+    setSalvandoPrazo(true);
+    try {
+      await api.patch(`/helpdesk/tickets/${ticketId}/move`, {
+        etapa: ticket.etapa,
+        prazoEntrega: semPrazo ? null : (prazoEntrega || null),
+        semPrazo,
+      });
+      loadTicket();
+    } catch {
+    } finally {
+      setSalvandoPrazo(false);
+    }
+  };
+
+  const salvarHorasDesenv = async () => {
+    if (!ticketId) return;
+    setSalvandoHoras(true);
+    try {
+      await api.patch(`/helpdesk/tickets/${ticketId}/move`, {
+        etapa: ticket.etapa,
+        horasDesenvolvimento: horasDesenv === '' ? null : Number(horasDesenv),
+      });
+      loadTicket();
+    } catch {
+    } finally {
+      setSalvandoHoras(false);
+    }
+  };
+
+  const getDeadlineStatus = () => {
+    if (semPrazo || !ticket?.prazoEntrega) return null;
+    const prazo = new Date(ticket.prazoEntrega);
+    const agora = new Date();
+    const horasRestantes = (prazo.getTime() - agora.getTime()) / (1000 * 60 * 60);
+    if (horasRestantes < 0) return { label: 'Atrasado', color: 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30', icon: AlertTriangle };
+    if (horasRestantes < 24) return { label: `Vence em ${Math.floor(horasRestantes)}h`, color: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30', icon: Clock };
+    return { label: `Prazo: ${prazo.toLocaleDateString('pt-BR')}`, color: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30', icon: Calendar };
   };
 
   const getTimelineIcon = (ev: any) => {
@@ -132,7 +185,7 @@ export default function TicketAtendimentoPage() {
       <div className="flex-1 grid grid-cols-[1fr_300px] border border-slate-200 border-t-0 rounded-b-xl bg-white dark:bg-slate-800 dark:border-slate-700 overflow-hidden min-h-0">
         {/* === COLUNA ESQUERDA: CHAT / TIMELINE === */}
         <div className="flex flex-col min-h-0 relative">
-          {/* Toggle Chat/Timeline */}
+          {/* Toggle Chat/Timeline/Checklist */}
           <div className="flex-shrink-0 flex border-b border-slate-200 dark:border-slate-700">
             <button
               onClick={() => setAba('chat')}
@@ -153,6 +206,16 @@ export default function TicketAtendimentoPage() {
               }`}
             >
               {'\uD83D\uDCCB'} Timeline
+            </button>
+            <button
+              onClick={() => setAba('checklist')}
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                aba === 'checklist'
+                  ? 'text-slate-800 border-b-2 border-blue-500 bg-slate-50 dark:text-slate-100 dark:bg-slate-900'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+              }`}
+            >
+              {'\u2611\uFE0F'} Checklist
             </button>
           </div>
 
@@ -187,7 +250,37 @@ export default function TicketAtendimentoPage() {
                             ? 'bg-blue-50 border border-blue-200 rounded-br-sm dark:bg-blue-900/30 dark:border-blue-700'
                             : 'bg-emerald-50 border border-emerald-200 rounded-br-sm dark:bg-emerald-900/30 dark:border-emerald-700'
                       }`}>
-                        <div>{msg.content || '(sem conteúdo)'}</div>
+                        {msg.mediaUrl && msg.mimeType?.startsWith('image/') && (
+                          <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="block mb-2">
+                            <img
+                              src={msg.mediaUrl}
+                              alt="Imagem"
+                              className="max-w-[280px] max-h-[200px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity border border-slate-200 dark:border-slate-600"
+                              loading="lazy"
+                            />
+                          </a>
+                        )}
+                        {msg.mediaUrl && msg.mimeType?.startsWith('video/') && (
+                          <video
+                            src={msg.mediaUrl}
+                            controls
+                            className="max-w-[280px] max-h-[200px] rounded-lg mb-2"
+                          />
+                        )}
+                        {msg.mediaUrl && msg.mimeType?.startsWith('audio/') && (
+                          <audio src={msg.mediaUrl} controls className="w-full mb-2" />
+                        )}
+                        {msg.mediaUrl && !msg.mimeType?.startsWith('image/') && !msg.mimeType?.startsWith('video/') && !msg.mimeType?.startsWith('audio/') && (
+                          <a
+                            href={msg.mediaUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline mb-2 text-xs"
+                          >
+                            📎 Arquivo anexo
+                          </a>
+                        )}
+                        <div>{msg.content || (msg.mediaUrl ? '' : '(sem conteúdo)')}</div>
                       </div>
                       <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400 dark:text-slate-500">
                         <span>{new Date(msg.createdAt || msg.sentAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -227,7 +320,11 @@ export default function TicketAtendimentoPage() {
                 <div className="text-center py-12 text-sm text-slate-400 dark:text-slate-500">
                   Nenhum evento registrado
                 </div>
-              ) : (
+          ) : aba === 'checklist' ? (
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900">
+              <TicketChecklist ticketId={ticketId!} onChange={loadTicket} />
+            </div>
+          ) : (
                 <div className="space-y-0">
                   {timelineEvents.slice(0, 20).map((ev: any, i: number) => {
                     const icon = getTimelineIcon(ev);
@@ -255,7 +352,102 @@ export default function TicketAtendimentoPage() {
         </div>
 
         {/* === COLUNA DIREITA: SIDEBAR === */}
-        <div className="border-l border-slate-200 dark:border-slate-700 p-4 overflow-y-auto">
+        <div className="border-l border-slate-200 dark:border-slate-700 p-4 overflow-y-auto space-y-4">
+          {/* Prazo de Entrega */}
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar size={14} className="text-blue-600 dark:text-blue-400" />
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Prazo de Entrega</span>
+            </div>
+            {getDeadlineStatus() && (
+              <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg mb-2 ${getDeadlineStatus()!.color}`}>
+                {(() => { const Icon = getDeadlineStatus()!.icon; return <Icon size={12} />; })()}
+                {getDeadlineStatus()!.label}
+              </div>
+            )}
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={() => { setSemPrazo(!semPrazo); }}
+                className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400"
+              >
+                {semPrazo ? <ToggleRight size={18} className="text-emerald-500" /> : <ToggleLeft size={18} className="text-slate-400" />}
+                Sem prazo
+              </button>
+            </div>
+            {!semPrazo && (
+              <input
+                type="datetime-local"
+                value={prazoEntrega}
+                onChange={(e) => setPrazoEntrega(e.target.value)}
+                onBlur={salvarPrazo}
+                className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-400 transition-colors text-slate-700 dark:text-slate-300"
+              />
+            )}
+            {prazoEntrega !== (ticket?.prazoEntrega ? new Date(ticket.prazoEntrega).toISOString().slice(0, 16) : '') || semPrazo !== (ticket?.semPrazo || false) ? (
+              <button
+                onClick={salvarPrazo}
+                disabled={salvandoPrazo}
+                className="mt-2 w-full text-xs bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-lg font-medium disabled:opacity-40 transition-colors"
+              >
+                {salvandoPrazo ? 'Salvando...' : 'Salvar Prazo'}
+              </button>
+            ) : null}
+          </div>
+
+          {/* Horas de Desenvolvimento */}
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock size={14} className="text-amber-600 dark:text-amber-400" />
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Horas Desenvolvimento</span>
+            </div>
+            <div className="flex gap-2 items-center">
+              <input
+                type="number"
+                value={horasDesenv}
+                onChange={(e) => setHorasDesenv(e.target.value === '' ? '' : Number(e.target.value))}
+                onBlur={salvarHorasDesenv}
+                placeholder="0"
+                min={0}
+                step={0.5}
+                className="flex-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-400 transition-colors text-slate-700 dark:text-slate-300"
+              />
+              <span className="text-xs text-slate-500 dark:text-slate-400">horas</span>
+            </div>
+          </div>
+
+          {/* Tempo por Departamento */}
+          {deptTempos.length > 0 && (
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+              <div className="flex items-center gap-2 mb-3">
+                <Building2 size={14} className="text-purple-600 dark:text-purple-400" />
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Tempo por Depto</span>
+              </div>
+              <div className="space-y-2">
+                {deptTempos.map((dt: any) => {
+                  const mins = dt.duracaoMin || 0;
+                  const horas = Math.floor(mins / 60);
+                  const minsResto = mins % 60;
+                  return (
+                    <div key={dt.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dt.departamento?.cor || '#6366f1' }} />
+                        <span className="text-xs text-slate-600 dark:text-slate-400">{dt.departamento?.nome}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                          {horas > 0 ? `${horas}h ` : ''}{minsResto}min
+                        </span>
+                        {dt.emAndamento && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">agora</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <TicketSidebar ticket={ticket} cliente={cliente} lastEvents={timelineEvents} historicoContato={historicoContato} onTagsChange={() => loadTicket()} />
         </div>
       </div>

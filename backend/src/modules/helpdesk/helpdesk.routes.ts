@@ -17,6 +17,15 @@ import {
   assumeTicket,
   getTicketPosition,
   recalcQueue,
+  getTicketAnalytics,
+  getTicketTagsController,
+  addTicketTagController,
+  removeTicketTagController,
+  setTicketTagsController,
+  getTicketFCR,
+  getTicketDepartmentTime,
+  criarKanbanTaskHandler,
+  getMetricasFCR,
 } from './helpdesk.controller';
 import {
   getStages,
@@ -59,6 +68,7 @@ router.post('/tickets/:id/triage', requireTicketAccess('edit'), triageTicket);
 router.post('/tickets/:id/assume', requireTicketAccess('edit'), assumeTicket);
 router.patch('/tickets/:id/client', requireTicketAccess('edit'), updateTicketClient);
 router.get('/tickets/:id/history', requireTicketAccess('view'), getTicketHistory);
+router.get('/tickets/:id/analytics', requireTicketAccess('view'), getTicketAnalytics);
 router.get('/tickets/:id/position', requireTicketAccess('view'), getTicketPosition);
 router.post('/queue/recalc', authorize('admin', 'gerente', 'supervisor'), recalcQueue);
 router.post('/presence', setAgentPresence);
@@ -84,5 +94,15 @@ router.get('/metrics', authorize('admin', 'gerente', 'supervisor'), getMetrics);
 router.get('/auto-messages', authorize('admin', 'gerente'), listAutoMessagesHandler);
 router.put('/auto-messages/:slug', authorize('admin', 'gerente'), updateAutoMessageHandler);
 router.post('/auto-messages/:slug/reset', authorize('admin', 'gerente'), resetAutoMessageHandler);
+
+router.get('/tickets/:id/tags', requireTicketAccess('view'), getTicketTagsController);
+router.post('/tickets/:id/tags', requireTicketAccess('edit'), addTicketTagController);
+router.delete('/tickets/:id/tags/:tag', requireTicketAccess('edit'), removeTicketTagController);
+router.put('/tickets/:id/tags', requireTicketAccess('edit'), setTicketTagsController);
+
+router.get('/tickets/:id/fcr', requireTicketAccess('view'), getTicketFCR);
+router.get('/tickets/:id/department-time', requireTicketAccess('view'), getTicketDepartmentTime);
+router.post('/tickets/:id/criar-kanban', requireTicketAccess('edit'), criarKanbanTaskHandler);
+router.get('/fcr/metricas', authorize('admin', 'gerente'), getMetricasFCR);
 
 export default router;

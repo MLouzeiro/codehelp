@@ -40,30 +40,33 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    target: 'es2020',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-recharts': ['recharts'],
+          'vendor-tiptap': ['@tiptap/react', '@tiptap/starter-kit', '@tiptap/extension-underline', '@tiptap/extension-placeholder', '@tiptap/pm'],
+          'vendor-dndkit': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+        },
+      },
+    },
+  },
   server: {
     port: 3000,
     proxy: {
       '/api': {
         target: 'http://localhost:3010',
-        configure: (proxy) => {
-          proxy.on('error', (err, _req, res) => {
-            if (!res.headersSent) {
-              res.writeHead(503, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Backend nao esta disponivel. Aguarde e recarregue a pagina.' }));
-            }
-          });
-        },
+        changeOrigin: true,
       },
       '/storage': {
         target: 'http://localhost:3010',
-        configure: (proxy) => {
-          proxy.on('error', (err, _req, res) => {
-            if (!res.headersSent) {
-              res.writeHead(503, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Backend nao esta disponivel.' }));
-            }
-          });
-        },
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://localhost:3010',
+        changeOrigin: true,
       },
     },
   },

@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { env } from '../../config/env';
-import { sendWeeklyAlert } from './alerts.service';
+import { enviarRelatorioSemanalWhatsApp } from '../analytics/weeklyReport.service';
+import { verificarTicketsAtrasados, verificarPrazoProximo } from './alerts.service';
 
 export function startScheduler(): void {
   const cronExpression = `0 ${env.alertHour} * * ${env.alertDay}`;
@@ -12,16 +13,28 @@ export function startScheduler(): void {
   }
 
   cron.schedule(cronExpression, async () => {
-    console.log(`[${new Date().toISOString()}] Running weekly alert...`);
+    console.log(`[${new Date().toISOString()}] Running weekly report...`);
     try {
-      await sendWeeklyAlert();
-      console.log(`[${new Date().toISOString()}] Weekly alert completed`);
+      await enviarRelatorioSemanalWhatsApp();
+      console.log(`[${new Date().toISOString()}] Weekly report completed`);
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Weekly alert failed:`, error);
+      console.error(`[${new Date().toISOString()}] Weekly report failed:`, error);
     }
   }, {
     timezone: env.timezone,
   });
 
+  cron.schedule('*/10 * * * *', async () => {
+    try {
+      await Promise.all([
+        verificarTicketsAtrasados(),
+        verificarPrazoProximo(),
+      ]);
+    } catch (error) {
+      console.error('[Scheduler] Erro ao verificar prazos:', error);
+    }
+  });
+
   console.log(`Scheduler started: ${cronExpression} (${env.timezone})`);
+  console.log('Deadline alert scheduler: every 10 minutes');
 }

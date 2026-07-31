@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { criarNotificacao } from '../notificacoes/notificacoes.service';
+import { formatDateBR } from '../../shared/utils/helpers';
 
 export interface AlertConfig {
   tipo: string;
@@ -19,6 +20,9 @@ const DEFAULT_ALERTS: AlertConfig[] = [
   { tipo: 'ticket_escalacao', habilitado: true, comSom: true, cor: '#8b5cf6', prioridade: 'alta' },
   { tipo: 'csat_recebido', habilitado: true, comSom: false, cor: '#6366f1', prioridade: 'baixa' },
   { tipo: 'aprovacao_pendente', habilitado: true, comSom: true, cor: '#ec4899', prioridade: 'alta' },
+  { tipo: 'fila_novo_ticket', habilitado: true, comSom: true, cor: '#f59e0b', prioridade: 'alta' },
+  { tipo: 'ticket_prazo_atrasado', habilitado: true, comSom: true, cor: '#ef4444', prioridade: 'critica' },
+  { tipo: 'ticket_prazo_proximo', habilitado: true, comSom: false, cor: '#f59e0b', prioridade: 'alta' },
 ];
 
 export async function getAlertConfigs(userId: string): Promise<AlertConfig[]> {
@@ -140,7 +144,7 @@ export async function sendWeeklyAlert() {
 
   const [totalTickets, ticketsAbertos, ticketsFechados, mediaTempoResposta] = await Promise.all([
     prisma.ticket.count({ where: { createdAt: { gte: weekAgo } } }),
-    prisma.ticket.count({ where: { status: { in: ['aberto', 'em_andamento', 'pendente'] } } }),
+    prisma.ticket.count({ where: { status: { in: ['aberto', 'em_atendimento', 'pendente'] } } }),
     prisma.ticket.count({ where: { status: 'fechado', dataFechamento: { gte: weekAgo } } }),
     prisma.ticket.aggregate({
       where: { dataPrimeiraResposta: { not: null }, createdAt: { gte: weekAgo } },
@@ -167,4 +171,173 @@ export async function sendWeeklyAlert() {
   });
 
   return { history, recipients, message };
+}
+
+export async function notificarAtendentesFila(ticketId: string, departamentoId?: string | null) {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: { contactName: true, assunto: true, protocolo: true, categoria: true },
+  });
+  if (!ticket) return;
+
+  let atendentes: string[] = [];
+  if (departamentoId) {
+    const deptUsuarios = await prisma.departamento.findUnique({
+      where: { id: departamentoId },
+      select: { usuarios: { select: { id: true } } },
+    });
+    atendentes = deptUsuarios?.usuarios?.map(u => u.id) || [];
+  }
+
+  if (atendentes.length === 0) {
+    const agentes = await prisma.user.findMany({
+      where: { role: { in: ['admin', 'gerente', 'tecnico'] }, active: true },
+      select: { id: true },
+    });
+    atendentes = agentes.map(a => a.id);
+  }
+
+  const nome = ticket.contactName || 'Cliente';
+  const assunto = ticket.assunto || ticket.categoria || 'Atendimento';
+  const protocolo = ticket.protocolo ? `#${ticket.protocolo}` : 'sem protocolo';
+  const mensagem = `Novo ticket na fila: ${nome} - ${assunto} (${protocolo})`;
+
+  for (const atendenteId of atendentes) {
+    await enviarAlertaAtendente({
+      tipo: 'fila_novo_ticket',
+      ticketId,
+      destinatarioId: atendenteId,
+      mensagem,
+      dados: { contactName: ticket.contactName, assunto: ticket.assunto, protocolo: ticket.protocolo },
+    });
+  }
+}
+
+export async function verificarTicketsAtrasados() {
+  const now = new Date();
+
+  const tickets = await prisma.ticket.findMany({
+    where: {
+      prazoEntrega: { lt: now },
+      semPrazo: false,
+      status: { notIn: ['fechado', 'cancelado', 'arquivado'] },
+    },
+    select: {
+      id: true,
+      protocolo: true,
+      contactName: true,
+      prazoEntrega: true,
+      assigneeId: true,
+    },
+  });
+
+  if (tickets.length === 0) return;
+
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  for (const ticket of tickets) {
+    const jaAlertadoHoje = await prisma.notificacao.findFirst({
+      where: {
+        ticketId: ticket.id,
+        tipo: 'ticket_prazo_atrasado',
+        createdAt: { gte: startOfToday },
+      },
+    });
+    if (jaAlertadoHoje) continue;
+
+    const nome = ticket.contactName || 'Cliente';
+    const protocolo = ticket.protocolo || 'sem protocolo';
+    const prazoFormatado = formatDateBR(ticket.prazoEntrega!);
+    const mensagem = `⏰ Ticket #${protocolo} de ${nome} está atrasado! Prazo: ${prazoFormatado}`;
+
+    if (ticket.assigneeId) {
+      await enviarAlertaAtendente({
+        tipo: 'ticket_prazo_atrasado',
+        ticketId: ticket.id,
+        destinatarioId: ticket.assigneeId,
+        mensagem,
+        dados: { contactName: nome, protocolo: ticket.protocolo, prazoEntrega: ticket.prazoEntrega },
+      });
+    }
+
+    const admins = await prisma.user.findMany({
+      where: { role: { in: ['admin', 'gerente'] }, active: true },
+      select: { id: true },
+    });
+    for (const admin of admins) {
+      if (admin.id === ticket.assigneeId) continue;
+      await enviarAlertaAtendente({
+        tipo: 'ticket_prazo_atrasado',
+        ticketId: ticket.id,
+        destinatarioId: admin.id,
+        mensagem,
+        dados: { contactName: nome, protocolo: ticket.protocolo, prazoEntrega: ticket.prazoEntrega },
+      });
+    }
+  }
+}
+
+export async function verificarPrazoProximo() {
+  const now = new Date();
+  const inTwoHours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+  const tickets = await prisma.ticket.findMany({
+    where: {
+      prazoEntrega: { gt: now, lte: inTwoHours },
+      semPrazo: false,
+      status: { notIn: ['fechado', 'cancelado', 'arquivado'] },
+    },
+    select: {
+      id: true,
+      protocolo: true,
+      contactName: true,
+      prazoEntrega: true,
+      assigneeId: true,
+    },
+  });
+
+  if (tickets.length === 0) return;
+
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  for (const ticket of tickets) {
+    const jaAlertadoHoje = await prisma.notificacao.findFirst({
+      where: {
+        ticketId: ticket.id,
+        tipo: 'ticket_prazo_proximo',
+        createdAt: { gte: startOfToday },
+      },
+    });
+    if (jaAlertadoHoje) continue;
+
+    const nome = ticket.contactName || 'Cliente';
+    const protocolo = ticket.protocolo || 'sem protocolo';
+    const prazoFormatado = formatDateBR(ticket.prazoEntrega!);
+    const mensagem = `⏰ Ticket #${protocolo} de ${nome} está com prazo próximo! Prazo: ${prazoFormatado}`;
+
+    if (ticket.assigneeId) {
+      await enviarAlertaAtendente({
+        tipo: 'ticket_prazo_proximo',
+        ticketId: ticket.id,
+        destinatarioId: ticket.assigneeId,
+        mensagem,
+        dados: { contactName: nome, protocolo: ticket.protocolo, prazoEntrega: ticket.prazoEntrega },
+      });
+    }
+
+    const admins = await prisma.user.findMany({
+      where: { role: { in: ['admin', 'gerente'] }, active: true },
+      select: { id: true },
+    });
+    for (const admin of admins) {
+      if (admin.id === ticket.assigneeId) continue;
+      await enviarAlertaAtendente({
+        tipo: 'ticket_prazo_proximo',
+        ticketId: ticket.id,
+        destinatarioId: admin.id,
+        mensagem,
+        dados: { contactName: nome, protocolo: ticket.protocolo, prazoEntrega: ticket.prazoEntrega },
+      });
+    }
+  }
 }
