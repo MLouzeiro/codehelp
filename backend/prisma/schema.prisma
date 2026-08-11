@@ -771,6 +771,22 @@ model HelpdeskConfig {
   thresholdValidacoes         Int      @default(3)
 }
 
+model Enquete {
+  id            String   @id @default(uuid())
+  nome          String
+  descricao     String?
+  tipo          String   @default("lista") // "lista" ou "enquete"
+  mensagem      String?  // Mensagem de apresentação
+  opcoes        Json     // Array de opções [{id, titulo, descricao}]
+  enviarComo    String   @default("texto") // "lista" ou "texto"
+  ativo         Boolean  @default(true)
+  usoCount      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+
+  @@index([ativo])
+}
+
 model HelpdeskRule {
   id            String   @id @default(uuid())
   nome          String

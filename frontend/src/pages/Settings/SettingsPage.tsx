@@ -1,5 +1,5 @@
 ﻿import { Link, useLocation } from 'react-router-dom';
-import { Users, Bell, Inbox, Shield, Settings2, Lock, CalendarOff, MessageSquare, Clock, Building2, Layers, ListTodo, FileText, Bot, Radio } from 'lucide-react';
+import { Users, Bell, Inbox, Shield, Settings2, Lock, CalendarOff, MessageSquare, Clock, Building2, Layers, ListTodo, FileText, Bot, Radio, BarChart3 } from 'lucide-react';
 
 export default function SettingsPage() {
   const location = useLocation();
@@ -9,6 +9,7 @@ export default function SettingsPage() {
     { path: '/app/settings/permissions', label: 'Permissões', icon: Shield, desc: 'Matriz de permissões por role (somente admin master)' },
     { path: '/app/settings/helpdesk-config', label: 'Helpdesk', icon: MessageSquare, desc: 'Mensagens automáticas, menu e horário de funcionamento' },
     { path: '/app/settings/auto-messages', label: 'Mensagens Automáticas', icon: FileText, desc: 'Editar todas as mensagens enviadas pela plataforma' },
+    { path: '/app/settings/enquetes', label: 'Enquetes e Listas', icon: BarChart3, desc: 'Criar enquetes e listas interativas para enviar aos clientes' },
     { path: '/app/settings/ai-auto-atendimento', label: 'Auto-Atendimento IA', icon: Bot, desc: 'Configurar atendimento automatizado por inteligência artificial' },
     { path: '/app/settings/helpdesk-stages', label: 'Etapas do Helpdesk', icon: Inbox, desc: 'Criar, renomear, ativar ou desativar etapas (somente admin master)' },
     { path: '/app/settings/helpdesk-departamentos', label: 'Departamentos', icon: Building2, desc: 'Gerenciar setores: Suporte, Comercial, Desenvolvimento, Demandas Internas' },

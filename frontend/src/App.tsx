@@ -33,6 +33,7 @@ const PermissionsPage = lazy(() => import('./pages/Settings/PermissionsPage'));
 const FeriadosPage = lazy(() => import('./pages/Settings/FeriadosPage'));
 const AlertSettings = lazy(() => import('./pages/Settings/AlertSettings'));
 const AutoMessagesPage = lazy(() => import('./pages/Settings/AutoMessagesPage'));
+const EnquetesPage = lazy(() => import('./pages/Settings/EnquetesPage'));
 const AIAutoAtendimentoPage = lazy(() => import('./pages/Settings/AIAutoAtendimentoPage'));
 const RobosPage = lazy(() => import('./pages/Robos/RobosPage'));
 const HelpdeskKanban = lazy(() => import('./pages/Helpdesk/HelpdeskKanban'));
@@ -45,6 +46,7 @@ const TicketAtendimentoPage = lazy(() => import('./pages/Helpdesk/TicketAtendime
 const TicketRelatorio = lazy(() => import('./pages/Helpdesk/TicketRelatorio'));
 const TicketTimelineExpandida = lazy(() => import('./pages/Helpdesk/TicketTimelineExpandida'));
 const AuditStatsPage = lazy(() => import('./pages/Helpdesk/AuditStatsPage'));
+const AuditoriaAtendimento = lazy(() => import('./pages/Helpdesk/AuditoriaAtendimento'));
 const Aprovacoes = lazy(() => import('./pages/Helpdesk/Aprovacoes'));
 const KBList = lazy(() => import('./pages/KB/KBList'));
 const AutomationsPage = lazy(() => import('./pages/Automations/AutomationsPage'));
@@ -104,6 +106,7 @@ export default function App() {
             <Route path="helpdesk/relatorio/:ticketId" element={<TicketRelatorio />} />
             <Route path="helpdesk/timeline/:ticketId" element={<TicketTimelineExpandida />} />
             <Route path="helpdesk/audit" element={<AuditStatsPage />} />
+            <Route path="helpdesk/auditoria-ia" element={<AuditoriaAtendimento />} />
             <Route path="helpdesk/aprovacoes" element={<Aprovacoes />} />
             <Route path="kb" element={<KBList />} />
             <Route path="automations" element={<AutomationsPage />} />
@@ -121,6 +124,7 @@ export default function App() {
             <Route path="settings/alert-settings" element={<AlertSettings />} />
             <Route path="settings/channels" element={<ChannelsPage />} />
             <Route path="settings/auto-messages" element={<AutoMessagesPage />} />
+            <Route path="settings/enquetes" element={<EnquetesPage />} />
             <Route path="settings/ai-auto-atendimento" element={<AIAutoAtendimentoPage />} />
             <Route path="robos" element={<RobosPage />} />
           </Route>
