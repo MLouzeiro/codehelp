@@ -49,10 +49,14 @@ export default function TicketTopo({ ticket }: TicketTopoProps) {
           {ticket.channel.tipo === 'email' && <Mail className="w-3 h-3" />}
           {ticket.channel.tipo === 'instagram' && <Instagram className="w-3 h-3" />}
           {ticket.channel.tipo === 'facebook' && <Facebook className="w-3 h-3" />}
-          {ticket.channel.tipo === 'telegram' && <Send className="w-3 h-3" />}
           {ticket.channel.tipo === 'web' && <Globe className="w-3 h-3" />}
           {ticket.channel.tipo === 'telefone' && <Phone className="w-3 h-3" />}
           {ticket.channel.nome}
+        </span>
+      )}
+      {ticket?.etapa === 'fila' && ticket?.filaOrder && (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full border bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
+          📋 Fila: {ticket.filaOrder}º
         </span>
       )}
       <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">

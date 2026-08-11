@@ -72,22 +72,13 @@ export async function enviarMenuInicial(ticketId: string) {
     }
   } catch {}
 
-  const sections = [{
-    title: 'Departamentos',
-    rows: departamentos.map((d, i) => ({
-      id: String(i + 1),
-      title: d.nome,
-      description: d.descricao || undefined,
-    })),
-  }];
+  const deptList = departamentos.map((d, i) => `*${i + 1}* - ${d.nome}`).join('\n');
+  const menuText = `${baseText}\n\n${deptList}\n\nResponda com o *número* do departamento.`;
 
   const phone = sanitizePhoneNumber(ticket.contactPhone).replace(/@c\.us$/i, '');
-  const { sendWhatsAppListMessage } = await import('../integrations/whatsapp/whatsapp.service');
-  const result = await sendWhatsAppListMessage(
+  const result = await sendWhatsAppMessage(
     phone,
-    'Selecionar departamento',
-    baseText,
-    sections,
+    menuText,
     (ticket as any).whatsappConnectionId || undefined,
     ticket.contactJid || undefined,
   );

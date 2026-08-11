@@ -116,24 +116,29 @@ export async function enviarMensagemCsat(csatId: string): Promise<EnviarResult> 
     return { enviado: false, erro: 'Ticket sem telefone', csat };
   }
   try {
-    const { sendWhatsAppListMessage } = await import('../integrations/whatsapp/whatsapp.service');
-    const csatText = `Olá! 👋\n\nSeu atendimento foi concluído com sucesso.\n\nPor favor, avalie sua experiência:`;
-    const sections = [{
-      title: 'Avaliação',
-      rows: [
-        { id: '1', title: '1 - Péssimo', description: 'Muito insatisfeito' },
-        { id: '2', title: '2 - Ruim', description: 'Insatisfeito' },
-        { id: '3', title: '3 - Regular', description: 'Neutro' },
-        { id: '4', title: '4 - Bom', description: 'Satisfeito' },
-        { id: '5', title: '5 - Excelente', description: 'Muito satisfeito' },
-      ],
-    }];
-    console.log(`[CSAT] Enviando lista interativa de avaliação para ${csat.ticket.contactPhone}`);
-    const result = await sendWhatsAppListMessage(
+    const { sendWhatsAppMessage } = await import('../integrations/whatsapp/whatsapp.service');
+    const csatText = [
+      `Olá! 👋`,
+      ``,
+      `Seu atendimento foi concluído com sucesso.`,
+      ``,
+      `Por favor, avalie sua experiência com um número de 1 a 5:`,
+      ``,
+      `*1* - Péssimo`,
+      `*2* - Ruim`,
+      `*3* - Regular`,
+      `*4* - Bom`,
+      `*5* - Excelente`,
+      ``,
+      `Responda com o *número* (1 a 5).`,
+      `Ou acesse: ${env.appUrl}/csat/${csat.tokenResposta}`,
+      ``,
+      `Obrigado pelo feedback! 🙏`,
+    ].join('\n');
+    console.log(`[CSAT] Enviando mensagem de avaliação para ${csat.ticket.contactPhone}`);
+    const result = await sendWhatsAppMessage(
       csat.ticket.contactPhone,
-      'Avaliar atendimento',
       csatText,
-      sections,
       (csat.ticket as any).whatsappConnectionId || undefined,
       (csat.ticket as any).contactJid || undefined,
     );
@@ -152,6 +157,12 @@ export async function enviarMensagemCsat(csatId: string): Promise<EnviarResult> 
           source: 'bot',
         },
       }).catch(() => {});
+      // Set conversation state to AWAITING_CSAT so handler knows to process CSAT response
+      try {
+        const { setWhatsAppConversationState } = await import('../integrations/whatsapp/whatsapp-message-handler');
+        const phoneDigits = csat.ticket.contactPhone.replace(/[^\d]/g, '');
+        setWhatsAppConversationState(phoneDigits, 'AWAITING_CSAT');
+      } catch {}
       return { enviado: true, csat: { ...csat, enviadoEm: new Date() } };
     }
     return { enviado: false, erro: result.error, csat };

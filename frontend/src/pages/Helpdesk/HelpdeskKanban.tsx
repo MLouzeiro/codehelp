@@ -50,6 +50,7 @@ const KanbanCard = memo(function KanbanCard({
   isSelected,
   isDragging,
   colunaSlug,
+  colunaTotal,
   board,
   openCardMenuId,
   onSelect,
@@ -66,6 +67,7 @@ const KanbanCard = memo(function KanbanCard({
   isSelected: boolean;
   isDragging: boolean;
   colunaSlug: EtapaSlug;
+  colunaTotal?: number;
   board: any;
   openCardMenuId: string | null;
   onSelect: (id: string) => void;
@@ -136,8 +138,8 @@ const KanbanCard = memo(function KanbanCard({
             </span>
           )}
           {colunaSlug === 'fila' && ticket.filaOrder && (
-            <span title={`Posição na fila: ${ticket.filaOrder}º`} className="text-[10px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-md font-bold">
-              #{ticket.filaOrder}º
+            <span title={`Posição na fila: ${ticket.filaOrder} de ${colunaTotal || '?'}`} className="text-[10px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-md font-bold">
+              #{ticket.filaOrder} de {colunaTotal || '?'}
             </span>
           )}
           <div className="relative" onClick={(e) => e.stopPropagation()}>
@@ -1165,6 +1167,7 @@ export default function HelpdeskKanban() {
                         isSelected={selectedTicketId === ticket.id}
                         isDragging={dragIdRef.current === ticket.id}
                         colunaSlug={coluna.slug}
+                        colunaTotal={coluna.total}
                         board={data.board}
                         openCardMenuId={openCardMenuId}
                         onSelect={(id) => navigate(`/app/helpdesk/ticket/${id}`)}

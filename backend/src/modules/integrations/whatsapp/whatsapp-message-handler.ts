@@ -53,6 +53,10 @@ function setConversationState(phoneDigits: string, state: ConversationState) {
   console.log(`[State] ${key}: → ${state}`);
 }
 
+export function setWhatsAppConversationState(phoneDigits: string, state: ConversationState) {
+  setConversationState(phoneDigits, state);
+}
+
 async function detectarRespostaCsat(phoneDigits: string, text: string): Promise<boolean> {
   try {
     const trimmed = text.trim();
