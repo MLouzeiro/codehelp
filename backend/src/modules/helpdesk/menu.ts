@@ -5,7 +5,9 @@ export type OpcaoMenu = string;
 
 export function detectarOpcaoMenu(text: string): OpcaoMenu | null {
   const limpo = text.trim();
-  if (/^\d+$/.test(limpo)) return limpo;
+  // Aceita tanto "1" como "1 - Suporte Técnico" (resposta de lista interativa)
+  const match = limpo.match(/^(\d+)/);
+  if (match) return match[1];
   return null;
 }
 
@@ -23,9 +25,9 @@ export async function montarBoasVindas(nome: string, now: Date = new Date()): Pr
     return `Olá! ${getSaudacao(now)}, ${nome || 'cliente'} 👋\n\nNo momento não há departamentos disponíveis. Entre em contato com o administrador do sistema.`;
   }
 
-  const opcoes = departamentos.map((d, i) => `${i + 1}️⃣ ${d.nome}`).join('\n');
+  const opcoes = departamentos.map((d) => `• ${d.nome}`).join('\n');
 
-  let baseMsg = `Olá! ${getSaudacao(now)}, ${nome || 'cliente'} 👋\n\nQue bom ter você por aqui!\n\nPor favor, selecione o departamento desejado:\n\n${opcoes}`;
+  let baseMsg = `Olá! ${getSaudacao(now)}, ${nome || 'cliente'} 👋\n\nQue bom ter você por aqui!\n\nPor favor, selecione o departamento desejado:\n\n${opcoes}\n\nResponda com o *nome* do departamento.`;
 
   try {
     const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
@@ -39,8 +41,8 @@ export async function montarBoasVindas(nome: string, now: Date = new Date()): Pr
   } catch {}
 
   // SEMPRE anexar a lista de departamentos se não estiver presente na mensagem
-  if (!baseMsg.includes('1️⃣')) {
-    baseMsg += `\n\nPor favor, selecione o departamento desejado:\n\n${opcoes}`;
+  if (!baseMsg.includes('•') && !baseMsg.includes('1️⃣')) {
+    baseMsg += `\n\nPor favor, selecione o departamento desejado:\n\n${opcoes}\n\nResponda com o *nome* do departamento.`;
   }
 
   return baseMsg;
@@ -52,16 +54,15 @@ export async function montarOpcaoInvalida(nome: string): Promise<string> {
     orderBy: { ordem: 'asc' },
   });
 
-  const maxOpcao = departamentos.length;
-  const defaultMsg = `Hmm, não entendi sua resposta, ${nome || 'cliente'} 😅\n\nPor favor, responda com um número de *1* a *${maxOpcao}* para selecionar o departamento.`;
+  const nomes = departamentos.map((d) => `• ${d.nome}`).join('\n');
+  const defaultMsg = `Hmm, não entendi sua resposta, ${nome || 'cliente'} 😅\n\nPor favor, responda com o *nome* do departamento desejado:\n\n${nomes}`;
 
   try {
     const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
     if ((config as any)?.mensagemOpcaoInvalida) {
       return interpolar((config as any).mensagemOpcaoInvalida, {
         nome: nome || 'cliente',
-        maxOpcao: String(maxOpcao),
-        departamentos: departamentos.map((d, i) => `${i + 1}️⃣ ${d.nome}`).join('\n'),
+        departamentos: departamentos.map((d) => `• ${d.nome}`).join('\n'),
       });
     }
   } catch {}
@@ -73,16 +74,26 @@ export async function resolverOpcaoMenu(opcao: string): Promise<{
   departamentoId: string;
   departamentoNome: string;
 } | null> {
-  const idx = parseInt(opcao, 10) - 1;
   const departamentos = await prisma.departamento.findMany({
     where: { ativo: true },
     orderBy: { ordem: 'asc' },
   });
 
-  if (idx < 0 || idx >= departamentos.length) return null;
+  const limpo = opcao.trim().toLowerCase();
 
-  const dept = departamentos[idx];
-  return { departamentoId: dept.id, departamentoNome: dept.nome };
+  if (/^\d+$/.test(limpo)) {
+    const idx = parseInt(limpo, 10) - 1;
+    if (idx < 0 || idx >= departamentos.length) return null;
+    const dept = departamentos[idx];
+    return { departamentoId: dept.id, departamentoNome: dept.nome };
+  }
+
+  const match = departamentos.find(
+    (d) => d.nome.toLowerCase().includes(limpo) || limpo.includes(d.nome.toLowerCase())
+  );
+  if (match) return { departamentoId: match.id, departamentoNome: match.nome };
+
+  return null;
 }
 
 export async function montarAckDepartamento(nome: string, deptNome: string): Promise<string> {

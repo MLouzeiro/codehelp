@@ -501,7 +501,11 @@ export async function sendMessage(req: AuthRequest, res: Response) {
         select: { name: true, signature: true },
       });
       if (agent?.signature) {
-        message = `${rawMessage}\n\n_${agent.name}\n${agent.signature}_`;
+        const nameParts = agent.name.split(' ');
+        const firstName = nameParts[0] || agent.name;
+        const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+        const italicName = lastName ? `_${firstName}_ _${lastName}_` : `_${firstName}_`;
+        message = `${rawMessage}\n\n${italicName} - *${agent.signature}*`;
       }
     }
 
