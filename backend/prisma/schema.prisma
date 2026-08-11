@@ -44,6 +44,7 @@ model User {
   orderTechnician       ServiceOrder[]      @relation("OrderTechnician")
   tasks                 Task[]
   ticketsAtendidos      Ticket[]            @relation("TicketAssignee")
+  ticketsPrimeiroAgente Ticket[]            @relation("TicketPrimeiroAgente")
   tickets               Ticket[]
   ticketActivities      TicketActivity[]
   ticketEvents          TicketEvent[]
@@ -55,6 +56,10 @@ model User {
   ticketWaitTimes       TicketWaitTime[]
   timeEntries           TimeEntry[]
   departamentos         UserDepartamento[]
+  ticketChecklists      TicketChecklist[]
+  checklistTemplates    ChecklistTemplate[]
+  agentInteractions     TicketAgentInteraction[]
+  departmentTimes       TicketDepartmentTime[]
 }
 
 model Client {
@@ -268,6 +273,17 @@ model Ticket {
   updatedAt             DateTime              @default(now())
   tags                  String?
   channelId             String?
+  prazoEntrega          DateTime?
+  semPrazo              Boolean             @default(false)
+  horasDesenvolvimento  Float?
+  dataInicioImplantacao DateTime?
+  dataFimImplantacao    DateTime?
+  resolvidoSemAjuda     Boolean?              @default(true)
+  agentesEnvolvidos     String?               @default("[]")
+  primeiroAgenteId      String?
+  tempoPrimeiroAgenteMin Int?
+  kanbanTaskId          String?
+  kanbanTaskBoardId     String?
   aiClassifications     AIClassification[]
   aiCorrections         AICorrection[]
   aiEvaluations         AIEvaluation[]
@@ -287,6 +303,7 @@ model Ticket {
   fila                  Fila?                 @relation(fields: [idFila], references: [id])
   nivelSuporte          NivelSuporte?         @relation(fields: [nivelSuporteId], references: [id])
   usuario               User?                 @relation(fields: [usuarioId], references: [id])
+  primeiroAgente        User?                 @relation("TicketPrimeiroAgente", fields: [primeiroAgenteId], references: [id])
   whatsappConnection    WhatsAppConnection?   @relation(fields: [whatsappConnectionId], references: [id])
   activities            TicketActivity[]
   aiLogs                TicketAiLog[]
@@ -298,6 +315,9 @@ model Ticket {
   timeline              TicketTimeline[]
   waitTimes             TicketWaitTime[]
   timeEntries           TimeEntry[]
+  checklists            TicketChecklist[]
+  departmentTimes       TicketDepartmentTime[]
+  agentInteractions     TicketAgentInteraction[]
 
   @@index([status])
   @@index([etapa])
@@ -805,6 +825,7 @@ model Departamento {
   tickets             Ticket[]
   usuarios            UserDepartamento[]
   whatsappConnections WhatsAppConnection[]
+  departmentTimes     TicketDepartmentTime[]
 }
 
 /// Nivel de suporte (customizavel: N1, N2, N3, N4, Supervisor, etc.)
@@ -1441,4 +1462,74 @@ model TimeEntry {
   @@index([tipo])
   @@index([dataInicio])
   @@index([billable])
+}
+
+/// Checklist dentro de um ticket (tarefas a serem cumpridas)
+model TicketChecklist {
+  id          String   @id @default(uuid())
+  ticketId    String
+  titulo      String
+  concluida   Boolean  @default(false)
+  ordem       Int      @default(0)
+  responsavelId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  responsavel User?    @relation(fields: [responsavelId], references: [id])
+
+  @@index([ticketId])
+  @@index([concluida])
+}
+
+/// Template de checklist reutilizável (pode ser usado em tickets e kanban)
+model ChecklistTemplate {
+  id          String   @id @default(uuid())
+  nome        String
+  descricao   String?
+  categoria   String?  @default("geral")
+  items       String   @default("[]") // JSON array of { titulo: string, ordem: number }
+  publico     Boolean  @default(false)
+  criadorId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  criador     User?    @relation(fields: [criadorId], references: [id])
+
+  @@index([criadorId])
+  @@index([categoria])
+}
+
+/// Tempo gasto por departamento/setor em um ticket
+model TicketDepartmentTime {
+  id             String       @id @default(uuid())
+  ticketId       String
+  departamentoId String
+  userId         String?
+  dataInicio     DateTime     @default(now())
+  dataFim        DateTime?
+  duracaoMin     Int?
+  kanbanTaskId   String?
+  createdAt      DateTime     @default(now())
+  ticket         Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  departamento   Departamento @relation(fields: [departamentoId], references: [id])
+  user           User?        @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+  @@index([departamentoId])
+  @@index([ticketId, departamentoId])
+}
+
+/// Registro de interação de agentes no ticket (para FCR)
+model TicketAgentInteraction {
+  id         String   @id @default(uuid())
+  ticketId   String
+  usuarioId  String
+  tipo       String   @default("mensagem")
+  conteudo   String?
+  createdAt  DateTime @default(now())
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuario    User     @relation(fields: [usuarioId], references: [id])
+
+  @@index([ticketId])
+  @@index([usuarioId])
+  @@index([ticketId, usuarioId])
 }

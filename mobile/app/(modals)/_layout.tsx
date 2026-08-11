@@ -12,6 +12,8 @@ export default function ModalsLayout() {
       <Stack.Screen name="ticket/[id]" />
       <Stack.Screen name="client/[id]" />
       <Stack.Screen name="order/[id]" />
+      <Stack.Screen name="pipeline" />
+      <Stack.Screen name="settings" />
     </Stack>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../services/auth';
+import { matchSearchMultiple } from '../../utils/text';
 import { Plus, Edit, Trash2, Tag, Users, Building, FileText, Save, X, Check, AlertCircle, Search } from 'lucide-react';
 
 interface Tema {
@@ -170,9 +171,7 @@ export default function CRMThemes() {
   };
 
   const temasFiltrados = temas.filter(tema =>
-    tema.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    tema.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    tema.descricao.toLowerCase().includes(searchTerm.toLowerCase())
+    matchSearchMultiple([tema.nome, tema.slug, tema.descricao], searchTerm)
   );
 
   if (loading) {

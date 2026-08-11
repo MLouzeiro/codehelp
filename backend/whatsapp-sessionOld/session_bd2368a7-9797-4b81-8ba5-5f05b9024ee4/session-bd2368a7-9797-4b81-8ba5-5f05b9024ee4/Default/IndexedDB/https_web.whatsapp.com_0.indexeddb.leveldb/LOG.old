@@ -1,0 +1,17 @@
+2026/07/14-13:22:34.622 5584 Reusing MANIFEST C:\Users\Louzeiro\Documents\Louzeiro\Projeto\code-help\backend\whatsapp-session\session_bd2368a7-9797-4b81-8ba5-5f05b9024ee4\session-bd2368a7-9797-4b81-8ba5-5f05b9024ee4\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/07/14-13:22:34.624 5584 Recovering log #237
+2026/07/14-13:22:34.629 5584 Reusing old log C:\Users\Louzeiro\Documents\Louzeiro\Projeto\code-help\backend\whatsapp-session\session_bd2368a7-9797-4b81-8ba5-5f05b9024ee4\session-bd2368a7-9797-4b81-8ba5-5f05b9024ee4\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000237.log 
+2026/07/14-13:22:34.629 5584 Delete type=2 #236
+2026/07/14-13:22:35.303 70d8 Level-0 table #242: started
+2026/07/14-13:22:35.327 70d8 Level-0 table #242: 44901 bytes OK
+2026/07/14-13:22:35.337 70d8 Delete type=0 #237
+2026/07/14-13:22:35.339 70d8 Manual compaction at level-0 from '\x00`\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00a\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/07/14-13:22:35.342 70d8 Manual compaction at level-1 from '\x00`\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00a\x00\x00\x00' @ 0 : 0; will stop at '\x00a\x0a\x02\x03\x00\x00\x00\x00\x00\x00\xf0?' @ 46417 : 1
+2026/07/14-13:22:35.342 70d8 Compacting 1@1 + 1@2 files
+2026/07/14-13:22:35.357 70d8 Generated table #243@1: 227 keys, 4854 bytes
+2026/07/14-13:22:35.358 70d8 Compacted 1@1 + 1@2 files => 4854 bytes
+2026/07/14-13:22:35.366 70d8 compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/07/14-13:22:35.371 70d8 Delete type=2 #242
+2026/07/14-13:22:35.380 70d8 Manual compaction at level-1 from '\x00a\x0a\x02\x03\x00\x00\x00\x00\x00\x00\xf0?' @ 46417 : 1 .. '\x00a\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/07/14-13:22:35.383 5584 Manual compaction at level-0 from '\x00a\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00b\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/07/14-13:22:35.383 5584 Manual compaction at level-1 from '\x00a\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00b\x00\x00\x00' @ 0 : 0; will stop at (end)

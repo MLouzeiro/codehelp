@@ -23,7 +23,7 @@ const COLUMN_GAP = 12;
 
 const STAGE_COLORS: Record<string, string> = {
   novo: '#3b82f6',
-  em_andamento: '#f59e0b',
+  em_atendimento: '#f59e0b',
   negociacao: '#8b5cf6',
   fechado: '#22c55e',
   perdido: '#ef4444',

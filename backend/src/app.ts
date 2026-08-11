@@ -61,7 +61,8 @@ app.use(helmet({
 }));
 
 // ── CORS — Whitelist de origens (nao usar wildcard em producao) ─────
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:4000')
+const isDev = process.env.NODE_ENV !== 'production';
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:4000,http://localhost:3000')
   .split(',')
   .map((o) => o.trim());
 
@@ -69,6 +70,18 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
+    // Em dev, aceitar qualquer origem de rede local (192.168.x.x, 10.x.x.x, etc)
+    if (isDev) {
+      try {
+        const url = new URL(origin);
+        const hostname = url.hostname;
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        const isPrivateIP = /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.|127\.)/.test(hostname);
+        if (isLocalhost || isPrivateIP) {
+          return callback(null, true);
+        }
+      } catch {}
+    }
     if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
       return callback(null, true);
     }

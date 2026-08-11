@@ -1,0 +1,66 @@
+{
+  "squad": "codehelp-audit-squad",
+  "status": "completed",
+  "step": { "current": 5, "total": 5, "label": "step-05-documentacao" },
+  "agents": [
+    {
+      "id": "qa-senior",
+      "name": "Rafael Costa",
+      "icon": "shield-check",
+      "status": "done",
+      "stepIndex": 1,
+      "stepLabel": "step-01-qa-testes",
+      "desk": { "col": 1, "row": 1 },
+      "deliverTo": "code-reviewer-senior",
+      "message": "27 bugs identificados (4 criticos, 9 altos, 10 medios, 4 baixos)"
+    },
+    {
+      "id": "code-reviewer-senior",
+      "name": "Andre Lima",
+      "icon": "magnifying-glass",
+      "status": "done",
+      "stepIndex": 2,
+      "stepLabel": "step-02-codigo",
+      "desk": { "col": 2, "row": 1 },
+      "deliverTo": "ux-auditor",
+      "message": "Classificacao B+ (7.5/10), 8 problemas seguranca, 6 performance"
+    },
+    {
+      "id": "ux-auditor",
+      "name": "Camila Ferreira",
+      "icon": "sparkles",
+      "status": "done",
+      "stepIndex": 3,
+      "stepLabel": "step-03-ux",
+      "desk": { "col": 3, "row": 1 },
+      "deliverTo": "csm-auditor",
+      "message": "Score usabilidade 7.5/10, 5 problemas criticos, 10 altos"
+    },
+    {
+      "id": "csm-auditor",
+      "name": "Fernando Alves",
+      "icon": "star",
+      "status": "done",
+      "stepIndex": 4,
+      "stepLabel": "step-04-experiencia",
+      "desk": { "col": 4, "row": 1 },
+      "deliverTo": "tech-writer-senior",
+      "message": "Score experiencia 6.8/10, 5 pontos de fricao criticos"
+    },
+    {
+      "id": "tech-writer-senior",
+      "name": "Beatriz Santos",
+      "icon": "file-text",
+      "status": "done",
+      "stepIndex": 5,
+      "stepLabel": "step-05-documentacao",
+      "desk": { "col": 5, "row": 1 },
+      "deliverTo": null,
+      "message": "Manual completo gerado: 17 secoes, 45.191 caracteres"
+    }
+  ],
+  "handoff": null,
+  "startedAt": "2026-06-19T15:20:00Z",
+  "updatedAt": "2026-06-19T15:35:00Z",
+  "completedAt": "2026-06-19T15:35:00Z"
+}

@@ -1,0 +1,55 @@
+{
+  "squad": "codehelp-fullstack",
+  "status": "completed",
+  "step": { "current": 5, "total": 5, "label": "Code review final" },
+  "agents": [
+    {
+      "id": "tech-lead",
+      "name": "Ricardo Almeida",
+      "icon": "brain",
+      "status": "done",
+      "stepIndex": 5,
+      "stepLabel": "Code review final",
+      "desk": { "col": 1, "row": 1 },
+      "deliverTo": null,
+      "message": "Aprovado para producao"
+    },
+    {
+      "id": "backend-dev",
+      "name": "Fernando Costa",
+      "icon": "server",
+      "status": "done",
+      "stepIndex": 2,
+      "stepLabel": "Implementação backend",
+      "desk": { "col": 2, "row": 1 },
+      "deliverTo": "frontend-dev",
+      "message": "4 novos endpoints BI + N+1 fix + 17 índices"
+    },
+    {
+      "id": "frontend-dev",
+      "name": "Mariana Oliveira",
+      "icon": "layout",
+      "status": "done",
+      "stepIndex": 3,
+      "stepLabel": "Implementação frontend",
+      "desk": { "col": 3, "row": 1 },
+      "deliverTo": "qa-engineer",
+      "message": "React.lazy + 2 novos gráficos + menus + responsividade + polling"
+    },
+    {
+      "id": "qa-engineer",
+      "name": "Lucas Pereira",
+      "icon": "check-circle",
+      "status": "done",
+      "stepIndex": 4,
+      "stepLabel": "Testes e validação",
+      "desk": { "col": 4, "row": 1 },
+      "deliverTo": "tech-lead",
+      "message": "293/295 passaram, sem regressões"
+    }
+  ],
+  "handoff": null,
+  "startedAt": "2026-07-06T16:34:00Z",
+  "completedAt": "2026-07-06T17:15:00Z",
+  "updatedAt": "2026-07-06T17:15:00Z"
+}

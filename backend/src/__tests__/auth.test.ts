@@ -4,6 +4,7 @@ vi.mock('../config/database', () => ({
   default: {
     user: {
       findUnique: vi.fn(),
+      update: vi.fn(),
     },
   },
 }));
@@ -47,6 +48,7 @@ describe('Auth Controller — Task 2.1', () => {
       } as any;
 
       vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
+      vi.mocked(prisma.user.update).mockResolvedValue(mockUser as any);
 
       const { req, res } = mockReqRes({
         body: { email: 'admin@codemed.com.br', password: 'admin123' },
@@ -161,6 +163,7 @@ describe('Auth Controller — Task 2.1', () => {
         phone: null,
         online: false,
         lastSeenAt: null,
+        sessionToken: null,
         departamentos: [],
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -173,6 +176,7 @@ describe('Auth Controller — Task 2.1', () => {
       );
 
       vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
+      vi.mocked(prisma.user.update).mockResolvedValue(mockUser as any);
 
       const { req, res } = mockReqRes({ body: { refreshToken: validToken } });
 

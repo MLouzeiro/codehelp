@@ -17,45 +17,81 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+// ── Helpers: Ler/escrever tokens em cookies ──────────────────────────
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+function setCookie(name: string, value: string, maxAge: number) {
+  document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Strict`;
+}
+
+function removeCookie(name: string) {
+  document.cookie = `${name}=; path=/; max-age=0`;
+}
+
+function clearAllTokens() {
+  removeCookie('accessToken');
+  removeCookie('refreshToken');
+  removeCookie('sessionToken');
+  localStorage.removeItem('user');
+}
+
 const scheduleTokenRefresh = () => {
   if (refreshTimeout) clearTimeout(refreshTimeout);
 
-  const token = localStorage.getItem('accessToken');
+  const token = getCookie('accessToken');
   if (!token) return;
 
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const expiresIn = payload.exp * 1000 - Date.now();
-    const refreshIn = Math.max(expiresIn - 60 * 1000, 10 * 1000);
+
+    if (expiresIn < 10 * 1000) return;
+
+    const refreshIn = Math.max(expiresIn - 2 * 60 * 1000, 30 * 1000);
 
     refreshTimeout = setTimeout(async () => {
-      const refreshToken = localStorage.getItem('refreshToken');
-      const sessionToken = localStorage.getItem('sessionToken');
+      if (isRefreshing) {
+        scheduleTokenRefresh();
+        return;
+      }
+
+      const refreshToken = getCookie('refreshToken');
+      const sessionToken = getCookie('sessionToken');
       if (!refreshToken) return;
 
       try {
+        isRefreshing = true;
         const { data } = await axios.post('/api/auth/refresh', { refreshToken, sessionToken });
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        if (data.sessionToken) localStorage.setItem('sessionToken', data.sessionToken);
+        setCookie('accessToken', data.accessToken, 900);
+        setCookie('refreshToken', data.refreshToken, 604800);
+        if (data.sessionToken) setCookie('sessionToken', data.sessionToken, 604800);
+        isRefreshing = false;
+        processQueue(null, data.accessToken);
         scheduleTokenRefresh();
       } catch {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('sessionToken');
-        localStorage.removeItem('user');
+        isRefreshing = false;
+        processQueue(new Error('Refresh failed'), null);
+        clearAllTokens();
         window.location.href = '/login';
       }
     }, refreshIn);
-  } catch {}
+  } catch {
+    clearAllTokens();
+    window.location.href = '/login';
+  }
 };
 
+// ── Request interceptor: enviar token do cookie ─────────────────────
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+  const token = getCookie('accessToken');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
+// ── Response interceptor: refresh automatico ────────────────────────
 api.interceptors.response.use(
   (response) => {
     scheduleTokenRefresh();
@@ -77,25 +113,22 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refreshToken');
-      const sessionToken = localStorage.getItem('sessionToken');
+      const refreshToken = getCookie('refreshToken');
+      const sessionToken = getCookie('sessionToken');
 
       if (refreshToken && originalRequest.url !== '/auth/refresh') {
         try {
           const { data } = await axios.post('/api/auth/refresh', { refreshToken, sessionToken });
-          localStorage.setItem('accessToken', data.accessToken);
-          localStorage.setItem('refreshToken', data.refreshToken);
-          if (data.sessionToken) localStorage.setItem('sessionToken', data.sessionToken);
+          setCookie('accessToken', data.accessToken, 900);
+          setCookie('refreshToken', data.refreshToken, 604800);
+          if (data.sessionToken) setCookie('sessionToken', data.sessionToken, 604800);
           processQueue(null, data.accessToken);
           scheduleTokenRefresh();
           originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
           return api(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError, null);
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('sessionToken');
-          localStorage.removeItem('user');
+          clearAllTokens();
           window.location.href = '/login';
           return Promise.reject(refreshError);
         } finally {
@@ -103,10 +136,7 @@ api.interceptors.response.use(
         }
       } else {
         isRefreshing = false;
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('sessionToken');
-        localStorage.removeItem('user');
+        clearAllTokens();
         window.location.href = '/login';
       }
     }
@@ -115,7 +145,7 @@ api.interceptors.response.use(
 );
 
 const initAuth = () => {
-  const token = localStorage.getItem('accessToken');
+  const token = getCookie('accessToken');
   if (token) {
     scheduleTokenRefresh();
   }

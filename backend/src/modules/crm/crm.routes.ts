@@ -4,8 +4,8 @@ import { auditLog } from '../../shared/middleware/audit';
 import { auditLog as auditLogGeneric } from '../../shared/middleware/audit';
 import {
   listClients, getClient, createClient, updateClient, deleteClient,
-  listContacts, createContact,
-  listOpportunities, createOpportunity, updateOpportunity,
+  listContacts, createContact, deleteContact,
+  listOpportunities, createOpportunity, updateOpportunity, deleteOpportunity,
   getPipeline,
   listThemes, createTheme, updateTheme, deleteTheme,
 } from './crm.controller';
@@ -28,6 +28,7 @@ router.delete('/clients/:id', authorize('admin'), auditLog('deletar_cliente', 'C
 
 router.get('/clients/:clientId/contacts', listContacts);
 router.post('/contacts', auditLog('criar_contato', 'Contact'), createContact);
+router.delete('/contacts/:id', authorize('admin', 'gerente'), auditLog('deletar_contato', 'Contact'), deleteContact);
 
 router.get('/clients/:clientId/colaboradores', getColaboradoresPorCliente);
 router.post('/clients/:clientId/colaboradores', authorize('admin', 'gerente', 'comercial'), auditLog('criar_colaborador', 'Colaborador'), postColaborador);
@@ -38,6 +39,7 @@ router.post('/colaboradores/:id/principal', postMarcarPrincipal);
 router.get('/opportunities', listOpportunities);
 router.post('/opportunities', authorize('admin', 'gerente', 'comercial'), auditLog('criar_oportunidade', 'Opportunity'), createOpportunity);
 router.put('/opportunities/:id', authorize('admin', 'gerente', 'comercial'), auditLog('editar_oportunidade', 'Opportunity'), updateOpportunity);
+router.delete('/opportunities/:id', authorize('admin', 'gerente'), auditLog('deletar_oportunidade', 'Opportunity'), deleteOpportunity);
 
 router.get('/pipeline', getPipeline);
 

@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeHelp - Documentação do Sistema de Atendimento</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --primary-dark: #4f46e5;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #3b82f6;
+      --bg: #0f172a;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --glow: rgba(99, 102, 241, 0.3);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+
+    header {
+      background: linear-gradient(135deg, var(--primary-dark), #7c3aed);
+      padding: 3rem 2rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+      animation: pulse 8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(135deg, #fff, #c7d2fe);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p { color: rgba(255,255,255,0.8); margin-top: 0.5rem; font-size: 1.1rem; position: relative; z-index: 1; }
+
+    .version-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      margin-top: 1rem;
+      backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 1;
+    }
+
+    nav {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+    }
+
+    nav ul {
+      display: flex;
+      gap: 0.5rem;
+      list-style: none;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      scrollbar-width: thin;
+    }
+
+    nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    nav a:hover { background: var(--bg-card-hover); color: var(--text); }
+    nav a.active { background: var(--primary); color: white; }
+
+    section { margin: 2rem 0; }
+
+    h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    h2 .icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 1.5rem 0 1rem;
+      color: var(--primary-light);
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      transition: all 0.3s;
+    }
+
+    .card:hover { border-color: var(--primary); box-shadow: 0 0 20px var(--glow); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-header h3 { margin: 0; }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-success { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+    .badge-info { background: rgba(59, 130, 246, 0.15); color: var(--info); }
+    .badge-primary { background: rgba(99, 102, 241, 0.15); color: var(--primary); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: rgba(99, 102, 241, 0.1);
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    tr:hover td { background: rgba(99, 102, 241, 0.05); }
+
+    code {
+      background: rgba(99, 102, 241, 0.1);
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--primary-light);
+    }
+
+    pre {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    pre code { background: none; padding: 0; color: #e2e8f0; }
+
+    .er-diagram {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 2rem;
+      margin: 1.5rem 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .flow {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
+    }
+
+    .flow-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .flow-arrow { color: var(--primary); font-weight: bold; }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value { font-size: 2rem; font-weight: 800; color: var(--primary-light); }
+    .stat-card .label { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+    .timeline-preview {
+      position: relative;
+      padding-left: 2rem;
+    }
+
+    .timeline-preview::before {
+      content: '';
+      position: absolute;
+      left: 0.75rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .timeline-item {
+      position: relative;
+      padding: 0.75rem 0 0.75rem 1.5rem;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -1.5rem;
+      top: 1rem;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 2px solid var(--bg);
+    }
+
+    .timeline-item.ia::before { background: #a855f7; }
+    .timeline-item.cliente::before { background: #f97316; }
+    .timeline-item.humano::before { background: #22c55e; }
+    .timeline-item.sla::before { background: #ef4444; }
+    .timeline-item.csat::before { background: #06b6d4; }
+
+    .timeline-time { font-size: 0.75rem; color: var(--text-muted); font-family: monospace; }
+    .timeline-title { font-weight: 600; font-size: 0.9rem; }
+    .timeline-desc { font-size: 0.8rem; color: var(--text-muted); }
+    .timeline-delta { font-size: 0.7rem; color: var(--primary-light); }
+
+    .sla-bar {
+      height: 8px;
+      border-radius: 4px;
+      background: var(--border);
+      overflow: hidden;
+      margin: 0.5rem 0;
+    }
+
+    .sla-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s ease;
+    }
+
+    .component-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      transition: all 0.3s;
+    }
+
+    .component-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+
+    .component-name {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--primary-light);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .component-desc { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+    .checklist { list-style: none; }
+    .checklist li { padding: 0.4rem 0; display: flex; align-items: center; gap: 0.5rem; }
+    .checklist li::before { content: '✓'; color: var(--success); font-weight: bold; }
+
+    .alert {
+      padding: 1rem 1.25rem;
+      border-radius: 0.75rem;
+      margin: 1rem 0;
+      border-left: 4px solid;
+    }
+
+    .alert-info { background: rgba(59, 130, 246, 0.1); border-color: var(--info); }
+    .alert-warning { background: rgba(245, 158, 11, 0.1); border-color: var(--warning); }
+    .alert-danger { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); }
+    .alert-success { background: rgba(16, 185, 129, 0.1); border-color: var(--success); }
+
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1rem;
+      background: var(--bg-card);
+      padding: 0.25rem;
+      border-radius: 0.75rem;
+      overflow-x: auto;
+    }
+
+    .tab {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .tab.active { background: var(--primary); color: white; }
+    .tab:hover:not(.active) { background: var(--bg-card-hover); color: var(--text); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    footer {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 3rem;
+    }
+
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      header h1 { font-size: 1.75rem; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      nav ul { gap: 0.25rem; }
+    }
+
+    @media print {
+      nav, header::before { display: none; }
+      body { background: white; color: black; }
+      .card { border: 1px solid #ccc; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>CodeHelp CRM/Helpdesk</h1>
+  <p>Documentação Completa do Sistema de Atendimento Profissional</p>
+  <div class="version-badge">v2.0.0 — Julho 2026</div>
+</header>
+
+<nav>
+  <ul>
+    <li><a href="#resumo" class="active">Resumo</a></li>
+    <li><a href="#requisitos">Requisitos</a></li>
+    <li><a href="#regras">Regras de Negócio</a></li>
+    <li><a href="#fluxo">Fluxo do Ticket</a></li>
+    <li><a href="#banco">Banco de Dados</a></li>
+    <li><a href="#componentes">Componentes</a></li>
+    <li><a href="#hooks">Hooks</a></li>
+    <li><a href="#services">Serviços</a></li>
+    <li><a href="#tipos">Tipagens</a></li>
+    <li><a href="#rls">Segurança (RLS)</a></li>
+    <li><a href="#testes">Testes</a></li>
+    <li><a href="#migracao">Migração</a></li>
+    <li><a href="#deploy">Deploy</a></li>
+  </ul>
+</nav>
+
+<div class="container">
+
+  <!-- RESUMO -->
+  <section id="resumo">
+    <h2><span class="icon">📋</span> Resumo do Projeto</h2>
+
+    <div class="grid-4">
+      <div class="stat-card">
+        <div class="value">8</div>
+        <div class="label">Tabelas Novas</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">12</div>
+        <div class="label">Componentes React</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">15+</div>
+        <div class="label">Endpoints API</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">10</div>
+        <div class="label">Fases de Implementação</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 1.5rem;">
+      <h3>Visão Geral</h3>
+      <p>Sistema de atendimento profissional inspirado em Zendesk, Freshdesk, Jira Service Management e Intercom.
+         Inclui timeline visual, métricas de IA, chat responsivo, inteligência artificial para alertas,
+         gráfico temporal, dashboard histórico, replay do ticket e auditoria completa.</p>
+
+      <div class="alert alert-info" style="margin-top: 1rem;">
+        <strong>Stack:</strong> React 18 + TypeScript + Vite + Supabase + PostgreSQL + IA (Claude/GPT/Gemini)
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Horário de Funcionamento</h3>
+      <div class="grid-2">
+        <div>
+          <p><strong>Segunda a Sexta:</strong> 07:00 — 18:00</p>
+          <p><strong>Sábado:</strong> 07:00 — 12:00</p>
+        </div>
+        <div>
+          <p><strong>Pausa Automática:</strong> Ambos (cliente sem resposta + ticket inativo)</p>
+          <p><strong>Feriados:</strong> Municipais + Nacionais automáticos</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REQUISITOS FUNCIONAIS -->
+  <section id="requisitos">
+    <h2><span class="icon">📝</span> Requisitos Funcionais</h2>
+
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('rf-atendimento')">Atendimento</div>
+      <div class="tab" onclick="showTab('rf-sla')">SLA</div>
+      <div class="tab" onclick="showTab('rf-timeline')">Timeline</div>
+      <div class="tab" onclick="showTab('rf-tempos')">Tempos</div>
+      <div class="tab" onclick="showTab('rf-cards')">Cards</div>
+      <div class="tab" onclick="showTab('rf-chat')">Chat</div>
+      <div class="tab" onclick="showTab('rf-ia')">IA</div>
+      <div class="tab" onclick="showTab('rf-export')">Exportação</div>
+    </div>
+
+    <div id="rf-atendimento" class="tab-content active">
+      <div class="card">
+        <h3>RF-001: Horário Comercial</h3>
+        <table>
+          <tr><th> Campo </th><th> Configuração </th></tr>
+          <tr><td>Seg-Sex</td><td>07:00 — 18:00</td></tr>
+          <tr><td>Sábado</td><td>07:00 — 12:00</td></tr>
+          <tr><td>Domingo/Feriado</td><td>Fechado</td></tr>
+          <tr><td>Fuso Horário</td><td>America/Fortaleza (configurável)</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>RF-002: Pausa Automática</h3>
+        <table>
+          <tr><th> Evento </th><th> Ação </th><th> Tempo </th></tr>
+          <tr><td>Cliente não responde</td><td>Marcar "Aguardando Cliente"</td><td>15 min (configurável)</td></tr>
+          <tr><td>Ticket inativo</td><td>Pausar SLA</td><td>Conforme etapa</td></tr>
+          <tr><td>Fora do expediente</td><td>Pausar SLA</td><td>Automático</td></tr>
+          <tr><td>Feriado</td><td>Pausar SLA</td><td>Dia inteiro</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>RF-003: Feriados</h3>
+        <ul class="checklist">
+          <li>Feriados nacionais brasileiros automáticos</li>
+          <li>Feriados estaduais configuráveis</li>
+          <li>Feriados municipais configuráveis</li>
+          <li>Cadastro manual de feriados especiais</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="rf-sla" class="tab-content">
+      <div class="card">
+        <h3>RF-004: SLA por Prioridade</h3>
+        <table>
+          <tr><th> Prioridade </th><th> 1ª Resposta IA </th><th> 1ª Resposta Humana </th><th> Resolução </th></tr>
+          <tr><td><span class="badge badge-danger">Crítica</span></td><td>30s</td><td>5 min</td><td>30 min</td></tr>
+          <tr><td><span class="badge badge-warning">Urgente</span></td><td>1 min</td><td>15 min</td><td>60 min</td></tr>
+          <tr><td><span class="badge badge-info">Alta</span></td><td>2 min</td><td>30 min</td><td>120 min</td></tr>
+          <tr><td><span class="badge badge-primary">Média</span></td><td>3 min</td><td>60 min</td><td>240 min</td></tr>
+          <tr><td><span class="badge badge-success">Baixa</span></td><td>5 min</td><td>120 min</td><td>480 min</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>RF-005: SLA por Cliente</h3>
+        <table>
+          <tr><th> Tier </th><th> Multiplicador </th><th> Exemplo </th></tr>
+          <tr><td>Premium</td><td>0.5x (metade do tempo)</td><td>SLA de 60min → 30min</td></tr>
+          <tr><td>Normal</td><td>1.0x (padrão)</td><td>SLA de 60min → 60min</td></tr>
+          <tr><td>Básico</td><td>1.5x (50% mais)</td><td>SLA de 60min → 90min</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>RF-006: SLA por Board</h3>
+        <table>
+          <tr><th> Board </th><th> SLA Padrão </th><th> Observação </th></tr>
+          <tr><td>N1 - Suporte</td><td>60 min</td><td>Atendimento inicial</td></tr>
+          <tr><td>N2 - Avançado</td><td>120 min</td><td>Problemas complexos</td></tr>
+          <tr><td>Comercial</td><td>240 min</td><td>Vendas e orçamentos</td></tr>
+          <tr><td>Cobrança</td><td>480 min</td><td>Questões financeiras</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>RF-007: SLA para IA e Humano</h3>
+        <div class="grid-2">
+          <div>
+            <h4>🤖 SLA IA</h4>
+            <table>
+              <tr><td>1ª Resposta</td><td>30 segundos</td></tr>
+              <tr><td>Classificação</td><td>5 segundos</td></tr>
+              <tr><td>Sugestão</td><td>10 segundos</td></tr>
+              <tr><td>Resolução</td><td>2 minutos</td></tr>
+            </table>
+          </div>
+          <div>
+            <h4>👤 SLA Humano</h4>
+            <table>
+              <tr><td>1ª Resposta</td><td>Conforme prioridade</td></tr>
+              <tr><td>Atendimento</td><td>Conforme prioridade</td></tr>
+              <tr><td>Resolução</td><td>Conforme prioridade</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>RF-008: Visual SLA</h3>
+        <div class="grid-4">
+          <div style="text-align:center;">
+            <div style="width:60px;height:60px;border-radius:50%;background:#10b981;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🟢</div>
+            <p style="margin-top:0.5rem;font-size:0.85rem;">Dentro do prazo<br><code>&gt;75%</code></p>
+          </div>
+          <div style="text-align:center;">
+            <div style="width:60px;height:60px;border-radius:50%;background:#f59e0b;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🟡</div>
+            <p style="margin-top:0.5rem;font-size:0.85rem;">Atenção<br><code>50-75%</code></p>
+          </div>
+          <div style="text-align:center;">
+            <div style="width:60px;height:60px;border-radius:50%;background:#f97316;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🟠</div>
+            <p style="margin-top:0.5rem;font-size:0.85rem;">Próximo vencimento<br><code>25-50%</code></p>
+          </div>
+          <div style="text-align:center;">
+            <div style="width:60px;height:60px;border-radius:50%;background:#ef4444;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🔴</div>
+            <p style="margin-top:0.5rem;font-size:0.85rem;">SLA Estourado<br><code>0%</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="rf-timeline" class="tab-content">
+      <div class="card">
+        <h3>RF-009: Visualização da Timeline</h3>
+        <div class="grid-3">
+          <div class="stat-card">
+            <div style="font-size:1.5rem;">↔️</div>
+            <div class="label">Horizontal (padrão)</div>
+          </div>
+          <div class="stat-card">
+            <div style="font-size:1.5rem;">📐</div>
+            <div class="label">Expandida (detalhes)</div>
+          </div>
+          <div class="stat-card">
+            <div style="font-size:1.5rem;">🔄</div>
+            <div class="label">Alternável</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>RF-010: Eventos da Timeline</h3>
+        <div class="timeline-preview">
+          <div class="timeline-item">
+            <div class="timeline-time">09:18</div>
+            <div class="timeline-title">Ticket Criado</div>
+            <div class="timeline-desc">Cliente enviou mensagem via WhatsApp</div>
+            <div class="timeline-delta">+0s</div>
+          </div>
+          <div class="timeline-item ia">
+            <div class="timeline-time">09:18</div>
+            <div class="timeline-title">IA Lino Assumiu</div>
+            <div class="timeline-desc">Classificação automática: Suporte Técnico</div>
+            <div class="timeline-delta">+2s</div>
+          </div>
+          <div class="timeline-item ia">
+            <div class="timeline-time">09:19</div>
+            <div class="timeline-title">IA Respondeu</div>
+            <div class="timeline-desc">Primeira resposta automática</div>
+            <div class="timeline-delta">+38s</div>
+          </div>
+          <div class="timeline-item cliente">
+            <div class="timeline-time">09:21</div>
+            <div class="timeline-title">Cliente Respondeu</div>
+            <div class="timeline-desc">"Obrigado, vou verificar"</div>
+            <div class="timeline-delta">+2m</div>
+          </div>
+          <div class="timeline-item humano">
+            <div class="timeline-time">09:23</div>
+            <div class="timeline-title">Transferido para João</div>
+            <div class="timeline-desc">IA não conseguiu resolver</div>
+            <div class="timeline-delta">+2m</div>
+          </div>
+          <div class="timeline-item humano">
+            <div class="timeline-time">09:24</div>
+            <div class="timeline-title">João Assumiu</div>
+            <div class="timeline-desc">Atendente humano assumiu o ticket</div>
+            <div class="timeline-delta">+1m</div>
+          </div>
+          <div class="timeline-item cliente">
+            <div class="timeline-time">09:40</div>
+            <div class="timeline-title">Aguardando Cliente</div>
+            <div class="timeline-desc">Cliente sem resposta por 16 minutos</div>
+            <div class="timeline-delta">+16m</div>
+          </div>
+          <div class="timeline-item cliente">
+            <div class="timeline-time">10:12</div>
+            <div class="timeline-title">Cliente Respondeu</div>
+            <div class="timeline-desc">Envio de comprovante</div>
+            <div class="timeline-delta">+32m</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-time">10:16</div>
+            <div class="timeline-title">Resolvido</div>
+            <div class="timeline-desc">Problema solucionado pelo atendente</div>
+            <div class="timeline-delta">+4m</div>
+          </div>
+          <div class="timeline-item csat">
+            <div class="timeline-time">10:16</div>
+            <div class="timeline-title">CSAT Enviado</div>
+            <div class="timeline-desc">Pesquisa de satisfação enviada</div>
+            <div class="timeline-delta">+0s</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="rf-tempos" class="tab-content">
+      <div class="card">
+        <h3>RF-011: Tempos a Medir</h3>
+        <table>
+          <tr><th> Métrica </th><th> Cálculo </th><th> Fórmula </th></tr>
+          <tr><td>Primeira Resposta IA</td><td>Criação → 1ª msg IA</td><td><code>msg_ia_1.created_at - ticket.created_at</code></td></tr>
+          <tr><td>Primeira Resposta Humana</td><td>Criação → 1ª msg humana</td><td><code>msg_humano_1.created_at - ticket.created_at</code></td></tr>
+          <tr><td>Atendimento Humano</td><td>1ª msg humana → Resolução</td><td><code>resolucao - msg_humano_1</code></td></tr>
+          <tr><td>Tempo em Fila</td><td>Criado → Assumido</td><td><code>assumido_em - created_at</code></td></tr>
+          <tr><td>Aguardando Cliente</td><td>Soma de todos os períodos</td><td><code>SUM(fim - inicio) WHERE etapa = 'aguardando_cliente'</code></td></tr>
+          <tr><td>Aguardando Terceiro</td><td>Soma de todos os períodos</td><td><code>SUM(fim - inicio) WHERE etapa = 'aguardando_terceiro'</code></td></tr>
+          <tr><td>Em Análise</td><td>Soma de todos os períodos</td><td><code>SUM(fim - inicio) WHERE etapa = 'analise'</code></td></tr>
+          <tr><td>Lead Time</td><td>Criação → Resolução</td><td><code>resolucao - created_at</code></td></tr>
+          <tr><td>Tempo Útil</td><td>Lead Time - Fora expediente</td><td><code>leadtime - pausas_expediente</code></td></tr>
+          <tr><td>Tempo Corrido</td><td>Criação → Agora (24/7)</td><td><code>NOW() - created_at</code></td></tr>
+          <tr><td>Fora Expediente</td><td>Soma de pausas noturnas/domingo</td><td><code>SUM(fora_horario)</code></td></tr>
+          <tr><td>Tempo Parado</td><td>Sem movimentação > threshold</td><td><code>MAX(gap_entre_eventos)</code></td></tr>
+          <tr><td>Tempo por Etapa</td><td>Cada etapa individual</td><td><code>fim_etapa - inicio_etapa</code></td></tr>
+          <tr><td>Tempo Resolução IA</td><td>1ª msg IA → Resolução IA</td><td><code>resolucao_ia - msg_ia_1</code></td></tr>
+          <tr><td>Processamento IA</td><td>Recebido → Resposta IA</td><td><code>msg_ia_1.created_at - msg_cliente_1.created_at</code></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div id="rf-cards" class="tab-content">
+      <div class="card">
+        <h3>RF-012: Cards de Métricas (Empilhados)</h3>
+        <div class="grid-2">
+          <div class="stat-card" style="text-align:left;">
+            <p style="color:var(--text-muted);font-size:0.75rem;">PRIMEIRA RESPOSTA IA</p>
+            <p style="font-size:1.5rem;font-weight:800;color:var(--primary-light);">00:00:18</p>
+          </div>
+          <div class="stat-card" style="text-align:left;">
+            <p style="color:var(--text-muted);font-size:0.75rem;">PRIMEIRA RESPOSTA HUMANA</p>
+            <p style="font-size:1.5rem;font-weight:800;color:var(--success);">00:08:32</p>
+          </div>
+          <div class="stat-card" style="text-align:left;">
+            <p style="color:var(--text-muted);font-size:0.75rem;">TEMPO AGUARDANDO CLIENTE</p>
+            <p style="font-size:1.5rem;font-weight:800;color:var(--warning);">18:20:11</p>
+          </div>
+          <div class="stat-card" style="text-align:left;">
+            <p style="color:var(--text-muted);font-size:0.75rem;">TEMPO EM FILA</p>
+            <p style="font-size:1.5rem;font-weight:800;color:var(--info);">00:05:12</p>
+          </div>
+          <div class="stat-card" style="text-align:left;">
+            <p style="color:var(--text-muted);font-size:0.75rem;">LEAD TIME</p>
+            <p style="font-size:1.5rem;font-weight:800;color:var(--danger);">19:55:10</p>
+          </div>
+          <div class="stat-card" style="text-align:left;">
+            <p style="color:var(--text-muted);font-size:0.75rem;">SLA</p>
+            <p style="font-size:1.5rem;font-weight:800;color:var(--success);">97%</p>
+            <div class="sla-bar"><div class="sla-bar-fill" style="width:97%;background:var(--success);"></div></div>
+          </div>
+          <div class="stat-card" style="text-align:left;">
+            <p style="color:var(--text-muted);font-size:0.75rem;">USO IA</p>
+            <p style="font-size:1.5rem;font-weight:800;color:var(--primary-light);">17 respostas</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="rf-chat" class="tab-content">
+      <div class="card">
+        <h3>RF-013: Chat Responsivo</h3>
+        <table>
+          <tr><th> Recurso </th><th> Descrição </th><th> Atalho </th></tr>
+          <tr><td>Arrastar altura</td><td>Redimensionar verticalmente pela borda</td><td>—</td></tr>
+          <tr><td>Arrastar largura</td><td>Redimensionar horizontalmente pela borda</td><td>—</td></tr>
+          <tr><td>Fullscreen</td><td>Tela cheia do chat</td><td><code>F11</code></td></tr>
+          <tr><td>Sair fullscreen</td><td>Voltar ao tamanho normal</td><td><code>Esc</code></td></tr>
+          <tr><td>Ocultar lateral</td><td>Esconder painel de métricas</td><td>Botão</td></tr>
+          <tr><td>Ocultar info ticket</td><td>Esconder header do ticket</td><td>Botão</td></tr>
+          <tr><td>Expandir conversa</td><td>Somente chat visível</td><td>Botão</td></tr>
+          <tr><td>Enviar mensagem</td><td>Enviar texto</td><td><code>Ctrl+Enter</code></td></tr>
+          <tr><td>Nota interna</td><td>Adicionar nota privada</td><td><code>Ctrl+Shift+N</code></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div id="rf-ia" class="tab-content">
+      <div class="card">
+        <h3>RF-014: Timeline Inteligente (IA)</h3>
+        <table>
+          <tr><th> Alerta </th><th> Condição </th><th> Severidade </th></tr>
+          <tr><td>Cliente aguardou</td><td>&gt; 30 min sem resposta</td><td><span class="badge badge-warning">⚠️ Atenção</span></td></tr>
+          <tr><td>SLA quase vencendo</td><td>&lt; 25% do tempo restante</td><td><span class="badge badge-danger">🚨 Crítico</span></td></tr>
+          <tr><td>Irritação detectada</td><td>IA identifica sentimento negativo</td><td><span class="badge badge-warning">⚠️ Atenção</span></td></tr>
+          <tr><td>Ticket parado</td><td>&gt; 3 horas sem movimentação</td><td><span class="badge badge-danger">🚨 Crítico</span></td></tr>
+          <tr><td>IA resolveu</td><td>100% resolvido sem humano</td><td><span class="badge badge-success">✅ Sucesso</span></td></tr>
+          <tr><td>Resposta rápida</td><td>&lt; 2 minutos</td><td><span class="badge badge-success">✅ Sucesso</span></td></tr>
+          <tr><td>Muitos áudios</td><td>&gt; 4 áudios</td><td><span class="badge badge-info">ℹ️ Info</span></td></tr>
+          <tr><td>Rechamado</td><td>Mesmo número, ticket anterior &lt; 7 dias</td><td><span class="badge badge-warning">⚠️ Atenção</span></td></tr>
+          <tr><td>Problema repetido</td><td>Mesmo ticket &gt; 3 vezes</td><td><span class="badge badge-danger">🚨 Crítico</span></td></tr>
+          <tr><td>Sugestão</td><td>IA gera resposta para operador</td><td><span class="badge badge-info">ℹ️ Info</span></td></tr>
+          <tr><td>Classificação</td><td>IA classifica automaticamente</td><td><span class="badge badge-info">ℹ️ Info</span></td></tr>
+          <tr><td>Nota encerramento</td><td>IA gera nota automática</td><td><span class="badge badge-info">ℹ️ Info</span></td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>RF-015: Gráfico Temporal</h3>
+        <p>Barras horizontais proporcionais com cores:</p>
+        <div style="margin:1rem 0;">
+          <div style="display:flex;gap:2px;height:30px;border-radius:6px;overflow:hidden;">
+            <div style="flex:2;background:#3b82f6;" title="Recebido"></div>
+            <div style="flex:1;background:#a855f7;" title="IA"></div>
+            <div style="flex:3;background:#eab308;" title="Fila"></div>
+            <div style="flex:5;background:#22c55e;" title="Humano"></div>
+            <div style="flex:8;background:#f97316;" title="Cliente"></div>
+            <div style="flex:1;background:#1e40af;" title="Finalizado"></div>
+          </div>
+          <div style="display:flex;gap:1rem;margin-top:0.5rem;font-size:0.7rem;color:var(--text-muted);">
+            <span>🟦 Recebido</span>
+            <span>🟪 IA</span>
+            <span>🟨 Fila</span>
+            <span>🟩 Humano</span>
+            <span>🟧 Cliente</span>
+            <span>🟦 Finalizado</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>RF-016: Dashboard Histórico</h3>
+        <div class="grid-2">
+          <div>
+            <h4>Dados Rastreados</h4>
+            <ul class="checklist">
+              <li>Mudanças de status</li>
+              <li>Transferências</li>
+              <li>Mudanças de prioridade</li>
+              <li>Alterações de categoria</li>
+              <li>Mudanças de SLA</li>
+              <li>Alterações pela IA</li>
+              <li>Alterações por usuários</li>
+              <li>Webhooks executados</li>
+            </ul>
+          </div>
+          <div>
+            <h4>Dados Adicionais</h4>
+            <ul class="checklist">
+              <li>Automações disparadas</li>
+              <li>Falhas/erros</li>
+              <li>Logs de IA</li>
+              <li>Custos por interação</li>
+              <li>Modelos de IA</li>
+              <li>Tempo de execução IA</li>
+              <li>Anexos</li>
+              <li>Notas internas</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="rf-export" class="tab-content">
+      <div class="card">
+        <h3>RF-017: Exportação</h3>
+        <table>
+          <tr><th> Formato </th><th> Dados </th><th> Destino </th></tr>
+          <tr><td>PDF</td><td>Relatórios de atendimento</td><td>Download / Email</td></tr>
+          <tr><td>CSV/Excel</td><td>Dados brutos de tickets</td><td>Download</td></tr>
+          <tr><td>JSON</td><td>Logs de auditoria</td><td>Download / API</td></tr>
+          <tr><td>API REST</td><td>Todos os dados</td><td>Integrações externas</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- REGRAS DE NEGÓCIO -->
+  <section id="regras">
+    <h2><span class="icon">⚙️</span> Regras de Negócio</h2>
+
+    <div class="card">
+      <h3>RN-001: Ciclo de Vida do Ticket</h3>
+      <div class="flow">
+        <div class="flow-step">📥 Criado</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">🤖 IA Assumiu</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">💬 Conversando</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">👤 Humano Assumiu</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">🔄 Transferido</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">⏳ Aguardando</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">✅ Resolvido</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">⭐ CSAT</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">📦 Arquivado</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>RN-002: Regras de SLA</h3>
+      <table>
+        <tr><th> # </th><th> Regra </th><th> Prioridade </th></tr>
+        <tr><td>1</td><td>SLA inicia quando ticket entra em "Fila"</td><td>Alta</td></tr>
+        <tr><td>2</td><td>SLA pausa em "Aguardando Cliente" e "Aguardando Terceiro"</td><td>Alta</td></tr>
+        <tr><td>3</td><td>SLA pausa fora do expediente (07:00-18:00 seg-sex, 07:00-12:00 sáb)</td><td>Alta</td></tr>
+        <tr><td>4</td><td>SLA pausa em feriados</td><td>Alta</td></tr>
+        <tr><td>5</td><td>SLA retoma quando cliente responde</td><td>Alta</td></tr>
+        <tr><td>6</td><td>SLA violado gera notificação automática</td><td>Média</td></tr>
+        <tr><td>7</td><td>SLA violado escalate automaticamente</td><td>Média</td></tr>
+        <tr><td>8</td><td>Cliente Premium: SLA × 0.5</td><td>Alta</td></tr>
+        <tr><td>9</td><td>Cliente Básico: SLA × 1.5</td><td>Alta</td></tr>
+        <tr><td>10</td><td>Board N2: SLA × 2.0</td><td>Alta</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>RN-003: Regras de IA</h3>
+      <table>
+        <tr><th> # </th><th> Regra </th></tr>
+        <tr><td>1</td><td>IA responde em até 30 segundos</td></tr>
+        <tr><td>2</td><td>IA classifica automaticamente em até 5 segundos</td></tr>
+        <tr><td>3</td><td>IA escala para humano após 3 tentativas</td></tr>
+        <tr><td>4</td><td>IA não fecha ticket sem confirmação</td></tr>
+        <tr><td>5</td><td>IA registra todas as interações</td></tr>
+        <tr><td>6</td><td>IA aprende com correções de operadores</td></tr>
+        <tr><td>7</td><td>IA detecta sentimento a cada 5 mensagens</td></tr>
+        <tr><td>8</td><td>IA gera nota de encerramento automática</td></tr>
+        <tr><td>9</td><td>IA sugere respostas para operadores</td></tr>
+        <tr><td>10</td><td>IA rastreia custo por interação</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>RN-004: Regras de Auditoria</h3>
+      <div class="alert alert-danger">
+        <strong>REGRA ABSOLUTA:</strong> Todas as tabelas de auditoria utilizam somente INSERT.
+        Nenhum UPDATE ou DELETE é permitido. Histórico completo e imutável.
+      </div>
+      <table>
+        <tr><th> Tabela </th><th> Operação </th><th> Retenção </th></tr>
+        <tr><td>ticket_events</td><td>INSERT only</td><td>Indefinida</td></tr>
+        <tr><td>ticket_timeline</td><td>INSERT only</td><td>Indefinida</td></tr>
+        <tr><td>ticket_metrics</td><td>INSERT only</td><td>Indefinida</td></tr>
+        <tr><td>ticket_sla_logs</td><td>INSERT only</td><td>Indefinida</td></tr>
+        <tr><td>ticket_activity</td><td>INSERT only</td><td>Indefinida</td></tr>
+        <tr><td>ticket_wait_times</td><td>INSERT only</td><td>Indefinida</td></tr>
+        <tr><td>ticket_ai_logs</td><td>INSERT only</td><td>Indefinida</td></tr>
+        <tr><td>ticket_performance</td><td>INSERT only</td><td>Indefinida</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- FLUXO DO TICKET -->
+  <section id="fluxo">
+    <h2><span class="icon">🔄</span> Fluxograma do Ticket</h2>
+
+    <div class="card">
+      <div class="er-diagram">
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐
+│  WhatsApp    │────▶│  Ticket      │────▶│  IA Lino     │
+│  Mensagem    │     │  Criado      │     │  Assumiu     │
+└─────────────┘     └──────────────┘     └──────┬───────┘
+                                                 │
+                              ┌───────────────────┤
+                              │                   │
+                              ▼                   ▼
+                    ┌──────────────┐     ┌──────────────┐
+                    │  IA Resolve  │     │  IA Não      │
+                    │  Sozinha     │     │  Resolve     │
+                    └──────┬───────┘     └──────┬───────┘
+                           │                    │
+                           ▼                    ▼
+                    ┌──────────────┐     ┌──────────────┐
+                    │  CSAT        │     │  Fila de     │
+                    │  Enviado     │     │  Espera      │
+                    └──────┬───────┘     └──────┬───────┘
+                           │                    │
+                           ▼                    ▼
+                    ┌──────────────┐     ┌──────────────┐
+                    │  Arquivado   │     │  Humano      │
+                    │              │     │  Assumiu     │
+                    └──────────────┘     └──────┬───────┘
+                                                │
+                              ┌──────────────────┤
+                              │                  │
+                              ▼                  ▼
+                    ┌──────────────┐     ┌──────────────┐
+                    │  Resolver    │     │  Transferir  │
+                    └──────┬───────┘     └──────┬───────┘
+                           │                    │
+                           ▼                    ▼
+                    ┌──────────────┐     ┌──────────────┐
+                    │  CSAT        │     │  Outro Board │
+                    │  Enviado     │     │              │
+                    └──────┬───────┘     └──────────────┘
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │  Arquivado   │
+                    └──────────────┘
+      </div>
+    </div>
+  </section>
+
+  <!-- BANCO DE DADOS -->
+  <section id="banco">
+    <h2><span class="icon">🗄️</span> Banco de Dados</h2>
+
+    <div class="card">
+      <h3>Modelo ER — Novas Tabelas</h3>
+      <div class="er-diagram">
+┌─────────────────────────────────────────────────────────────────────┐
+│                          ticket_events                              │
+├─────────────────────────────────────────────────────────────────────┤
+│ id            UUID PK                                               │
+│ ticket_id     UUID FK → Ticket                                      │
+│ event_type    VARCHAR  (criado, status, prioridade, categoria,      │
+│                         transferencia, sla, csat, nota, arquivo,    │
+│                         automacao, webhook, erro, ia_resposta,      │
+│                         ia_classificacao, ia_nota)                  │
+│ description   TEXT                                                   │
+│ user_id       UUID FK → User (nullable)                             │
+│ is_ai         BOOLEAN DEFAULT false                                  │
+│ old_value     JSONB (nullable)                                       │
+│ new_value     JSONB (nullable)                                       │
+│ metadata      JSONB (nullable)                                       │
+│ created_at    TIMESTAMPTZ DEFAULT NOW()                              │
+├─────────────────────────────────────────────────────────────────────┤
+│ INDEX: idx_ticket_events_ticket_id, idx_ticket_events_type,         │
+│        idx_ticket_events_created_at                                  │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                        ticket_timeline                               │
+├─────────────────────────────────────────────────────────────────────┤
+│ id            UUID PK                                               │
+│ ticket_id     UUID FK → Ticket                                      │
+│ event_type    VARCHAR  (recebido, ia_assumiu, ia_respondeu,         │
+│                         cliente_respondeu, humano_assumiu,          │
+│                         transferencia, status_alterado,             │
+│                         prioridade_alterada, sla_alerta,            │
+│                         sla_estourado, csat_enviado, csat_resp,     │
+│                         nota_interna, arquivo, automacao, webhook,  │
+│                         erro, resolvido, arquivado)                 │
+│ title         VARCHAR(255)                                           │
+│ description   TEXT                                                   │
+│ icon          VARCHAR(50)                                            │
+│ color         VARCHAR(7)  (#hex)                                     │
+│ user_id       UUID FK → User (nullable)                             │
+│ is_ai         BOOLEAN DEFAULT false                                  │
+│ delta_seconds INT  (tempo desde evento anterior em segundos)         │
+│ metadata      JSONB (nullable)                                       │
+│ created_at    TIMESTAMPTZ DEFAULT NOW()                              │
+├─────────────────────────────────────────────────────────────────────┤
+│ INDEX: idx_ticket_timeline_ticket_id, idx_ticket_timeline_created_at│
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                        ticket_metrics                                │
+├─────────────────────────────────────────────────────────────────────┤
+│ id                       UUID PK                                    │
+│ ticket_id                UUID FK → Ticket                           │
+│ primeira_resposta_ia_s   INT  (segundos)                            │
+│ primeira_resposta_humano_s INT (segundos)                           │
+│ tempo_atendimento_humano_s INT (segundos)                           │
+│ tempo_fila_s             INT  (segundos)                            │
+│ tempo_aguardando_cliente_s INT (segundos)                           │
+│ tempo_aguardando_terceiro_s INT (segundos)                          │
+│ tempo_analise_s          INT  (segundos)                            │
+│ lead_time_s              INT  (segundos)                            │
+│ tempo_util_s             INT  (segundos)                            │
+│ tempo_corrido_s          INT  (segundos)                            │
+│ tempo_fora_expediente_s  INT  (segundos)                            │
+│ tempo_parado_s           INT  (segundos)                            │
+│ tempo_por_etapa          JSONB  {"fila": 300, "em_atendimento": 1200}│
+│ tempo_resolucao_ia_s     INT  (segundos)                            │
+│ tempo_processamento_ia_s INT  (segundos)                            │
+│ total_mensagens          INT                                        │
+│ mensagens_cliente        INT                                        │
+│ mensagens_agente         INT                                        │
+│ mensagens_bot            INT                                        │
+│ total_audios             INT                                        │
+│ total_arquivos           INT                                        │
+│ total_reaberturas        INT                                        │
+│ total_transferencias     INT                                        │
+│ uso_ia_respostas         INT                                        │
+│ uso_ia_tokens            INT                                        │
+│ uso_ia_custo             DECIMAL(10,4)                              │
+│ sla_percentual           DECIMAL(5,2)                               │
+│ sla_status               VARCHAR(20) (ok, alerta_75, alerta_90,     │
+│                                      violado)                       │
+│ created_at               TIMESTAMPTZ DEFAULT NOW()                  │
+├─────────────────────────────────────────────────────────────────────┤
+│ INDEX: idx_ticket_metrics_ticket_id, idx_ticket_metrics_sla         │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                        ticket_sla_logs                               │
+├─────────────────────────────────────────────────────────────────────┤
+│ id            UUID PK                                               │
+│ ticket_id     UUID FK → Ticket                                      │
+│ action        VARCHAR (iniciado, pausado, retomado, violado,        │
+│                        alerta_75, alerta_90, estourado)             │
+│ sla_config    JSONB  {prioridade, minutos_total, minutos_restantes} │
+│ reason        TEXT                                                   │
+│ user_id       UUID FK → User (nullable)                             │
+│ created_at    TIMESTAMPTZ DEFAULT NOW()                              │
+├─────────────────────────────────────────────────────────────────────┤
+│ INDEX: idx_ticket_sla_logs_ticket_id, idx_ticket_sla_logs_action    │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                        ticket_activity                               │
+├─────────────────────────────────────────────────────────────────────┤
+│ id            UUID PK                                               │
+│ ticket_id     UUID FK → Ticket                                      │
+│ action        VARCHAR (created, updated, moved, assigned,           │
+│                        transferred, resolved, closed, reopened,     │
+│                        deleted, attachment_added, note_added)       │
+│ entity        VARCHAR (ticket, message, client, order, sla, ia)     │
+│ entity_id     UUID (nullable)                                       │
+│ user_id       UUID FK → User (nullable)                             │
+│ is_ai         BOOLEAN DEFAULT false                                  │
+│ changes       JSONB  {field, old_value, new_value}                  │
+│ ip_address    INET (nullable)                                       │
+│ user_agent    TEXT (nullable)                                       │
+│ created_at    TIMESTAMPTZ DEFAULT NOW()                              │
+├─────────────────────────────────────────────────────────────────────┤
+│ INDEX: idx_ticket_activity_ticket_id, idx_ticket_activity_action,   │
+│        idx_ticket_activity_created_at                                │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                        ticket_wait_times                             │
+├─────────────────────────────────────────────────────────────────────┤
+│ id            UUID PK                                               │
+│ ticket_id     UUID FK → Ticket                                      │
+│ wait_type     VARCHAR (fila, cliente, terceiro, expediente, pausa)  │
+│ started_at    TIMESTAMPTZ                                            │
+│ ended_at      TIMESTAMPTZ (nullable, null = ainda aguardando)       │
+│ duration_s    INT (nullable, calculado ao finalizar)                 │
+│ caused_by     VARCHAR (nullable: ia, humano, cliente, sistema)      │
+│ user_id       UUID FK → User (nullable)                             │
+│ created_at    TIMESTAMPTZ DEFAULT NOW()                              │
+├─────────────────────────────────────────────────────────────────────┤
+│ INDEX: idx_ticket_wait_times_ticket_id, idx_ticket_wait_times_type  │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                        ticket_ai_logs                                │
+├─────────────────────────────────────────────────────────────────────┤
+│ id            UUID PK                                               │
+│ ticket_id     UUID FK → Ticket                                      │
+│ action        VARCHAR (classificar, analisar, responder, sugerir,   │
+│                        encerrar, avaliar, corrigir)                 │
+│ model         VARCHAR (claude-sonnet, gpt-4o, gemini-flash, etc)   │
+│ prompt_tokens INT                                                    │
+│ completion_tokens INT                                                │
+│ total_tokens  INT                                                    │
+│ cost_usd      DECIMAL(10,6)                                          │
+│ cost_brl      DECIMAL(10,4)                                          │
+│ latency_ms    INT                                                    │
+│ input_text    TEXT (nullable, primeiros 500 chars)                   │
+│ output_text   TEXT (nullable, primeiros 500 chars)                   │
+│ success       BOOLEAN DEFAULT true                                   │
+│ error_message TEXT (nullable)                                        │
+│ metadata      JSONB (nullable)                                       │
+│ created_at    TIMESTAMPTZ DEFAULT NOW()                              │
+├─────────────────────────────────────────────────────────────────────┤
+│ INDEX: idx_ticket_ai_logs_ticket_id, idx_ticket_ai_logs_action,     │
+│        idx_ticket_ai_logs_model, idx_ticket_ai_logs_created_at      │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                        ticket_performance                            │
+├─────────────────────────────────────────────────────────────────────┤
+│ id            UUID PK                                               │
+│ ticket_id     UUID FK → Ticket                                      │
+│ period        VARCHAR (YYYY-MM-DD ou YYYY-MM)                       │
+│ metric_type   VARCHAR (mttr, mtfa, csat, sla, fcr, ia_resolution)  │
+│ metric_value  DECIMAL(10,4)                                          │
+│ target_value  DECIMAL(10,4) (nullable, meta)                        │
+│ is_met        BOOLEAN (nullable, calculado)                         │
+│ user_id       UUID FK → User (nullable, para métricas por agente)  │
+│ created_at    TIMESTAMPTZ DEFAULT NOW()                              │
+├─────────────────────────────────────────────────────────────────────┤
+│ INDEX: idx_ticket_performance_ticket_id, idx_ticket_performance_type│
+│        idx_ticket_performance_period                                 │
+└─────────────────────────────────────────────────────────────────────┘
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPONENTES -->
+  <section id="componentes">
+    <h2><span class="icon">🧩</span> Componentes React</h2>
+
+    <div class="grid-2">
+      <div class="component-card">
+        <div class="component-name">TicketTimeline.tsx</div>
+        <div class="component-desc">Timeline visual do ticket com eventos, ícones, tempo delta, alternância compacta/expandida. Suporte a horizontal/vertical.</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-primary">Novo</span>
+          <span class="badge badge-info">Fase 2</span>
+        </div>
+      </div>
+
+      <div class="component-card">
+        <div class="component-name">TicketMetricsPanel.tsx</div>
+        <div class="component-desc">Painel lateral com métricas empilhadas: tempos, SLA, uso IA, custo. Atualização em tempo real.</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-primary">Novo</span>
+          <span class="badge badge-info">Fase 3</span>
+        </div>
+      </div>
+
+      <div class="component-card">
+        <div class="component-name">ResizableChat.tsx</div>
+        <div class="component-desc">Chat com redimensionamento arrastável, fullscreen (F11), ocultar painéis, atalhos de teclado.</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-primary">Novo</span>
+          <span class="badge badge-info">Fase 4</span>
+        </div>
+      </div>
+
+      <div class="component-card">
+        <div class="component-name">SmartTimeline.tsx</div>
+        <div class="component-desc">Timeline com alertas inteligentes da IA: irritação, SLA, rechamado, ticket parado, etc.</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-primary">Novo</span>
+          <span class="badge badge-info">Fase 5</span>
+        </div>
+      </div>
+
+      <div class="component-card">
+        <div class="component-name">TemporalBarChart.tsx</div>
+        <div class="component-desc">Gráfico de barras horizontais proporcionais com cores por etapa (Recebido→IA→Fila→Humano→Cliente→Finalizado).</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-primary">Novo</span>
+          <span class="badge badge-info">Fase 6</span>
+        </div>
+      </div>
+
+      <div class="component-card">
+        <div class="component-name">TicketHistoryDashboard.tsx</div>
+        <div class="component-desc">Dashboard completo com todas as mudanças, transferências, logs de IA, custos, webhooks, automações.</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-primary">Novo</span>
+          <span class="badge badge-info">Fase 7</span>
+        </div>
+      </div>
+
+      <div class="component-card">
+        <div class="component-name">SLAIndicator.tsx</div>
+        <div class="component-desc">Indicador visual de SLA com cores (verde/amarelo/laranja/vermelho), barra de progresso, countdown.</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-success">Melhoria</span>
+        </div>
+      </div>
+
+      <div class="component-card">
+        <div class="component-name">TicketReplayPlayer.tsx</div>
+        <div class="component-desc">Player temporal para reproduzir toda a história do ticket com velocidades 1x/2x/4x/8x e filtros.</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-primary">Novo</span>
+          <span class="badge badge-warning">Fase 10</span>
+        </div>
+      </div>
+
+      <div class="component-card">
+        <div class="component-name">SkeletonCard.tsx</div>
+        <div class="component-desc">Skeleton loading para cards de métricas e timeline. Animação de pulse.</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-success">Melhoria</span>
+        </div>
+      </div>
+
+      <div class="component-card">
+        <div class="component-name">GlassPanel.tsx</div>
+        <div class="component-desc">Painel com efeito glassmorphism leve. Suporte a dark mode. Componente reutilizável.</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-primary">Novo</span>
+          <span class="badge badge-info">Fase 9</span>
+        </div>
+      </div>
+
+      <div class="component-card">
+        <div class="component-name">ExportButton.tsx</div>
+        <div class="component-desc">Botão de exportação multi-formato: PDF, CSV, JSON. Download ou API.</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-primary">Novo</span>
+        </div>
+      </div>
+
+      <div class="component-card">
+        <div class="component-name">CostAlertBadge.tsx</div>
+        <div class="component-desc">Badge de alerta de custo da IA. Muda cor conforme limite de gasto mensal.</div>
+        <div style="margin-top:0.5rem;">
+          <span class="badge badge-primary">Novo</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOOKS -->
+  <section id="hooks">
+    <h2><span class="icon">🪝</span> Hooks Customizados</h2>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>useTicketTimeline</h3>
+        <pre><code>const { events, loading, addEvent } = useTicketTimeline(ticketId);
+
+// Retorna:
+// events: TicketTimelineEvent[]
+// loading: boolean
+// addEvent: (event) => void
+// subscription: RealtimeSubscription</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>useTicketMetrics</h3>
+        <pre><code>const { metrics, loading, refresh } = useTicketMetrics(ticketId);
+
+// Retorna:
+// metrics: TicketMetrics | null
+// loading: boolean
+// refresh: () => void</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>useResizable</h3>
+        <pre><code>const { size, ref, toggleFullscreen } = useResizable({
+  defaultWidth: 600,
+  defaultHeight: 500,
+  minWidth: 300,
+  minHeight: 200,
+});
+
+// Retorna:
+// size: { width, height }
+// ref: RefObject
+// toggleFullscreen: () => void
+// isFullscreen: boolean</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>useSLACountdown</h3>
+        <pre><code>const { remaining, percent, status } = useSLACountdown({
+  totalMinutes: 60,
+  paused: false,
+  startedAt: ticket.createdAt,
+});
+
+// Retorna:
+// remaining: string "00:32:15"
+// percent: number 53.5
+// status: 'ok' | 'alerta' | 'critico' | 'violado'</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>useTicketKeyboard</h3>
+        <pre><code>useTicketKeyboard({
+  onFullscreen: () => toggleFullscreen(),
+  onSendMessage: () => sendMessage(),
+  onNote: () => addInternalNote(),
+});
+
+// Registra:
+// F11 → fullscreen
+// Esc → sair fullscreen
+// Ctrl+Enter → enviar
+// Ctrl+Shift+N → nota</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>useReplayPlayer</h3>
+        <pre><code>const { playing, speed, currentEvent, play, pause, setSpeed } = useReplayPlayer({
+  events: timelineEvents,
+  speed: 1, // 1x, 2x, 4x, 8x
+});
+
+// Retorna:
+// playing: boolean
+// speed: number
+// currentEvent: TicketEvent | null
+// play: () => void
+// pause: () => void
+// setSpeed: (s) => void</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVIÇOS -->
+  <section id="services">
+    <h2><span class="icon">🔧</span> Serviços</h2>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>ticketTimeline.service.ts</h3>
+        <pre><code>// Backend (Supabase Edge Function)
+export async function addTimelineEvent(data: {
+  ticket_id: string;
+  event_type: string;
+  title: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  user_id?: string;
+  is_ai?: boolean;
+  metadata?: any;
+}): Promise&lt;TicketTimelineEvent&gt;
+
+export async function getTimeline(ticket_id: string): Promise&lt;TicketTimelineEvent[]&gt;
+
+export async function getTimelineWithDeltas(ticket_id: string): Promise&lt;TicketTimelineEvent[]&gt;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>ticketMetrics.service.ts</h3>
+        <pre><code>// Backend
+export async function calculateMetrics(ticket_id: string): Promise&lt;TicketMetrics&gt;
+
+export async function updateMetrics(ticket_id: string): Promise&lt;void&gt;
+
+export async function getMetricsHistory(ticket_id: string): Promise&lt;TicketMetrics[]&gt;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>ticketSLA.service.ts</h3>
+        <pre><code>// Backend
+export async function startSLA(ticket_id: string): Promise&lt;void&gt;
+
+export async function pauseSLA(ticket_id: string, reason: string): Promise&lt;void&gt;
+
+export async function resumeSLA(ticket_id: string): Promise&lt;void&gt;
+
+export async function checkSLAAlerts(): Promise&lt;SLAAlert[]&gt;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>ticketAI.service.ts</h3>
+        <pre><code>// Backend
+export async function logAICall(data: {
+  ticket_id: string;
+  action: string;
+  model: string;
+  tokens: { prompt: number; completion: number; total: number };
+  cost_usd: number;
+  latency_ms: number;
+  success: boolean;
+}): Promise&lt;void&gt;
+
+export async function getAICosts(ticket_id: string): Promise&lt;AICostSummary&gt;
+
+export async function getAICostsByPeriod(period: string): Promise&lt;AICostSummary[]&gt;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>ticketExport.service.ts</h3>
+        <pre><code>// Backend
+export async function exportTicketPDF(ticket_id: string): Promise&lt;Buffer&gt;
+
+export async function exportTicketCSV(ticket_id: string): Promise&lt;string&gt;
+
+export async function exportTicketJSON(ticket_id: string): Promise&lt;any&gt;
+
+export async function exportAuditLogs(filters: ExportFilters): Promise&lt;Buffer&gt;</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>ticketReplay.service.ts</h3>
+        <pre><code>// Backend
+export async function getReplayData(ticket_id: string): Promise&lt;ReplayEvent[]&gt;
+
+export async function getReplayWithFilters(
+  ticket_id: string,
+  filters: {
+    event_types?: string[];
+    user_id?: string;
+    is_ai?: boolean;
+    date_from?: string;
+    date_to?: string;
+  }
+): Promise&lt;ReplayEvent[]&gt;</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- TIPAGENS -->
+  <section id="tipos">
+    <h2><span class="icon">📐</span> Tipagens TypeScript</h2>
+
+    <div class="card">
+      <h3>ticketTimeline.types.ts</h3>
+      <pre><code>export type TimelineEventType =
+  | 'recebido' | 'ia_assumiu' | 'ia_respondeu'
+  | 'cliente_respondeu' | 'humano_assumiu'
+  | 'transferencia' | 'status_alterado'
+  | 'prioridade_alterada' | 'categoria_alterada'
+  | 'sla_alerta' | 'sla_estourado'
+  | 'csat_enviado' | 'csat_respondido'
+  | 'nota_interna' | 'arquivo_anexado'
+  | 'automacao_disparada' | 'webhook_executado'
+  | 'erro_falha' | 'resolvido' | 'arquivado';
+
+export interface TicketTimelineEvent {
+  id: string;
+  ticket_id: string;
+  event_type: TimelineEventType;
+  title: string;
+  description?: string;
+  icon: string;
+  color: string;
+  user_id?: string;
+  user_name?: string;
+  is_ai: boolean;
+  delta_seconds?: number;
+  metadata?: Record&lt;string, any&gt;;
+  created_at: string;
+}
+
+export type SLAStatus = 'ok' | 'alerta_75' | 'alerta_90' | 'violado';
+
+export interface TicketMetrics {
+  id: string;
+  ticket_id: string;
+  primeira_resposta_ia_s: number;
+  primeira_resposta_humano_s: number;
+  tempo_atendimento_humano_s: number;
+  tempo_fila_s: number;
+  tempo_aguardando_cliente_s: number;
+  tempo_aguardando_terceiro_s: number;
+  tempo_analise_s: number;
+  lead_time_s: number;
+  tempo_util_s: number;
+  tempo_corrido_s: number;
+  tempo_fora_expediente_s: number;
+  tempo_parado_s: number;
+  tempo_por_etapa: Record&lt;string, number&gt;;
+  tempo_resolucao_ia_s: number;
+  tempo_processamento_ia_s: number;
+  total_mensagens: number;
+  mensagens_cliente: number;
+  mensagens_agente: number;
+  mensagens_bot: number;
+  total_audios: number;
+  total_arquivos: number;
+  total_reaberturas: number;
+  total_transferencias: number;
+  uso_ia_respostas: number;
+  uso_ia_tokens: number;
+  uso_ia_custo: number;
+  sla_percentual: number;
+  sla_status: SLAStatus;
+  created_at: string;
+}
+
+export interface SLALog {
+  id: string;
+  ticket_id: string;
+  action: string;
+  sla_config: {
+    prioridade: string;
+    minutos_total: number;
+    minutos_restantes: number;
+  };
+  reason?: string;
+  user_id?: string;
+  created_at: string;
+}
+
+export interface TicketActivity {
+  id: string;
+  ticket_id: string;
+  action: string;
+  entity: string;
+  entity_id?: string;
+  user_id?: string;
+  is_ai: boolean;
+  changes?: {
+    field: string;
+    old_value: any;
+    new_value: any;
+  };
+  ip_address?: string;
+  created_at: string;
+}
+
+export interface TicketAILog {
+  id: string;
+  ticket_id: string;
+  action: string;
+  model: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cost_usd: number;
+  cost_brl: number;
+  latency_ms: number;
+  success: boolean;
+  error_message?: string;
+  created_at: string;
+}
+
+export interface ReplayEvent {
+  id: string;
+  ticket_id: string;
+  event_type: string;
+  title: string;
+  description?: string;
+  icon: string;
+  color: string;
+  user_id?: string;
+  is_ai: boolean;
+  created_at: string;
+}
+
+export interface ExportFilters {
+  ticket_id?: string;
+  date_from?: string;
+  date_to?: string;
+  event_types?: string[];
+  user_id?: string;
+  is_ai?: boolean;
+  format: 'pdf' | 'csv' | 'json';
+}</code></pre>
+    </div>
+  </section>
+
+  <!-- SEGURANÇA -->
+  <section id="rls">
+    <h2><span class="icon">🔒</span> Políticas de Segurança (RLS)</h2>
+
+    <div class="card">
+      <h3>Row Level Security — Supabase</h3>
+      <pre><code>-- ticket_events
+ALTER TABLE ticket_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view events for accessible tickets"
+  ON ticket_events FOR SELECT
+  USING (
+    ticket_id IN (
+      SELECT id FROM tickets WHERE
+        assignee_id = auth.uid()
+        OR usuario_id = auth.uid()
+        OR EXISTS (
+          SELECT 1 FROM user_departamentos ud
+          WHERE ud.user_id = auth.uid()
+          AND ud.departamento_id = tickets.departamento_id
+        )
+        OR auth.jwt() ->> 'role' IN ('admin', 'gerente')
+    )
+  );
+
+CREATE POLICY "System can insert events"
+  ON ticket_events FOR INSERT
+  WITH CHECK (true);  -- Service role only
+
+-- ticket_timeline
+ALTER TABLE ticket_timeline ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view timeline for accessible tickets"
+  ON ticket_timeline FOR SELECT
+  USING (
+    ticket_id IN (
+      SELECT id FROM tickets WHERE
+        assignee_id = auth.uid()
+        OR usuario_id = auth.uid()
+        OR EXISTS (
+          SELECT 1 FROM user_departamentos ud
+          WHERE ud.user_id = auth.uid()
+          AND ud.departamento_id = tickets.departamento_id
+        )
+        OR auth.jwt() ->> 'role' IN ('admin', 'gerente')
+    )
+  );
+
+-- ticket_metrics
+ALTER TABLE ticket_metrics ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view metrics for accessible tickets"
+  ON ticket_metrics FOR SELECT
+  USING (
+    ticket_id IN (
+      SELECT id FROM tickets WHERE
+        assignee_id = auth.uid()
+        OR usuario_id = auth.uid()
+        OR EXISTS (
+          SELECT 1 FROM user_departamentos ud
+          WHERE ud.user_id = auth.uid()
+          AND ud.departamento_id = tickets.departamento_id
+        )
+        OR auth.jwt() ->> 'role' IN ('admin', 'gerente')
+    )
+  );
+
+-- ticket_ai_logs (apenas admin/gerente veem custos)
+ALTER TABLE ticket_ai_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can view AI logs"
+  ON ticket_ai_logs FOR SELECT
+  USING (
+    auth.jwt() ->> 'role' IN ('admin', 'gerente')
+  );
+
+CREATE POLICY "Agents can view AI logs for their tickets"
+  ON ticket_ai_logs FOR SELECT
+  USING (
+    ticket_id IN (
+      SELECT id FROM tickets WHERE assignee_id = auth.uid()
+    )
+  );
+
+-- Regra de auditoria: INSERT only
+-- Criar trigger para bloquear UPDATE/DELETE
+CREATE OR REPLACE FUNCTION prevent_audit_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'Auditing tables are INSERT only. UPDATE and DELETE are prohibited.';
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER block_update_ticket_events
+  BEFORE UPDATE OR DELETE ON ticket_events
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_update();
+
+CREATE TRIGGER block_update_ticket_timeline
+  BEFORE UPDATE OR DELETE ON ticket_timeline
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_update();
+
+CREATE TRIGGER block_update_ticket_metrics
+  BEFORE UPDATE OR DELETE ON ticket_metrics
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_update();
+
+CREATE TRIGGER block_update_ticket_sla_logs
+  BEFORE UPDATE OR DELETE ON ticket_sla_logs
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_update();
+
+CREATE TRIGGER block_update_ticket_activity
+  BEFORE UPDATE OR DELETE ON ticket_activity
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_update();
+
+CREATE TRIGGER block_update_ticket_wait_times
+  BEFORE UPDATE OR DELETE ON ticket_wait_times
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_update();
+
+CREATE TRIGGER block_update_ticket_ai_logs
+  BEFORE UPDATE OR DELETE ON ticket_ai_logs
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_update();
+
+CREATE TRIGGER block_update_ticket_performance
+  BEFORE UPDATE OR DELETE ON ticket_performance
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_update();</code></pre>
+    </div>
+  </section>
+
+  <!-- TESTES -->
+  <section id="testes">
+    <h2><span class="icon">🧪</span> Plano de Testes</h2>
+
+    <div class="card">
+      <h3>Testes Unitários</h3>
+      <table>
+        <tr><th> Componente </th><th> Teste </th><th> Tipo </th></tr>
+        <tr><td>useSLACountdown</td><td>Calcula tempo restante corretamente</td><td>Unit</td></tr>
+        <tr><td>useSLACountdown</td><td>Detecta SLA violado</td><td>Unit</td></tr>
+        <tr><td>useResizable</td><td>Redimensiona com limites mínimos</td><td>Unit</td></tr>
+        <tr><td>useReplayPlayer</td><td>Reproduz eventos na ordem correta</td><td>Unit</td></tr>
+        <tr><td>formatTime</td><td>Formata segundos para HH:MM:SS</td><td>Unit</td></tr>
+        <tr><td>calculateDelta</td><td>Calcula diferença entre eventos</td><td>Unit</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Testes de Integração</h3>
+      <table>
+        <tr><th> Fluxo </th><th> Teste </th></tr>
+        <tr><td>Criação → Timeline</td><td>Evento é registrado automaticamente</td></tr>
+        <tr><td>SLA Start → Pause → Resume</td><td>Tempo é calculado corretamente</td></tr>
+        <tr><td>IA Resposta → AI Log</td><td>Custo é registrado</td></tr>
+        <tr><td>Ticket Resolvido → Métricas</td><td>Métricas são calculadas</td></tr>
+        <tr><td>Export PDF</td><td>Arquivo gerado com dados corretos</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Testes E2E (Playwright)</h3>
+      <table>
+        <tr><th> Cenário </th><th> Passos </th></tr>
+        <tr><td>Timeline carrega</td><td>Abrir ticket → Timeline visível com eventos</td></tr>
+        <tr><td>Chat redimensiona</td><td>Arrastar borda → Tamanho muda</td></tr>
+        <tr><td>Fullscreen funciona</td><td>F11 → Tela cheia → Esc → Volta</td></tr>
+        <tr><td>Métricas atualizam</td><td>Enviar mensagem → Métricas mudam</td></tr>
+        <tr><td>Replay reproduce</td><td>Clicar play → Eventos avançam</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- MIGRAÇÃO -->
+  <section id="migracao">
+    <h2><span class="icon">🚀</span> Estratégia de Migração</h2>
+
+    <div class="card">
+      <h3>Migração sem Indisponibilidade</h3>
+      <table>
+        <tr><th> Fase </th><th> Ação </th><th> Downtime </th></tr>
+        <tr><td>1. Preparação</td><td>Criar tabelas novas (INSERT only)</td><td>Zero</td></tr>
+        <tr><td>2. Backfill</td><td>Popular dados históricos via script</td><td>Zero</td></tr>
+        <tr><td>3. Deploy Backend</td><td>Novos endpoints + triggers</td><td>Zero</td></tr>
+        <tr><td>4. Deploy Frontend</td><td>Novos componentes (lazy load)</td><td>Zero</td></tr>
+        <tr><td>5. Validação</td><td>Verificar dados e performance</td><td>Zero</td></tr>
+        <tr><td>6. Limpeza</td><td>Remover código legado (opcional)</td><td>Zero</td></tr>
+      </table>
+
+      <div class="alert alert-success" style="margin-top:1rem;">
+        <strong>Zero downtime:</strong> Todas as mudanças são aditivas. Nenhuma tabela existente é modificada.
+        Novos componentes são carregados via lazy loading.
+      </div>
+    </div>
+  </section>
+
+  <!-- DEPLOY -->
+  <section id="deploy">
+    <h2><span class="icon">✅</span> Checklist de Validação</h2>
+
+    <div class="card">
+      <h3>Antes do Deploy</h3>
+      <ul class="checklist">
+        <li>Todas as tabelas criadas no Supabase</li>
+        <li>RLS habilitado em todas as tabelas</li>
+        <li>Triggers de INSERT only funcionando</li>
+        <li>Backends endpoints testados</li>
+        <li>Frontend compila sem erros</li>
+        <li>Testes unitários passando (100%)</li>
+        <li>Testes de integração passando</li>
+        <li>Performance verificada (timeline &lt; 200ms)</li>
+        <li>Responsividade testada em todos dispositivos</li>
+        <li>Dark mode funcionando</li>
+        <li>Atalhos de teclado funcionando</li>
+        <li>Exportação PDF/CSV/JSON funcionando</li>
+        <li>Replay temporal funcionando</li>
+        <li>Custos de IA rastreados corretamente</li>
+        <li>Alertas de SLA disparando</li>
+        <li>Realtime do Supabase funcionando</li>
+        <li>Documentação atualizada</li>
+        <li>CHANGELOG atualizado</li>
+        <li>Backup do banco realizado</li>
+        <li>Rollback testado</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <p><strong>CodeHelp CRM/Helpdesk</strong> — Documentação v2.0.0</p>
+  <p>Gerado em: <span id="timestamp"></span></p>
+  <p>Última atualização automática a cada 30 segundos</p>
+</footer>
+
+<script>
+  // Timestamp auto-atualizável
+  function updateTimestamp() {
+    document.getElementById('timestamp').textContent =
+      new Date().toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+  }
+  updateTimestamp();
+  setInterval(updateTimestamp, 30000);
+
+  // Tabs
+  function showTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  // Nav active
+  document.querySelectorAll('nav a').forEach(link => {
+    link.addEventListener('click', function() {
+      document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  // Smooth scroll
+  document.querySelectorAll('nav a').forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

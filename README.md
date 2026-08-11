@@ -1,169 +1,186 @@
-# 🧠 Codemed Hub
+# Codemed Hub
 
-Sistema centralizado de CRM + OS Digital + WhatsApp Nativo + Dashboard IA para a **Codemed — Desenvolvimento de Software Laboratorial**.
+Sistema centralizado de Helpdesk, CRM, OS Digital, WhatsApp Nativo e Dashboard IA para a **Codemed — Desenvolvimento de Software Laboratorial**.
 
-## 🚀 Stack
+## Stack
 
-| Layer | Tecnologia |
-|-------|-----------|
+| Camada | Tecnologia |
+|--------|-----------|
 | Frontend | React 18 + TypeScript + Tailwind CSS + Recharts |
 | Backend | Node.js + Express + TypeScript |
 | ORM | Prisma |
 | Banco | PostgreSQL 16 |
-| Cache/Fila | Redis + node-cron |
-| WhatsApp | whatsapp-web.js (nativo, sem dependência externa) |
+| Cache | Redis + node-cron |
+| WhatsApp | whatsapp-web.js (nativo) |
 | PDF | PDFKit |
-| Assinatura | Canvas HTML5 (signature_pad manual) |
-| Auth | JWT + Refresh Token + bcrypt |
-| Deploy | Docker Compose |
+| Auth | JWT (access 15min + refresh 7d) + bcrypt |
+| Deploy | Docker Compose / Vercel |
 
-## 📋 Funcionalidades
+## Funcionalidades
 
-### ✅ Módulo 1 — Auth
+### Auth & Seguranca
 - Login com JWT (accessToken 15min + refreshToken 7 dias)
-- 4 perfis: admin, gerente, tecnico, comercial
+- 5 perfis: admin, gerente, tecnico, comercial, vendedor
 - Rate limiting (5 tentativas/hora no login)
+- Multi-departamento (suporte-tecnico, comercial, desenvolvimento, demandas-internas)
 
-### ✅ Módulo 2 — CRM
+### CRM
 - CRUD completo de clientes
 - Busca global com debounce
-- Filtros por status, segmento, cidade, responsável
-- Timeline de interações por cliente
+- Filtros por status, segmento, cidade, responsavel
+- Timeline de interacoes por cliente
 - Pipeline de oportunidades (kanban visual)
-- Histórico de contatos
+- Anti-duplicidade (CNPJ/CPF)
 
-### ✅ Módulo 3 — Ordem de Serviço (OS)
-- Geração automática de número (OS-YYYY-NNNN)
-- Fluxo de assinatura digital:
-  1. Técnico cria OS → status `rascunho`
-  2. Envia link via WhatsApp → status `aguardando_assinatura`
-  3. Cliente assina em página pública → status `assinada`
-  4. PDF gerado automaticamente
-- PDF com: dados do cliente, serviço, técnico, assinatura em canvas
-- Proteção: OS assinada não pode ser editada
+### Helpdesk / OS
+- Kanban com abas por departamento + vista unificada
+- Visual estilo Trello (borda por prioridade, hover lift, badge de departamento)
+- Escalonamento automatico (N1 -> N2 -> Supervisor)
+- Filas configuraveis com proxima fila
+- Suporte multi-departamento (usuario pertence a N departamentos)
+- Geracao automatica de numero (OS-YYYY-NNNN)
+- Fluxo de assinatura digital via WhatsApp
+- PDF gerado automaticamente apos assinatura
+- Busca global (clientes, tickets, usuarios, base de conhecimento)
+- Links bidirecionais CRM <-> Helpdesk
 
-### ✅ Módulo 4 — WhatsApp Nativo
+### WhatsApp Nativo
+- Multi-connexoes (varios numeros)
 - Conecta via QR Code (whatsapp-web.js)
-- Recebe mensagens automaticamente → cria tickets
-- Envia mensagens do sistema
-- Cria OS diretamente dos tickets
-- Histórico completo de mensagens
+- Recebe mensagens automaticamente -> cria tickets
+- Menu por departamento (resposta numerica)
+- Roteamento automatico por conexao
 
-### ✅ Módulo 5 — Dashboard IA
+### Dashboard IA
 - 8 cards de KPIs: chamados, TMR, TMRes, OS, clientes
-- 5 gráficos: linha, pizza, barra, área, pipeline
-- Insights automáticos via Claude API (Anthropic)
-- Filtro por período
+- 5 graficos: linha, pizza, barra, area, pipeline
+- Insights automaticos via Claude API (Anthropic)
+- Filtro por periodo
 
-### ✅ Módulo 6 — Kanban de Tarefas
-- Substitui PlannerX internamente
+### Kanban de Tarefas
 - Drag & drop entre colunas
-- Prioridades: baixa, média, alta, urgente
+- Prioridades: baixa, media, alta, urgente
 - Projetos e sprints
 
-### ✅ Módulo 7 — Alertas Semanais
-- Cron: toda segunda-feira às 08:00 (America/Fortaleza)
-- Relatório completo via WhatsApp
-- Destinatários configuráveis
-- Disparo manual pelo painel
+### Alertas Semanais
+- Cron: toda segunda-feira as 08:00 (America/Fortaleza)
+- Relatorio completo via WhatsApp
+- Destinatarios configuraveis
 
-## 🐳 Instalação e Deploy
+### Busca Global
+- Busca fuzzy across clientes, tickets, usuarios e base de conhecimento
+- Sistema de scoring por relevancia
+- Sugestoes instantaneas
 
-### Pré-requisitos
-- Docker e Docker Compose
-- Node.js 20+ (para desenvolvimento)
+---
 
-### Desenvolvimento Local
+## Instalacao
 
-```bash
-# 1. Clone o repositório
-git clone https://github.com/codemed/codemed-hub.git
-cd codemed-hub
+### Windows (recomendado)
 
-# 2. Backend
-cd backend
-cp .env.example .env
-npm install
-npx prisma migrate dev
-npx prisma db seed
-npm run dev
+Veja o guia completo em [INSTALL.md](./INSTALL.md).
 
-# 3. Frontend (novo terminal)
-cd frontend
-npm install
-npm run dev
+**Resumo rapido:**
 
-# Acesse: http://localhost:3000
+```cmd
+git clone <url> code-help
+cd code-help
+setup.bat
+dev.bat
 ```
 
-### Produção (Docker Compose)
+Acesse: http://localhost:3000
 
-```bash
-# 1. Configure as variáveis de ambiente
-cp .env.example .env
-# Edite .env com suas credenciais
+### Docker
 
-# 2. Suba os serviços
-docker-compose up -d
+```cmd
+# Apenas infraestrutura (PostgreSQL + Redis)
+docker-compose -f docker-compose.dev.yml up -d
 
-# 3. Execute as migrations
-docker-compose exec backend npx prisma migrate deploy
-
-# 4. Popule o banco (opcional)
-docker-compose exec backend npx prisma db seed
-
-# Acesse: http://localhost:3000
+# Stack completa (PG + Redis + Backend + Frontend)
+docker-compose up -d --build
 ```
 
-### Credenciais Padrão (Seed)
+### Comandos Disponiveis
+
+| Script | Descricao |
+|--------|-----------|
+| `setup.bat` | Setup inicial completo |
+| `dev.bat` | Modo desenvolvimento |
+| `build.bat` | Build para producao |
+| `start.bat` | Iniciar em producao |
+| `db.bat` | Gerenciar banco de dados |
+
+---
+
+## Credenciais Padrao
 
 | Email | Senha | Perfil |
 |-------|-------|--------|
-| admin@codemed.com.br | admin123 | Admin |
-| gerente@codemed.com.br | tecnico123 | Gerente |
-| joao@codemed.com.br | tecnico123 | Técnico |
-| maria@codemed.com.br | tecnico123 | Técnica |
-| comercial@codemed.com.br | tecnico123 | Comercial |
+| admin@codemed.com.br | admin123 | Admin (master) |
+| ana@codemed.com.br | tecnico123 | Gerente |
+| joao@codemed.com.br | tecnico123 | Tecnico |
+| maria@codemed.com.br | tecnico123 | Tecnica |
+| pedro@codemed.com.br | tecnico123 | Comercial |
 
-## 🔧 Conexão WhatsApp
+> Altere as senhas apos o primeiro login em producao!
 
-1. Acesse o sistema e vá em **WhatsApp**
-2. Clique em **Conectar**
-3. Escaneie o QR Code com o WhatsApp do celular
-4. Pronto! Os tickets serão criados automaticamente
+---
 
-## 📊 Insights IA
+## Portas
 
-Para ativar os insights automáticos:
-1. Obtenha uma chave da [Anthropic](https://console.anthropic.com/)
-2. Adicione no `.env`: `ANTHROPIC_API_KEY=sk-ant-sua-chave`
-3. O dashboard usará Claude para gerar 3 insights sobre os dados
+| Porta | Servico | URL |
+|-------|---------|-----|
+| 3000 | Frontend (Vite) | http://localhost:3000 |
+| 3010 | Backend (Express) | http://localhost:3010 |
+| 5432 | PostgreSQL | localhost:5432 |
+| 5555 | Prisma Studio | http://localhost:5555 |
+| 6379 | Redis | localhost:6379 |
 
-## 📁 Estrutura do Projeto
+---
+
+## Estrutura do Projeto
 
 ```
-codemed-hub/
-├── backend/           # API Express + Prisma
+code-help/
+├── backend/
+│   ├── prisma/              # Schema + migrations + seed
 │   ├── src/
-│   │   ├── modules/   # auth, crm, orders, analytics, integrations, alerts, kanban
-│   │   ├── shared/    # middleware, utils
-│   │   └── config/    # env, database, redis
-│   └── prisma/        # schema + migrations + seed
-├── frontend/          # React + Tailwind + Recharts
-│   └── src/
-│       ├── pages/     # Dashboard, CRM, Orders, Sign, WhatsApp, Kanban, Settings
-│       └── services/  # api, auth
-└── docker-compose.yml
+│   │   ├── config/          # database.ts, env.ts, redis.ts
+│   │   ├── modules/         # auth, crm, helpdesk, kanban, search, etc.
+│   │   ├── shared/          # middleware (auth, error, ticketAccess)
+│   │   └── server.ts        # Entry point
+│   └── dist/                # Build (gitignored)
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # Layout, SearchBar, KanbanBoard
+│   │   ├── pages/           # Login, Dashboard, CRM, Helpdesk, Settings, WhatsApp
+│   │   ├── services/        # api.ts, auth.tsx, useTheme.ts
+│   │   └── types/           # TypeScript interfaces
+│   └── dist/                # Build (gitignored)
+├── docker-compose.yml       # Stack completa (producao)
+├── docker-compose.dev.yml   # Infra apenas (desenvolvimento)
+├── setup.bat                # Setup Windows
+├── dev.bat                  # Desenvolvimento
+├── build.bat                # Build producao
+├── db.bat                   # Gerenciar banco
+└── INSTALL.md               # Guia de instalacao completo
 ```
 
-## 🔒 Segurança
+---
+
+## Seguranca
 
 - JWT com tokens curtos (15min) + refresh token (7 dias)
 - Senhas com bcrypt (salt rounds: 12)
 - Rate limiting nas rotas de login
-- Auditoria: todas as ações críticas registradas
-- OS assinada não pode ser editada
+- Auditoria: todas as acoes criticas registradas
+- RBAC: admin, gerente, tecnico, comercial, vendedor
+- Multi-departamento com visibilidade por fila
+- OS assinada nao pode ser editada
 - Link de assinatura expira em 7 dias
+- Soft delete (clientes, tarefas, KB) com opcao de restaurar
+- Anti-duplicidade (CNPJ/CPF) no CRM
 
 ---
 

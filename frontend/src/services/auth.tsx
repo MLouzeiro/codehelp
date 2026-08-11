@@ -13,16 +13,42 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>(null!);
 
+// ── Helper: Salvar tokens via cookies (httpOnly no backend) ──────────
+// O backend Define httpOnly cookies — o frontend so armazena o user object
+function setAuthCookies(accessToken: string, refreshToken: string, sessionToken: string) {
+  // Salvar em cookies simples (nao httpOnly, mas o httpOnly ja esta no backend)
+  // Estes sao para o frontend usar no Authorization header
+  document.cookie = `accessToken=${accessToken}; path=/; max-age=900; SameSite=Strict`;
+  document.cookie = `refreshToken=${refreshToken}; path=/; max-age=604800; SameSite=Strict`;
+  document.cookie = `sessionToken=${sessionToken}; path=/; max-age=604800; SameSite=Strict`;
+}
+
+function clearAuthCookies() {
+  document.cookie = 'accessToken=; path=/; max-age=0';
+  document.cookie = 'refreshToken=; path=/; max-age=0';
+  document.cookie = 'sessionToken=; path=/; max-age=0';
+}
+
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Verificar se existe cookie de sessao e user no localStorage
     const stored = localStorage.getItem('user');
-    const token = localStorage.getItem('accessToken');
+    const token = getCookie('accessToken');
     if (stored && token) {
-      setUser(JSON.parse(stored));
+      try {
+        setUser(JSON.parse(stored));
+      } catch {
+        localStorage.removeItem('user');
+      }
     }
     setLoading(false);
   }, []);
@@ -31,8 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const { data } = await api.post('/auth/login', { email, password });
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
+
+      // Salvar tokens em cookies
+      setAuthCookies(data.accessToken, data.refreshToken, data.sessionToken);
+
+      // Salvar user no localStorage (nao sensive)
       localStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
     } catch (err: any) {
@@ -43,19 +72,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    clearAuthCookies();
     localStorage.removeItem('user');
     setUser(null);
     setError(null);
   };
 
   const refreshTokenFn = async () => {
-    const refresh = localStorage.getItem('refreshToken');
+    const refresh = getCookie('refreshToken');
+    const session = getCookie('sessionToken');
     if (!refresh) throw new Error('Sem refresh token');
-    const { data } = await api.post('/auth/refresh', { refreshToken: refresh });
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
+
+    const { data } = await api.post('/auth/refresh', { refreshToken: refresh, sessionToken: session });
+
+    // Atualizar cookies
+    setAuthCookies(data.accessToken, data.refreshToken, data.sessionToken || session || '');
   };
 
   return (

@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeHelp CRM - Apresentacao</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Khand:wght@400;600;700&family=Lexend:wght@300;400;500;600;700&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Lexend', sans-serif;
+      background: #0F172A;
+      color: #F1F5F9;
+      overflow: hidden;
+    }
+    
+    .slide {
+      width: 100vw;
+      height: 100vh;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px 80px;
+      position: relative;
+    }
+    
+    .slide.active { display: flex; }
+    
+    .slide-number {
+      position: absolute;
+      bottom: 30px;
+      right: 40px;
+      font-size: 14px;
+      color: #64748B;
+    }
+    
+    .logo {
+      position: absolute;
+      top: 30px;
+      left: 40px;
+      font-family: 'Khand', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: #3B82F6;
+    }
+    
+    h1 {
+      font-family: 'Khand', sans-serif;
+      font-size: 56px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      line-height: 1.1;
+    }
+    
+    h2 {
+      font-family: 'Khand', sans-serif;
+      font-size: 40px;
+      font-weight: 600;
+      margin-bottom: 30px;
+      color: #60A5FA;
+    }
+    
+    h3 {
+      font-family: 'Khand', sans-serif;
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #93C5FD;
+    }
+    
+    p, li {
+      font-size: 22px;
+      line-height: 1.6;
+      color: #CBD5E1;
+    }
+    
+    .subtitle {
+      font-size: 26px;
+      color: #94A3B8;
+      margin-bottom: 40px;
+    }
+    
+    .gradient-text {
+      background: linear-gradient(135deg, #60A5FA, #3B82F6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-top: 30px;
+    }
+    
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 30px;
+      margin-top: 30px;
+    }
+    
+    .card {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 30px;
+    }
+    
+    .card h3 {
+      font-size: 22px;
+      margin-bottom: 15px;
+      color: #F1F5F9;
+    }
+    
+    .card p, .card li {
+      font-size: 18px;
+      color: #94A3B8;
+    }
+    
+    .card-icon {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+    
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    ul li {
+      padding: 10px 0;
+      padding-left: 30px;
+      position: relative;
+    }
+    
+    ul li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      color: #3B82F6;
+      font-weight: bold;
+    }
+    
+    .highlight {
+      background: rgba(59, 130, 246, 0.2);
+      border-left: 4px solid #3B82F6;
+      padding: 20px 25px;
+      border-radius: 0 12px 12px 0;
+      margin: 20px 0;
+    }
+    
+    .stat {
+      text-align: center;
+      padding: 30px;
+    }
+    
+    .stat-number {
+      font-family: 'Khand', sans-serif;
+      font-size: 64px;
+      font-weight: 700;
+      color: #3B82F6;
+    }
+    
+    .stat-label {
+      font-size: 18px;
+      color: #94A3B8;
+      margin-top: 10px;
+    }
+    
+    .controls {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 15px;
+      z-index: 100;
+    }
+    
+    .controls button {
+      background: #1E293B;
+      border: 1px solid #334155;
+      color: #F1F5F9;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Lexend', sans-serif;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .controls button:hover {
+      background: #334155;
+      border-color: #3B82F6;
+    }
+    
+    .badge {
+      display: inline-block;
+      background: rgba(59, 130, 246, 0.2);
+      color: #60A5FA;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+    
+    .flow {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+    
+    .flow-step {
+      background: #1E293B;
+      border: 1px solid #334155;
+      padding: 15px 25px;
+      border-radius: 12px;
+      font-size: 16px;
+    }
+    
+    .flow-arrow {
+      color: #3B82F6;
+      font-size: 24px;
+    }
+    
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+    
+    @media print {
+      .slide { page-break-after: always; display: flex !important; }
+      .controls { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Slide 1: Capa -->
+  <div class="slide active" id="slide1">
+    <div class="logo">CodeHelp</div>
+    <div>
+      <h1><span class="gradient-text">CodeHelp CRM</span></h1>
+      <p class="subtitle">Plataforma completa de Helpdesk + CRM para Laboratorios</p>
+      <div class="highlight">
+        <p>Helpdesk • Clientes • WhatsApp • OS Digital • IA</p>
+      </div>
+    </div>
+    <div class="slide-number">1 / 12</div>
+  </div>
+
+  <!-- Slide 2: O que e -->
+  <div class="slide" id="slide2">
+    <div class="logo">CodeHelp</div>
+    <span class="badge">Visao Geral</span>
+    <h2>O que e o CodeHelp?</h2>
+    <div class="two-col">
+      <div>
+        <p>Uma plataforma integrada que unifica:</p>
+        <ul>
+          <li><strong>Helpdesk</strong> com Kanban e SLA</li>
+          <li><strong>Gestao de Clientes</strong> completa</li>
+          <li><strong>WhatsApp nativo</strong> com menu interativo</li>
+          <li><strong>OS Digital</strong> com assinatura via WhatsApp</li>
+          <li><strong>Inteligencia Artificial</strong> para insights</li>
+        </ul>
+      </div>
+      <div>
+        <div class="card">
+          <h3>Tecnologias</h3>
+          <ul>
+            <li>Node.js + Express + TypeScript</li>
+            <li>React 18 + Vite + Tailwind</li>
+            <li>Prisma ORM + PostgreSQL</li>
+            <li>whatsapp-web.js</li>
+            <li>Anthropic Claude AI</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="slide-number">2 / 12</div>
+  </div>
+
+  <!-- Slide 3: Modulos -->
+  <div class="slide" id="slide3">
+    <div class="logo">CodeHelp</div>
+    <span class="badge">Funcionalidades</span>
+    <h2>Modulos Principais</h2>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-icon">🎧</div>
+        <h3>Helpdesk</h3>
+        <p>Kanban, triagem automatica, SLA, escalonamento N1/N2/N3</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">👥</div>
+        <h3>Clientes</h3>
+        <p>CRM completo, contatos, colaboradores, pipeline de vendas</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📱</div>
+        <h3>WhatsApp</h3>
+        <p>Integracao nativa, menu interativo, multi-numero</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📄</div>
+        <h3>OS Digital</h3>
+        <p>Criacao, assinatura digital via WhatsApp, PDF automatico</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📚</div>
+        <h3>Base de Conhecimento</h3>
+        <p>Artigos com sugestao por IA para tickets</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🤖</div>
+        <h3>IA e Automacoes</h3>
+        <p>Robos WHEN/IF/THEN, classificacao automatica</p>
+      </div>
+    </div>
+    <div class="slide-number">3 / 12</div>
+  </div>
+
+  <!-- Slide 4: Helpdesk -->
+  <div class="slide" id="slide4">
+    <div class="logo">CodeHelp</div>
+    <span class="badge">Helpdesk</span>
+    <h2>Gestao de Tickets</h2>
+    <div class="flow">
+      <div class="flow-step">WhatsApp</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">Triagem</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">Fila</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">Atendimento</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">Resolvido</div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Etapas do Kanban</h3>
+        <ul>
+          <li>Triagem - Direcionamento</li>
+          <li>Fila de Espera - Aguardando agente</li>
+          <li>Em Atendimento - Sendo processado</li>
+          <li>Aguardando Cliente - Retorno</li>
+          <li>Aguardando OS - Geracao de OS</li>
+          <li>Concluido - Finalizado</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Recursos de SLA</h3>
+        <ul>
+          <li>Alertas em 75% e 90% do tempo</li>
+          <li>Pausa automatica (aguardando cliente)</li>
+          <li>Escalonamento automatico</li>
+          <li>Considera feriados</li>
+          <li>Configuravel por fila e prioridade</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">4 / 12</div>
+  </div>
+
+  <!-- Slide 5: WhatsApp -->
+  <div class="slide" id="slide5">
+    <div class="logo">CodeHelp</div>
+    <span class="badge">Integracao</span>
+    <h2>WhatsApp Nativo</h2>
+    <div class="two-col">
+      <div>
+        <h3>Como funciona</h3>
+        <ul>
+          <li>Conexao via QR Code (whatsapp-web.js)</li>
+          <li>Menu interativo por numero</li>
+          <li>Classificacao automatica por IA</li>
+          <li>Follow-up periodico</li>
+          <li>Multi-numero (um por departamento)</li>
+        </ul>
+      </div>
+      <div>
+        <div class="card">
+          <h3>Fluxo do Cliente</h3>
+          <p style="font-size: 16px;">
+            1. Envia mensagem WhatsApp<br>
+            2. Recebe menu de departamentos<br>
+            3. Seleciona por numero (1-N)<br>
+            4. Informa assunto e laboratorio<br>
+            5. Posicao na fila exibida<br>
+            6. Atendente assume e resolve
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-number">5 / 12</div>
+  </div>
+
+  <!-- Slide 6: OS Digital -->
+  <div class="slide" id="slide6">
+    <div class="logo">CodeHelp</div>
+    <span class="badge">Ordem de Servico</span>
+    <h2>OS Digital com Assinatura</h2>
+    <div class="flow">
+      <div class="flow-step">Criar OS</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">Gerar Link</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">Enviar WhatsApp</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">Cliente Assina</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">PDF Gerado</div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Funcionalidades</h3>
+        <ul>
+          <li>Assinatura digital no celular</li>
+          <li>Canvas com deteccao de DPI</li>
+          <li>PDF com valor legal</li>
+          <li>Envio automatico via WhatsApp</li>
+          <li>Historico completo</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Status da OS</h3>
+        <ul>
+          <li>Rascunho - Sendo editada</li>
+          <li>Em Andamento - Execucao</li>
+          <li>Aguardando Aprovacao - Assinatura</li>
+          <li>Concluido - Finalizada</li>
+          <li>Cancelado - Descartada</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">6 / 12</div>
+  </div>
+
+  <!-- Slide 7: Clientes -->
+  <div class="slide" id="slide7">
+    <div class="logo">CodeHelp</div>
+    <span class="badge">CRM</span>
+    <h2>Gestao de Clientes</h2>
+    <div class="grid-3">
+      <div class="card">
+        <h3>Cadastro Completo</h3>
+        <ul>
+          <li>Razao Social e CNPJ</li>
+          <li>Segmento (Lab, Hospital...)</li>
+          <li>Contrato e valores</li>
+          <li>Status e origem</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Colaboradores</h3>
+        <ul>
+          <li>Pessoas do cliente</li>
+          <li>Cargo e departamento</li>
+          <li>Contato principal</li>
+          <li>Vinculo ao ticket</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Pipeline de Vendas</h3>
+        <ul>
+          <li>Prospeccao</li>
+          <li>Proposta</li>
+          <li>Negociacao</li>
+          <li>Fechamento</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">7 / 12</div>
+  </div>
+
+  <!-- Slide 8: Dashboard -->
+  <div class="slide" id="slide8">
+    <div class="logo">CodeHelp</div>
+    <span class="badge">Analytics</span>
+    <h2>Dashboard e Metricas</h2>
+    <div class="grid-2">
+      <div>
+        <h3>KPIs Principais</h3>
+        <div class="grid-2" style="gap: 20px;">
+          <div class="stat">
+            <div class="stat-number">8</div>
+            <div class="stat-label">Cards de KPI</div>
+          </div>
+          <div class="stat">
+            <div class="stat-number">8</div>
+            <div class="stat-label">Graficos</div>
+          </div>
+          <div class="stat">
+            <div class="stat-number">3</div>
+            <div class="stat-label">Niveis de SLA</div>
+          </div>
+          <div class="stat">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">Monitoramento</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Insights de IA</h3>
+        <ul>
+          <li>Tendencias de atendimento</li>
+          <li>Sugestoes de melhoria</li>
+          <li>Alertas de problemas</li>
+          <li>Analise de satisfacao</li>
+          <li>Previsao de demanda</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">8 / 12</div>
+  </div>
+
+  <!-- Slide 9: Automacoes -->
+  <div class="slide" id="slide9">
+    <div class="logo">CodeHelp</div>
+    <span class="badge">Automacao</span>
+    <h2>Automacoes e IA</h2>
+    <div class="two-col">
+      <div>
+        <h3>Regras WHEN/IF/THEN</h3>
+        <div class="card" style="margin-bottom: 20px;">
+          <p style="font-size: 16px;">
+            <strong>QUANDO:</strong> novo_ticket<br>
+            <strong>SE:</strong> prioridade = urgente<br>
+            <strong>ENTAO:</strong> atribuir_admin + notificar
+          </p>
+        </div>
+        <ul>
+          <li>Triggers: 6 eventos</li>
+          <li>Condicoes: 8 operadores</li>
+          <li>Acoes: 8 tipos</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Recursos de IA</h3>
+        <ul>
+          <li>Classificacao automatica</li>
+          <li>Sugestoes de vendas</li>
+          <li>Alertas de OS</li>
+          <li>Sugestoes de tarefas</li>
+          <li>Sugestao de artigos KB</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">9 / 12</div>
+  </div>
+
+  <!-- Slide 10: Seguranca -->
+  <div class="slide" id="slide10">
+    <div class="logo">CodeHelp</div>
+    <span class="badge">Seguranca</span>
+    <h2>Seguranca e Controle</h2>
+    <div class="grid-3">
+      <div class="card">
+        <h3>RBAC</h3>
+        <ul>
+          <li>4 niveis de acesso</li>
+          <li>Permissoes granulares</li>
+          <li>IsMaster para admin total</li>
+          <li>Override por role</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>JWT Tokens</h3>
+        <ul>
+          <li>Access: 15 minutos</li>
+          <li>Refresh: 7 dias</li>
+          <li>Session: unico por login</li>
+          <li>Auto-refresh</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Audit Log</h3>
+        <ul>
+          <li>Todas as acoes registradas</li>
+          <li>Rastreabilidade completa</li>
+          <li>Historico de tickets</li>
+          <li>Logs de envio</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">10 / 12</div>
+  </div>
+
+  <!-- Slide 11: Metricas do Sistema -->
+  <div class="slide" id="slide11">
+    <div class="logo">CodeHelp</div>
+    <span class="badge">Numeros</span>
+    <h2> Numeros do Sistema</h2>
+    <div class="grid-3">
+      <div class="stat">
+        <div class="stat-number">34</div>
+        <div class="stat-label">Tabelas no Banco</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">100+</div>
+        <div class="stat-label">Endpoints API</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">20+</div>
+        <div class="stat-label">Paginas Frontend</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">5</div>
+        <div class="stat-label">Roles de Acesso</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">7</div>
+        <div class="stat-label">Etapas Kanban</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">295</div>
+        <div class="stat-label">Testes Automatizados</div>
+      </div>
+    </div>
+    <div class="slide-number">11 / 12</div>
+  </div>
+
+  <!-- Slide 12: Proximos Passos -->
+  <div class="slide" id="slide12">
+    <div class="logo">CodeHelp</div>
+    <span class="badge">Proximos Passos</span>
+    <h2>Proximos Passos</h2>
+    <div class="grid-2">
+      <div>
+        <h3>Curto Prazo</h3>
+        <ul>
+          <li>Multi-WhatsApp (multi-numero)</li>
+          <li>Onboarding guiado</li>
+          <li>Esqueci minha senha</li>
+          <li>Notificacoes push mobile</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Medio Prazo</h3>
+        <ul>
+          <li>Multi-tenant (white-label)</li>
+          <li>App mobile completo</li>
+          <li>Integracao com outros canais</li>
+          <li>Relatorios avancados</li>
+        </ul>
+      </div>
+    </div>
+    <div class="highlight" style="margin-top: 40px;">
+      <h3 style="color: #F1F5F9; margin-bottom: 10px;">Contato</h3>
+      <p>CodeHelp CRM - Codemed Tecnologia</p>
+      <p style="color: #60A5FA;">contato@codemed.com.br</p>
+    </div>
+    <div class="slide-number">12 / 12</div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button onclick="prevSlide()">← Anterior</button>
+    <button onclick="nextSlide()">Proximo →</button>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 12;
+
+    function showSlide(n) {
+      document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+      document.getElementById(`slide${n}`).classList.add('active');
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        showSlide(currentSlide);
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        showSlide(currentSlide);
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+    });
+  </script>
+</body>
+</html>

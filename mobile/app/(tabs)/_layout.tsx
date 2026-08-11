@@ -58,7 +58,7 @@ export default function TabsLayout() {
         options={{
           title: 'Dashboard',
           headerTitle: `Olá, ${user?.name?.split(' ')[0] || 'Agente'}`,
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
           headerRight: () => (
@@ -77,7 +77,7 @@ export default function TabsLayout() {
         name="helpdesk"
         options={{
           title: 'Helpdesk',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="headset-outline" size={size} color={color} />
           ),
         }}
@@ -86,8 +86,13 @@ export default function TabsLayout() {
         name="crm"
         options={{
           title: 'CRM',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="people-outline" size={size} color={color} />
+          ),
+          headerRight: () => (
+            <Pressable onPress={() => router.push('/(modals)/pipeline')} style={{ marginRight: 16 }}>
+              <Ionicons name="git-branch-outline" size={22} color={colors.textSecondary} />
+            </Pressable>
           ),
         }}
       />
@@ -95,7 +100,7 @@ export default function TabsLayout() {
         name="orders"
         options={{
           title: 'OS',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="clipboard-outline" size={size} color={color} />
           ),
         }}
@@ -104,7 +109,7 @@ export default function TabsLayout() {
         name="approvals"
         options={{
           title: 'Aprovacoes',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="checkmark-done-outline" size={size} color={color} />
           ),
         }}
@@ -113,7 +118,7 @@ export default function TabsLayout() {
         name="notifications"
         options={{
           title: 'Alertas',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <View>
               <Ionicons name="notifications-outline" size={size} color={color} />
               {naoLidas > 0 && (

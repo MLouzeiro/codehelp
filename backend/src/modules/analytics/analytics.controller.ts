@@ -3,6 +3,225 @@ import prisma from '../../config/database';
 import { AuthRequest } from '../../shared/middleware/auth';
 import { env } from '../../config/env';
 
+// ── Métricas de Helpdesk/Suporite e Implantação ────────────────────────
+// Endpoint: GET /api/analytics/helpdesk-metrics
+export async function getHelpdeskMetrics(req: AuthRequest, res: Response) {
+  try {
+    const now = new Date();
+    const firstDayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const firstDayPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // Período: último mês (mês atual)
+    const periodoInicio = firstDayMonth;
+    const periodoFim = now;
+
+    // ── 1. Chamados abertos no último mês (total de todos os clientes) ──
+    const totalChamadosMes = await prisma.ticket.count({
+      where: { createdAt: { gte: periodoInicio, lte: periodoFim } },
+    });
+
+    // ── 2. Tempo médio de atendimento por chamado (minutos) ──
+    const ticketsComTempo = await prisma.ticket.findMany({
+      where: {
+        dataFechamento: { not: null, gte: periodoInicio, lte: periodoFim },
+      },
+      select: {
+        dataAbertura: true,
+        dataFechamento: true,
+        slaPausadoTotalMin: true,
+      },
+    });
+
+    let tempoTotalAtendimento = 0;
+    for (const t of ticketsComTempo) {
+      const pausaMs = (t.slaPausadoTotalMin || 0) * 60 * 1000;
+      const diffMin = (new Date(t.dataFechamento!).getTime() - new Date(t.dataAbertura).getTime() - pausaMs) / 60000;
+      tempoTotalAtendimento += Math.max(0, diffMin);
+    }
+    const tempoMedioAtendimento = ticketsComTempo.length > 0
+      ? Math.round(tempoTotalAtendimento / ticketsComTempo.length)
+      : 0;
+
+    // ── 3. Chamados do cliente que MAIS te aciona no mês ──
+    const chamadosPorCliente = await prisma.ticket.groupBy({
+      by: ['clientId'],
+      where: { createdAt: { gte: periodoInicio, lte: periodoFim } },
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: 10,
+    });
+
+    const clientIds = chamadosPorCliente
+      .filter(c => c.clientId)
+      .map(c => c.clientId!);
+
+    const clients = await prisma.client.findMany({
+      where: { id: { in: clientIds } },
+      select: { id: true, razaoSocial: true, nomeFantasia: true },
+    });
+    const clientMap = new Map(clients.map(c => [c.id, c]));
+
+    const topClienteChamados = chamadosPorCliente[0]?.clientId
+      ? {
+          clientId: chamadosPorCliente[0].clientId,
+          nome: clientMap.get(chamadosPorCliente[0].clientId!)?.razaoSocial || 'Desconhecido',
+          totalChamados: chamadosPorCliente[0]._count.id,
+        }
+      : null;
+
+    const rankingChamadosPorCliente = chamadosPorCliente.map(c => ({
+      clientId: c.clientId,
+      nome: clientMap.get(c.clientId!)?.razaoSocial || 'Desconhecido',
+      totalChamados: c._count.id,
+    }));
+
+    // ── 4. Horas de dev que os clientes consomem (total no mês + top cliente) ──
+    const horasDevPorCliente = await prisma.serviceOrder.groupBy({
+      by: ['clientId'],
+      where: {
+        createdAt: { gte: periodoInicio, lte: periodoFim },
+        horasDev: { not: null, gt: 0 },
+      },
+      _sum: { horasDev: true },
+      _count: { id: true },
+      orderBy: { _sum: { horasDev: 'desc' } },
+      take: 10,
+    });
+
+    const devClientIds = horasDevPorCliente.map(c => c.clientId);
+    const devClients = await prisma.client.findMany({
+      where: { id: { in: devClientIds } },
+      select: { id: true, razaoSocial: true },
+    });
+    const devClientMap = new Map(devClients.map(c => [c.id, c]));
+
+    const totalHorasDevMes = horasDevPorCliente.reduce(
+      (sum, c) => sum + (c._sum.horasDev || 0), 0
+    );
+
+    const topClienteHorasDev = horasDevPorCliente[0]?.clientId
+      ? {
+          clientId: horasDevPorCliente[0].clientId,
+          nome: devClientMap.get(horasDevPorCliente[0].clientId)?.razaoSocial || 'Desconhecido',
+          horasDev: horasDevPorCliente[0]._sum.horasDev || 0,
+        }
+      : null;
+
+    const rankingHorasDevPorCliente = horasDevPorCliente.map(c => ({
+      clientId: c.clientId,
+      nome: devClientMap.get(c.clientId)?.razaoSocial || 'Desconhecido',
+      horasDev: c._sum.horasDev || 0,
+      totalOs: c._count.id,
+    }));
+
+    // ── 5. Horas de dev por implantação (média do começo até cliente ativar) ──
+    const implantacoesComHorasDev = await prisma.serviceOrder.findMany({
+      where: {
+        tipoImplantacao: 'implantacao',
+        horasDev: { not: null, gt: 0 },
+      },
+      select: {
+        horasDev: true,
+        dataInicioImplantacao: true,
+        dataFimImplantacao: true,
+        implantacaoConcluida: true,
+      },
+    });
+
+    const mediaHorasDevImplantacao = implantacoesComHorasDev.length > 0
+      ? Math.round(
+          implantacoesComHorasDev.reduce((sum, i) => sum + (i.horasDev || 0), 0) /
+          implantacoesComHorasDev.length * 100
+        ) / 100
+      : 0;
+
+    // ── 6. Horas de suporte por implantação (treinamento, migração, configuração) ──
+    const horasSuportePorTipo = await prisma.serviceOrder.groupBy({
+      by: ['tipoImplantacao'],
+      where: {
+        tipoImplantacao: { in: ['treinamento', 'migracao', 'configuracao'] },
+        horasSuporte: { not: null, gt: 0 },
+      },
+      _sum: { horasSuporte: true },
+      _count: { id: true },
+    });
+
+    const totalHorasSuporte = horasSuportePorTipo.reduce(
+      (sum, t) => sum + (t._sum.horasSuporte || 0), 0
+    );
+
+    const horasSuportePorCategoria = horasSuportePorTipo.map(t => ({
+      tipo: t.tipoImplantacao,
+      horasSuporte: t._sum.horasSuporte || 0,
+      totalOs: t._count.id,
+      mediaPorOs: t._count.id > 0
+        ? Math.round((t._sum.horasSuporte || 0) / t._count.id * 100) / 100
+        : 0,
+    }));
+
+    // ── 7. Preço médio da implantação ──
+    const implantacoesComPreco = await prisma.serviceOrder.findMany({
+      where: {
+        tipoImplantacao: 'implantacao',
+        precoImplantacao: { not: null, gt: 0 },
+      },
+      select: { precoImplantacao: true },
+    });
+
+    const precoMedioImplantacao = implantacoesComPreco.length > 0
+      ? Math.round(
+          implantacoesComPreco.reduce((sum, i) => sum + (i.precoImplantacao || 0), 0) /
+          implantacoesComPreco.length * 100
+        ) / 100
+      : 0;
+
+    const totalImplantacoes = await prisma.serviceOrder.count({
+      where: { tipoImplantacao: 'implantacao' },
+    });
+
+    const implantacoesConcluidas = await prisma.serviceOrder.count({
+      where: { tipoImplantacao: 'implantacao', implantacaoConcluida: true },
+    });
+
+    return res.json({
+      periodo: {
+        inicio: periodoInicio.toISOString(),
+        fim: periodoFim.toISOString(),
+        label: `${now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`,
+      },
+      helpdesk: {
+        totalChamadosMes,
+        tempoMedioAtendimentoMin: tempoMedioAtendimento,
+        ticketsComTempoResolvido: ticketsComTempo.length,
+        topClienteChamados,
+        rankingChamadosPorCliente,
+      },
+      horasDev: {
+        totalMes: totalHorasDevMes,
+        topCliente: topClienteHorasDev,
+        rankingPorCliente: rankingHorasDevPorCliente,
+        implantacoes: {
+          total: totalImplantacoes,
+          concluidas: implantacoesConcluidas,
+          mediaHorasDevPorImplantacao: mediaHorasDevImplantacao,
+        },
+      },
+      horasSuporte: {
+        totalMes: totalHorasSuporte,
+        porCategoria: horasSuportePorCategoria,
+      },
+      implantacao: {
+        precoMedio: precoMedioImplantacao,
+        totalComPreco: implantacoesComPreco.length,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Analytics] Erro ao calcular helpdesk metrics:', error?.message || error);
+    return res.status(500).json({ error: 'Erro ao calcular métricas de helpdesk' });
+  }
+}
+
 export async function getKpis(req: AuthRequest, res: Response) {
   try {
     const { cards, charts } = await getKpisData();
@@ -99,6 +318,149 @@ export async function getDashboard(req: AuthRequest, res: Response) {
   }
 }
 
+// ── NOVOS ENDPOINTS DE BI ──────────────────────────────────────────────
+
+export async function getTicketsByDepartment(req: AuthRequest, res: Response) {
+  try {
+    const now = new Date();
+    const firstDayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const tickets = await prisma.ticket.groupBy({
+      by: ['departamentoId'],
+      where: { createdAt: { gte: firstDayMonth } },
+      _count: { _all: true },
+    });
+
+    const deptIds = tickets.filter(t => t.departamentoId).map(t => t.departamentoId!);
+    const depts = await prisma.departamento.findMany({
+      where: { id: { in: deptIds } },
+      select: { id: true, nome: true },
+    });
+    const deptMap = new Map(depts.map(d => [d.id, d.nome]));
+
+    const result = tickets.map(t => ({
+      departamento: deptMap.get(t.departamentoId!) || 'Sem departamento',
+      count: t._count._all,
+    }));
+
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao calcular chamados por departamento' });
+  }
+}
+
+export async function getAvgTimeByQueue(req: AuthRequest, res: Response) {
+  try {
+    const now = new Date();
+    const firstDayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const tickets = await prisma.ticket.findMany({
+      where: {
+        dataFechamento: { not: null, gte: firstDayMonth },
+        idFila: { not: null },
+      },
+      select: {
+        idFila: true,
+        dataAbertura: true,
+        dataFechamento: true,
+        slaPausadoTotalMin: true,
+      },
+    });
+
+    const queueTimes: Record<string, number[]> = {};
+    for (const t of tickets) {
+      const fid = t.idFila || 'sem_fila';
+      if (!queueTimes[fid]) queueTimes[fid] = [];
+      const pausaMs = (t.slaPausadoTotalMin || 0) * 60 * 1000;
+      const diffMin = Math.max(0, (new Date(t.dataFechamento!).getTime() - new Date(t.dataAbertura).getTime() - pausaMs) / 60000);
+      queueTimes[fid].push(diffMin);
+    }
+
+    const queueIds = Object.keys(queueTimes).filter(id => id !== 'sem_fila');
+    const filas = await prisma.fila.findMany({
+      where: { id: { in: queueIds } },
+      select: { id: true, nome: true },
+    });
+    const filaMap = new Map(filas.map(f => [f.id, f.nome]));
+
+    const result = Object.entries(queueTimes).map(([id, times]) => ({
+      fila: filaMap.get(id) || 'Sem fila',
+      tempoMedioMin: Math.round(times.reduce((a, b) => a + b, 0) / times.length),
+      total: times.length,
+    }));
+
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao calcular tempo medio por fila' });
+  }
+}
+
+export async function getCsatTrending(req: AuthRequest, res: Response) {
+  try {
+    const now = new Date();
+    const firstDayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const respostas = await prisma.cSATResposta.findMany({
+      where: {
+        respondidoEm: { not: null, gte: firstDayMonth },
+        nota: { not: null },
+      },
+      select: { nota: true, respondidoEm: true },
+      orderBy: { respondidoEm: 'asc' },
+    });
+
+    const byDay: Record<string, { total: number; soma: number }> = {};
+    for (const r of respostas) {
+      const day = r.respondidoEm!.toISOString().split('T')[0];
+      if (!byDay[day]) byDay[day] = { total: 0, soma: 0 };
+      byDay[day].total++;
+      byDay[day].soma += r.nota || 0;
+    }
+
+    const result = Object.entries(byDay).map(([date, data]) => ({
+      date,
+      media: Math.round((data.soma / data.total) * 100) / 100,
+      total: data.total,
+    }));
+
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao calcular trending de CSAT' });
+  }
+}
+
+export async function getStatusByDay(req: AuthRequest, res: Response) {
+  try {
+    const now = new Date();
+    const firstDayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const tickets = await prisma.ticket.findMany({
+      where: { createdAt: { gte: firstDayMonth } },
+      select: { createdAt: true, status: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const byDay: Record<string, Record<string, number>> = {};
+    const allStatuses = new Set<string>();
+
+    for (const t of tickets) {
+      const day = t.createdAt.toISOString().split('T')[0];
+      allStatuses.add(t.status);
+      if (!byDay[day]) byDay[day] = {};
+      byDay[day][t.status] = (byDay[day][t.status] || 0) + 1;
+    }
+
+    const result = Object.entries(byDay).map(([date, statuses]) => ({
+      date,
+      ...statuses,
+    }));
+
+    return res.json({ statuses: Array.from(allStatuses), data: result });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao calcular status por dia' });
+  }
+}
+
 export async function getInsights(req: AuthRequest, res: Response) {
   try {
     const { cards, charts } = await getKpisData();
@@ -168,15 +530,37 @@ async function getKpisData() {
   const now = new Date();
   const firstDayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [
+const [
     totalTicketsMonth, ticketsAbertos, ticketsFechados,
     totalOsMonth, osAguardando,
+    ticketsResolvidosIa, ticketsResolvidosIaHumano, ticketsResolvidosSoloIa,
   ] = await Promise.all([
     prisma.ticket.count({ where: { createdAt: { gte: firstDayMonth } } }),
-    prisma.ticket.count({ where: { status: { in: ['aberto', 'em_andamento'] } } }),
+    prisma.ticket.count({ where: { status: { in: ['aberto', 'em_atendimento'] } } }),
     prisma.ticket.count({ where: { status: 'fechado', dataFechamento: { gte: firstDayMonth } } }),
     prisma.serviceOrder.count({ where: { createdAt: { gte: firstDayMonth } } }),
     prisma.serviceOrder.count({ where: { status: 'aguardando_assinatura' } }),
+    prisma.ticket.count({
+      where: { resolvidoPorIa: true, dataFechamento: { gte: firstDayMonth } },
+    }),
+    prisma.ticket.count({
+      where: {
+        resolvidoPorIa: false,
+        status: { in: ['fechado', 'resolvido'] },
+        dataFechamento: { gte: firstDayMonth },
+      },
+    }),
+    prisma.ticket.count({
+      where: {
+        resolvidoPorIa: true,
+        iaMensagensEnviadas: { gt: 0 },
+        iaPrimeiraRespostaEm: { not: null },
+        status: { in: ['fechado', 'resolvido'] },
+        dataFechamento: { gte: firstDayMonth },
+        // Solo IA: sem mensagens de agente humano (fromMe source != 'agent')
+        assigneeId: null,
+      },
+    }),
   ]);
 
   const ticketsWithResponse = await prisma.ticket.findMany({
@@ -207,7 +591,12 @@ async function getKpisData() {
   });
 
   return {
-    cards: { totalTicketsMonth, ticketsAbertos, ticketsFechados, tmrMedia, tmresMedia, totalOsMonth, osAguardando },
+    cards: {
+      totalTicketsMonth, ticketsAbertos, ticketsFechados, tmrMedia, tmresMedia,
+      totalOsMonth, osAguardando,
+      ticketsResolvidosIa, ticketsResolvidosSoloIa,
+      totalResolvidos: ticketsFechados,
+    },
     charts: { ticketsByCategory },
   };
 }

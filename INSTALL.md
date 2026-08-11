@@ -1,19 +1,63 @@
-# Codemed Hub — Guia de Instalacao (Windows)
+# Codemed Hub — Guia Completo de Instalacao
 
-## Pre-requisitos
-
-| Software | Versao Minima | Como verificar | Download |
-|----------|---------------|----------------|----------|
-| **Node.js** | 20.0.0+ | `node -v` | https://nodejs.org/ |
-| **npm** | 9.0.0+ | `npm -v` | Vem com Node.js |
-| **Docker Desktop** | 24.0+ | `docker -v` | https://www.docker.com/products/docker-desktop |
-| **Git** | 2.0+ | `git -v` | https://git-scm.com/ |
-
-> **Opcional**: Se nao quiser Docker, instale PostgreSQL 16+ manualmente: https://www.postgresql.org/download/windows/
+Sistema de Helpdesk & CRM para Windows.
 
 ---
 
-## Instalacao Rapida (3 passos)
+## Sumario
+
+1. [Pre-requisitos](#1-pre-requisitos)
+2. [Instalacao Rapida](#2-instalacao-rapida)
+3. [Instalacao Manual](#3-instalacao-manual)
+4. [Comandos Disponiveis](#4-comandos-disponiveis)
+5. [Credenciais Padrao](#5-credenciais-padrao)
+6. [Portas do Sistema](#6-portas-do-sistema)
+7. [Estrutura do Projeto](#7-estrutura-do-projeto)
+8. [Configuracao Avancada](#8-configuracao-avancada)
+9. [Deploy em Producao](#9-deploy-em-producao)
+10. [Solucao de Problemas](#10-solucao-de-problemas)
+
+---
+
+## 1. Pre-requisitos
+
+### Obrigatorio
+
+| Software | Versao Minima | Como Verificar | Download |
+|----------|---------------|----------------|----------|
+| **Node.js** | 20.0.0+ | `node -v` | https://nodejs.org/ |
+| **npm** | 9.0.0+ | `npm -v` | Vem junto com Node.js |
+| **PostgreSQL** | 16+ | `psql --version` | https://www.postgresql.org/download/windows/ |
+| **Git** | 2.0+ | `git -v` | https://git-scm.com/ |
+
+### Opcional (para rodar via container)
+
+| Software | Versao Minima | Como Verificar | Download |
+|----------|---------------|----------------|----------|
+| **Docker Desktop** | 24.0+ | `docker -v` | https://www.docker.com/products/docker-desktop |
+
+### Instalacao do PostgreSQL no Windows
+
+1. Baixe o instalador em https://www.postgresql.org/download/windows/
+2. Execute o instalador e siga o assistente
+3. Na tela de configuracao, defina:
+   - **Porta**: 5432 (padrao)
+   - **Senha do usuario postgres**: lembre-se dela
+4. finalize a instalacao
+
+Apos instalar, adicione o diretorio `bin` do PostgreSQL ao PATH do sistema:
+```
+C:\Program Files\PostgreSQL\16\bin
+```
+
+Ou crie o banco manualmente via pgAdmin:
+- Usuario: `codemed`
+- Senha: `codemed123`
+- Banco: `codemed_hub`
+
+---
+
+## 2. Instalacao Rapida
 
 ### Passo 1 — Clonar o repositorio
 
@@ -28,13 +72,14 @@ cd code-help
 setup.bat
 ```
 
-O script vai:
-1. Verificar se Node.js e npm estao instalados
-2. Instalar todas as dependencias
-3. Criar o arquivo `backend/.env` (se nao existir)
-4. Gerar o Prisma Client
-5. Aplicar o schema no banco de dados
-6. Executar o seed (dados padrao)
+O script faz tudo automaticamente:
+1. Verifica se Node.js e npm estao instalados
+2. Verifica se PostgreSQL esta acessivel
+3. Instala todas as dependencias (backend + frontend)
+4. Cria o arquivo `backend/.env` (se nao existir)
+5. Gera o Prisma Client
+6. Aplica o schema no banco de dados
+7. Executa o seed (dados padrao)
 
 ### Passo 3 — Iniciar o sistema
 
@@ -45,44 +90,49 @@ dev.bat
 Acesse:
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:3010
-- **Prisma Studio**: http://localhost:5555
 
 ---
 
-## Instalacao Manual (passo a passo)
+## 3. Instalacao Manual
 
-### 1. Subir PostgreSQL e Redis com Docker
+Se preferir configurar passo a passo:
+
+### 3.1 — Subir PostgreSQL (Docker ou Manual)
+
+**Opcao A — Docker (recomendado):**
 
 ```cmd
-docker-compose up -d
+docker-compose -f docker-compose.dev.yml up -d
 ```
 
-Isso cria:
-- PostgreSQL na porta **5432** (usuario: `codemed`, senha: `codemed123`, banco: `codemed`)
-- Redis na porta **6379**
+Isso cria PostgreSQL (porta 5432) e Redis (porta 6379).
 
-Para verificar se esta rodando:
+**Opcao B — PostgreSQL local:**
+
+Se ja instalou o PostgreSQL manualmente, crie o banco:
+
 ```cmd
-docker ps
+psql -U postgres -c "CREATE USER codemed WITH PASSWORD 'codemed123';"
+psql -U postgres -c "CREATE DATABASE codemed_hub OWNER codemed;"
 ```
 
-### 2. Configurar variaveis de ambiente
+### 3.2 — Configurar variaveis de ambiente
 
 ```cmd
 copy backend\.env.example backend\.env
 ```
 
-Edite `backend/.env` conforme necessario. As configuracoes padrao funcionam com o Docker acima.
+Edite `backend/.env` se necessario. As configuracoes padrao funcionam com Docker.
 
-### 3. Instalar dependencias
+### 3.3 — Instalar dependencias
 
 ```cmd
 npm install
 ```
 
-Isso instala as dependencias da raiz, do backend e do frontend automaticamente.
+Isso instala dependencias da raiz, backend e frontend.
 
-### 4. Gerar Prisma Client
+### 3.4 — Gerar Prisma Client
 
 ```cmd
 cd backend
@@ -90,7 +140,7 @@ npx prisma generate
 cd ..
 ```
 
-### 5. Aplicar schema no banco
+### 3.5 — Aplicar schema no banco
 
 ```cmd
 cd backend
@@ -98,7 +148,7 @@ npx prisma db push
 cd ..
 ```
 
-### 6. Popular dados padrao (seed)
+### 3.6 — Executar seed (dados padrao)
 
 ```cmd
 cd backend
@@ -106,15 +156,17 @@ npx prisma db seed
 cd ..
 ```
 
-### 7. Iniciar em modo desenvolvimento
+### 3.7 — Iniciar desenvolvimento
 
 ```cmd
 npm run dev
 ```
 
+Ou use `dev.bat` para iniciar com as informacoes de porta.
+
 ---
 
-## Comandos Disponiveis
+## 4. Comandos Disponiveis
 
 ### Scripts Windows (.bat)
 
@@ -134,28 +186,39 @@ npm run dev
 | `npm run dev:backend` | Apenas backend (tsx watch, porta 3010) |
 | `npm run dev:frontend` | Apenas frontend (vite, porta 3000) |
 | `npm run build` | Build de ambos |
+| `npm run start` | Iniciar em producao |
 | `npm run db:seed` | Executar seed |
 | `npm run db:studio` | Abrir Prisma Studio |
 | `npm run db:push` | Aplicar schema sem migration |
 | `npm run db:migrate` | Criar migration |
+| `npm run reset` | Reset completo (requer Admin) |
+
+### Docker Compose
+
+| Comando | Descricao |
+|---------|-----------|
+| `docker-compose -f docker-compose.dev.yml up -d` | Sobe infra (PG + Redis) |
+| `docker-compose up -d` | Sobe tudo (PG + Redis + Backend + Frontend) |
+| `docker-compose down` | Para todos os servicos |
+| `docker-compose logs -f` | Ver logs em tempo real |
 
 ---
 
-## Credenciais Padrao
+## 5. Credenciais Padrao
 
-| Usuario | Email | Senha | Role |
-|---------|-------|-------|------|
+| Usuario | Email | Senha | Nivel |
+|---------|-------|-------|-------|
 | Admin | admin@codemed.com.br | admin123 | admin (master) |
-| Gerente | gerente@codemed.com.br | tecnico123 | gerente |
+| Gerente | ana@codemed.com.br | tecnico123 | gerente |
 | Tecnico 1 | joao@codemed.com.br | tecnico123 | tecnico |
 | Tecnico 2 | maria@codemed.com.br | tecnico123 | tecnico |
-| Comercial | comercial@codemed.com.br | tecnico123 | comercial |
+| Comercial | pedro@codemed.com.br | tecnico123 | comercial |
 
-> **IMPORTANTE**: Altere as senhas apos o primeiro login em producao!
+> **IMPORTANTE**: Altere todas as senhas apos o primeiro login em producao!
 
 ---
 
-## Portas do Sistema
+## 6. Portas do Sistema
 
 | Porta | Servico | URL |
 |-------|---------|-----|
@@ -167,7 +230,7 @@ npm run dev
 
 ---
 
-## Estrutura do Projeto
+## 7. Estrutura do Projeto
 
 ```
 code-help/
@@ -176,55 +239,151 @@ code-help/
 │   ├── src/
 │   │   ├── config/          # database.ts, env.ts, redis.ts
 │   │   ├── modules/         # auth, users, clients, tasks, helpdesk, etc.
-│   │   ├── shared/          # middleware (auth, error)
+│   │   ├── shared/          # middleware (auth, error, ticketAccess)
 │   │   └── server.ts        # Entry point
 │   ├── storage/pdfs/        # Uploads (gitignored)
 │   ├── whatsapp-session/    # Sessao WhatsApp (gitignored)
 │   └── dist/                # Build (gitignored)
 ├── frontend/
 │   ├── src/
-│   │   ├── components/      # UI components, KanbanBoard, Layout
-│   │   ├── pages/           # Login, Dashboard, Clients, Kanban, Helpdesk, Settings
+│   │   ├── components/      # UI components, KanbanBoard, Layout, SearchBar
+│   │   ├── pages/           # Login, Dashboard, CRM, Helpdesk, Settings, WhatsApp
 │   │   ├── services/        # api.ts, auth.tsx, useTheme.ts
 │   │   └── types/           # TypeScript interfaces
 │   └── dist/                # Build (gitignored)
-├── docker-compose.yml       # PostgreSQL + Redis
+├── .env.example             # Template de variaveis de ambiente (raiz)
+├── backend/.env.example     # Template de variaveis de ambiente (backend)
+├── docker-compose.yml       # Docker completo (producao)
+├── docker-compose.dev.yml   # Docker infra (desenvolvimento)
 ├── setup.bat                # Setup inicial Windows
 ├── dev.bat                  # Modo desenvolvimento
 ├── build.bat                # Build producao
 ├── start.bat                # Iniciar producao
 ├── db.bat                   # Gerenciar banco
+├── reset-dev.ps1            # Reset de desenvolvimento (Admin)
+├── AGENTS.md                # Regras de desenvolvimento
 └── INSTALL.md               # Este arquivo
 ```
 
 ---
 
-## Solucao de Problemas
+## 8. Configuracao Avancada
 
-### "ERRO: Porta 3000/3010 ja esta em uso"
+### Variaveis de Ambiente
+
+Edite `backend/.env` conforme necessidade:
+
+| Variavel | Descricao | Padrao |
+|----------|-----------|--------|
+| `DATABASE_URL` | URL de conexao PostgreSQL | `postgresql://codemed:codemed123@localhost:5432/codemed_hub` |
+| `JWT_SECRET` | Chave secreta JWT (access) | `dev_jwt_secret_codemed_2024` |
+| `JWT_REFRESH_SECRET` | Chave secreta JWT (refresh) | `dev_refresh_secret_codemed_2024` |
+| `PORT` | Porta do backend | `3010` |
+| `NODE_ENV` | Ambiente | `development` |
+| `WHATSAPP_CHROME_PATH` | Caminho do Chrome | `C:\Program Files\Google\Chrome\Application\chrome.exe` |
+| `SMTP_HOST` | Servidor de email | (vazio) |
+| `SMTP_PORT` | Porta SMTP | `587` |
+| `ANTHROPIC_API_KEY` | Chave da API Anthropic (IA) | (vazio) |
+
+### WhatsApp (Opcional)
+
+O WhatsApp WebJS precisa de Chrome/Chromium instalado:
+
+1. Instale o Google Chrome
+2. Configure o caminho em `backend/.env`:
+   ```
+   WHATSAPP_CHROME_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe
+   ```
+3. Na primeira execucao, escaneie o QR Code que aparece no terminal
+
+### Redis (Opcional)
+
+O Redis e usado para cache. Se nao estiver rodando, o sistema funciona sem ele.
+
+Para rodar via Docker:
+```cmd
+docker run -d --name redis -p 6379:6379 redis:7-alpine
+```
+
+---
+
+## 9. Deploy em Producao
+
+### Opcao 1 — Docker Completo (recomendado)
+
+```cmd
+# No servidor
+git clone <url> code-help
+cd code-help
+
+# Configurar .env com producao
+copy backend\.env.example backend\.env
+# Edite com senhas fortes e DATABASE_URL do servidor
+
+# Build e subir
+docker-compose up -d --build
+```
+
+O sistema ficara acessivel na porta 80 (frontend) e 3010 (API).
+
+### Opcao 2 — VPS sem Docker
+
+```cmd
+# Instalar Node.js e PostgreSQL no servidor
+# Clonar repositorio
+git clone <url> code-help
+cd code-help
+
+# Configurar
+copy backend\.env.example backend\.env
+# Edite com DATABASE_URL remoto
+
+# Instalar e buildar
+npm install
+npm run build
+
+# Iniciar com PM2 (recomendado)
+npm install -g pm2
+pm2 start backend/dist/server.js --name codemed-api
+pm2 save
+pm2 startup
+```
+
+### Opcao 3 — Vercel (Frontend) + Railway/Render (Backend)
+
+1. Frontend: push para GitHub, importe no Vercel
+2. Backend: push para GitHub, importe no Railway ou Render
+3. Configure as variaveis de ambiente no painel de cada servico
+
+---
+
+## 10. Solucao de Problemas
+
+### "Porta 3000/3010 ja esta em uso"
 
 ```cmd
 :: Matar processos node
 taskkill /F /IM node.exe
 
 :: Ou usar o reset (como Administrador)
-reset-dev.ps1
+powershell -ExecutionPolicy Bypass -File ./reset-dev.ps1
 ```
 
-### "ERRO: Database nao encontrado"
+### "Database nao encontrado" ou "Connection refused"
 
 ```cmd
-:: Verificar se Docker esta rodando
-docker ps
+:: Verificar se PostgreSQL esta rodando
+pg_isready
 
-:: Se nao estiver, subir os servicos
-docker-compose up -d
+:: Se nao estiver, iniciar o servico
+:: Windows: painel de servicos ou:
+net start postgresql-x64-16
 
-:: Verificar logs
-docker-compose logs postgres
+:: Ou via Docker
+docker-compose -f docker-compose.dev.yml up -d
 ```
 
-### "ERRO: Prisma Client nao encontrado"
+### "Prisma Client nao encontrado"
 
 ```cmd
 cd backend
@@ -241,77 +400,41 @@ rmdir /s /q backend\whatsapp-session
 npm run dev
 ```
 
-### "ERRO: bcrypt / node-gyp no Windows"
+### "bcrypt / node-gyp erro no Windows"
 
-Instale as ferramentas de build do Windows:
+Instale as ferramentas de build:
 ```cmd
 npm install -g windows-build-tools
 ```
 
-Ou use o PowerShell como Administrador:
+Ou execute como Administrador:
 ```cmd
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 npm install -g windows-build-tools
 ```
 
----
+### "prisma generate trava no Windows"
 
-## Deploy em Producao
+O Prisma trava se outros processos Node estao usando o client:
+```cmd
+:: Matar todos os processos node
+taskkill /F /IM node.exe
 
-### Opcao 1 — Vercel (Frontend) + Railway/Render (Backend)
+:: Gerar novamente
+cd backend
+npx prisma generate
+```
 
-1. **Frontend**: Faça push para o GitHub e importe no Vercel
-2. **Backend**: Faça push para o GitHub e importe no Railway ou Render
-3. Configure as variaveis de ambiente no painel de cada servico
-
-### Opcao 2 — VPS (DigitalOcean, AWS, etc.)
+### "Seed falhou"
 
 ```cmd
-:: No servidor Linux
-git clone <url> code-help
-cd code-help
+:: Verificar conexao com o banco
+cd backend
+npx prisma db push --skip-generate
 
-:: Instalar Docker
-curl -fsSL https://get.docker.com | sh
-docker-compose up -d
-
-:: Build e iniciar
-npm install
-npm run build
-npm run start
+:: Executar seed novamente
+npx prisma db seed
 ```
-
-### Opcao 3 — Docker completo (futuro)
-
-```yaml
-# docker-compose.prod.yml
-version: '3.8'
-services:
-  app:
-    build: .
-    ports:
-      - '3010:3010'
-    environment:
-      - DATABASE_URL=postgresql://codemed:codemed123@postgres:5432/codemed
-      - NODE_ENV=production
-    depends_on:
-      - postgres
-      - redis
-```
-
----
-
-## Variaveis de Ambiente
-
-Consulte `backend/.env.example` para a lista completa. As principais:
-
-| Variavel | Descricao | Padrao |
-|----------|-----------|--------|
-| `DATABASE_URL` | URL de conexao com PostgreSQL | `postgresql://codemed:codemed123@localhost:5432/codemed` |
-| `JWT_SECRET` | Chave secreta JWT (access token) | `dev_jwt_secret_codemed_2024` |
-| `JWT_REFRESH_SECRET` | Chave secreta JWT (refresh token) | `dev_refresh_secret_codemed_2024` |
-| `PORT` | Porta do backend | `3010` |
-| `WHATSAPP_CHROME_PATH` | Caminho do Chrome para WhatsApp Web | `C:\Program Files\Google\Chrome\Application\chrome.exe` |
 
 ---
 

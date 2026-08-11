@@ -5,6 +5,55 @@ import { logAction } from '../audit/audit.service';
 const CSAT_DELAY_MINUTOS = 30;
 const CSAT_NEGATIVO_LIMITE = 2;
 
+export async function enviarCsatImediatamente(ticketId: string): Promise<void> {
+  console.log(`[CSAT] Iniciando envio imediato para ticket ${ticketId}`);
+  try {
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      console.warn(`[CSAT] Ticket ${ticketId} nao encontrado`);
+      return;
+    }
+    if (!ticket.contactPhone) {
+      console.warn(`[CSAT] Ticket ${ticketId} sem telefone`);
+      return;
+    }
+    console.log(`[CSAT] Ticket encontrado: ${ticket.contactPhone}, status: ${ticket.status}`);
+
+    const existente = await prisma.cSATResposta.findUnique({ where: { ticketId } });
+    if (existente) {
+      if (existente.enviadoEm) {
+        console.log(`[CSAT] CSAT ja existe e enviado para ticket ${ticketId}`);
+        return;
+      }
+      // CSAT exists but was never sent — resend it
+      console.log(`[CSAT] CSAT existe mas nao enviado para ticket ${ticketId}, reenviando...`);
+      const resultado = await enviarMensagemCsat(existente.id);
+      console.log(`[CSAT] Resultado reenvio:`, resultado);
+      if (!resultado.enviado) {
+        console.warn(`[CSAT] Falha ao reenviar CSAT para ticket ${ticketId}: ${resultado.erro}`);
+      }
+      return;
+    }
+
+    const csat = await prisma.cSATResposta.create({
+      data: {
+        ticketId,
+        tokenResposta: crypto.randomUUID(),
+        enviadoEm: null,
+      },
+    });
+    console.log(`[CSAT] CSAT criado: ${csat.id}`);
+
+    const resultado = await enviarMensagemCsat(csat.id);
+    console.log(`[CSAT] Resultado envio:`, resultado);
+    if (!resultado.enviado) {
+      console.warn(`[CSAT] Falha ao enviar CSAT imediatamente para ticket ${ticketId}: ${resultado.erro}`);
+    }
+  } catch (err: any) {
+    console.error(`[CSAT] Erro ao enviar CSAT imediatamente:`, err);
+  }
+}
+
 export interface AgendamentoResult {
   criado: boolean;
   csat: any;
@@ -22,13 +71,13 @@ export async function agendarCsat(ticketId: string): Promise<AgendamentoResult> 
     data: {
       ticketId,
       tokenResposta: crypto.randomUUID(),
-      enviadoEm: new Date(),
+      enviadoEm: null,
     },
   });
   return { criado: true, csat };
 }
 
-const CSAT_DEFAULT_MESSAGE = `Olá! 👋\n\nSeu atendimento foi concluído.\n\nPor favor, avalie de 1 a 5 estrelas como foi sua experiência:\n\n⭐ 1 - Péssimo\n⭐⭐ 2 - Ruim\n⭐⭐⭐ 3 - Regular\n⭐⭐⭐⭐ 4 - Bom\n⭐⭐⭐⭐⭐ 5 - Excelente\n\nResponda esta mensagem com o número de estrelas (1 a 5).\nOu acesse: {{url}}\n\nObrigado pelo feedback! 🙏\n\nEquipe Codemed`;
+const CSAT_DEFAULT_MESSAGE = `Olá! 👋\n\nSeu atendimento foi concluído.\n\nPor favor, avalie sua experiência:\n\n• 1 - Péssimo\n• 2 - Ruim\n• 3 - Regular\n• 4 - Bom\n• 5 - Excelente\n\nResponda com o *número* (1 a 5).\nOu acesse: {{url}}\n\nObrigado pelo feedback! 🙏\n\nEquipe Codemed`;
 
 export function montarMensagemCsat(token: string, baseUrl?: string): string {
   const url = baseUrl
@@ -66,10 +115,35 @@ export async function enviarMensagemCsat(csatId: string): Promise<EnviarResult> 
   if (!csat.ticket.contactPhone) {
     return { enviado: false, erro: 'Ticket sem telefone', csat };
   }
-  const mensagem = await montarMensagemCsatCustomizada(csat.tokenResposta);
   try {
     const { sendWhatsAppMessage } = await import('../integrations/whatsapp/whatsapp.service');
-    const result = await sendWhatsAppMessage(csat.ticket.contactPhone, mensagem, undefined, (csat.ticket as any).contactJid || undefined);
+    const csatText = [
+      `Olá! 👋`,
+      ``,
+      `Seu atendimento foi concluído com sucesso.`,
+      ``,
+      `Por favor, avalie sua experiência respondendo com um número de 1 a 5:`,
+      ``,
+      `*1* - Péssimo`,
+      `*2* - Ruim`,
+      `*3* - Regular`,
+      `*4* - Bom`,
+      `*5* - Excelente`,
+      ``,
+      `Responda com o *número* (1 a 5).`,
+      `Ou acesse: ${env.appUrl}/csat/${csat.tokenResposta}`,
+      ``,
+      `Obrigado pelo feedback! 🙏`,
+    ].join('\n');
+    console.log(`[CSAT] Enviando mensagem de avaliação para ${csat.ticket.contactPhone}`);
+    const result = await sendWhatsAppMessage(
+      csat.ticket.contactPhone,
+      csatText,
+      (csat.ticket as any).whatsappConnectionId || undefined,
+      (csat.ticket as any).contactJid || undefined,
+    );
+    console.log(`[CSAT] Resultado envio:`, result);
+
     if (result.success) {
       await prisma.cSATResposta.update({
         where: { id: csatId },
@@ -79,7 +153,7 @@ export async function enviarMensagemCsat(csatId: string): Promise<EnviarResult> 
         data: {
           ticketId: csat.ticketId,
           fromMe: true,
-          content: mensagem,
+          content: csatText,
           source: 'bot',
         },
       }).catch(() => {});
@@ -87,6 +161,7 @@ export async function enviarMensagemCsat(csatId: string): Promise<EnviarResult> 
     }
     return { enviado: false, erro: result.error, csat };
   } catch (err: any) {
+    console.error(`[CSAT] Erro ao enviar mensagem:`, err);
     return { enviado: false, erro: err?.message, csat };
   }
 }
@@ -97,6 +172,7 @@ export interface RespostaInput {
 }
 
 export async function responderCsat(token: string, input: RespostaInput) {
+  console.log(`[CSAT] responderCsat chamado com token=${token}, nota=${input.nota}`);
   if (input.nota < 1 || input.nota > 5) {
     throw new Error('Nota deve ser entre 1 e 5');
   }
@@ -104,8 +180,15 @@ export async function responderCsat(token: string, input: RespostaInput) {
     where: { tokenResposta: token },
     include: { ticket: true },
   });
-  if (!csat) throw new Error('Token invalido');
-  if (csat.respondidoEm) throw new Error('CSAT ja respondido');
+  if (!csat) {
+    console.warn(`[CSAT] Token invalido: ${token}`);
+    throw new Error('Token invalido');
+  }
+  if (csat.respondidoEm) {
+    console.warn(`[CSAT] CSAT ja respondido: ${csat.id}`);
+    throw new Error('CSAT ja respondido');
+  }
+  console.log(`[CSAT] CSAT encontrado: ${csat.id}, atualizando respondidoEm...`);
   const updated = await prisma.cSATResposta.update({
     where: { id: csat.id },
     data: {
@@ -114,6 +197,7 @@ export async function responderCsat(token: string, input: RespostaInput) {
       respondidoEm: new Date(),
     },
   });
+  console.log(`[CSAT] CSAT respondido com sucesso: ${csat.id}, nota=${input.nota}, respondidoEm=${updated.respondidoEm}`);
   await prisma.ticket.update({
     where: { id: csat.ticketId },
     data: { satisfacao: input.nota, dataCSAT: new Date() },
@@ -194,6 +278,32 @@ export async function processarAgendamentosCsat(): Promise<ProcessarResult> {
       }
     }
   }
+
+  // Retry CSATs that were created but never sent (enviadoEm is null)
+  const csatsNaoEnviados = await prisma.cSATResposta.findMany({
+    where: {
+      enviadoEm: null,
+      respondidoEm: null,
+      ticket: {
+        OR: [
+          { status: { in: ['fechado', 'cancelado', 'resolvido'] } },
+          { etapa: { in: ['concluido', 'descartado'] } },
+        ],
+      },
+    },
+    include: { ticket: true },
+    take: 20,
+  });
+  for (const csat of csatsNaoEnviados) {
+    const result = await enviarMensagemCsat(csat.id);
+    if (result.enviado) {
+      enviados++;
+    } else {
+      erros++;
+      console.warn(`[CSAT] Retry falhou para csat ${csat.id}: ${result.erro}`);
+    }
+  }
+
   return { agendados, enviados, erros };
 }
 

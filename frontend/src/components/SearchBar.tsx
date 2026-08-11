@@ -37,7 +37,7 @@ const TIPO_LABEL: Record<string, string> = {
   cliente: 'Cliente',
   ticket: 'Ticket',
   usuario: 'Usuario',
-  kb: 'KB',
+  kb: 'Base de Conhecimento',
 };
 
 interface SearchBarProps {
@@ -147,7 +147,7 @@ export default function SearchBar({ onSearch, compact, className = '' }: SearchB
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => { if (query.length >= 2) setOpen(true); }}
           onKeyDown={handleKeyDown}
-          placeholder="Buscar clientes, tickets, usuarios, KB..."
+          placeholder="Buscar clientes, tickets, usuarios, artigos..."
           className={`flex-1 outline-none bg-transparent text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 ${compact ? 'text-xs' : ''}`}
         />
         {query && (

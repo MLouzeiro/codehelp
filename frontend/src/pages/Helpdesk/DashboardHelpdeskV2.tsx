@@ -2,37 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../services/auth';
 import { useNavigate } from 'react-router-dom';
-
 import {
   Bot, BarChart3, MessageSquare, Activity, CheckCircle, TrendingUp, Clock, ArrowUpRight, ShieldCheck,
+  X, Star, Users, AlertTriangle, Eye, Loader2, Search, ThumbsUp, ThumbsDown,
 } from 'lucide-react';
-
 import {
   BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell,
+  PieChart, Pie,
 } from 'recharts';
-
-interface HelpdeskTicketSummary {
-  id: string;
-  protocolo?: string;
-  contactName?: string;
-  assunto?: string;
-  status: string;
-  prioridade: string;
-  resolvidoPorIa?: boolean;
-  iaMensagensEnviadas?: number;
-  dataAbertura: string;
-  dataFechamento?: string;
-}
-
-interface IaSubMetrics {
-  totalChamados: number;
-  chamadosIaResolveu: number;
-  taxaResolucaoIa: number;
-  tempoMedioResolucaoIaMin: number;
-  tempoMedioResolucaoHumanoMin: number;
-  totalCorrecoes: number;
-  confiancaMediaClassificacao: number;
-}
 
 interface KpiCards {
   totalTicketsMonth: number;
@@ -45,16 +22,50 @@ interface KpiCards {
   tmresMedia: number;
 }
 
-const DIAS_SEMANA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+interface IaSubMetrics {
+  totalChamados: number;
+  chamadosIaResolveu: number;
+  taxaResolucaoIa: number;
+  tempoMedioResolucaoIaMin: number;
+  tempoMedioResolucaoHumanoMin: number;
+  totalCorrecoes: number;
+  confiancaMediaClassificacao: number;
+}
 
-function formatarTempoRelativo(dataISO: string): string {
-  const diff = Date.now() - new Date(dataISO).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'agora';
-  if (mins < 60) return `${mins}min`;
-  const horas = Math.floor(mins / 60);
-  if (horas < 24) return `${horas}h`;
-  return `${Math.floor(horas / 24)}d`;
+interface DetailedTicket {
+  id: string;
+  protocolo?: string;
+  contactName?: string;
+  assunto?: string;
+  etapa: string;
+  status: string;
+  prioridade: string;
+  cliente?: string;
+  assignee?: { id: string; name: string } | null;
+  departamento?: { id: string; nome: string; cor: string } | null;
+  dataAbertura: string;
+  dataInicioAtendimento?: string;
+  tempoAberturaMin: number;
+  ultimaMensagem?: string;
+  totalMensagens: number;
+}
+
+interface CsatAgent {
+  agenteId: string;
+  agenteNome: string;
+  totalRespostas: number;
+  mediaNotas: number;
+  distribuicao: number[];
+  ultimasRespostas: { ticketId: string; protocolo: string; contactName: string; nota: number; comentario?: string; respondidoEm: string }[];
+}
+
+interface AgentAudit {
+  agenteId: string;
+  agenteNome: string;
+  totalAtendimentos: number;
+  mediaNotas: number;
+  classificacao: string;
+  ultimasAvaliacoes: { ticketId: string; nota: number; classificacao: string; data: string }[];
 }
 
 function tempoFormatado(min: number): string {
@@ -63,6 +74,16 @@ function tempoFormatado(min: number): string {
   const h = Math.floor(min / 60);
   const m = Math.round(min % 60);
   return m === 0 ? `${h}h` : `${h}h${m}`;
+}
+
+function tempoAbsoluto(dataISO: string): string {
+  const diff = Date.now() - new Date(dataISO).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'agora';
+  if (mins < 60) return `${mins}min`;
+  const horas = Math.floor(mins / 60);
+  if (horas < 24) return `${horas}h`;
+  return `${Math.floor(horas / 24)}d`;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -84,29 +105,36 @@ const PRIORIDADE_BADGE: Record<string, string> = {
 
 function statusLabel(s: string): string {
   const map: Record<string, string> = {
-    aberto: 'Aberto',
-    em_andamento: 'Em Andamento',
-    pendente: 'Pendente',
-    resolvido: 'Resolvido',
-    fechado: 'Fechado',
-    cancelado: 'Cancelado',
-    escalonado: 'Escalonado',
+    aberto: 'Aberto', em_andamento: 'Em Andamento', pendente: 'Pendente',
+    resolvido: 'Resolvido', fechado: 'Fechado', cancelado: 'Cancelado', escalonado: 'Escalonado',
   };
   return map[s] || s;
 }
 
-function formatarResolucao(ticket: HelpdeskTicketSummary): string {
-  if (ticket.resolvidoPorIa && (ticket.iaMensagensEnviadas ?? 0) > 0) return 'Só IA';
-  if (ticket.resolvidoPorIa) return 'IA + Humano';
-  return 'Humano';
+function etapaLabel(e: string): string {
+  const map: Record<string, string> = {
+    fila: 'Fila de Espera', triagem: 'Triagem', em_atendimento: 'Em Atendimento',
+    aguardando_cliente: 'Aguardando Cliente', aguardando_os: 'Aguardando OS',
+    concluido: 'Concluído', descartado: 'Descartado',
+  };
+  return map[e] || e;
 }
 
-function resolucaoBadgeColor(ticket: HelpdeskTicketSummary): string {
-  if (ticket.resolvidoPorIa && (ticket.iaMensagensEnviadas ?? 0) > 0)
-    return 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400';
-  if (ticket.resolvidoPorIa)
-    return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
-  return 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400';
+function csatNotaColor(nota: number): string {
+  if (nota >= 4) return 'text-emerald-500';
+  if (nota >= 3) return 'text-amber-500';
+  return 'text-red-500';
+}
+
+function classificacaoBadge(c: string): string {
+  const map: Record<string, string> = {
+    excelente: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    bom: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    regular: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    ruim: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    sem_dados: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
+  };
+  return map[c] || map.regular;
 }
 
 export default function DashboardHelpdeskV2() {
@@ -115,9 +143,16 @@ export default function DashboardHelpdeskV2() {
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState<KpiCards | null>(null);
   const [iaMetrics, setIaMetrics] = useState<IaSubMetrics | null>(null);
-  const [ultimosTickets, setUltimosTickets] = useState<HelpdeskTicketSummary[]>([]);
   const [periodo, setPeriodo] = useState<7 | 30 | 90>(30);
   const [fcrMetrics, setFcrMetrics] = useState<any>(null);
+
+  const [modalTickets, setModalTickets] = useState<DetailedTicket[] | null>(null);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const [csatData, setCsatData] = useState<CsatAgent[]>([]);
+  const [auditData, setAuditData] = useState<AgentAudit[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -126,19 +161,19 @@ export default function DashboardHelpdeskV2() {
       const inicio = new Date(fim.getTime() - periodo * 24 * 60 * 60 * 1000);
       const params = { dataInicio: inicio.toISOString(), dataFim: fim.toISOString() };
 
-      const [kpisRes, metricsRes, ticketsRes, fcrRes] = await Promise.all([
+      const [kpisRes, metricsRes, fcrRes, csatRes, auditRes] = await Promise.all([
         api.get('/analytics/kpis'),
         api.get('/helpdesk/metrics', { params }),
-        api.get('/helpdesk/tickets', {
-          params: { limit: 10, orderBy: 'updatedAt', order: 'desc' },
-        }),
         api.get('/helpdesk/fcr/metricas', { params }).catch(() => ({ data: null })),
+        api.get('/csat/por-agente', { params }).catch(() => ({ data: [] })),
+        api.get('/helpdesk/audit/agent-performance', { params }).catch(() => ({ data: [] })),
       ]);
 
       setKpis(kpisRes.data.cards);
       setIaMetrics(metricsRes.data.ia);
-      setUltimosTickets(ticketsRes.data.items || ticketsRes.data || []);
       setFcrMetrics(fcrRes.data);
+      setCsatData(csatRes.data || []);
+      setAuditData(auditRes.data || []);
     } catch (err) {
       console.error('Erro DashboardHelpdeskV2:', err);
     } finally {
@@ -148,10 +183,24 @@ export default function DashboardHelpdeskV2() {
 
   useEffect(() => { load(); }, [load]);
 
+  const openTicketModal = useCallback(async (titulo: string, params: Record<string, string>) => {
+    setModalTitle(titulo);
+    setModalLoading(true);
+    setModalTickets(null);
+    try {
+      const { data } = await api.get('/helpdesk/dashboard/detalhado', { params });
+      setModalTickets(data.tickets || []);
+    } catch {
+      setModalTickets([]);
+    } finally {
+      setModalLoading(false);
+    }
+  }, []);
+
   if (loading || !kpis) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Bot className="animate-spin text-violet-600" size={32} />
+        <Loader2 className="animate-spin text-violet-600" size={32} />
       </div>
     );
   }
@@ -161,45 +210,21 @@ export default function DashboardHelpdeskV2() {
   const totalResolvidos = kpis.totalResolvidos || 1;
   const iaPercentual = Math.round((iaTicketCount / totalResolvidos) * 100);
 
-  const distribuicaoData = [
-    { name: 'Seg', ia: 0, iaHumano: 0, humano: 0 },
-    { name: 'Ter', ia: 0, iaHumano: 0, humano: 0 },
-    { name: 'Qua', ia: 0, iaHumano: 0, humano: 0 },
-    { name: 'Qui', ia: 0, iaHumano: 0, humano: 0 },
-    { name: 'Sex', ia: 0, iaHumano: 0, humano: 0 },
-    { name: 'Sáb', ia: 0, iaHumano: 0, humano: 0 },
-    { name: 'Dom', ia: 0, iaHumano: 0, humano: 0 },
-  ];
-
   const tempoMedioData = [
-    { name: 'IA', tempo: 4.5, fill: '#7C3AED' },
-    { name: 'IA+Humano', tempo: 18.2, fill: '#3B82F6' },
-    { name: 'Humano', tempo: 32.75, fill: '#94A3B8' },
+    { name: 'IA', tempo: iaMetrics?.tempoMedioResolucaoIaMin || 4.5, fill: '#7C3AED' },
+    { name: 'IA+Humano', tempo: iaMetrics && iaMetrics.tempoMedioResolucaoIaMin ? Math.round(((iaMetrics.tempoMedioResolucaoIaMin + (iaMetrics.tempoMedioResolucaoHumanoMin || 32)) / 2) * 100) / 100 : 18.2, fill: '#3B82F6' },
+    { name: 'Humano', tempo: iaMetrics?.tempoMedioResolucaoHumanoMin || 32.75, fill: '#94A3B8' },
   ];
 
-  function makeDistribuicao(data: any[]) {
-    if (!data || data.length === 0) return distribuicaoData;
-    return distribuicaoData.map((d, i) => ({
-      ...d,
-      ia: data[i]?.ia ?? d.ia,
-      iaHumano: data[i]?.iaHumano ?? d.iaHumano,
-      humano: data[i]?.humano ?? d.humano,
-    }));
-  }
+  const csatGeral = csatData.length > 0
+    ? { media: Math.round(csatData.reduce((s, a) => s + a.mediaNotas * a.totalRespostas, 0) / Math.max(csatData.reduce((s, a) => s + a.totalRespostas, 0), 1) * 10) / 10, total: csatData.reduce((s, a) => s + a.totalRespostas, 0) }
+    : { media: 0, total: 0 };
 
-  const pm = iaMetrics?.tempoMedioResolucaoIaMin;
-  const ph = iaMetrics?.tempoMedioResolucaoHumanoMin;
-
-  if (pm !== undefined) tempoMedioData[0].tempo = Math.round(pm * 100) / 100;
-  if (ph !== undefined) tempoMedioData[2].tempo = Math.round(ph * 100) / 100;
-  tempoMedioData[1].tempo = pm !== undefined && ph !== undefined
-    ? Math.round(((pm + ph) / 2) * 100) / 100
-    : 18.2;
-
-  const ticketsArray = Array.isArray(ultimosTickets) ? ultimosTickets : [];
+  const periodos = [7, 30, 90] as const;
 
   return (
     <div className="space-y-6 font-['Lexend']">
+      {/* Header */}
       <div className="bg-gradient-to-r from-white via-white to-violet-50/30 dark:from-slate-800 dark:via-slate-800 dark:to-violet-900/30 rounded-2xl border border-neutral-200/60 dark:border-slate-700/60 p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -207,25 +232,18 @@ export default function DashboardHelpdeskV2() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-200">
                 <Bot className="text-white" size={22} />
               </div>
-              Dashboard Helpdesk V2
+              Dashboard Helpdesk
             </h1>
             <p className="text-neutral-500 dark:text-slate-400 text-sm mt-1.5 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
-              Visão geral com métricas de IA • {periodo} dias
+              Métricas em tempo real • {periodo} dias
             </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex bg-white dark:bg-slate-800 border border-neutral-200 dark:border-slate-700 rounded-xl p-1 shadow-sm">
-              {([7, 30, 90] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPeriodo(p)}
-                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                    periodo === p
-                      ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 shadow-sm'
-                      : 'text-neutral-600 dark:text-slate-400 hover:bg-neutral-50 dark:hover:bg-slate-700'
-                  }`}
-                >
+              {periodos.map((p) => (
+                <button key={p} onClick={() => setPeriodo(p)}
+                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${periodo === p ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 shadow-sm' : 'text-neutral-600 dark:text-slate-400 hover:bg-neutral-50 dark:hover:bg-slate-700'}`}>
                   {p}d
                 </button>
               ))}
@@ -237,66 +255,72 @@ export default function DashboardHelpdeskV2() {
         </div>
       </div>
 
+      {/* KPI Cards - Clicaveis */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
+        <button onClick={() => openTicketModal('Tickets Abertos', { etapa: 'fila', etapa2: 'triagem' })}
+          className="text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all cursor-pointer group">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-md shadow-blue-200 dark:shadow-blue-800/50">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-md shadow-blue-200 dark:shadow-blue-800/50 group-hover:scale-105 transition-transform">
               <MessageSquare size={20} className="text-white" />
             </div>
-            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Tickets Abertos</span>
+            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Abertos</span>
           </div>
           <p className="text-4xl font-bold text-navy-900 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{kpis.ticketsAbertos}</p>
-          <p className="text-xs text-neutral-500 dark:text-slate-400 mt-2">Aguardando atendimento</p>
-        </div>
+          <p className="text-xs text-violet-600 dark:text-violet-400 mt-2 font-medium flex items-center gap-1">Clique para ver <Eye size={10} /></p>
+        </button>
 
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
+        <button onClick={() => openTicketModal('Em Andamento', { etapa: 'em_atendimento' })}
+          className="text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md hover:border-amber-300 dark:hover:border-amber-600 transition-all cursor-pointer group">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center shadow-md shadow-amber-200 dark:shadow-amber-800/50">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center shadow-md shadow-amber-200 dark:shadow-amber-800/50 group-hover:scale-105 transition-transform">
               <Activity size={20} className="text-white" />
             </div>
-            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Em Andamento</span>
+            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Em Atendimento</span>
           </div>
           <p className="text-4xl font-bold text-navy-900 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{kpis.totalTicketsMonth - kpis.ticketsFechados}</p>
-          <p className="text-xs text-neutral-500 dark:text-slate-400 mt-2">Sendo resolvidos agora</p>
-        </div>
+          <p className="text-xs text-violet-600 dark:text-violet-400 mt-2 font-medium flex items-center gap-1">Clique para ver <Eye size={10} /></p>
+        </button>
 
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
+        <button onClick={() => openTicketModal('Resolvidos / Fechados', { status: 'resolvido' })}
+          className="text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-600 transition-all cursor-pointer group">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center shadow-md shadow-emerald-200 dark:shadow-emerald-800/50">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center shadow-md shadow-emerald-200 dark:shadow-emerald-800/50 group-hover:scale-105 transition-transform">
               <CheckCircle size={20} className="text-white" />
             </div>
-            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Resolvidos Hoje</span>
+            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Resolvidos</span>
           </div>
           <p className="text-4xl font-bold text-navy-900 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{kpis.ticketsFechados}</p>
-          <p className="text-xs text-neutral-500 dark:text-slate-400 mt-2">Total no período</p>
-        </div>
+          <p className="text-xs text-violet-600 dark:text-violet-400 mt-2 font-medium flex items-center gap-1">Clique para ver <Eye size={10} /></p>
+        </button>
 
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
+        <button onClick={() => openTicketModal('Aguardando Cliente', { etapa: 'aguardando_cliente' })}
+          className="text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md hover:border-cyan-300 dark:hover:border-cyan-600 transition-all cursor-pointer group">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md shadow-cyan-200 dark:shadow-cyan-800/50">
-              <ShieldCheck size={20} className="text-white" />
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md shadow-cyan-200 dark:shadow-cyan-800/50 group-hover:scale-105 transition-transform">
+              <Clock size={20} className="text-white" />
             </div>
-            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Taxa FCR</span>
+            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Aguard. Cliente</span>
           </div>
           <p className="text-4xl font-bold text-navy-900 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{fcrMetrics?.taxaFCR ?? 0}%</p>
-          <p className="text-xs text-neutral-500 dark:text-slate-400 mt-2">Resolvidos primeiro contato</p>
-        </div>
+          <p className="text-xs text-violet-600 dark:text-violet-400 mt-2 font-medium flex items-center gap-1">Clique para ver <Eye size={10} /></p>
+        </button>
 
         <div className="rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-violet-600 to-violet-800 border border-violet-500">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center shadow-md backdrop-blur-sm">
               <Bot size={20} className="text-white" />
             </div>
-            <span className="text-xs font-semibold text-violet-100 uppercase tracking-wider">Resolvidos pela IA</span>
+            <span className="text-xs font-semibold text-violet-100 uppercase tracking-wider">Resolvidos IA</span>
           </div>
           <p className="text-4xl font-bold text-white" style={{ fontFamily: 'Khand, sans-serif' }}>{iaTicketCount}</p>
-          <p className="text-xs text-violet-200 mt-2">{iaPercentual}% dos resolvidos no período</p>
+          <p className="text-xs text-violet-200 mt-2">{iaPercentual}% dos resolvidos</p>
         </div>
       </div>
 
+      {/* IA Highlight */}
       <div className="rounded-2xl p-6 shadow-sm bg-gradient-to-br from-violet-900 to-[#2D1B69] border border-violet-700/50 text-white">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-1 flex flex-col justify-center">
+          <div className="flex flex-col justify-center">
             <div className="flex items-center gap-2 mb-2">
               <Bot size={24} className="text-violet-300" />
               <span className="text-xs font-semibold text-violet-300 uppercase tracking-wider">IA Destacado</span>
@@ -306,74 +330,35 @@ export default function DashboardHelpdeskV2() {
             </p>
             <p className="text-violet-200 text-sm mt-1">resolução por IA</p>
           </div>
-
-          <div className="lg:col-span-1 flex flex-col justify-center">
-            <p className="text-4xl font-bold" style={{ fontFamily: 'Khand, sans-serif' }}>
-              {iaSoloCount}
-            </p>
+          <div className="flex flex-col justify-center">
+            <p className="text-4xl font-bold" style={{ fontFamily: 'Khand, sans-serif' }}>{iaSoloCount}</p>
             <p className="text-violet-200 text-sm mt-1">
               <TrendingUp size={14} className="inline mr-1 text-emerald-400" />
-              Tickets resolvidos só pela IA
+              Resolvidos só pela IA
             </p>
           </div>
-
-          <div className="lg:col-span-1 flex flex-col justify-center">
+          <div className="flex flex-col justify-center">
             <p className="text-4xl font-bold text-emerald-400" style={{ fontFamily: 'Khand, sans-serif' }}>
-              +23%
+              {csatGeral.media > 0 ? `${csatGeral.media}/5` : '—'}
             </p>
-            <p className="text-violet-200 text-sm mt-1">vs mês anterior</p>
+            <p className="text-violet-200 text-sm mt-1">Nota média CSAT ({csatGeral.total} respostas)</p>
           </div>
-
-          <div className="lg:col-span-1 flex flex-col justify-center">
+          <div className="flex flex-col justify-center">
             <p className="text-sm text-violet-200 leading-relaxed">
-              A IA está resolvendo {iaMetrics?.chamadosIaResolveu ?? iaTicketCount} chamados de forma autônoma neste período,
-              com {iaMetrics?.confiancaMediaClassificacao ?? 0}% de confiança média nas classificações
-              {iaMetrics && iaMetrics.totalCorrecoes > 0
-                ? ` e ${iaMetrics.totalCorrecoes} correção(ões) no período.`
-                : '.'}
+              A IA resolveu {iaMetrics?.chamadosIaResolveu ?? iaTicketCount} chamados autônomos,
+              com {iaMetrics?.confiancaMediaClassificacao ?? 0}% de confiança
+              {iaMetrics && iaMetrics.totalCorrecoes > 0 ? ` e ${iaMetrics.totalCorrecoes} correções.` : '.'}
             </p>
           </div>
         </div>
       </div>
 
+      {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
           <h3 className="text-base font-bold text-navy-900 dark:text-slate-100 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
               <BarChart3 size={16} className="text-violet-600 dark:text-violet-400" />
-            </div>
-            Distribuição de Resoluções
-          </h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <RechartsBarChart data={makeDistribuicao([])} barGap={2} barCategoryGap="20%">
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: 12,
-                  fontSize: 13,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                }}
-              />
-              <Bar dataKey="ia" name="Só IA" stackId="a" fill="#7C3AED" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="iaHumano" name="IA + Humano" stackId="a" fill="#A78BFA" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="humano" name="Só Humano" stackId="a" fill="#CBD5E1" radius={[0, 4, 4, 0]} />
-            </RechartsBarChart>
-          </ResponsiveContainer>
-          <div className="flex items-center gap-4 mt-3 text-xs text-neutral-500 dark:text-slate-400">
-            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#7C3AED]" /> Só IA</div>
-            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#A78BFA]" /> IA + Humano</div>
-            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#CBD5E1]" /> Só Humano</div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="text-base font-bold text-navy-900 dark:text-slate-100 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
-            <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-              <Clock size={16} className="text-violet-600 dark:text-violet-400" />
             </div>
             Tempo Médio de Resolução
           </h3>
@@ -383,91 +368,104 @@ export default function DashboardHelpdeskV2() {
               <XAxis type="number" tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false}
                 tickFormatter={(v: number) => tempoFormatado(v)} />
               <YAxis dataKey="name" type="category" tick={{ fontSize: 13, fill: '#334155', fontWeight: 600 }} axisLine={false} tickLine={false} width={90} />
-              <Tooltip
-                formatter={(value: number) => tempoFormatado(value)}
-                contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: 12,
-                  fontSize: 13,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                }}
-              />
+              <Tooltip formatter={(value: number) => tempoFormatado(value)}
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, fontSize: 13 }} />
               <Bar dataKey="tempo" radius={[0, 8, 8, 0]} maxBarSize={40}>
-                {tempoMedioData.map((entry, idx) => (
-                  <Cell key={idx} fill={entry.fill} />
-                ))}
+                {tempoMedioData.map((entry, idx) => (<Cell key={idx} fill={entry.fill} />))}
               </Bar>
             </RechartsBarChart>
           </ResponsiveContainer>
         </div>
+
+        {/* CSAT Distribution */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
+          <h3 className="text-base font-bold text-navy-900 dark:text-slate-100 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+            <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <Star size={16} className="text-amber-600 dark:text-amber-400" />
+            </div>
+            Avaliações CSAT por Atendente
+          </h3>
+          {csatData.length === 0 ? (
+            <p className="text-center py-16 text-neutral-400 dark:text-slate-500 text-sm">Nenhuma avaliação CSAT ainda</p>
+          ) : (
+            <div className="space-y-3 max-h-[280px] overflow-y-auto">
+              {csatData.map(a => (
+                <div key={a.agenteId} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-900/50 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                    {a.agenteNome.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-slate-200 truncate">{a.agenteNome}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">{a.totalRespostas} respostas</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className={`text-xl font-bold ${csatNotaColor(a.mediaNotas)}`} style={{ fontFamily: 'Khand, sans-serif' }}>{a.mediaNotas}</p>
+                    <div className="flex gap-0.5 justify-end">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Star key={s} size={10} className={s <= Math.round(a.mediaNotas) ? 'text-amber-400 fill-amber-400' : 'text-gray-300 dark:text-slate-600'} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
+      {/* Auditoria AI */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
         <h3 className="text-base font-bold text-navy-900 dark:text-slate-100 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
           <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-            <MessageSquare size={16} className="text-violet-600 dark:text-violet-400" />
+            <ShieldCheck size={16} className="text-violet-600 dark:text-violet-400" />
           </div>
-          Últimos Tickets
-          <span className="text-xs font-normal text-neutral-400 dark:text-slate-500 ml-2">({ticketsArray.length})</span>
+          Auditoria de Atendimento (IA)
+          <span className="text-xs font-normal text-neutral-400 dark:text-slate-500 ml-2">Análise de qualidade das respostas</span>
         </h3>
-
-        {ticketsArray.length === 0 ? (
-          <p className="text-center py-10 text-neutral-400 dark:text-slate-500 text-sm">Nenhum ticket encontrado</p>
+        {auditData.length === 0 ? (
+          <p className="text-center py-10 text-neutral-400 dark:text-slate-500 text-sm">Nenhum dado de auditoria disponível</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-700 text-xs text-neutral-500 dark:text-slate-400 uppercase tracking-wider">
-                  <th className="text-left py-3 px-3 font-semibold">#</th>
-                  <th className="text-left py-3 px-3 font-semibold">Cliente</th>
-                  <th className="text-left py-3 px-3 font-semibold">Problema</th>
-                  <th className="text-left py-3 px-3 font-semibold">Status</th>
-                  <th className="text-left py-3 px-3 font-semibold">Resolução</th>
-                  <th className="text-left py-3 px-3 font-semibold">Prioridade</th>
-                  <th className="text-left py-3 px-3 font-semibold">Tempo</th>
-                  <th className="text-center py-3 px-3 font-semibold">Ações</th>
+                  <th className="text-left py-3 px-3 font-semibold">Atendente</th>
+                  <th className="text-center py-3 px-3 font-semibold">Atendimentos</th>
+                  <th className="text-center py-3 px-3 font-semibold">Nota Média</th>
+                  <th className="text-center py-3 px-3 font-semibold">Classificação</th>
+                  <th className="text-left py-3 px-3 font-semibold">Últimas Avaliações</th>
                 </tr>
               </thead>
               <tbody>
-                {ticketsArray.map((ticket) => (
-                  <tr key={ticket.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                    <td className="py-3 px-3 font-mono text-xs text-neutral-500 dark:text-slate-400">{ticket.protocolo || ticket.id.slice(0, 8)}</td>
-                    <td className="py-3 px-3 font-semibold text-navy-900 dark:text-slate-100 truncate max-w-[140px]">
-                      {ticket.contactName || '—'}
-                    </td>
-                    <td className="py-3 px-3 text-neutral-600 dark:text-slate-400 truncate max-w-[200px]">
-                      {ticket.assunto || '—'}
-                    </td>
+                {auditData.map(a => (
+                  <tr key={a.agenteId} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                     <td className="py-3 px-3">
-                      <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_BADGE[ticket.status] || 'bg-slate-100 text-slate-600'}`}>
-                        {statusLabel(ticket.status)}
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                          {a.agenteNome.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-semibold text-gray-800 dark:text-slate-200">{a.agenteNome}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 text-center text-gray-600 dark:text-slate-400">{a.totalAtendimentos}</td>
+                    <td className="py-3 px-3 text-center">
+                      <span className={`text-lg font-bold ${csatNotaColor(a.mediaNotas)}`} style={{ fontFamily: 'Khand, sans-serif' }}>
+                        {a.mediaNotas}/10
                       </span>
-                    </td>
-                    <td className="py-3 px-3">
-                      {ticket.status === 'fechado' || ticket.status === 'resolvido' ? (
-                        <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${resolucaoBadgeColor(ticket)}`}>
-                          {formatarResolucao(ticket)}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-neutral-400 dark:text-slate-500">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${PRIORIDADE_BADGE[ticket.prioridade] || 'bg-slate-100 text-slate-600'}`}>
-                        {ticket.prioridade?.charAt(0).toUpperCase() + ticket.prioridade?.slice(1) || '—'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-xs text-neutral-500 dark:text-slate-400 font-mono">
-                      {formatarTempoRelativo(ticket.dataAbertura)}
                     </td>
                     <td className="py-3 px-3 text-center">
-                      <button
-                        onClick={() => navigate(`/app/helpdesk/ticket/${ticket.id}`)}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 transition-colors"
-                      >
-                        Abrir <ArrowUpRight size={12} />
-                      </button>
+                      <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${classificacaoBadge(a.classificacao)}`}>
+                        {a.classificacao === 'excelente' ? 'Excelente' : a.classificacao === 'bom' ? 'Bom' : a.classificacao === 'regular' ? 'Regular' : a.classificacao === 'ruim' ? 'Ruim' : 'Sem dados'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="flex gap-1 flex-wrap">
+                        {a.ultimasAvaliacoes.slice(0, 5).map((av, i) => (
+                          <span key={i} className={`inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded ${av.nota >= 7 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : av.nota >= 5 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                            {av.nota}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -476,6 +474,85 @@ export default function DashboardHelpdeskV2() {
           </div>
         )}
       </div>
+
+      {/* Modal de Tickets Filtrados */}
+      {modalTickets !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setModalTickets(null)} />
+          <div className="relative w-full max-w-5xl max-h-[85vh] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-5 py-4 flex items-center justify-between z-10">
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{modalTitle}</h2>
+                <span className="text-xs text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">{modalTickets.length} tickets</span>
+              </div>
+              <button onClick={() => setModalTickets(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {modalLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="animate-spin text-violet-600" size={28} />
+                </div>
+              ) : modalTickets.length === 0 ? (
+                <p className="text-center py-16 text-neutral-400 dark:text-slate-500 text-sm">Nenhum ticket encontrado</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-700 text-xs text-neutral-500 dark:text-slate-400 uppercase tracking-wider">
+                        <th className="text-left py-3 px-2 font-semibold">#</th>
+                        <th className="text-left py-3 px-2 font-semibold">Cliente</th>
+                        <th className="text-left py-3 px-2 font-semibold">Assunto</th>
+                        <th className="text-center py-3 px-2 font-semibold">Etapa</th>
+                        <th className="text-center py-3 px-2 font-semibold">Status</th>
+                        <th className="text-center py-3 px-2 font-semibold">Prioridade</th>
+                        <th className="text-left py-3 px-2 font-semibold">Responsável</th>
+                        <th className="text-center py-3 px-2 font-semibold">Departamento</th>
+                        <th className="text-center py-3 px-2 font-semibold">Tempo</th>
+                        <th className="text-center py-3 px-2 font-semibold">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalTickets.map(t => (
+                        <tr key={t.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                          <td className="py-2.5 px-2 font-mono text-xs text-neutral-500 dark:text-slate-400">{t.protocolo || t.id.slice(0, 8)}</td>
+                          <td className="py-2.5 px-2 font-semibold text-gray-800 dark:text-slate-200 truncate max-w-[120px]">{t.contactName || t.cliente || '—'}</td>
+                          <td className="py-2.5 px-2 text-neutral-600 dark:text-slate-400 truncate max-w-[180px]">{t.assunto || '—'}</td>
+                          <td className="py-2.5 px-2 text-center">
+                            <span className="text-xs font-medium text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">{etapaLabel(t.etapa)}</span>
+                          </td>
+                          <td className="py-2.5 px-2 text-center">
+                            <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_BADGE[t.status] || ''}`}>{statusLabel(t.status)}</span>
+                          </td>
+                          <td className="py-2.5 px-2 text-center">
+                            <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${PRIORIDADE_BADGE[t.prioridade] || ''}`}>
+                              {t.prioridade?.charAt(0).toUpperCase() + t.prioridade?.slice(1) || '—'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-2 text-center text-xs text-gray-600 dark:text-slate-400">{t.assignee?.name || <span className="text-neutral-300 dark:text-slate-600">Não atribuído</span>}</td>
+                          <td className="py-2.5 px-2 text-center">
+                            {t.departamento ? (
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: `${t.departamento.cor}20`, color: t.departamento.cor }}>{t.departamento.nome}</span>
+                            ) : <span className="text-neutral-300 dark:text-slate-600 text-xs">—</span>}
+                          </td>
+                          <td className="py-2.5 px-2 text-center text-xs font-mono text-neutral-500 dark:text-slate-400">{tempoAbsoluto(t.dataAbertura)}</td>
+                          <td className="py-2.5 px-2 text-center">
+                            <button onClick={() => { setModalTickets(null); navigate(`/app/helpdesk/ticket/${t.id}`); }}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 transition-colors">
+                              Abrir <ArrowUpRight size={11} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

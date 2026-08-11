@@ -18,9 +18,15 @@ export interface DepartamentoInput {
   ordem?: number;
 }
 
-export async function listDepartamentos(options: { includeInativos?: boolean } = {}) {
+export async function listDepartamentos(options: { includeInativos?: boolean; userId?: string } = {}) {
+  const where: any = options.includeInativos ? {} : { ativo: true };
+
+  if (options.userId) {
+    where.usuarios = { some: { userId: options.userId } };
+  }
+
   return prisma.departamento.findMany({
-    where: options.includeInativos ? {} : { ativo: true },
+    where,
     orderBy: [{ ordem: 'asc' }, { nome: 'asc' }],
     include: { _count: { select: { tickets: true, usuarios: true, filas: true } } },
   });

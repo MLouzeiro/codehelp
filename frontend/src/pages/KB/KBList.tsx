@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../services/auth';
 import {
@@ -32,6 +32,7 @@ interface FormState {
   categoriaId: string;
   tags: string;
   publicado: boolean;
+  passos: Array<{ titulo: string; descricao: string; imagemUrl?: string }>;
 }
 
 const FORM_VAZIO: FormState = {
@@ -41,6 +42,7 @@ const FORM_VAZIO: FormState = {
   categoriaId: '',
   tags: '',
   publicado: false,
+  passos: [],
 };
 
 export default function KBList() {
@@ -97,6 +99,10 @@ export default function KBList() {
   };
 
   const abrirEdicao = (art: KBArticle) => {
+    let passos: Array<{ titulo: string; descricao: string; imagemUrl?: string }> = [];
+    if ((art as any).passos) {
+      try { passos = JSON.parse((art as any).passos); } catch { /* ignore */ }
+    }
     setArtigoAtual(art);
     setForm({
       id: art.id,
@@ -106,6 +112,7 @@ export default function KBList() {
       categoriaId: art.categoriaId || '',
       tags: art.tags || '',
       publicado: art.publicado,
+      passos,
     });
     setShowForm(true);
   };
@@ -121,6 +128,7 @@ export default function KBList() {
         categoriaId: form.categoriaId || null,
         tags: form.tags.trim(),
         publicado: form.publicado,
+        passos: form.passos.length > 0 ? JSON.stringify(form.passos) : null,
       };
       if (form.id) {
         await api.patch(`/kb/${form.id}`, payload);
@@ -182,10 +190,10 @@ export default function KBList() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-navy-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-navy-900 dark:text-slate-100 flex items-center gap-2">
             <BookOpen className="text-emerald-600" size={24} /> Base de Conhecimento
           </h1>
-          <p className="text-neutral-500 text-sm">
+          <p className="text-neutral-500 dark:text-slate-400 text-sm">
             {total} artigo(s) • {totalPublicados} publicado(s)
           </p>
         </div>
@@ -203,59 +211,59 @@ export default function KBList() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-neutral-200 p-3 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-200 dark:border-slate-700 p-3 shadow-sm">
           <div className="flex items-center gap-2">
-            <FileText className="text-blue-600" size={16} />
-            <span className="text-xs font-semibold text-neutral-500 uppercase">Total</span>
+            <FileText className="text-blue-600 dark:text-blue-400" size={16} />
+            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase">Total</span>
           </div>
-          <p className="text-2xl font-bold text-navy-900 mt-1">{total}</p>
+          <p className="text-2xl font-bold text-navy-900 dark:text-slate-100 mt-1">{total}</p>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-200 p-3 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-200 dark:border-slate-700 p-3 shadow-sm">
           <div className="flex items-center gap-2">
             <CheckCircle className="text-emerald-600" size={16} />
-            <span className="text-xs font-semibold text-neutral-500 uppercase">Publicados</span>
+            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase">Publicados</span>
           </div>
-          <p className="text-2xl font-bold text-navy-900 mt-1">{totalPublicados}</p>
+          <p className="text-2xl font-bold text-navy-900 dark:text-slate-100 mt-1">{totalPublicados}</p>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-200 p-3 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-200 dark:border-slate-700 p-3 shadow-sm">
           <div className="flex items-center gap-2">
             <Eye className="text-purple-600" size={16} />
-            <span className="text-xs font-semibold text-neutral-500 uppercase">Visualizacoes</span>
+            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase">Visualizacoes</span>
           </div>
-          <p className="text-2xl font-bold text-navy-900 mt-1">{totalVisualizacoes}</p>
+          <p className="text-2xl font-bold text-navy-900 dark:text-slate-100 mt-1">{totalVisualizacoes}</p>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-200 p-3 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-200 dark:border-slate-700 p-3 shadow-sm">
           <div className="flex items-center gap-2">
             <ThumbsUp className="text-amber-600" size={16} />
-            <span className="text-xs font-semibold text-neutral-500 uppercase">Feedbacks Uteis</span>
+            <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400 uppercase">Feedbacks Uteis</span>
           </div>
-          <p className="text-2xl font-bold text-navy-900 mt-1">{totalUtil}</p>
+          <p className="text-2xl font-bold text-navy-900 dark:text-slate-100 mt-1">{totalUtil}</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 p-3 shadow-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-200 dark:border-slate-700 p-3 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
             <input type="text" placeholder="Buscar por titulo ou conteudo..."
               value={busca} onChange={(e) => setBusca(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-emerald-500 outline-none" />
+              className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-emerald-500 outline-none" />
           </div>
           <div className="relative">
-            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
             <select value={categoriaFiltro} onChange={(e) => setCategoriaFiltro(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-emerald-500 outline-none appearance-none bg-white">
+              className="w-full pl-8 pr-3 py-2 text-sm border border-neutral-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-emerald-500 outline-none appearance-none bg-white dark:bg-slate-800">
               <option value="">Todas categorias</option>
               {categorias.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
               ))}
             </select>
           </div>
-          <div className="flex bg-neutral-50 rounded-lg p-0.5 border border-neutral-200">
+          <div className="flex bg-neutral-50 dark:bg-slate-900 rounded-lg p-0.5 border border-neutral-200 dark:border-slate-700">
             {(['todos', 'publicados', 'rascunhos'] as const).map((opt) => (
               <button key={opt} onClick={() => setPublicadoFiltro(opt)}
                 className={`flex-1 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors capitalize ${
-                  publicadoFiltro === opt ? 'bg-emerald-100 text-emerald-700' : 'text-neutral-600 hover:bg-neutral-100'
+                  publicadoFiltro === opt ? 'bg-emerald-100 text-emerald-700' : 'text-neutral-600 dark:text-slate-300 hover:bg-neutral-100 dark:hover:bg-slate-700'
                 }`}>
                 {opt}
               </button>
@@ -265,7 +273,7 @@ export default function KBList() {
       </div>
 
       {erro && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">{erro}</div>
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 rounded-xl p-4 text-sm text-red-700">{erro}</div>
       )}
 
       {loading && items.length === 0 ? (
@@ -273,9 +281,9 @@ export default function KBList() {
           <RefreshCw className="animate-spin text-emerald-600" size={32} />
         </div>
       ) : items.length === 0 ? (
-        <div className="bg-white rounded-xl border border-neutral-200 p-12 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-200 dark:border-slate-700 p-12 text-center">
           <BookOpen className="mx-auto text-neutral-300 mb-3" size={48} />
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-neutral-500 dark:text-slate-400">
             {busca || categoriaFiltro || publicadoFiltro !== 'todos'
               ? 'Nenhum artigo encontrado com esses filtros.'
               : 'Nenhum artigo cadastrado ainda.'}
@@ -287,10 +295,10 @@ export default function KBList() {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-200 dark:border-slate-700 shadow-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-neutral-50 border-b border-neutral-200 text-xs text-neutral-500 uppercase tracking-wider">
+              <tr className="bg-neutral-50 dark:bg-slate-900 border-b border-neutral-200 dark:border-slate-700 text-xs text-neutral-500 dark:text-slate-400 uppercase tracking-wider">
                 <th className="text-left py-3 px-4">Artigo</th>
                 <th className="text-left py-3 px-4 hidden md:table-cell">Categoria</th>
                 <th className="text-center py-3 px-4">Status</th>
@@ -300,14 +308,14 @@ export default function KBList() {
             </thead>
             <tbody>
               {items.map((art) => (
-                <tr key={art.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                <tr key={art.id} className="border-b border-neutral-100 dark:border-slate-700/50 hover:bg-neutral-50 dark:hover:bg-slate-700">
                   <td className="py-3 px-4">
-                    <div className="font-semibold text-navy-900">{art.titulo}</div>
-                    {art.resumo && <p className="text-xs text-neutral-500 mt-0.5 line-clamp-1">{art.resumo}</p>}
+                    <div className="font-semibold text-navy-900 dark:text-slate-100">{art.titulo}</div>
+                    {art.resumo && <p className="text-xs text-neutral-500 dark:text-slate-400 mt-0.5 line-clamp-1">{art.resumo}</p>}
                     {art.tags && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {art.tags.split(',').filter(Boolean).slice(0, 3).map((t) => (
-                          <span key={t} className="text-[10px] bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded">
+                          <span key={t} className="text-[10px] bg-neutral-100 dark:bg-slate-800 text-neutral-600 dark:text-slate-300 px-1.5 py-0.5 rounded">
                             {t.trim()}
                           </span>
                         ))}
@@ -316,9 +324,9 @@ export default function KBList() {
                   </td>
                   <td className="py-3 px-4 hidden md:table-cell">
                     {art.categoria ? (
-                      <span className="text-xs font-medium text-neutral-700">{art.categoria.nome}</span>
+                      <span className="text-xs font-medium text-neutral-700 dark:text-slate-200">{art.categoria.nome}</span>
                     ) : (
-                      <span className="text-xs text-neutral-400">—</span>
+                      <span className="text-xs text-neutral-400 dark:text-slate-500">—</span>
                     )}
                   </td>
                   <td className="py-3 px-4 text-center">
@@ -327,13 +335,13 @@ export default function KBList() {
                         <CheckCircle size={10} /> publicado
                       </span>
                     ) : (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 inline-flex items-center gap-1">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-slate-800 text-neutral-600 dark:text-slate-300 inline-flex items-center gap-1">
                         <XCircle size={10} /> rascunho
                       </span>
                     )}
                   </td>
                   <td className="py-3 px-4 text-center hidden sm:table-cell">
-                    <div className="flex items-center justify-center gap-2 text-[11px] text-neutral-500">
+                    <div className="flex items-center justify-center gap-2 text-[11px] text-neutral-500 dark:text-slate-400">
                       <span className="flex items-center gap-0.5"><Eye size={10} />{art.visualizacoes}</span>
                       <span className="flex items-center gap-0.5 text-emerald-600"><ThumbsUp size={10} />{art.util}</span>
                       <span className="flex items-center gap-0.5 text-red-600"><ThumbsDown size={10} />{art.inutil}</span>
@@ -341,11 +349,11 @@ export default function KBList() {
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => verArtigo(art)} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-600" title="Visualizar">
+                      <button onClick={() => verArtigo(art)} className="p-1.5 rounded hover:bg-neutral-100 dark:hover:bg-slate-700 text-neutral-600 dark:text-slate-300" title="Visualizar">
                         <Eye size={14} />
                       </button>
                       {canEdit(user?.role) && (
-                        <button onClick={() => abrirEdicao(art)} className="p-1.5 rounded hover:bg-blue-50 text-blue-600" title="Editar">
+                        <button onClick={() => abrirEdicao(art)} className="p-1.5 rounded hover:bg-blue-50 text-blue-600 dark:text-blue-400" title="Editar">
                           <Edit size={14} />
                         </button>
                       )}
@@ -360,6 +368,13 @@ export default function KBList() {
                           <Trash2 size={14} />
                         </button>
                       )}
+                      <button
+                        onClick={() => window.open(`/api/kb/${art.id}/video`, '_blank')}
+                        className="p-1.5 rounded hover:bg-purple-50 text-purple-600 dark:text-purple-400"
+                        title="Gerar Video Explicativo"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -371,19 +386,19 @@ export default function KBList() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !salvando && setShowForm(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-neutral-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900 dark:text-slate-100">
                 {form.id ? 'Editar Artigo' : 'Novo Artigo'}
               </h3>
-              <button onClick={() => setShowForm(false)} disabled={salvando} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50">
+              <button onClick={() => setShowForm(false)} disabled={salvando} className="text-neutral-400 dark:text-slate-500 hover:text-neutral-600 p-1 disabled:opacity-50">
                 <XCircle size={20} />
               </button>
             </div>
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="text-xs font-semibold text-gray-700 mb-1 block">Titulo *</label>
+                <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-1 block">Titulo *</label>
                 <input type="text" value={form.titulo}
                   onChange={(e) => setForm({ ...form, titulo: e.target.value })}
                   placeholder="Ex: Como resolver erro de sincronizacao"
@@ -391,7 +406,7 @@ export default function KBList() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-700 mb-1 block">Resumo (opcional)</label>
+                <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-1 block">Resumo (opcional)</label>
                 <input type="text" value={form.resumo}
                   onChange={(e) => setForm({ ...form, resumo: e.target.value })}
                   placeholder="Frase curta que aparece na busca"
@@ -400,7 +415,7 @@ export default function KBList() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">Categoria</label>
+                  <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-1 block">Categoria</label>
                   <select value={form.categoriaId}
                     onChange={(e) => setForm({ ...form, categoriaId: e.target.value })}
                     className="input w-full">
@@ -411,7 +426,7 @@ export default function KBList() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">Tags (separadas por virgula)</label>
+                  <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-1 block">Tags (separadas por virgula)</label>
                   <input type="text" value={form.tags}
                     onChange={(e) => setForm({ ...form, tags: e.target.value })}
                     placeholder="erp, sync, erro"
@@ -420,15 +435,82 @@ export default function KBList() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-700 mb-1 block">Conteudo *</label>
+                <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-1 block">Conteudo *</label>
                 <textarea rows={14} value={form.conteudo}
                   onChange={(e) => setForm({ ...form, conteudo: e.target.value })}
                   placeholder="Escreva o conteudo do artigo. Suporta Markdown basico (## titulo, **negrito**, - lista)."
                   className="input w-full font-mono text-sm resize-none" />
-                <p className="text-[10px] text-neutral-400 mt-1">{form.conteudo.length} caracteres</p>
+                <p className="text-[10px] text-neutral-400 dark:text-slate-500 mt-1">{form.conteudo.length} caracteres</p>
               </div>
 
-              <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+              {/* Step-by-step editor for video generation */}
+              <div className="border border-neutral-200 dark:border-slate-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-xs font-semibold text-gray-700 dark:text-slate-200">
+                    Passos para Video (opcional)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setForm({
+                      ...form,
+                      passos: [...form.passos, { titulo: '', descricao: '' }],
+                    })}
+                    className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg font-medium"
+                  >
+                    + Adicionar Passo
+                  </button>
+                </div>
+                {form.passos.length === 0 && (
+                  <p className="text-xs text-neutral-400 dark:text-slate-500">
+                    Adicione passos para gerar um video explicativo a partir deste artigo.
+                  </p>
+                )}
+                <div className="space-y-3">
+                  {form.passos.map((passo, idx) => (
+                    <div key={idx} className="bg-gray-50 dark:bg-slate-900 rounded-lg p-3 border border-neutral-200 dark:border-slate-600">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded">
+                          {idx + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={passo.titulo}
+                          onChange={(e) => {
+                            const novos = [...form.passos];
+                            novos[idx] = { ...novos[idx], titulo: e.target.value };
+                            setForm({ ...form, passos: novos });
+                          }}
+                          placeholder="Titulo do passo"
+                          className="input flex-1 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const novos = form.passos.filter((_, i) => i !== idx);
+                            setForm({ ...form, passos: novos });
+                          }}
+                          className="text-red-400 hover:text-red-600 p-1"
+                        >
+                          <XCircle size={16} />
+                        </button>
+                      </div>
+                      <textarea
+                        rows={2}
+                        value={passo.descricao}
+                        onChange={(e) => {
+                          const novos = [...form.passos];
+                          novos[idx] = { ...novos[idx], descricao: e.target.value };
+                          setForm({ ...form, passos: novos });
+                        }}
+                        placeholder="Descricao da etapa..."
+                        className="input w-full text-sm resize-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg border border-emerald-200">
                 <input type="checkbox" id="publicado"
                   checked={form.publicado}
                   onChange={(e) => setForm({ ...form, publicado: e.target.checked })}
@@ -439,8 +521,8 @@ export default function KBList() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-3 flex gap-2 justify-end">
-              <button onClick={() => setShowForm(false)} disabled={salvando} className="px-4 py-2 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-50">
+            <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-neutral-200 dark:border-slate-700 px-6 py-3 flex gap-2 justify-end">
+              <button onClick={() => setShowForm(false)} disabled={salvando} className="px-4 py-2 border border-neutral-200 dark:border-slate-700 rounded-lg text-sm hover:bg-neutral-50 dark:hover:bg-slate-700 disabled:opacity-50">
                 Cancelar
               </button>
               <button onClick={salvar} disabled={!form.titulo.trim() || !form.conteudo.trim() || salvando}
@@ -454,11 +536,11 @@ export default function KBList() {
 
       {showViewer && artigoAtual && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowViewer(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-neutral-200 px-6 py-4 flex items-start justify-between">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-neutral-200 dark:border-slate-700 px-6 py-4 flex items-start justify-between">
               <div className="flex-1 min-w-0 pr-3">
-                <h3 className="font-bold text-lg text-navy-900">{artigoAtual.titulo}</h3>
-                <div className="flex items-center gap-3 text-xs text-neutral-500 mt-1 flex-wrap">
+                <h3 className="font-bold text-lg text-navy-900 dark:text-slate-100">{artigoAtual.titulo}</h3>
+                <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-slate-400 mt-1 flex-wrap">
                   {artigoAtual.categoria && (
                     <span className="flex items-center gap-1"><Tag size={10} /> {artigoAtual.categoria.nome}</span>
                   )}
@@ -467,32 +549,32 @@ export default function KBList() {
                   <span>atualizado {new Date(artigoAtual.updatedAt).toLocaleDateString('pt-BR')}</span>
                 </div>
               </div>
-              <button onClick={() => setShowViewer(false)} className="text-neutral-400 hover:text-neutral-600 p-1 flex-shrink-0">
+              <button onClick={() => setShowViewer(false)} className="text-neutral-400 dark:text-slate-500 hover:text-neutral-600 p-1 flex-shrink-0">
                 <XCircle size={20} />
               </button>
             </div>
             <div className="p-6">
               {artigoAtual.resumo && (
-                <p className="text-sm text-neutral-600 italic border-l-2 border-emerald-300 pl-3 mb-4">
+                <p className="text-sm text-neutral-600 dark:text-slate-300 italic border-l-2 border-emerald-300 pl-3 mb-4">
                   {artigoAtual.resumo}
                 </p>
               )}
-              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-navy-900 leading-relaxed">
+              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-navy-900 dark:text-slate-100 leading-relaxed">
                 {artigoAtual.conteudo}
               </div>
             </div>
-            <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-3 flex items-center justify-between">
-              <p className="text-xs text-neutral-500">Este artigo foi util?</p>
+            <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-neutral-200 dark:border-slate-700 px-6 py-3 flex items-center justify-between">
+              <p className="text-xs text-neutral-500 dark:text-slate-400">Este artigo foi util?</p>
               <div className="flex items-center gap-2">
                 <button onClick={() => feedback(artigoAtual, true)}
-                  className="flex items-center gap-1 text-xs px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100">
+                  className="flex items-center gap-1 text-xs px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 rounded-lg hover:bg-emerald-100">
                   <ThumbsUp size={12} /> Util ({artigoAtual.util})
                 </button>
                 <button onClick={() => feedback(artigoAtual, false)}
-                  className="flex items-center gap-1 text-xs px-3 py-1.5 bg-red-50 text-red-700 rounded-lg hover:bg-red-100">
+                  className="flex items-center gap-1 text-xs px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-700 rounded-lg hover:bg-red-100">
                   <ThumbsDown size={12} /> Inutil ({artigoAtual.inutil})
                 </button>
-                <button onClick={() => setShowViewer(false)} className="text-xs text-neutral-500 hover:text-neutral-700 ml-2">
+                <button onClick={() => setShowViewer(false)} className="text-xs text-neutral-500 dark:text-slate-400 hover:text-neutral-700 ml-2">
                   Fechar
                 </button>
               </div>

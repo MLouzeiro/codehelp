@@ -1,14 +1,15 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import prisma from '../../config/database';
 import { env } from '../../config/env';
 import { AuthRequest } from '../../shared/middleware/auth';
 
-function generateTokens(user: { id: string; email: string; role: string }) {
+function generateTokens(user: { id: string; email: string; role: string; sessionToken: string }) {
   const accessOptions: SignOptions = { expiresIn: env.jwtExpiresIn as SignOptions['expiresIn'] };
   const refreshOptions: SignOptions = { expiresIn: env.jwtRefreshExpiresIn as SignOptions['expiresIn'] };
-  const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role }, env.jwtSecret, accessOptions);
+  const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role, sessionToken: user.sessionToken }, env.jwtSecret, accessOptions);
   const refreshToken = jwt.sign({ id: user.id }, env.jwtRefreshSecret, refreshOptions);
   return { accessToken, refreshToken };
 }
@@ -24,9 +25,13 @@ export async function login(req: Request, res: Response) {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: 'Credenciais inválidas' });
 
-    const tokens = generateTokens(user);
+    const sessionToken = uuidv4();
+    await prisma.user.update({ where: { id: user.id }, data: { sessionToken } });
+
+    const tokens = generateTokens({ ...user, sessionToken });
     return res.json({
       ...tokens,
+      sessionToken,
       user: { id: user.id, name: user.name, email: user.email, role: user.role, isMaster: user.isMaster, phone: user.phone },
     });
   } catch {
@@ -36,15 +41,21 @@ export async function login(req: Request, res: Response) {
 
 export async function refreshToken(req: Request, res: Response) {
   try {
-    const { refreshToken } = req.body;
+    const { refreshToken, sessionToken } = req.body;
     if (!refreshToken) return res.status(400).json({ error: 'Refresh token é obrigatório' });
 
     const decoded = jwt.verify(refreshToken, env.jwtRefreshSecret) as { id: string };
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
     if (!user || !user.active) return res.status(401).json({ error: 'Usuário inválido' });
 
-    const tokens = generateTokens(user);
-    return res.json(tokens);
+    if (sessionToken && user.sessionToken !== sessionToken) {
+      return res.status(401).json({ error: 'Sessão encerrada em outro dispositivo' });
+    }
+
+    // NÃO rotacionar sessionToken no refresh — só no login.
+    // Isso evita que um refresh em uma aba invalide o token de outra aba.
+    const tokens = generateTokens({ ...user, sessionToken: user.sessionToken || '' });
+    return res.json({ ...tokens, sessionToken: user.sessionToken });
   } catch {
     return res.status(401).json({ error: 'Refresh token inválido ou expirado' });
   }
@@ -81,14 +92,35 @@ export async function createUser(req: Request, res: Response) {
   try {
     const { name, email, password, role, isMaster, departamentoIds } = req.body;
     if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
+      return res.status(400).json({ error: 'Nome, email e senha sao obrigatorios' });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) return res.status(409).json({ error: 'Email já cadastrado' });
+    if (existing) return res.status(409).json({ error: 'Email ja cadastrado' });
 
-    // Seguranca: so master pode criar outro master
+    // ── Seguranca: validacao de role ──────────────────────────────────
     const requestingUser = (req as AuthRequest).user;
+    const roleHierarchy: Record<string, number> = {
+      tecnico: 1,
+      comercial: 2,
+      gerente: 3,
+      admin: 4,
+    };
+    const requesterLevel = roleHierarchy[requestingUser?.role || 'tecnico'] || 1;
+    const requestedRole = role || 'tecnico';
+    const requestedLevel = roleHierarchy[requestedRole] || 1;
+
+    // Gerente so pode criar tecnicos e comerciais
+    if (requesterLevel < roleHierarchy.admin && requestedLevel > requesterLevel) {
+      return res.status(403).json({ error: `Voce nao pode criar usuarios com role "${requestedRole}". Roles permitidas: ${Object.entries(roleHierarchy).filter(([, v]) => v <= requesterLevel).map(([k]) => k).join(', ')}` });
+    }
+
+    // So admin/master pode criar admin
+    if (requestedLevel >= roleHierarchy.admin && !requestingUser?.isMaster && requestingUser?.role !== 'admin') {
+      return res.status(403).json({ error: 'Apenas administradores podem criar outros administradores' });
+    }
+
+    // So master pode setar isMaster
     const canSetMaster = requestingUser?.isMaster || requestingUser?.role === 'admin';
     const finalIsMaster = canSetMaster && isMaster ? true : false;
 
@@ -132,13 +164,38 @@ export async function updateUser(req: Request, res: Response) {
     const data: any = {};
     if (name) data.name = name;
     if (email) data.email = email;
-    if (role) data.role = role;
-    if (active !== undefined) data.active = active;
     if (password) data.password = await bcrypt.hash(password, 12);
     if (req.body.phone !== undefined) data.phone = req.body.phone;
 
-    // Seguranca: so master pode alterar isMaster
+    // ── Seguranca: validacao de role ──────────────────────────────────
     const requestingUser = (req as AuthRequest).user;
+    const roleHierarchy: Record<string, number> = {
+      tecnico: 1,
+      comercial: 2,
+      gerente: 3,
+      admin: 4,
+    };
+    const requesterLevel = roleHierarchy[requestingUser?.role || 'tecnico'] || 1;
+
+    // Validar role
+    if (role) {
+      const requestedLevel = roleHierarchy[role] || 1;
+      if (requesterLevel < roleHierarchy.admin && requestedLevel > requesterLevel) {
+        return res.status(403).json({ error: `Voce nao pode atribuir role "${role}"` });
+      }
+      data.role = role;
+    }
+
+    // Validar active
+    if (active !== undefined) {
+      // So admin/master pode desativar/ativar usuarios
+      if (requesterLevel < roleHierarchy.admin) {
+        return res.status(403).json({ error: 'Apenas administradores podem ativar/desativar usuarios' });
+      }
+      data.active = active;
+    }
+
+    // Validar isMaster — so master pode alterar isMaster
     const canSetMaster = requestingUser?.isMaster || requestingUser?.role === 'admin';
     if (isMaster !== undefined && canSetMaster) {
       data.isMaster = isMaster;

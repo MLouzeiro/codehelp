@@ -102,7 +102,10 @@ export function podeAtribuirTicket(usuario: AuthRequest['user'], ticket: { depar
  */
 export function requireTicketAccess(action: 'view' | 'edit' | 'assign') {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
-    const { id } = req.params;
+    const id = req.params.id || req.params.ticketId;
+    if (!id) {
+      return res.status(400).json({ error: 'Ticket ID não fornecido' });
+    }
     const ticket = await prisma.ticket.findUnique({
       where: { id },
       select: { id: true, departamentoId: true, assigneeId: true, usuarioId: true },

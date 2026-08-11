@@ -85,7 +85,7 @@ export default function ClientForm() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-neutral-100 shadow-sm p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-100 shadow-sm p-6 space-y-5">
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-neutral-700 mb-1">Razão Social *</label>

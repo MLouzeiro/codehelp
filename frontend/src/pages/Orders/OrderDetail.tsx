@@ -119,7 +119,7 @@ export default function OrderDetail() {
           {order.signature.assinaturaBase64 && (
             <div className="mt-4">
               <p className="text-xs text-gray-500 mb-2">Assinatura</p>
-              <img src={order.signature.assinaturaBase64} alt="Assinatura" className="max-h-24 border border-gray-200 rounded-lg p-2 bg-white" />
+              <img src={order.signature.assinaturaBase64} alt="Assinatura" className="max-h-24 border border-gray-200 rounded-lg p-2 bg-white dark:bg-slate-800" />
             </div>
           )}
         </div>

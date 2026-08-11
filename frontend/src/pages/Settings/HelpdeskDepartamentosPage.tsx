@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Edit2, Power, PowerOff, GripVertical, Save, X, RefreshCw,
   Building2,
@@ -97,23 +97,23 @@ export default function HelpdeskDepartamentosPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[60vh]"><RefreshCw className="animate-spin text-blue-600" size={32} /></div>;
+    return <div className="flex items-center justify-center min-h-[60vh]"><RefreshCw className="animate-spin text-blue-600 dark:text-blue-400" size={32} /></div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Building2 className="text-blue-600" size={24} /> Departamentos
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2">
+            <Building2 className="text-blue-600 dark:text-blue-400" size={24} /> Departamentos
           </h1>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 dark:text-slate-400 text-sm">
             {departamentos.length} departamento(s) {showInativos && '(incluindo inativos)'}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowInativos(!showInativos)}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${showInativos ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 text-neutral-600'}`}>
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${showInativos ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 dark:bg-slate-800 text-neutral-600 dark:text-slate-300'}`}>
             {showInativos ? 'Mostrando inativas' : 'Mostrar inativas'}
           </button>
           {isMaster && (
@@ -126,14 +126,14 @@ export default function HelpdeskDepartamentosPage() {
       </div>
 
       {feedback && (
-        <div className={`text-sm px-3 py-2 rounded-lg ${feedback.type === 'ok' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+        <div className={`text-sm px-3 py-2 rounded-lg ${feedback.type === 'ok' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700' : 'bg-red-50 dark:bg-red-900/30 text-red-700'}`}>
           {feedback.msg}
         </div>
       )}
 
       <div className="space-y-2">
         {departamentos.length === 0 && (
-          <p className="text-center text-neutral-400 py-8 text-sm">Nenhum departamento cadastrado.</p>
+          <p className="text-center text-neutral-400 dark:text-slate-500 py-8 text-sm">Nenhum departamento cadastrado.</p>
         )}
         {departamentos.map((dept) => (
           <div key={dept.id} className={`card flex items-center gap-3 p-3 ${!dept.ativo ? 'opacity-60' : ''}`}>
@@ -142,14 +142,14 @@ export default function HelpdeskDepartamentosPage() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm text-gray-900 truncate">{dept.nome}</h3>
-                <code className="text-[10px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded font-mono">{dept.slug}</code>
+                <h3 className="font-semibold text-sm text-gray-900 dark:text-slate-100 truncate">{dept.nome}</h3>
+                <code className="text-[10px] text-neutral-500 dark:text-slate-400 bg-neutral-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono">{dept.slug}</code>
                 {!dept.ativo && (
-                  <span className="text-[10px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded font-medium uppercase">Inativo</span>
+                  <span className="text-[10px] text-neutral-500 dark:text-slate-400 bg-neutral-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-medium uppercase">Inativo</span>
                 )}
               </div>
-              {dept.descricao && <p className="text-xs text-neutral-500 truncate mt-0.5">{dept.descricao}</p>}
-              <div className="flex gap-3 mt-1 text-[10px] text-neutral-400">
+              {dept.descricao && <p className="text-xs text-neutral-500 dark:text-slate-400 truncate mt-0.5">{dept.descricao}</p>}
+              <div className="flex gap-3 mt-1 text-[10px] text-neutral-400 dark:text-slate-500">
                 {dept._count && <span>{dept._count.tickets} ticket(s)</span>}
                 {dept._count && <span>{dept._count.usuarios} usuario(s)</span>}
                 {dept._count && <span>{dept._count.filas} fila(s)</span>}
@@ -157,10 +157,10 @@ export default function HelpdeskDepartamentosPage() {
             </div>
             {isMaster && (
               <div className="flex items-center gap-1">
-                <button onClick={() => { setEditing(dept); setCreating(false); }} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-600" title="Editar">
+                <button onClick={() => { setEditing(dept); setCreating(false); }} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-slate-700 rounded text-neutral-600 dark:text-slate-300" title="Editar">
                   <Edit2 size={14} />
                 </button>
-                <button onClick={() => handleToggle(dept)} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-600" title={dept.ativo ? 'Desativar' : 'Reativar'}>
+                <button onClick={() => handleToggle(dept)} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-slate-700 rounded text-neutral-600 dark:text-slate-300" title={dept.ativo ? 'Desativar' : 'Reativar'}>
                   {dept.ativo ? <PowerOff size={14} className="text-red-500" /> : <Power size={14} className="text-emerald-500" />}
                 </button>
               </div>
@@ -196,35 +196,35 @@ function DepartamentoEditor({ dept, onClose, onSave, saving }: EditorProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl p-5 w-full max-w-lg space-y-3" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-5 w-full max-w-lg space-y-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-gray-900">{isNew ? 'Novo Departamento' : `Editar "${dept!.nome}"`}</h3>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600"><X size={18} /></button>
+          <h3 className="font-bold text-gray-900 dark:text-slate-100">{isNew ? 'Novo Departamento' : `Editar "${dept!.nome}"`}</h3>
+          <button onClick={onClose} className="text-neutral-400 dark:text-slate-500 hover:text-neutral-600"><X size={18} /></button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Slug (kebab-case) *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Slug (kebab-case) *</label>
             <input type="text" value={form.slug || ''} onChange={(e) => setForm({ ...form, slug: e.target.value })}
               disabled={!isNew} placeholder="suporte-tecnico"
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 disabled:bg-gray-50 disabled:text-gray-500 font-mono" />
+              className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 disabled:bg-gray-50 disabled:text-gray-500 font-mono" />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Nome *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Nome *</label>
             <input type="text" value={form.nome || ''} onChange={(e) => setForm({ ...form, nome: e.target.value })}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" />
+              className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2" />
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-700 block mb-1">Descricao</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Descricao</label>
           <input type="text" value={form.descricao || ''} onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" />
+            className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2" />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Cor</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Cor</label>
             <div className="flex flex-wrap gap-1.5">
               {CORES_OPCOES.map((c) => (
                 <button key={c} type="button" onClick={() => setForm({ ...form, cor: c })}
@@ -234,16 +234,16 @@ function DepartamentoEditor({ dept, onClose, onSave, saving }: EditorProps) {
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Icone</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Icone</label>
             <select value={form.icone} onChange={(e) => setForm({ ...form, icone: e.target.value })}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2">
+              className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2">
               {ICONES_OPCOES.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
             </select>
           </div>
         </div>
 
         <div className="flex gap-2 pt-3 border-t">
-          <button onClick={onClose} disabled={saving} className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+          <button onClick={onClose} disabled={saving} className="flex-1 px-4 py-2 text-sm border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50">Cancelar</button>
           <button onClick={() => onSave(form)} disabled={saving || !form.nome?.trim() || !form.slug?.trim()}
             className="flex-1 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-1.5">
             <Save size={14} /> {saving ? 'Salvando...' : isNew ? 'Criar' : 'Salvar'}

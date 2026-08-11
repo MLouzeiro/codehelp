@@ -46,6 +46,15 @@ export interface DashboardMetrics {
     total: number;
     percentual: number;
   }>;
+  ia?: {
+    totalChamados: number;
+    chamadosIaResolveu: number;
+    taxaResolucaoIa: number;
+    tempoMedioResolucaoIaMin: number;
+    tempoMedioResolucaoHumanoMin: number;
+    totalCorrecoes: number;
+    confiancaMediaClassificacao: number;
+  };
 }
 
 function mediana(arr: number[]): number {
@@ -151,14 +160,35 @@ export async function getDashboardMetrics(
     },
     _count: { _all: true },
   });
+
+  // Batch fetch users and CSAT to avoid N+1
+  const agentIds = ticketsPorAgente.filter(g => g.assigneeId).map(g => g.assigneeId!);
+  const [users, allCsats] = await Promise.all([
+    prisma.user.findMany({
+      where: { id: { in: agentIds } },
+      select: { id: true, name: true },
+    }),
+    prisma.cSATResposta.findMany({
+      where: {
+        ticketId: { in: ticketsResolvidos.map(t => t.id) },
+        nota: { not: null },
+      },
+      select: { ticketId: true, nota: true },
+    }),
+  ]);
+
+  const userMap = new Map(users.map(u => [u.id, u.name]));
+  const csatByTicket = new Map<string, number[]>();
+  for (const c of allCsats) {
+    if (!csatByTicket.has(c.ticketId)) csatByTicket.set(c.ticketId, []);
+    csatByTicket.get(c.ticketId)!.push(c.nota || 0);
+  }
+
   const porAgente: DashboardMetrics['porAgente'] = [];
   for (const grupo of ticketsPorAgente) {
     if (!grupo.assigneeId) continue;
-    const user = await prisma.user.findUnique({
-      where: { id: grupo.assigneeId },
-      select: { id: true, name: true },
-    });
-    if (!user) continue;
+    const userName = userMap.get(grupo.assigneeId);
+    if (!userName) continue;
     const ticketsAgente = ticketsResolvidos.filter((t) => t.assigneeId === grupo.assigneeId);
     const temposAgente = ticketsAgente
       .filter((t) => t.dataFechamento && t.dataInicioAtendimento)
@@ -169,16 +199,20 @@ export async function getDashboardMetrics(
     const mttrMedio = temposAgente.length > 0
       ? Math.round(temposAgente.reduce((a, b) => a + b, 0) / temposAgente.length)
       : 0;
-    const csats = await prisma.cSATResposta.findMany({
-      where: { ticketId: { in: ticketsAgente.map((t) => t.id) }, nota: { not: null } },
-      select: { nota: true },
-    });
-    const csatMedio = csats.length > 0
-      ? Math.round((csats.reduce((a, b) => a + (b.nota || 0), 0) / csats.length) * 100) / 100
+
+    // Compute CSAT from batch-fetched data
+    const notas: number[] = [];
+    for (const t of ticketsAgente) {
+      const tNotas = csatByTicket.get(t.id);
+      if (tNotas) notas.push(...tNotas);
+    }
+    const csatMedio = notas.length > 0
+      ? Math.round((notas.reduce((a, b) => a + b, 0) / notas.length) * 100) / 100
       : null;
+
     porAgente.push({
-      usuarioId: user.id,
-      nome: user.name,
+      usuarioId: grupo.assigneeId,
+      nome: userName,
       ticketsAtendidos: grupo._count._all,
       mttrMedioMin: mttrMedio,
       csatMedio,
@@ -199,6 +233,68 @@ export async function getDashboardMetrics(
       percentual: totalCategoria > 0 ? Math.round((c._count._all / totalCategoria) * 10000) / 100 : 0,
     }))
     .sort((a, b) => b.total - a.total);
+
+  // ── Metricas de IA ──
+  const [totalChamadosIa, chamadosIaResolveu, correcoes, classificacoes, ticketsIaResolvidos, ticketsHumanosResolvidos] = await Promise.all([
+    prisma.ticket.count({
+      where: { dataAbertura: { gte: inicio, lte: fim }, status: { not: 'arquivado' } },
+    }),
+    prisma.ticket.count({
+      where: { dataAbertura: { gte: inicio, lte: fim }, resolvidoPorIa: true },
+    }),
+    prisma.aICorrection.count({
+      where: { createdAt: { gte: inicio, lte: fim } },
+    }),
+    prisma.aIClassification.findMany({
+      where: { createdAt: { gte: inicio, lte: fim } },
+      select: { confianca: true },
+    }),
+    prisma.ticket.findMany({
+      where: {
+        dataAbertura: { gte: inicio, lte: fim },
+        resolvidoPorIa: true,
+        dataFechamento: { not: null },
+      },
+      select: { dataAbertura: true, dataFechamento: true },
+    }),
+    prisma.ticket.findMany({
+      where: {
+        dataAbertura: { gte: inicio, lte: fim },
+        resolvidoPorIa: false,
+        status: { in: ['fechado', 'resolvido'] },
+        dataFechamento: { not: null },
+      },
+      select: { dataAbertura: true, dataFechamento: true },
+    }),
+  ]);
+
+  const taxaResolucaoIa = totalChamadosIa > 0
+    ? Math.round((chamadosIaResolveu / totalChamadosIa) * 10000) / 100
+    : 0;
+
+  const tempoMedioResolucaoIaMin = ticketsIaResolvidos.length > 0
+    ? Math.round(
+        ticketsIaResolvidos.reduce((acc, t) => {
+          const ms = new Date(t.dataFechamento!).getTime() - new Date(t.dataAbertura).getTime();
+          return acc + ms / 60000;
+        }, 0) / ticketsIaResolvidos.length
+      )
+    : 0;
+
+  const tempoMedioResolucaoHumanoMin = ticketsHumanosResolvidos.length > 0
+    ? Math.round(
+        ticketsHumanosResolvidos.reduce((acc, t) => {
+          const ms = new Date(t.dataFechamento!).getTime() - new Date(t.dataAbertura).getTime();
+          return acc + ms / 60000;
+        }, 0) / ticketsHumanosResolvidos.length
+      )
+    : 0;
+
+  const confiancaMedia = classificacoes.length > 0
+    ? Math.round(
+        classificacoes.reduce((acc, c) => acc + (c.confianca || 0), 0) / classificacoes.length
+      )
+    : 0;
 
   return {
     periodo: { inicio, fim },
@@ -234,5 +330,14 @@ export async function getDashboardMetrics(
     },
     porAgente,
     porCategoria,
+    ia: {
+      totalChamados: totalChamadosIa,
+      chamadosIaResolveu,
+      taxaResolucaoIa,
+      tempoMedioResolucaoIaMin,
+      tempoMedioResolucaoHumanoMin,
+      totalCorrecoes: correcoes,
+      confiancaMediaClassificacao: confiancaMedia,
+    },
   };
 }

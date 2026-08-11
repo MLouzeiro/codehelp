@@ -46,6 +46,13 @@ export const BG_MODES: Record<BgMode, { label: string; bgApp: string; bgCard: st
   blue:  { label: 'Azul Claro', bgApp: '#EFF6FF', bgCard: '#FFFFFF', bgCardHover: '#F0F4FF', bgInput: '#FFFFFF' },
 };
 
+const BG_MODES_DARK: Record<BgMode, { bgApp: string; bgCard: string; bgCardHover: string; bgInput: string }> = {
+  white: { bgApp: '#0F172A', bgCard: '#1E293B', bgCardHover: '#334155', bgInput: '#1E293B' },
+  ice:   { bgApp: '#0C1425', bgCard: '#1E293B', bgCardHover: '#334155', bgInput: '#1E293B' },
+  gray:  { bgApp: '#0F172A', bgCard: '#1E293B', bgCardHover: '#334155', bgInput: '#1E293B' },
+  blue:  { bgApp: '#0B1120', bgCard: '#1E293B', bgCardHover: '#334155', bgInput: '#1E293B' },
+};
+
 function getInitial(): ThemeSettings {
   if (typeof window === 'undefined') {
     return { theme: 'light', fontScale: 'md', colorScheme: 'blue', sidebarLayout: 'vertical', bgMode: 'white' };
@@ -87,7 +94,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--accent-light', scheme.light);
     root.style.setProperty('--accent-dark', scheme.dark);
 
-    const bg = BG_MODES[s.bgMode];
+    const bg = s.theme === 'dark' ? BG_MODES_DARK[s.bgMode] : BG_MODES[s.bgMode];
     root.style.setProperty('--bg-app', bg.bgApp);
     root.style.setProperty('--bg-card', bg.bgCard);
     root.style.setProperty('--bg-card-hover', bg.bgCardHover);

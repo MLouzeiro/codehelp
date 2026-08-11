@@ -128,7 +128,7 @@ function Hero() {
           </h1>
 
           <p className="text-lg sm:text-xl text-slate-300 max-w-xl mb-10 leading-relaxed" style={{ fontFamily: 'Lexend, sans-serif' }}>
-            CRM, Ordem de Serviço Digital, WhatsApp nativo e Dashboard com IA —
+            Gestao de Clientes, Ordem de Servico Digital, WhatsApp nativo e Dashboard com IA —
             tudo em um sistema que seu time vai gostar de usar.
           </p>
 
@@ -181,8 +181,8 @@ function Hero() {
 const features = [
   {
     icon: Users,
-    title: 'CRM Inteligente',
-    desc: 'Gestão completa de clientes com pipeline de oportunidades, timeline de interações e busca global. Saiba exatamente onde cada cliente está.',
+    title: 'Gestao de Clientes',
+    desc: 'Gestao completa de clientes com pipeline de oportunidades, timeline de interacoes e busca global. Saiba exatamente onde cada cliente esta.',
     highlight: 'Pipeline kanban • Histórico completo • Busca com debounce',
   },
   {
@@ -225,7 +225,7 @@ function Features() {
           <div className="section-badge justify-center mx-auto mb-4">Funcionalidades</div>
           <h2 className="section-title mb-4">Tudo que seu laboratório precisa em um só lugar</h2>
           <p className="section-desc mx-auto">
-            CRM, gestão de OS, WhatsApp integrado e inteligência de dados — sem precisar
+            Gestao de Clientes, gestao de OS, WhatsApp integrado e inteligencia de dados — sem precisar
             de 4 sistemas diferentes.
           </p>
         </div>
@@ -353,7 +353,7 @@ const testimonials = [
     name: 'Marcelo Lima',
     role: 'Diretor Técnico',
     city: 'Patos de Minas, MG',
-    text: 'Usávamos 3 sistemas diferentes. Agora é tudo em um lugar — CRM, OS, WhatsApp. A equipe inteira aprovou.',
+    text: 'Usavamos 3 sistemas diferentes. Agora e tudo em um lugar — Clientes, OS, WhatsApp. A equipe inteira aprovou.',
     initials: 'ML',
   },
   {
@@ -411,7 +411,7 @@ const plans = [
     period: '/mês',
     desc: 'Para laboratórios que estão começando a organizar a gestão.',
     features: [
-      'CRM completo',
+      'Gestao de Clientes',
       'OS Digital (até 100 OS/mês)',
       'Dashboard com KPIs',
       'Kanban de tarefas',
@@ -585,7 +585,7 @@ function Footer() {
               Produto
             </h4>
             <ul className="space-y-3">
-              {['CRM', 'OS Digital', 'WhatsApp', 'Dashboard IA', 'Kanban'].map((item) => (
+              {['Clientes', 'OS Digital', 'WhatsApp', 'Dashboard IA', 'Kanban'].map((item) => (
                 <li key={item}>
                   <a href="#funcionalidades" className="text-sm text-slate-400 hover:text-blue-400 transition-colors" style={{ fontFamily: 'Lexend, sans-serif' }}>
                     {item}

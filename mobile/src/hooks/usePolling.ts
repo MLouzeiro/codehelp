@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-export function usePolling(callback: () => Promise<void>, intervalMs: number, enabled = true) {
+export function usePolling(callback: () => Promise<void> | void, intervalMs: number, enabled = true) {
   const savedCallback = useRef(callback);
   const [isPolling, setIsPolling] = useState(true);
 

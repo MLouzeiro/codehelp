@@ -1,8 +1,10 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { tokenStorage } from './secureStore';
 
-const API_BASE = 'http://192.168.1.100:3001/api';
-// Em producao, usar: https://api.codemed.com.br/api
+import Constants from 'expo-constants';
+
+const API_BASE = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3001/api';
+// No app.json -> extra -> apiUrl: sua IP local ou producao
 
 const api = axios.create({
   baseURL: API_BASE,

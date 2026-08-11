@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeHelp — Mockups v3</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #f5f5f4; color: #1c1917; padding: 24px; }
+  .nav { display: flex; align-items: center; gap: 2px; background: #fff; padding: 4px 16px; height: 52px; border-radius: 14px; margin-bottom: 28px; box-shadow: 0 1px 3px rgba(0,0,0,.04); border: 1px solid #e7e5e4; }
+  .nav a { color: #78716c; text-decoration: none; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: all .15s; }
+  .nav a.active { color: #292524; background: #f5f5f4; font-weight: 600; }
+  .nav-brand { font-weight: 700; font-size: 15px; color: #292524; margin-right: 24px; letter-spacing: -.3px; }
+  .nav-brand span { color: #6366f1; }
+
+  .section { margin-bottom: 44px; background: #fff; border-radius: 16px; border: 1px solid #e7e5e4; padding: 28px; box-shadow: 0 1px 4px rgba(0,0,0,.03); }
+  .section-title { font-size: 16px; font-weight: 600; color: #292524; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #f0efed; letter-spacing: -.2px; }
+  .section-title small { font-weight: 400; font-size: 13px; color: #a8a29e; }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 100px; font-size: 11px; font-weight: 500; letter-spacing: .2px; }
+  .badge-ia { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+  .badge-ia-humano { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+  .badge-humano { background: #fafaf9; color: #57534e; border: 1px solid #e7e5e4; }
+  .badge-urgent { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .badge-high { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+  .badge-medium { background: #fefce8; color: #a16207; border: 1px solid #fef08a; }
+  .badge-low { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+
+  .grid-c4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .grid-c3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid-c2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .card { background: #fff; border-radius: 12px; border: 1px solid #e7e5e4; padding: 16px; transition: box-shadow .15s; }
+  .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+  .card-h { font-size: 12px; font-weight: 500; color: #a8a29e; margin-bottom: 6px; letter-spacing: .2px; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+  .card-v { font-size: 28px; font-weight: 600; color: #292524; letter-spacing: -1px; line-height: 1.2; }
+  .card-l { font-size: 11px; color: #a8a29e; margin-top: 4px; }
+  .card-v small { font-size: 14px; font-weight: 500; color: #a8a29e; letter-spacing: 0; }
+  .trend-up { color: #15803d; font-size: 12px; font-weight: 600; }
+  .trend-down { color: #dc2626; font-size: 12px; font-weight: 600; }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  th { text-align: left; padding: 10px 12px; background: #fafaf9; color: #a8a29e; font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid #e7e5e4; }
+  th:first-child { border-radius: 8px 0 0 0; }
+  th:last-child { border-radius: 0 8px 0 0; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f3efed; color: #44403c; }
+  tr:last-child td:first-child { border-radius: 0 0 0 8px; }
+  tr:last-child td:last-child { border-radius: 0 0 8px 0; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafaf9; }
+
+  .tkt-hdr { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 18px; background: #fafaf9; border-radius: 12px; border: 1px solid #e7e5e4; margin-bottom: 14px; }
+  .tkt-hdr .name { font-weight: 600; font-size: 14px; color: #292524; }
+  .tkt-m { font-size: 11px; color: #a8a29e; display: flex; align-items: center; gap: 3px; }
+  .tkt-m strong { color: #44403c; font-weight: 600; }
+
+  .res-card { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #fafaf9; border-radius: 10px; border: 1px solid #e7e5e4; }
+  .res-card .lbl { font-size: 11px; color: #78716c; }
+  .res-card .val { font-size: 15px; font-weight: 600; }
+  .res-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  .bg-gradient-ia { background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 12px; padding: 20px 24px; color: #fff; }
+  .bg-gradient-ia .label { color: #a5b4fc; }
+  .bg-gradient-ia .big { font-size: 30px; font-weight: 700; letter-spacing: -1px; }
+  .bg-gradient-ia .big small { font-size: 14px; font-weight: 400; color: #a5b4fc; }
+
+  .flex { display: flex; gap: 8px; flex-wrap: wrap; }
+  .flex-c { display: flex; align-items: center; gap: 8px; }
+  .flex-b { display: flex; justify-content: space-between; align-items: center; }
+  .gap-2 { gap: 8px; }
+  .gap-3 { gap: 12px; }
+  .gap-4 { gap: 16px; }
+  .mt-2 { margin-top: 8px; }
+  .mt-3 { margin-top: 12px; }
+  .mt-4 { margin-top: 16px; }
+  .mb-2 { margin-bottom: 8px; }
+  .mb-3 { margin-bottom: 12px; }
+  .mb-4 { margin-bottom: 16px; }
+  .text-m { color: #78716c; font-size: 12px; }
+  .text-xs { font-size: 11px; }
+  .fw-5 { font-weight: 500; }
+  .fw-6 { font-weight: 600; }
+
+  hr { border: none; border-top: 1px solid #e7e5e4; margin: 20px 0; }
+
+  .bar-chart-v { display: flex; align-items: flex-end; gap: 8px; height: 140px; padding: 8px 0; }
+  .bar-g { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .bar { width: 100%; max-width: 56px; border-radius: 4px 4px 0 0; min-height: 3px; transition: height .3s; }
+  .bar-lbl { font-size: 9px; color: #a8a29e; font-weight: 500; }
+
+  .tl-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid; background: #fff; }
+
+  .pbar { height: 6px; border-radius: 3px; display: inline-block; }
+
+  .btn { padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; border: none; cursor: default; transition: all .1s; }
+  .btn-primary { background: #6366f1; color: #fff; }
+  .btn-primary:hover { background: #4f46e5; }
+  .btn-outline { background: transparent; color: #44403c; border: 1px solid #e7e5e4; }
+  .btn-ghost { background: transparent; color: #78716c; border: none; padding: 4px 8px; }
+
+  input, select { padding: 6px 10px; border: 1px solid #e7e5e4; border-radius: 8px; font-size: 12px; background: #fff; color: #292524; outline: none; }
+  input:focus, select:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.1); }
+
+  .tabs { display: flex; gap: 2px; background: #f3f3f3; padding: 3px; border-radius: 10px; }
+  .tab { padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 500; color: #78716c; border: none; background: transparent; }
+  .tab.active { background: #fff; color: #292524; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+
+  .legend { display: flex; gap: 14px; justify-content: center; font-size: 10px; color: #78716c; }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .legend .sq { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+
+  .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px; background: #fafaf9; border-radius: 10px; border: 1px solid #e7e5e4; }
+  .page-info { font-size: 11px; color: #a8a29e; }
+
+  .acao { font-size: 13px; letter-spacing: 2px; color: #a8a29e; }
+  .acao span { cursor: default; transition: color .1s; }
+  .acao span:hover { color: #6366f1; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <span class="nav-brand">⌘ <span>CodeHelp</span></span>
+  <a href="#tela1" class="active">Classificação</a>
+  <a href="#tela2">Ticket</a>
+  <a href="#tela3">Dashboard</a>
+  <a href="#tela4">Timeline</a>
+  <a href="#tela5">Clientes</a>
+</div>
+
+<!-- ========== TELA 1: CLASSIFICAÇÃO ========== -->
+<div id="tela1" class="section">
+  <div class="section-title">Classificação de Resolução <small>— campo derivado automático</small></div>
+
+  <div class="grid-c3 mb-3">
+    <div class="card" style="border-left: 3px solid #6366f1; background:#fafaff;">
+      <div class="card-h"><span class="badge badge-ia">Só IA</span></div>
+      <div class="text-m" style="font-size:12px; margin-top:4px;">Ticket resolvido sem nenhuma intervenção humana. IA respondeu, classificou, resolveu e finalizou sozinha.</div>
+      <div style="font-size:10px; color:#a8a29e; margin-top:6px;"><code style="font-size:10px;">resolvidoPorIa=true + assigneeId=null</code></div>
+    </div>
+    <div class="card" style="border-left: 3px solid #0284c7; background: #f6fcff;">
+      <div class="card-h"><span class="badge badge-ia-humano">IA + Humano</span></div>
+      <div class="text-m" style="font-size:12px; margin-top:4px;">IA classificou e sugeriu, mas operador atuou diretamente na resolução do ticket.</div>
+      <div style="font-size:10px; color:#a8a29e; margin-top:6px;"><code style="font-size:10px;">resolvidoPorIa=true + mensagensAgente>0</code></div>
+    </div>
+    <div class="card" style="border-left: 3px solid #d6d3d1;">
+      <div class="card-h"><span class="badge badge-humano">Só Humano</span></div>
+      <div class="text-m" style="font-size:12px; margin-top:4px;">Ticket resolvido exclusivamente por operador. IA no máximo classificou o chamado.</div>
+      <div style="font-size:10px; color:#a8a29e; margin-top:6px;"><code style="font-size:10px;">resolvidoPorIa=false</code></div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 10px; margin-top: 16px;">
+    <span class="badge badge-ia">Só IA</span>
+    <span class="badge badge-ia-humano">IA + Humano</span>
+    <span class="badge badge-humano">Só Humano</span>
+    <span class="badge" style="background:#fafaf9;color:#a8a29e;border:1px solid #e7e5e4;">Em aberto (sem badge)</span>
+  </div>
+</div>
+
+<!-- ========== TELA 2: HEADER TICKET ========== -->
+<div id="tela2" class="section">
+  <div class="section-title">Cabeçalho do Ticket <small>— métricas via API</small></div>
+
+  <div class="tkt-hdr">
+    <span class="name">João Silva</span>
+    <span class="badge badge-urgent">🔴 Urgente</span>
+    <span class="badge" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">Suporte Técnico</span>
+
+    <span class="tkt-m"><span style="color:#44403c;font-weight:600;">1h 23min</span> em aberto</span>
+    <span class="tkt-m"><strong>12min</strong> 1ª resposta</span>
+    <span class="tkt-m"><strong>5min</strong> esperando</span>
+    <span class="tkt-m"><strong>32min</strong> atendimento</span>
+
+    <span class="badge badge-ia-humano" style="margin-left: auto;">IA + Humano</span>
+  </div>
+
+  <div class="grid-c2" style="margin-top:4px;">
+    <div class="card" style="border-left:3px solid #6366f1;">
+      <div class="card-h">Endpoint</div>
+      <code style="font-size:12px;">GET /audit-ticket/tickets/:id/metrics</code>
+      <div style="margin-top:6px; font-size:11px; color:#78716c;">
+        → <span class="fw-5">tempoPrimeiraRespostaMin</span><br>
+        → <span class="fw-5">tempoAguardandoClienteMin</span><br>
+        → <span class="fw-5">tempoEmAtendimentoMin</span>
+      </div>
+    </div>
+    <div class="card" style="border-left:3px solid #15803d;">
+      <div class="card-h">O que muda</div>
+      <div style="margin-top:4px;">
+        <div style="font-size:12px;"><span style="color:#a8a29e;text-decoration:line-through;">12min fixo</span> → <span style="color:#15803d;font-weight:600;">metrics.tempoPrimeiraRespostaMin</span></div>
+        <div style="font-size:12px;"><span style="color:#a8a29e;text-decoration:line-through;">8min fixo</span> → <span style="color:#15803d;font-weight:600;">metrics.tempoAguardandoClienteMin</span></div>
+        <div style="font-size:12px;"><span style="color:#a8a29e;text-decoration:line-through;">0 sidebar</span> → <span style="color:#15803d;font-weight:600;">client ticket stats reais</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TELA 3: DASHBOARD ========== -->
+<div id="tela3" class="section">
+  <div class="section-title">Dashboard <small>— dados reais + classificação</small></div>
+
+  <div class="grid-c4">
+    <div class="card">
+      <div class="card-h"><span>📊</span>Tickets Abertos</div>
+      <div class="card-v">47 <small>+12%</small></div>
+      <div class="card-l">+5 vs ontem</div>
+    </div>
+    <div class="card">
+      <div class="card-h"><span>🔄</span>Em Andamento</div>
+      <div class="card-v">23 <small>+8%</small></div>
+      <div class="card-l">+3 vs ontem</div>
+    </div>
+    <div class="card">
+      <div class="card-h"><span>✅</span>Resolvidos Hoje</div>
+      <div class="card-v">31 <small>-3%</small></div>
+      <div class="card-l">-1 vs ontem</div>
+    </div>
+    <div class="card" style="background: linear-gradient(135deg,#1e1b4b,#312e81); color:#fff; border:none;">
+      <div class="card-h" style="color:#a5b4fc;"><span>🤖</span>Resolvidos IA</div>
+      <div class="card-v" style="color:#fff;">18 <small style="color:#6ee7b7;">+23%</small></div>
+      <div class="card-l" style="color:#a5b4fc;">+4 vs ontem</div>
+    </div>
+  </div>
+
+  <div class="bg-gradient-ia mt-3">
+    <div class="flex-b">
+      <div>
+        <div class="big">57% <small>dos resolvidos</small></div>
+        <div class="label" style="margin-top:4px;">89 tickets resolvidos 100% só pela IA</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:22px;font-weight:700;color:#6ee7b7;">+23%</div>
+        <div class="label">vs mês anterior</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;background:rgba(255,255,255,.08);border-radius:10px;padding:12px 14px;font-size:12px;color:#c7d2fe;">
+      A IA está resolvendo mais da metade dos chamados automaticamente — redução de carga da equipe em 57%.
+    </div>
+  </div>
+
+  <div class="grid-c2 mt-4">
+    <div class="card">
+      <div class="card-h">Distribuição de Resoluções (7d)</div>
+      <div class="bar-chart-v">
+        <div class="bar-g"><div class="bar" style="height:70px;background:#6366f1;"></div><div class="bar-lbl">Seg</div></div>
+        <div class="bar-g"><div class="bar" style="height:92px;background:linear-gradient(#6366f1 55%,#38bdf8 35%,#d6d4d1 10%);"></div><div class="bar-lbl">Ter</div></div>
+        <div class="bar-g"><div class="bar" style="height:44px;background:linear-gradient(#6366f1 30%,#d6d4d1 70%);"></div><div class="bar-lbl">Qua</div></div>
+        <div class="bar-g"><div class="bar" style="height:85px;background:linear-gradient(#6366f1 50%,#38bdf8 25%,#d6d4d1 25%);"></div><div class="bar-lbl">Qui</div></div>
+        <div class="bar-g"><div class="bar" style="height:65px;background:linear-gradient(#6366f1 60%,#38bdf8 40%);"></div><div class="bar-lbl">Sex</div></div>
+        <div class="bar-g"><div class="bar" style="height:35px;background:linear-gradient(#6366f1 40%,#38bdf8 60%);"></div><div class="bar-lbl">Sáb</div></div>
+        <div class="bar-g"><div class="bar" style="height:50px;background:linear-gradient(#6366f1 25%,#38bdf8 25%,#d6d4d1 50%);"></div><div class="bar-lbl">Dom</div></div>
+      </div>
+      <div class="legend mt-2">
+        <span><span class="sq" style="background:#6366f1;"></span>Só IA</span>
+        <span><span class="sq" style="background:#38bdf8;"></span>IA+Humano</span>
+        <span><span class="sq" style="background:#d6d4d1;"></span>Só Humano</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">Tempo Médio de Resolução</div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <div class="flex-b"><span class="badge badge-ia">Só IA</span><strong style="font-size:15px;">4min 32s</strong></div>
+          <div style="background:#f3f0ff;border-radius:3px;height:8px;margin-top:4px;"><div style="width:8%;height:8px;border-radius:3px;background:#6366f1;"></div></div>
+        </div>
+        <div>
+          <div class="flex-b"><span class="badge badge-ia-humano">IA+Humano</span><strong style="font-size:15px;">18min 10s</strong></div>
+          <div style="background:#e0f2fe;border-radius:3px;height:8px;margin-top:4px;"><div style="width:35%;height:8px;border-radius:3px;background:#38bdf8;"></div></div>
+        </div>
+        <div>
+          <div class="flex-b"><span class="badge badge-humano">Só Humano</span><strong style="font-size:15px;">32min 45s</strong></div>
+          <div style="background:#f5f5f4;border-radius:3px;height:8px;margin-top:4px;"><div style="width:65%;height:8px;border-radius:3px;background:#a8a29e;"></div></div>
+        </div>
+      </div>
+      <div class="text-m text-xs mt-2" style="text-align:center;">IA resolve 7× mais rápido que humano sozinho</div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <div class="card-h mb-2" style="padding:0;">Últimos Tickets</div>
+    <table>
+      <thead><tr><th>#</th><th>Cliente</th><th>Problema</th><th>Status</th><th>Resolução</th><th>Prioridade</th><th>Tempo</th></tr></thead>
+      <tbody>
+        <tr><td class="fw-5">#2026-0123</td><td>Lab. São Paulo</td><td>ERP não abre</td><td><span class="badge badge-urgent">Aberto</span></td><td><span class="badge badge-humano">Humano</span></td><td><span class="badge badge-urgent">Urgente</span></td><td>2h 15min</td></tr>
+        <tr><td class="fw-5">#2026-0122</td><td>Farmácia Total</td><td>Nota fiscal atrasada</td><td><span class="badge badge-low" style="background:#f0fdf4;color:#15803d;border-color:#bbf7d0;">Resolvido</span></td><td><span class="badge badge-ia">Só IA</span></td><td><span class="badge badge-medium">Média</span></td><td>23min</td></tr>
+        <tr><td class="fw-5">#2026-0121</td><td>Hospital Vida</td><td>Instalar sistema</td><td><span class="badge badge-ia-humano">Atendimento</span></td><td><span class="badge badge-ia-humano">IA+Humano</span></td><td><span class="badge badge-high">Alta</span></td><td>1h 05min</td></tr>
+        <tr><td class="fw-5">#2026-0120</td><td>Clínica Nova</td><td>Dúvida faturamento</td><td><span class="badge badge-low" style="background:#f0fdf4;color:#15803d;border-color:#bbf7d0;">Resolvido</span></td><td><span class="badge badge-ia">Só IA</span></td><td><span class="badge badge-low">Baixa</span></td><td>12min</td></tr>
+        <tr><td class="fw-5">#2026-0119</td><td>Lab Unimed</td><td>Relatório errado</td><td><span class="badge badge-medium">Pendente</span></td><td><span class="badge badge-ia-humano">IA+Humano</span></td><td><span class="badge badge-medium">Média</span></td><td>3h 40min</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========== TELA 4: TIMELINE ========== -->
+<div id="tela4" class="section">
+  <div class="section-title">Timeline <small>— expandida com barras de duração</small></div>
+
+  <div style="background:#fefce8; border:1px solid #fde68a; padding:8px 14px; border-radius:10px; font-size:12px; font-weight:500; color:#854d0e; display:inline-flex; align-items:center; gap:5px; margin-bottom:18px;">
+    ⏱ Atendimento atual: 45min 32s
+  </div>
+
+  <div style="position:relative; padding-left:90px;">
+    <div style="position:absolute; left:90px; top:4px; bottom:4px; width:1.5px; background:#e7e5e4;"></div>
+
+    <div style="margin-bottom:18px; position:relative;">
+      <div style="position:absolute; left:-90px; width:82px; text-align:right; padding-right:10px; font-size:11px; color:#a8a29e; padding-top:3px;">08:32</div>
+      <div style="position:absolute; left:-4px; top:5px; width:13px; height:13px; border-radius:50%; border:2px solid #6366f1; background:#eef2ff;"></div>
+      <div style="margin-left:18px; background:#fff; border:1px solid #e7e5e4; border-radius:10px; padding:10px 14px; box-shadow:0 1px 2px rgba(0,0,0,.02);">
+        <div style="font-size:13px;font-weight:500;">🎫 Ticket aberto</div>
+        <div style="font-size:11px;color:#78716c; margin-top:2px;">Cliente: João Silva • Sistema ERP não abre</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:18px; position:relative;">
+      <div style="position:absolute; left:-90px; width:82px; text-align:right; padding-right:10px; font-size:11px; color:#a8a29e; padding-top:3px;">08:35</div>
+      <div style="position:absolute; left:-4px; top:5px; width:13px; height:13px; border-radius:50%; border:2px solid #6366f1; background:#eef2ff;"></div>
+      <div style="margin-left:10px; background:#fff; border:1px solid #e7e5e4; border-radius:10px; padding:10px 14px; border-left:3px solid #6366f1; box-shadow:0 1px 2px rgba(0,0,0,.02);">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <span class="badge badge-ia">Só IA</span>
+          <span style="font-size:13px;font-weight:500;">IA classificou e respondeu</span>
+        </div>
+        <div style="font-size:11px;color:#a8a29e; margin-top:2px;">Prioridade: Alta • Categoria: Suporte Técnico</div>
+        <div style="margin-top:5px;"><span class="pbar" style="width:130px;background:#c7d2fe;"></span> <span style="font-size:10px;color:#a8a29e;margin-left:4px;">2min atuação IA</span></div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:18px; position:relative;">
+      <div style="position:absolute; left:-90px; width:82px; text-align:right; padding-right:10px; font-size:11px; color:#a8a29e; padding-top:3px;">08:44</div>
+      <div style="position:absolute; left:-4px; top:5px; width:13px; height:13px; border-radius:50%; border:2px solid #f59e0b; background:#fef3c7;"></div>
+      <div style="margin-left:10px; background:#fff; border:1px solid #fde68a; border-radius:10px; padding:10px 14px; border-left:3px solid #f59e0b; box-shadow:0 1px 2px rgba(0,0,0,.02);">
+        <div style="font-size:13px;font-weight:500;">⏳ Aguardando cliente</div>
+        <div style="font-size:11px;color:#a8a29e; margin-top:2px;">IA perguntou: "Poderia me passar o código do erro?"</div>
+        <div style="margin-top:5px;"><span class="pbar" style="width:80px;background:#fde68a;"></span> <span style="font-size:10px;color:#92400e;margin-left:4px;">5min aguardando</span></div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:18px; position:relative;">
+      <div style="position:absolute; left:-90px; width:82px; text-align:right; padding-right:10px; font-size:11px; color:#a8a29e; padding-top:3px;">08:49</div>
+      <div style="position:absolute; left:-4px; top:5px; width:13px; height:13px; border-radius:50%; border:2px solid #15803d; background:#f0fdf4;"></div>
+      <div style="margin-left:10px; background:#fff; border:1px solid #bbf7d0; border-radius:10px; padding:10px 14px; border-left:3px solid #15803d; box-shadow:0 1px 2px rgba(0,0,0,.02);">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <span class="badge badge-humano">Humano</span>
+          <span style="font-size:13px;font-weight:500;">Carlos (N1) assumiu</span>
+        </div>
+        <div style="font-size:11px;color:#a8a29e; margin-top:2px;">Transferido da IA para humano</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:18px; position:relative;">
+      <div style="position:absolute; left:-90px; width:82px; text-align:right; padding-right:10px; font-size:11px; color:#a8a29e; padding-top:3px;">09:12</div>
+      <div style="position:absolute; left:-4px; top:5px; width:13px; height:13px; border-radius:50%; border:2px solid #0369a1; background:#f0f9ff;"></div>
+      <div style="margin-left:10px; background:#fff; border:1px solid #bae6fd; border-radius:10px; padding:10px 14px; border-left:3px solid #0369a1; box-shadow:0 1px 2px rgba(0,0,0,.02);">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <span class="badge badge-ia-humano">IA+Humano</span>
+          <span style="font-size:13px;font-weight:500;">Transferência N1 → N2</span>
+        </div>
+        <div style="font-size:11px;color:#a8a29e; margin-top:2px;">Carlos → Maria (N2) • Problema complexo de banco</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TELA 5: TABELA CLIENTES ========== -->
+<div id="tela5" class="section">
+  <div class="section-title">Clientes <small>— conectado à API real</small></div>
+
+  <div class="flex-b mb-3">
+    <div class="text-m">Exibindo <strong style="color:#292524;">15</strong> clientes</div>
+    <div class="flex gap-2">
+      <button class="btn btn-primary">+ Novo</button>
+      <button class="btn btn-outline">Exportar</button>
+    </div>
+  </div>
+
+  <div class="toolbar mb-3">
+    <select><option>Todos status</option><option>Ativo</option><option>Inativo</option><option>Lead</option></select>
+    <select><option>Inadimplência</option><option>Todos</option><option>Sim</option><option>Não</option></select>
+    <select><option>Últ. compra</option><option>7 dias</option><option>30 dias</option><option>60 dias</option></select>
+    <input type="text" placeholder="Buscar cliente..." style="flex:1;max-width:260px;">
+    <button class="btn btn-ghost">Limpar</button>
+  </div>
+
+  <table>
+    <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Tickets</th><th>Última Compra</th><th>Inadimplente</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      <tr><td class="fw-5">Lab. São Paulo Ltda</td><td>labsp@email.com</td><td>(11) 9999-8888</td><td>12</td><td>15/06/2026</td><td><span class="badge badge-urgent" style="background:#fef2f2;color:#dc2626;border-color:#fecaca;">Sim</span></td><td><span class="badge badge-low" style="background:#f0fdf4;color:#15803d;border-color:#bbf7d0;">Ativo</span></td><td class="acao"><span>👁</span> <span>✏️</span> <span>🗑</span></td></tr>
+      <tr><td class="fw-5">Farmácia Total</td><td>farmacia@total.com</td><td>(21) 9888-7777</td><td>5</td><td>20/06/2026</td><td><span class="badge badge-humano">Não</span></td><td><span class="badge badge-low" style="background:#f0fdf4;color:#15803d;border-color:#bbf7d0;">Ativo</span></td><td class="acao"><span>👁</span> <span>✏️</span> <span>🗑</span></td></tr>
+      <tr><td class="fw-5">Hospital Vida</td><td>adm@hospitalvida.com</td><td>(31) 9777-6666</td><td>23</td><td>10/06/2026</td><td><span class="badge badge-humano">Não</span></td><td><span class="badge badge-low" style="background:#f0fdf4;color:#15803d;border-color:#bbf7d0;">Ativo</span></td><td class="acao"><span>👁</span> <span>✏️</span> <span>🗑</span></td></tr>
+      <tr><td class="fw-5">Clínica Nova</td><td>clinicanova@email.com</td><td>(41) 9666-5555</td><td>1</td><td>—</td><td><span class="badge badge-humano">Não</span></td><td><span class="badge badge-ia-humano" style="background:#f0f9ff;color:#0369a1;border-color:#bae6fd;">Lead</span></td><td class="acao"><span>👁</span> <span>✏️</span> <span>🗑</span></td></tr>
+      <tr><td class="fw-5">Lab Unimed</td><td>ti@labunimed.com</td><td>(51) 9555-4444</td><td>8</td><td>01/05/2026</td><td><span class="badge badge-urgent" style="background:#fef2f2;color:#dc2626;border-color:#fecaca;">Sim</span></td><td><span class="badge badge-humano">Inativo</span></td><td class="acao"><span>👁</span> <span>✏️</span> <span>🗑</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="flex-b mt-3">
+    <div class="page-info">Página 1 de 2</div>
+    <div class="flex gap-2">
+      <button class="btn btn-ghost" style="font-size:11px;">← Anterior</button>
+      <button class="btn btn-outline" style="background:#6366f1;color:#fff;border-color:#6366f1;">1</button>
+      <button class="btn btn-outline">2</button>
+      <button class="btn btn-ghost" style="font-size:11px;">Próximo →</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -84,14 +84,14 @@ export default function OrderForm() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{isEdit ? 'Editar OS' : 'Nova Ordem de Serviço'}</h1>
-        <p className="text-gray-500">Preencha os dados da OS</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">{isEdit ? 'Editar OS' : 'Nova Ordem de Serviço'}</h1>
+        <p className="text-gray-500 dark:text-slate-400">Preencha os dados da OS</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="card space-y-4">
+      <form onSubmit={handleSubmit} className="card space-y-4 dark:bg-slate-800 dark:border-slate-700">
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Cliente *</label>
             <select value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} className="input" required>
               <option value="">Selecione um cliente</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.razaoSocial}</option>)}
@@ -99,7 +99,7 @@ export default function OrderForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Serviço *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Tipo de Serviço *</label>
             <select value={form.tipoServico} onChange={(e) => setForm({ ...form, tipoServico: e.target.value })} className="input">
               <option value="implantacao">Implantação</option>
               <option value="suporte">Suporte</option>
@@ -110,7 +110,7 @@ export default function OrderForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Técnico Responsável *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Técnico Responsável *</label>
             <select value={form.tecnicoResponsavelId} onChange={(e) => setForm({ ...form, tecnicoResponsavelId: e.target.value })} className="input" required>
               <option value="">Selecione</option>
               {technicians.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -118,32 +118,32 @@ export default function OrderForm() {
           </div>
 
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Descrição do Serviço</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Descrição do Serviço</label>
             <textarea value={form.descricaoServico} onChange={(e) => setForm({ ...form, descricaoServico: e.target.value })} className="input" rows={4} />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sistemas Envolvidos</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Sistemas Envolvidos</label>
             <input type="text" value={form.sistemasEnvolvidos} onChange={(e) => setForm({ ...form, sistemasEnvolvidos: e.target.value })} className="input" placeholder="LIS, GLPI, Módulo Fiscal" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Equipamentos</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Equipamentos</label>
             <input type="text" value={form.equipamentos} onChange={(e) => setForm({ ...form, equipamentos: e.target.value })} className="input" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Valor do Serviço (R$)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Valor do Serviço (R$)</label>
             <input type="number" step="0.01" value={form.valorServico} onChange={(e) => setForm({ ...form, valorServico: e.target.value })} className="input" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Previsão de Entrega</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Previsão de Entrega</label>
             <input type="date" value={form.dataPrevistaEntrega} onChange={(e) => setForm({ ...form, dataPrevistaEntrega: e.target.value })} className="input" />
           </div>
 
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Observações</label>
             <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} className="input" rows={2} />
           </div>
         </div>

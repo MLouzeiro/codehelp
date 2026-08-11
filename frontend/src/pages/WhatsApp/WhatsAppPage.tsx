@@ -4,8 +4,11 @@ import api from '../../services/api';
 import { useAuth } from '../../services/auth';
 import { playSound, initAudioContext } from '../../services/soundAlerts';
 import { isAlertSoundEnabled, getAlertColor } from '../Settings/AlertSettings';
-import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X, FileText, Building2, Calendar, DollarSign, Tag, ArrowRightLeft, Bot, ClipboardList, ArrowUpDown, XCircle } from 'lucide-react';
+import { matchSearchMultiple } from '../../utils/text';
+import { Bluetooth, BluetoothOff, RefreshCw, Send, Plus, Search, MessageSquare, User, Phone, AlertCircle, X, FileText, Building2, Calendar, DollarSign, Tag, ArrowRightLeft, Bot, ClipboardList, ArrowUpDown, XCircle, ChevronDown, CheckCircle2, Loader2, Wifi, Settings } from 'lucide-react';
 import QRCode from 'qrcode';
+import type { WhatsAppConnection, WhatsAppConnectionStatus } from '../../types';
+import ConnectionsTab from './ConnectionsTab';
 
 export default function WhatsAppPage() {
   const navigate = useNavigate();
@@ -17,6 +20,16 @@ export default function WhatsAppPage() {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [waState, setWaState] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  // Multi-connection state
+  const [connections, setConnections] = useState<WhatsAppConnection[]>([]);
+  const [connStatuses, setConnStatuses] = useState<WhatsAppConnectionStatus[]>([]);
+  const [selectedConnId, setSelectedConnId] = useState<string | null>(null);
+  const [showConnDropdown, setShowConnDropdown] = useState(false);
+  const [connQrModal, setConnQrModal] = useState<{ conn: WhatsAppConnection; qrDataUrl: string | null } | null>(null);
+  const [connQrStatus, setConnQrStatus] = useState<'idle' | 'initializing' | 'scanning' | 'error'>('idle');
+  const [connQrError, setConnQrError] = useState<string | null>(null);
+  const connQrPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const connQrTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tickets, setTickets] = useState<any[]>([]);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
@@ -49,6 +62,8 @@ export default function WhatsAppPage() {
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [newClient, setNewClient] = useState({ razaoSocial: '', telefone: '', cnpj: '', email: '' });
   const [creatingClient, setCreatingClient] = useState(false);
+  const [status, setStatus] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'chat' | 'connections'>('chat');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const msgPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -86,7 +101,7 @@ export default function WhatsAppPage() {
 
   const statusStyles: Record<string, string> = {
     aberto: 'bg-blue-100 text-blue-700',
-    em_andamento: 'bg-amber-100 text-amber-700',
+    em_atendimento: 'bg-amber-100 text-amber-700',
     fechado: 'bg-green-100 text-green-700',
     pendente: 'bg-gray-100 text-gray-700',
   };
@@ -109,31 +124,124 @@ export default function WhatsAppPage() {
     return new Date(d).toLocaleDateString('pt-BR');
   };
 
+  const activeProviderRef = useRef<string | null>(null);
+  const consecutiveFailuresRef = useRef(0);
+
   const loadStatus = useCallback(async () => {
     try {
-      const { data } = await api.get('/whatsapp/status');
-      setConnected(data.connected);
-      setConnectionError(data.error || null);
-      setWaState(data.state || null);
+      // Check multi-connection status first (new architecture)
+      try {
+        const { data: statuses } = await api.get('/whatsapp/connections/status', { timeout: 5000 });
+        if (Array.isArray(statuses) && statuses.length > 0) {
+          const anyConnected = statuses.some((s: any) => s.connected);
+          const anyScanning = statuses.some((s: any) => s.scanning);
+          const firstQr = statuses.find((s: any) => s.qrCode);
+          
+          consecutiveFailuresRef.current = 0;
+          setConnected(anyConnected);
+          setConnecting(anyScanning);
+          
+          if (firstQr?.qrCode) {
+            setQrCode(firstQr.qrCode);
+            const url = await QRCode.toDataURL(firstQr.qrCode, { width: 256, margin: 1 });
+            setQrDataUrl(url);
+          } else {
+            setQrCode(null);
+            setQrDataUrl(null);
+          }
+          
+          // Find first error
+          const firstError = statuses.find((s: any) => s.error);
+          setConnectionError(firstError?.error || null);
+          
+          setStatus({ connected: anyConnected, connections: statuses, activeProvider: 'multi' });
+          return;
+        }
+      } catch { /* multi-connection endpoint not available, fall through */ }
+
+      // Legacy Baileys single-connection fallback
+      const res = await api.get('/whatsapp/baileys/status', { timeout: 5000 });
+      const data = res.data;
+      consecutiveFailuresRef.current = 0;
+      if (data.connected) {
+        setConnected(true);
+        setQrCode(null);
+        setQrDataUrl(null);
+        setConnectionError(null);
+        setConnecting(false);
+        setStatus({ ...data, activeProvider: 'baileys' });
+        return;
+      }
       if (data.qrCode) {
         setQrCode(data.qrCode);
         const url = await QRCode.toDataURL(data.qrCode, { width: 256, margin: 1 });
         setQrDataUrl(url);
-      } else if (data.connected) {
+        setConnected(false);
+        setStatus({ ...data, activeProvider: 'baileys' });
+        return;
+      }
+
+      // Generic status (fallback)
+      const res2 = await api.get('/whatsapp/status', { timeout: 10000 });
+      const data2 = res2.data;
+      setConnected(data2.connected);
+      setConnectionError(data2.error || null);
+      setWaState(data2.state || null);
+      setStatus(data2);
+      if (data2.qrCode) {
+        setQrCode(data2.qrCode);
+        const url = await QRCode.toDataURL(data2.qrCode, { width: 256, margin: 1 });
+        setQrDataUrl(url);
+      } else if (data2.connected) {
         setQrCode(null);
         setQrDataUrl(null);
       }
-      if (data.connected) {
+      if (data2.connected) {
         setConnecting(false);
       }
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      const isConnRefused = err?.code === 'ECONNREFUSED' || err?.message?.includes('ECONNREFUSED');
+      if (isConnRefused) {
+        consecutiveFailuresRef.current++;
+        if (consecutiveFailuresRef.current >= 3) {
+          activeProviderRef.current = null;
+        }
+      }
+      console.error('[WhatsApp] loadStatus error:', err?.message || err);
+    }
   }, []);
+
+  const loadConnections = useCallback(async () => {
+    try {
+      const [connsRes, statusesRes] = await Promise.all([
+        api.get('/whatsapp/connections?includeInativos=true', { timeout: 10000 }),
+        api.get('/whatsapp/connections/status', { timeout: 10000 }),
+      ]);
+      setConnections(connsRes.data);
+      setConnStatuses(statusesRes.data);
+      // Auto-select first connected, or first scanning, or first overall
+      setSelectedConnId((prev) => {
+        if (prev && connsRes.data.some((c: WhatsAppConnection) => c.id === prev)) return prev;
+        const connected = statusesRes.data.find((s: WhatsAppConnectionStatus) => s.connected);
+        if (connected) return connected.id;
+        const scanning = statusesRes.data.find((s: WhatsAppConnectionStatus) => s.scanning);
+        if (scanning) return scanning.id;
+        return connsRes.data[0]?.id || null;
+      });
+    } catch (err) { console.error('[WhatsApp] loadConnections error:', err); }
+  }, []);
+
+  const getConnStatus = (connId: string): WhatsAppConnectionStatus | undefined =>
+    connStatuses.find((s) => s.id === connId);
+
+  const anyConnected = connStatuses.some((s) => s.connected);
+  const selectedConnStatus = selectedConnId ? getConnStatus(selectedConnId) : undefined;
 
   const loadTickets = useCallback(async () => {
     try {
-      const { data } = await api.get('/whatsapp/tickets', { params: { limit: 100, orderBy } });
+      const { data } = await api.get('/whatsapp/tickets', { params: { limit: 100, orderBy }, timeout: 10000 });
       setTickets(data.tickets || []);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error('[WhatsApp] loadTickets error:', err); }
     finally {
       if (!initialLoadedRef.current) {
         initialLoadedRef.current = true;
@@ -144,26 +252,27 @@ export default function WhatsAppPage() {
 
   const loadMessages = useCallback(async (ticketId: string) => {
     try {
-      const { data } = await api.get(`/whatsapp/tickets/${ticketId}`);
+      const { data } = await api.get(`/whatsapp/tickets/${ticketId}`, { timeout: 10000 });
       setSelectedTicket(data);
       setMessages(data.messages || []);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error('[WhatsApp] loadMessages error:', err); }
   }, []);
 
   const loadDepartamentos = useCallback(async () => {
     try {
       const params: any = {};
       if (user?.role === 'tecnico') params.mine = 'true';
-      const { data } = await api.get('/helpdesk/departamentos', { params });
+      const { data } = await api.get('/helpdesk/departamentos', { params, timeout: 10000 });
       setDepartamentos(data.filter((d: any) => d.ativo));
-    } catch { }
+    } catch { /* ignore */ }
   }, [user?.role]);
 
   useEffect(() => {
     loadStatus();
+    loadConnections();
     loadTickets();
     loadDepartamentos();
-  }, [loadStatus, loadTickets, loadDepartamentos]);
+  }, [loadStatus, loadConnections, loadTickets, loadDepartamentos]);
 
   useEffect(() => {
     if (!firstLoadDoneRef.current) {
@@ -196,9 +305,9 @@ export default function WhatsAppPage() {
   }, [messages]);
 
   useEffect(() => {
-    const interval = (!connected || connecting) ? 2000 : 5000;
+    const interval = (!connected || connecting) ? 8000 : 20000;
     if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(() => { loadStatus(); loadTickets(); }, interval);
+    pollRef.current = setInterval(() => { loadStatus(); loadTickets(); loadConnections(); }, interval);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [connected, connecting, loadStatus, loadTickets]);
 
@@ -206,7 +315,7 @@ export default function WhatsAppPage() {
     if (selectedTicketId) {
       loadMessages(selectedTicketId);
       if (msgPollRef.current) clearInterval(msgPollRef.current);
-      msgPollRef.current = setInterval(() => loadMessages(selectedTicketId), 3000);
+      msgPollRef.current = setInterval(() => loadMessages(selectedTicketId), 8000);
     } else {
       if (msgPollRef.current) { clearInterval(msgPollRef.current); msgPollRef.current = null; }
       setSelectedTicket(null);
@@ -247,7 +356,60 @@ export default function WhatsAppPage() {
     try {
       setConnecting(true);
       setConnectionError(null);
-      await api.post('/whatsapp/connect');
+      const provider = activeProviderRef.current || 'baileys';
+
+      if (provider === 'evolution') {
+        // Evolution: fetch instances and get QR from the first one
+        try {
+          const { data: statusData } = await api.get('/whatsapp/evolution/status', { timeout: 5000 });
+          const instances = statusData.instances || [];
+          if (instances.length === 0) {
+            setConnectionError('Nenhuma instancia Evolution encontrada. Crie uma na pagina de Conexoes.');
+            setConnecting(false);
+            return;
+          }
+          // Try to connect the first instance
+          const instanceName = instances[0].instanceName || instances[0].name;
+          const { data } = await api.get(`/whatsapp/evolution/instance/connect/${instanceName}`, { timeout: 10000 });
+          if (data.base64) {
+            const url = `data:image/png;base64,${data.base64}`;
+            setQrCode(url);
+            setQrDataUrl(url);
+            setStatus({ connected: false, qrCode: true, activeProvider: 'evolution' });
+          } else if (data.state === 'open' || data.status === 'open') {
+            setConnected(true);
+            setQrCode(null);
+            setQrDataUrl(null);
+            setConnecting(false);
+          }
+          loadStatus();
+        } catch (err: any) {
+          setConnectionError(err?.response?.data?.error || 'Erro ao conectar via Evolution API');
+          setConnecting(false);
+        }
+        return;
+      }
+
+      if (provider === 'cloud') {
+        // Cloud API: no QR code needed, just check config
+        try {
+          await api.post('/whatsapp/connect');
+          loadStatus();
+        } catch (err: any) {
+          setConnectionError(err?.response?.data?.error || 'Erro ao conectar via Cloud API');
+          setConnecting(false);
+        }
+        return;
+      }
+
+      // Baileys: try Baileys first (no Chrome needed)
+      try {
+        await api.post('/whatsapp/baileys/connect');
+      } catch {
+        // Fallback to legacy
+        await api.post('/whatsapp/connect');
+      }
+
       loadStatus();
       setTimeout(loadStatus, 1500);
       setTimeout(loadStatus, 3000);
@@ -257,7 +419,14 @@ export default function WhatsAppPage() {
 
   const disconnectWhatsApp = async () => {
     try {
-      await api.post('/whatsapp/disconnect');
+      const provider = activeProviderRef.current || 'baileys';
+
+      if (provider === 'baileys') {
+        try { await api.post('/whatsapp/baileys/disconnect'); } catch {}
+      }
+      // Also try generic disconnect (safe for all providers)
+      try { await api.post('/whatsapp/disconnect'); } catch {}
+
       setConnected(false);
       setQrCode(null);
       setQrDataUrl(null);
@@ -277,6 +446,134 @@ export default function WhatsAppPage() {
     } catch (err) { console.error(err); setConnecting(false); }
   };
 
+  // ── Multi-connection actions ───────────────────────────────────────
+  const stopConnQrPolling = () => {
+    if (connQrPollRef.current) { clearInterval(connQrPollRef.current); connQrPollRef.current = null; }
+    if (connQrTimeoutRef.current) { clearTimeout(connQrTimeoutRef.current); connQrTimeoutRef.current = null; }
+  };
+
+  const handleConnectConn = async (conn: WhatsAppConnection) => {
+    try {
+      const provider = activeProviderRef.current || 'baileys';
+
+      if (provider === 'baileys') {
+        // Use Baileys (WebSocket, sem Chrome)
+        await api.post(`/whatsapp/baileys/multi/${conn.id}/connect`);
+      } else {
+        // Evolution: use generic connection connect
+        await api.post(`/whatsapp/connections/${conn.id}/connect`);
+        loadConnections();
+        return;
+      }
+
+      setConnQrModal({ conn, qrDataUrl: null });
+      setConnQrStatus('initializing');
+      setConnQrError(null);
+      setTimeout(() => {
+        let elapsed = 0;
+        connQrPollRef.current = setInterval(async () => {
+          elapsed += 3000;
+          if (elapsed > 60000) { stopConnQrPolling(); setConnQrStatus('error'); setConnQrError('Tempo esgotado (60s). Tente novamente.'); return; }
+          try {
+            const { data } = await api.get(`/whatsapp/baileys/multi/${conn.id}/status`);
+            if (data.connected) {
+              stopConnQrPolling();
+              setConnQrModal(null);
+              setConnQrStatus('idle');
+              loadConnections();
+              loadTickets();
+              return;
+            }
+            if (data.error) {
+              stopConnQrPolling();
+              setConnQrStatus('error');
+              setConnQrError(data.error);
+              return;
+            }
+            if (data.qrCode) {
+              const url = await QRCode.toDataURL(data.qrCode, { width: 256, margin: 1 });
+              setConnQrModal((prev) => prev ? { ...prev, qrDataUrl: url } : null);
+              setConnQrStatus('scanning');
+            }
+          } catch (err: any) {
+            if (err?.response?.status === 401 || err?.response?.status === 403) {
+              stopConnQrPolling();
+              setConnQrStatus('error');
+              setConnQrError('Sessao expirada. Faca login novamente.');
+            }
+          }
+        }, 3000);
+      }, 3000);
+    } catch (err: any) {
+      setConnQrStatus('error');
+      setConnQrError(err?.response?.data?.error || 'Erro ao conectar');
+    }
+  };
+
+  const handleDisconnectConn = async (conn: WhatsAppConnection) => {
+    try {
+      await api.post(`/whatsapp/connections/${conn.id}/disconnect`);
+      loadConnections();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleRegenerateQr = async (conn: WhatsAppConnection) => {
+    stopConnQrPolling();
+    setConnQrStatus('initializing');
+    setConnQrError(null);
+    setConnQrModal({ conn, qrDataUrl: null });
+    try {
+      const provider = activeProviderRef.current || 'baileys';
+
+      if (provider === 'baileys') {
+        // Baileys: desconectar e reconectar via WebSocket
+        await api.post(`/whatsapp/baileys/multi/${conn.id}/disconnect`).catch(() => {});
+        await api.post(`/whatsapp/baileys/multi/${conn.id}/connect`);
+        setTimeout(() => {
+          let elapsed = 0;
+          connQrPollRef.current = setInterval(async () => {
+            elapsed += 3000;
+            if (elapsed > 60000) { stopConnQrPolling(); setConnQrStatus('error'); setConnQrError('Tempo esgotado.'); return; }
+            try {
+              const { data } = await api.get(`/whatsapp/baileys/multi/${conn.id}/status`);
+              if (data.connected) { stopConnQrPolling(); setConnQrModal(null); setConnQrStatus('idle'); loadConnections(); return; }
+              if (data.error) { stopConnQrPolling(); setConnQrStatus('error'); setConnQrError(data.error); return; }
+              if (data.qrCode) {
+                const url = await QRCode.toDataURL(data.qrCode, { width: 256, margin: 1 });
+                setConnQrModal((prev) => prev ? { ...prev, qrDataUrl: url } : null);
+                setConnQrStatus('scanning');
+              }
+            } catch { /* ignore */ }
+          }, 3000);
+        }, 3000);
+      } else {
+        // Evolution: use generic regenerate-qr endpoint
+        await api.post(`/whatsapp/connections/${conn.id}/regenerate-qr`);
+        // Poll generic QR endpoint
+        setTimeout(() => {
+          let elapsed = 0;
+          connQrPollRef.current = setInterval(async () => {
+            elapsed += 3000;
+            if (elapsed > 60000) { stopConnQrPolling(); setConnQrStatus('error'); setConnQrError('Tempo esgotado.'); return; }
+            try {
+              const { data } = await api.get(`/whatsapp/connections/${conn.id}/qrcode`);
+              if (data.connected) { stopConnQrPolling(); setConnQrModal(null); setConnQrStatus('idle'); loadConnections(); return; }
+              if (data.error) { stopConnQrPolling(); setConnQrStatus('error'); setConnQrError(data.error); return; }
+              if (data.qrCode) {
+                const url = await QRCode.toDataURL(data.qrCode, { width: 256, margin: 1 });
+                setConnQrModal((prev) => prev ? { ...prev, qrDataUrl: url } : null);
+                setConnQrStatus('scanning');
+              }
+            } catch { /* ignore */ }
+          }, 3000);
+        }, 3000);
+      }
+    } catch (err: any) {
+      setConnQrStatus('error');
+      setConnQrError(err?.response?.data?.error || 'Erro ao regenerar QR');
+    }
+  };
+
   const sendMessage = async () => {
     if (!messageText.trim()) return;
     if (!selectedTicket?.contactPhone) {
@@ -285,10 +582,12 @@ export default function WhatsAppPage() {
     }
     setSendError(null);
     try {
+      // Backend detects Baileys automatically — just send via unified endpoint
       await api.post('/whatsapp/send', {
         to: selectedTicket.contactPhone,
         message: messageText.trim(),
         ticketId: selectedTicket.id,
+        whatsappConnectionId: selectedConnId || undefined,
       });
       setMessageText('');
       if (selectedTicketId) loadMessages(selectedTicketId);
@@ -423,12 +722,10 @@ export default function WhatsAppPage() {
 
   const filteredTickets = tickets.filter((t: any) => {
     if (!search) return true;
-    const q = search.toLowerCase();
-    return (t.contactName?.toLowerCase() || '').includes(q)
-      || (t.contactPhone || '').includes(q)
-      || (t.assunto?.toLowerCase() || '').includes(q)
-      || (t.client?.razaoSocial || '').toLowerCase().includes(q)
-      || (t.messages?.[0]?.content?.toLowerCase() || '').includes(q);
+    return matchSearchMultiple(
+      [t.contactName, t.assunto, t.client?.razaoSocial, t.messages?.[0]?.content],
+      search
+    ) || (t.contactPhone || '').includes(search);
   });
 
   const formatTime = (dateStr: string) => {
@@ -447,37 +744,188 @@ export default function WhatsAppPage() {
             <MessageSquare className="text-green-500" size={22} />
             <h1 className="text-xl font-bold text-codemed-700">WhatsApp</h1>
           </div>
-          <div className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${connected ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-            {connected ? <><Bluetooth size={12} /> Conectado</> : <><BluetoothOff size={12} /> Desconectado</>}
+          {/* Tab toggle */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setActiveTab('chat')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                activeTab === 'chat'
+                  ? 'bg-white text-green-700 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <MessageSquare size={12} /> Chat
+            </button>
+            <button
+              onClick={() => setActiveTab('connections')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                activeTab === 'connections'
+                  ? 'bg-white text-green-700 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Settings size={12} /> Conexoes
+            </button>
+          </div>
+          {/* Connection selector dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowConnDropdown(!showConnDropdown)}
+              className={`flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                selectedConnStatus?.connected
+                  ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                  : selectedConnStatus?.scanning
+                  ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {selectedConnStatus?.connected ? <Bluetooth size={12} /> : selectedConnStatus?.scanning ? <Loader2 size={12} className="animate-spin" /> : <BluetoothOff size={12} />}
+              {connections.find((c) => c.id === selectedConnId)?.nome || 'Nenhuma conexao'}
+              <ChevronDown size={12} />
+            </button>
+            {showConnDropdown && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowConnDropdown(false)} />
+                <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-slate-800 border border-gray-200 rounded-xl shadow-xl w-72 max-h-80 overflow-y-auto">
+                  <div className="p-2 border-b border-gray-100">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase px-2">Conexoes WhatsApp</p>
+                  </div>
+                  {connections.length === 0 ? (
+                    <div className="p-4 text-center text-gray-400 text-xs">Nenhuma conexao cadastrada</div>
+                  ) : (
+                    connections.map((conn) => {
+                      const status = getConnStatus(conn.id);
+                      const isSelected = conn.id === selectedConnId;
+                      return (
+                        <div
+                          key={conn.id}
+                          className={`px-3 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${
+                            isSelected ? 'bg-green-50' : 'hover:bg-gray-50'
+                          }`}
+                          onClick={() => { setSelectedConnId(conn.id); setShowConnDropdown(false); }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${status?.connected ? 'bg-green-500' : status?.scanning ? 'bg-amber-500 animate-pulse' : 'bg-gray-300'}`} />
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{conn.nome}</p>
+                                <p className="text-[10px] text-gray-500 truncate">{conn.numero}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {status?.connected ? (
+                                <span className="text-[10px] text-green-600 font-medium">Online</span>
+                              ) : status?.scanning ? (
+                                <span className="text-[10px] text-amber-600 font-medium">Escaneando</span>
+                              ) : (
+                                <span className="text-[10px] text-gray-400">Offline</span>
+                              )}
+                              {isSelected && <CheckCircle2 size={14} className="text-green-500" />}
+                            </div>
+                          </div>
+                          {/* Action buttons per connection */}
+                          <div className="flex items-center gap-1 mt-1.5" onClick={(e) => e.stopPropagation()}>
+                            {status?.connected ? (
+                              <button
+                                onClick={() => handleDisconnectConn(conn)}
+                                className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 hover:bg-red-100 font-medium"
+                              >
+                                Desconectar
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleConnectConn(conn)}
+                                disabled={status?.scanning}
+                                className="text-[10px] px-2 py-0.5 rounded bg-green-50 text-green-600 hover:bg-green-100 font-medium disabled:opacity-50"
+                              >
+                                {status?.scanning ? 'Conectando...' : 'Conectar'}
+                              </button>
+                            )}
+                            {status?.error && (
+                              <span className="text-[10px] text-red-500 truncate max-w-[120px]" title={status.error}>{status.error}</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div className="p-2 border-t border-gray-100">
+                    <button
+                      onClick={() => { setShowConnDropdown(false); setActiveTab('connections'); }}
+                      className="w-full text-center text-[11px] text-codemed-600 hover:text-codemed-700 font-medium py-1"
+                    >
+                      Gerenciar conexoes
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <div className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${anyConnected ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+            {anyConnected ? <><Bluetooth size={12} /> {connStatuses.filter((s) => s.connected).length} conectada(s)</> : <><BluetoothOff size={12} /> Nenhuma conectada</>}
+          </div>
+          {/* Provider status */}
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+            {status?.providers && (
+              <>
+                {status.providers['evolution']?.connected && (
+                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded font-medium">Evolution API</span>
+                )}
+                {status.providers['baileys']?.connected && !status.providers['evolution']?.connected && (
+                  <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">Baileys</span>
+                )}
+                {status.providers['cloud']?.connected && (
+                  <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded font-medium">Cloud API</span>
+                )}
+              </>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => setShowNewTicket(true)} className="btn-primary text-sm flex items-center gap-1 min-h-[40px] px-3"><Plus size={14} /> Novo</button>
-          {!connected && (
-            <button onClick={reconnectWhatsApp} disabled={connecting} className="bg-amber-500 text-white text-sm px-3 py-2 rounded-lg hover:bg-amber-600 transition-colors font-medium flex items-center gap-1 disabled:opacity-50 min-h-[40px]">
-              <RefreshCw size={14} /> Reconectar
-            </button>
-          )}
-          {connected ? (
-            <button onClick={disconnectWhatsApp} className="bg-red-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-1 min-h-[40px]"><BluetoothOff size={14} /> Desconectar</button>
-          ) : (
-            <button onClick={connectWhatsApp} disabled={connecting} className="btn-primary text-sm flex items-center gap-1 disabled:opacity-50 min-h-[40px] px-3">
-              {connecting ? <><RefreshCw size={14} className="animate-spin" /> Conectando</> : <><Bluetooth size={14} /> Conectar</>}
-            </button>
-          )}
         </div>
       </div>
 
-      {connectionError && !connected && (
+      {connectionError && !anyConnected && (
         <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
           <AlertCircle size={16} className="flex-shrink-0" />
           <div className="flex-1">
             <p className="font-medium">{connectionError}</p>
             {waState && <p className="text-xs mt-0.5 opacity-80">Estado interno: {waState}</p>}
+            {connectionError.includes('conflito') || connectionError.includes('outro dispositivo') ? (
+              <div className="mt-2">
+                <p className="text-xs mb-2">
+                  <strong>Para resolver:</strong> Abra WhatsApp no celular &rarr; Configuracoes &rarr; Dispositivos conectados &rarr; Sair de todos
+                </p>
+                <button
+                  onClick={async () => {
+                    try {
+                      setConnecting(true);
+                      setConnectionError(null);
+                      // Force reconnect: clean session and reconnect fresh
+                      const selectedConn = connections.find((c) => c.numero && c.ativo) || connections[0];
+                      if (selectedConn) {
+                        await api.post(`/whatsapp/connections/${selectedConn.id}/force-reconnect`);
+                        setTimeout(() => loadStatus(), 3000);
+                      }
+                    } catch (err) {
+                      setConnectionError('Erro ao limpar sessao');
+                      setConnecting(false);
+                    }
+                  }}
+                  className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1"
+                >
+                  <RefreshCw size={12} /> Limpar Sessao e Reconectar
+                </button>
+              </div>
+            ) : (
+              !status?.providers?.['evolution']?.connected && !status?.providers?.['baileys']?.connected && (
+                <p className="text-xs mt-1 opacity-80">
+                  Dica: Verifique se a conexao Baileys esta ativa ou configure a Evolution API (Docker) para uma conexao mais estavel.
+                </p>
+              )
+            )}
           </div>
-          <button onClick={reconnectWhatsApp} disabled={connecting} className="ml-auto text-xs bg-red-100 hover:bg-red-200 px-2 py-1 rounded font-medium disabled:opacity-50">
-            {connecting ? 'Reconectando...' : 'Tentar reconectar'}
-          </button>
         </div>
       )}
 
@@ -510,6 +958,49 @@ export default function WhatsAppPage() {
         </div>
       )}
 
+      {/* Multi-connection QR Modal */}
+      {connQrModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => { stopConnQrPolling(); setConnQrModal(null); setConnQrStatus('idle'); }}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl text-center max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-lg text-gray-900 mb-1">QR Code — {connQrModal.conn.nome}</h3>
+            {connQrModal.qrDataUrl ? (
+              <>
+                <p className="text-sm text-gray-500 mb-4">Abra o WhatsApp no celular<br />Menu &rarr; Dispositivos conectados &rarr; Conectar dispositivo</p>
+                <img src={connQrModal.qrDataUrl} alt="QR Code" className="mx-auto w-56 h-56" />
+                <p className="text-xs text-green-600 mt-3 font-medium">Escaneie o QR Code com o celular</p>
+              </>
+            ) : connQrStatus === 'error' ? (
+              <div className="py-6">
+                <AlertCircle size={40} className="text-red-400 mx-auto mb-2" />
+                <p className="text-sm text-red-600">{connQrError || 'Erro ao gerar QR Code'}</p>
+                <button
+                  onClick={() => handleRegenerateQr(connQrModal.conn)}
+                  className="mt-3 text-sm px-4 py-2 bg-codemed-600 hover:bg-codemed-700 text-white rounded-lg font-medium"
+                >
+                  <RefreshCw size={14} className="inline mr-1" /> Tentar novamente
+                </button>
+              </div>
+            ) : (
+              <div className="py-8">
+                <div className="flex justify-center mb-3">
+                  <RefreshCw size={32} className="animate-spin text-green-500" />
+                </div>
+                <p className="text-sm text-gray-500">
+                  {connQrStatus === 'initializing' ? 'Inicializando WhatsApp...' : 'Gerando QR Code...'}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">Aguarde alguns segundos</p>
+              </div>
+            )}
+            <button onClick={() => { stopConnQrPolling(); setConnQrModal(null); setConnQrStatus('idle'); }} className="mt-4 text-sm text-gray-500 hover:text-gray-700">Fechar</button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'connections' ? (
+        <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 overflow-y-auto">
+          <ConnectionsTab onConnectionsChange={() => { loadConnections(); loadStatus(); }} />
+        </div>
+      ) : (
       <div className="flex-1 flex min-h-0 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 overflow-hidden">
         <div className={`${selectedTicket ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-gray-200 flex flex-col bg-gray-50/50`}>
           <div className="p-3 border-b border-gray-200 bg-white dark:bg-slate-800 space-y-2">
@@ -741,14 +1232,17 @@ export default function WhatsAppPage() {
 
               <div className="px-3 sm:px-5 py-2 bg-white dark:bg-slate-800 flex-shrink-0">
                 {sendError && <p className="text-xs text-red-600 mb-1 flex items-center gap-1"><AlertCircle size={12} /> {sendError}</p>}
-                {!connected && <p className="text-xs text-amber-600 mb-1 flex items-center gap-1"><AlertCircle size={12} /> WhatsApp desconectado — conecte-se para enviar mensagens</p>}
+                {!anyConnected && <p className="text-xs text-amber-600 mb-1 flex items-center gap-1"><AlertCircle size={12} /> Nenhuma conexao WhatsApp ativa — conecte uma para enviar mensagens</p>}
+                {selectedConnId && selectedConnStatus?.connected && (
+                  <p className="text-[10px] text-green-600 mb-1 flex items-center gap-1"><Wifi size={10} /> Enviando via: {connections.find((c) => c.id === selectedConnId)?.nome}</p>
+                )}
               </div>
               <div className="flex items-center gap-2 px-3 sm:px-5 py-3 border-t border-gray-200 bg-white dark:bg-slate-800 flex-shrink-0">
                 <input type="text" value={messageText} onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                   placeholder="Digite sua mensagem..."
                   className="flex-1 px-4 py-2.5 text-sm border border-neutral-200 rounded-full focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none bg-neutral-50" />
-                <button onClick={sendMessage} disabled={!messageText.trim() || !connected}
+                <button onClick={sendMessage} disabled={!messageText.trim() || !anyConnected || !selectedConnStatus?.connected}
                   className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center disabled:opacity-40 hover:bg-green-600 transition-colors">
                   <Send size={16} />
                 </button>
@@ -762,6 +1256,7 @@ export default function WhatsAppPage() {
           )}
         </div>
       </div>
+      )}
 
       {showNewTicket && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setShowNewTicket(false)}>

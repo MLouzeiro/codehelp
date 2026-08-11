@@ -10,6 +10,9 @@ import {
   postPublicarKb,
   postFeedbackKb,
   getSugerirKb,
+  getVersoesKb,
+  getVersaoKb,
+  gerarVideoKb,
 } from './kb.controller';
 
 const router = Router();
@@ -24,5 +27,8 @@ router.patch('/:id', patchKb);
 router.delete('/:id', deleteKb);
 router.post('/:id/publicar', postPublicarKb);
 router.post('/:id/feedback', postFeedbackKb);
+router.get('/:id/versoes', getVersoesKb);
+router.get('/:id/versao/:version', getVersaoKb);
+router.get('/:id/video', gerarVideoKb);
 
 export default router;

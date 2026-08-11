@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeHelp - HOJE (as-is)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #f0f4f8; color: #1e293b; padding: 20px; }
+  .nav { display: flex; gap: 4px; background: #1e3a5f; padding: 0 20px; height: 48px; align-items: center; border-radius: 10px; margin-bottom: 24px; position:sticky; top:20px; z-index:10; }
+  .nav a { color: rgba(255,255,255,.75); text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: default; }
+  .nav a.active { color: #fff; background: rgba(255,255,255,.12); }
+  .nav-brand { color: #fff; font-weight: 700; font-size: 16px; margin-right: 20px; }
+  .section { margin-bottom: 40px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; position:relative; }
+  .section-title { font-size: 18px; font-weight: 700; color: #1e3a5f; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; display:flex; align-items:center; gap:10px; }
+  .mock-badge { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 2px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+  .api-badge { background: #f0fdf4; color: #059669; border: 1px solid #bbf7d0; padding: 2px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-urgent { background: #fee2e2; color: #dc2626; }
+  .badge-high { background: #ffedd5; color: #c2410c; }
+  .badge-medium { background: #fef9c3; color: #a16207; }
+  .badge-low { background: #d1fae5; color: #059669; }
+
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card { background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; padding: 14px; }
+  .card-header { font-size: 13px; font-weight: 600; color: #1e3a5f; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .value { font-size: 22px; font-weight: 700; color: #1e293b; }
+  .label { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 10px; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; border-bottom: 1px solid #e2e8f0; }
+  td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+  tr:hover td { background: #f8fafc; }
+  .status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+
+  .ticket-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 12px; }
+  .ticket-header .name { font-weight: 700; font-size: 15px; color: #1e3a5f; }
+  .ticket-metric { font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 4px; }
+  .ticket-metric strong { color: #1e293b; }
+  .mock-highlight { background:#fef2f2; color:#dc2626; padding:1px 6px; border-radius:4px; font-weight:700; font-size:12px; }
+  .zero-highlight { background:#fef9c3; color:#92400e; padding:1px 4px; border-radius:3px; font-size:11px; font-weight:600; }
+
+  .chat-msg { padding:8px 12px; border-radius:8px; margin-bottom:6px; max-width:80%; font-size:13px; }
+  .c-sidebar { background:#f8fafc; padding:12px 16px; border-radius:8px; border:1px solid #e2e8f0; }
+  .c-sidebar h4 { font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px; }
+  .c-sidebar .stat-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; text-align:center; }
+  .c-sidebar .stat-grid .n { font-size:18px; font-weight:700; }
+  .c-sidebar .stat-grid .l { font-size:10px; color:#64748b; }
+
+  .flex { display: flex; gap: 8px; flex-wrap: wrap; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .gap-2 { gap: 8px; }
+  .gap-3 { gap: 12px; }
+  .mt-2 { margin-top: 8px; }
+  .mt-3 { margin-top: 12px; }
+  .mb-2 { margin-bottom: 8px; }
+  .mb-3 { margin-bottom: 12px; }
+  .mb-4 { margin-bottom: 16px; }
+  .text-center { text-align: center; }
+  .text-sm { font-size: 13px; }
+  .text-xs { font-size: 11px; }
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
+
+  .warning-banner { background:#fef9c3; border:1.5px solid #fcd34d; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; color:#92400e; display:inline-flex; align-items:center; gap:6px; }
+
+  .timeline-item { position:relative; padding-left:100px; margin-bottom:16px; }
+  .timeline-item .time { position:absolute; left:-100px; width:90px; text-align:right; padding-right:12px; font-size:12px; color:#64748b; padding-top:4px; }
+  .timeline-item .dot { position:absolute; left:-6px; top:6px; width:14px; height:14px; border-radius:50%; background:#fff; }
+  .timeline-item .card { margin-left:20px; padding:10px 14px; border-left:3px solid #e2e8f0; }
+
+  .mock-banner { border:2px dashed #dc2626; background:#fef2f2; padding:10px; border-radius:8px; margin:8px 0; font-size:12px; color:#991b1b; display:flex; align-items:center; gap:6px; }
+  .api-banner { border:2px dashed #059669; background:#f0fdf4; padding:10px; border-radius:8px; margin:8px 0; font-size:12px; color:#065f46; display:flex; align-items:center; gap:6px; }
+
+  .badge-resolvido { background:#d1fae5; color:#059669; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge-aberto { background:#fee2e2; color:#dc2626; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge-andamento { background:#dbeafe; color:#2563eb; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge-pendente { background:#fef9c3; color:#a16207; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge-inativo { background:#f1f5f9; color:#64748b; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge-lead { background:#dbeafe; color:#2563eb; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge-ativo { background:#d1fae5; color:#059669; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge-inadimplente { background:#fee2e2; color:#dc2626; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+  .badge-nao { background:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <span class="nav-brand">CodeHelp • HOJE</span>
+  <a href="#tela1" class="active">Ticket</a>
+  <a href="#tela2">Dashboard</a>
+  <a href="#tela3">Relatório</a>
+  <a href="#tela4">Timeline</a>
+  <a href="#tela5">Clientes</a>
+</div>
+
+<!-- ===== TELA 1: TICKET ATENDIMENTO ===== -->
+<div id="tela1" class="section">
+  <div class="section-title">
+    Ticket Atendimento
+    <span class="api-badge">API: ticket, mensagens, eventos</span>
+    <span class="mock-badge">MOCK: métricas header</span>
+  </div>
+
+  <div class="ticket-header">
+    <span class="name">João Silva (contactName)</span>
+    <span class="badge badge-urgent">🔴 Urgente</span>
+    <span class="badge" style="background:#dbeafe;color:#2563eb;border:1px solid #93c5fd;">🔧 Suporte Técnico</span>
+
+    <span class="ticket-metric">⏱ <strong class="mock-highlight">12min</strong> até 1ª resposta ← HARDCODED</span>
+    <span class="ticket-metric">⏳ <strong class="mock-highlight">8min</strong> esperando cliente ← HARDCODED</span>
+    <span class="ticket-metric">🔢 Protocolo: <strong>#2026-0123</strong></span>
+  </div>
+
+  <div class="grid-2" style="margin-top:8px;">
+    <!-- Chat Column -->
+    <div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px;">
+      <div class="flex gap-2" style="margin-bottom:8px;">
+        <button style="padding:4px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:12px;">💬 Chat</button>
+        <button style="padding:4px 10px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;">📋 Timeline</button>
+        <button style="margin-left:auto;font-size:11px;color:#64748b;">↔ Expandir</button>
+      </div>
+      <div class="chat-msg" style="background:#f8fafc;border:1px solid #e2e8f0;">👤 Cliente: "Bom dia, meu sistema ERP não abre"</div>
+      <div class="chat-msg" style="background:#eff6ff;border:1px solid #bfdbfe;margin-left:20px;">🤖 IA: "Olá! Vou verificar. Pode me passar o código do erro?"</div>
+      <div class="chat-msg" style="background:#ecfdf5;border:1px solid #a7f3d0;margin-left:20px;">👤 Carlos (operador): "Pode me passar o print da tela?"</div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="c-sidebar">
+      <h4>Informações do Cliente</h4>
+      <p style="font-size:14px;font-weight:600;margin-bottom:8px;">Lab. São Paulo Ltda</p>
+
+      <div class="stat-grid">
+        <div><div class="n">12</div><div class="l">Total</div></div>
+        <div><div class="n zero-highlight">0</div><div class="l">Abertos</div></div>
+        <div><div class="n zero-highlight">0</div><div class="l">Resolvidos</div></div>
+      </div>
+
+      <hr style="margin:8px 0;">
+      <div style="font-size:12px;color:#475569;">
+        <div><span style="color:#64748b;">Canal:</span> Chat</div>
+        <div><span style="color:#64748b;">Atendente:</span> Carlos</div>
+        <div><span style="color:#64748b;">Abertura:</span> 08/07/2026 08:32</div>
+        <div><span style="color:#64748b;">Etapa:</span> <span class="badge badge-high">Em Atendimento</span></div>
+      </div>
+
+      <div style="margin-top:8px;display:flex;gap:4px;">
+        <button style="flex:1;padding:6px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:12px;">Finalizar</button>
+        <button style="flex:1;padding:6px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">Gerar Relatório</button>
+        <button style="padding:6px 10px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">Transferir</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mock-banner">
+    <strong>⚠️ 3 MOCKs identificados nesta tela:</strong>
+    Linha 95: <code>12min</code> hardcoded → deveria vir de <code>GET /audit-ticket/tickets/:id/metrics</code><br>
+    Linha 98: <code>8min</code> hardcoded → deveria vir de <code>GET /audit-ticket/tickets/:id/metrics</code><br>
+    Sidebar: <code>0</code> Abertos e <code>0</code> Resolvidos → deveria vir de <code>GET /crm/clients/:id</code>
+  </div>
+</div>
+
+<!-- ===== TELA 2: DASHBOARD HOJE ===== -->
+<div id="tela2" class="section">
+  <div class="section-title">
+    Dashboard Helpdesk
+    <span class="api-badge">API: KPIs, metrics, tickets</span>
+    <span class="mock-badge">MOCK: gráfico de resolução</span>
+  </div>
+
+  <div class="grid-4">
+    <div class="card"><div class="card-header">📊 Tickets Abertos</div><div class="value">47</div><div class="label">Aguardando atendimento</div></div>
+    <div class="card"><div class="card-header">🔄 Em Andamento</div><div class="value">23</div><div class="label">Sendo resolvidos agora</div></div>
+    <div class="card"><div class="card-header">✅ Resolvidos Hoje</div><div class="value">31</div><div class="label">Total no período</div></div>
+    <div class="card" style="background:linear-gradient(135deg,#1e3a5f,#2d5a8e);color:#fff;">
+      <div class="card-header" style="color:rgba(255,255,255,.7);">🤖 Resolvidos pela IA</div>
+      <div class="value" style="color:#fff;">18</div>
+      <div class="label" style="color:rgba(255,255,255,.6);">X% dos resolvidos no período</div>
+    </div>
+  </div>
+
+  <!-- Card IA Destacado -->
+  <div style="background:linear-gradient(135deg,#3b0764,#581c87);border-radius:12px;padding:20px;margin-top:12px;color:#fff;">
+    <div class="flex-between">
+      <div>
+        <div style="font-size:24px;font-weight:700;">X%<span style="font-size:14px;font-weight:400;color:#a78bfa;margin-left:8px;">resolução por IA</span></div>
+        <div style="font-size:13px;margin-top:4px;color:#c4b5fd;">N tickets resolvidos só pela IA</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="mock-highlight" style="font-size:18px;font-weight:700;background:none;color:#6ee7b7;">+23%</div>
+        <div style="font-size:12px;color:#a78bfa;">vs mês anterior</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="grid-2" style="margin-top:16px;">
+    <div class="card">
+      <div class="card-header">Distribuição de Resoluções <span class="mock-badge">ZERADO</span></div>
+      <div style="height:140px;display:flex;align-items:center;justify-content:center;background:#f8fafc;border-radius:8px;color:#94a3b8;font-size:13px;">
+        📊 Todos os valores = 0 (dados não chegam da API)
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#64748b;">
+        <code>makeDistribuicao([])</code> → seg:{ia:0,iaHumano:0,humano:0} para todos os 7 dias
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Tempo Médio de Resolução <span class="api-badge">FALLBACK</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:8px 0;">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <span>🤖 IA</span><strong>4.5 min</strong>
+          </div>
+          <div style="background:#e2e8f0;border-radius:4px;height:8px;margin-top:4px;"><div style="width:14%;height:8px;border-radius:4px;background:#7C3AED;"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <span>🤖+👤 IA+Humano</span><strong class="mock-highlight">18.2 min</strong>
+          </div>
+          <div style="background:#e2e8f0;border-radius:4px;height:8px;margin-top:4px;"><div style="width:56%;height:8px;border-radius:4px;background:#3B82F6;"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <span>👤 Humano</span><strong class="mock-highlight">32.75 min</strong>
+          </div>
+          <div style="background:#e2e8f0;border-radius:4px;height:8px;margin-top:4px;"><div style="width:100%;height:8px;border-radius:4px;background:#94A3B8;"></div></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;">
+        4.5, 18.2 e 32.75 são valores FALLBACK hardcoded (linhas 171-175).<br>
+        Se API retorna valores reais, eles substituem (exceto IA+Humano = média dos dois).<br>
+        <span class="mock-highlight">IA+Humano (18.2) permanece se tempoMedioResolucaoIaMin ou tempoMedioResolucaoHumanoMin for undefined.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela de Tickets -->
+  <div style="margin-top:16px;">
+    <div class="card-header" style="padding:0;margin-bottom:8px;">📋 Últimos Tickets <span class="api-badge">API real</span></div>
+    <table>
+      <thead><tr><th>#</th><th>Cliente</th><th>Problema</th><th>Status</th><th>Resolução</th><th>Prioridade</th><th>Tempo</th><th>Ações</th></tr></thead>
+      <tbody>
+        <tr><td>#2026-0123</td><td>Lab. São Paulo</td><td>ERP não abre</td><td><span class="badge-andamento">Atendimento</span></td><td><span class="badge-andamento">IA+Humano</span></td><td><span class="badge-urgent">🔴 Urgente</span></td><td>2h 15min</td><td><span style="color:#2563eb;">👁</span></td></tr>
+        <tr><td>#2026-0122</td><td>Farmácia Total</td><td>Nota fiscal atrasada</td><td><span class="badge-resolvido">Resolvido</span></td><td><span class="badge-resolvido">Só IA</span></td><td><span class="badge-medium">🟡 Média</span></td><td>23min</td><td><span style="color:#2563eb;">👁</span></td></tr>
+        <tr><td>#2026-0121</td><td>Hospital Vida</td><td>Instalar sistema</td><td><span class="badge-andamento">Atendimento</span></td><td><span class="badge-andamento">IA+Humano</span></td><td><span class="badge-high">🟠 Alta</span></td><td>1h 05min</td><td><span style="color:#2563eb;">👁</span></td></tr>
+        <tr><td colspan="8" style="text-align:center;color:#94a3b8;font-size:12px;padding:12px;">... dados reais da API <code>GET /helpdesk/tickets</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mock-banner" style="margin-top:10px;">
+    <strong>⚠️ 2 MOCK VALUES:</strong> Gráfico "Distribuição de Resoluções" sempre zeros. Card "vs mês anterior" = +23% hardcoded. Barras de tempo médio usam fallback 4.5/18.2/32.75.
+  </div>
+</div>
+
+<!-- ===== TELA 3: RELATÓRIO (TUDO REAL) ===== -->
+<div id="tela3" class="section">
+  <div class="section-title">
+    Relatório de Chamado
+    <span class="api-badge">100% API real</span>
+  </div>
+
+  <div style="padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#065f46;margin-bottom:12px;">
+    ✅ Esta página já usa dados reais da API. Nenhum mock. Nenhuma alteração necessária.
+  </div>
+
+  <div class="grid-4">
+    <div class="card" style="text-align:center;"><div class="card-header" style="justify-content:center;">🤖 Resolução</div><div class="value" style="font-size:18px;">Resolvido por IA</div><div class="label">API real</div></div>
+    <div class="card" style="text-align:center;"><div class="card-header" style="justify-content:center;">💬 Total Msgs</div><div class="value">14</div><div class="label">API real</div></div>
+    <div class="card" style="text-align:center;"><div class="card-header" style="justify-content:center;">🤖 Msgs IA</div><div class="value">10</div><div class="label">API real</div></div>
+    <div class="card" style="text-align:center;"><div class="card-header" style="justify-content:center;">⚠️ Sinais</div><div class="value">2</div><div class="label">API real</div></div>
+  </div>
+
+  <div style="margin-top:12px;padding:14px;background:#f8fafc;border-radius:8px;">
+    <strong style="font-size:14px;">Problema Relatado</strong>
+    <p style="font-size:13px;color:#475569;margin-top:4px;">Sistema ERP não abre após atualização. Cliente relatou que ao clicar no ícone do sistema aparece erro "Falha na conexão com banco de dados".</p>
+  </div>
+  <div style="margin-top:8px;padding:14px;background:#f8fafc;border-radius:8px;">
+    <strong style="font-size:14px;">Ações Tomadas</strong>
+    <ul style="margin-top:4px;padding-left:20px;font-size:13px;color:#475569;">
+      <li>IA fez diagnóstico inicial do erro de conexão</li>
+      <li>IA sugeriu verificação de credenciais do banco</li>
+      <li>Transferido para N2 - humano reconfigurou string de conexão</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== TELA 4: TIMELINE ===== -->
+<div id="tela4" class="section">
+  <div class="section-title">
+    Timeline Expandida
+    <span class="api-badge">API: events + timeline</span>
+  </div>
+
+  <div class="warning-banner" style="margin-bottom:16px;">
+    ⏱️ Atendimento atual: 45min 32s (tempo real, atualiza a cada 10s)
+  </div>
+
+  <div style="padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#065f46;margin-bottom:12px;">
+    ✅ Timeline já está conectada à API real. Único hardcoded: <code>PROGRESS_BAR_MAX_MIN = 120</code> (linha 52) e labels das etapas.
+  </div>
+
+  <div style="position:relative;padding-left:100px;">
+    <div style="position:absolute;left:100px;top:0;bottom:0;width:2px;background:#e2e8f0;"></div>
+
+    <div class="timeline-item">
+      <div class="time">08:32</div>
+      <div class="dot" style="border:2px solid #3b82f6;background:#dbeafe;"></div>
+      <div class="card" style="border-left:3px solid #3b82f6;">
+        <div style="font-size:13px;font-weight:500;">🎫 Ticket criado</div>
+        <div style="font-size:12px;color:#64748b;">por João Silva</div>
+        <div style="margin-top:4px;"><span style="display:inline-block;height:6px;width:60px;background:#bfdbfe;border-radius:3px;"></span> <span style="font-size:11px;color:#64748b;">fila: 2min</span></div>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="time">08:35</div>
+      <div class="dot" style="border:2px solid #8b5cf6;background:#ede9fe;"></div>
+      <div class="card" style="border-left:3px solid #8b5cf6;">
+        <div style="font-size:13px;font-weight:500;">🤖 IA classificou</div>
+        <div style="font-size:12px;color:#64748b;">Prioridade: Alta • Categoria: Suporte Técnico</div>
+        <div style="margin-top:4px;"><span style="display:inline-block;height:6px;width:40px;background:#c4b5fd;border-radius:3px;"></span> <span style="font-size:11px;color:#64748b;">triagem: 3min</span></div>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="time">08:44</div>
+      <div class="dot" style="border:2px solid #f59e0b;background:#fef3c7;"></div>
+      <div class="card" style="border-left:3px solid #f59e0b;">
+        <div style="font-size:13px;font-weight:500;">⏳ Aguardando cliente</div>
+        <div style="font-size:12px;color:#64748b;">IA perguntou: "Poderia me passar o código do erro?"</div>
+        <div style="margin-top:4px;"><span style="display:inline-block;height:6px;width:90px;background:#fde68a;border-radius:3px;"></span> <span style="font-size:11px;color:#92400e;">aguardando cliente: 5min</span></div>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="time">08:49</div>
+      <div class="dot" style="border:2px solid #10b981;background:#d1fae5;"></div>
+      <div class="card" style="border-left:3px solid #10b981;">
+        <div style="font-size:13px;font-weight:500;">👤 Carlos (operador) assumiu</div>
+        <div style="font-size:12px;color:#64748b;">Transferido da IA para humano • N1</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TELA 5: TABELA CLIENTES (100% MOCK) ===== -->
+<div id="tela5" class="section">
+  <div class="section-title">
+    CRM Clientes
+    <span class="mock-badge">100% MOCK - SEM API</span>
+  </div>
+
+  <div class="flex-between" style="margin-bottom:12px;">
+    <div><span class="mock-highlight">MOCK_CLIENTES.length = 15</span> clientes cadastrados</div>
+    <button style="padding:7px 16px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:default;">+ Novo Cliente</button>
+  </div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;background:#f8fafc;padding:10px;border-radius:8px;border:1px solid #e2e8f0;">
+    <select style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;"><option>Todos status</option><option>Ativo</option><option>Inativo</option><option>Lead</option></select>
+    <input type="date" style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;" placeholder="De">
+    <input type="date" style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;" placeholder="Até">
+    <select style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;"><option>Todas categorias</option><option>Suporte</option><option>Vendas</option></select>
+    <select style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;"><option>Todos planos</option><option>Básico</option><option>Premium</option><option>Enterprise</option></select>
+    <input type="text" style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;flex:1;" placeholder="🔍 Buscar cliente...">
+    <button style="padding:5px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:12px;">Aplicar</button>
+    <button style="padding:5px 10px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;">Limpar</button>
+  </div>
+
+  <div class="mock-banner">
+    <strong>⚠️ FILTROS NÃO FUNCIONAM:</strong> Todos os campos de filtro são decorativos. Nenhum altera a listagem.
+  </div>
+
+  <table>
+    <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Tickets</th><th>Última Compra</th><th>Inadimplente</th><th>Status</th><th>Ações</th></tr></thead>
+    <tbody>
+      <tr><td>Empresa ABC Ltda</td><td>contato@abc.com.br</td><td>(11) 99999-0001</td><td>12</td><td>15/03/2026</td><td><span class="badge-nao">Não</span></td><td><span class="badge-ativo">Ativo</span></td><td><span style="color:#2563eb;">👁</span> <span style="color:#d97706;">✏️</span> <span style="color:#dc2626;">🗑️</span></td></tr>
+      <tr><td>Tech Solutions S.A.</td><td>admin@techsol.com.br</td><td>(21) 98888-0002</td><td>3</td><td>02/01/2026</td><td><span class="badge-nao">Não</span></td><td><span class="badge-ativo">Ativo</span></td><td><span style="color:#2563eb;">👁</span> <span style="color:#d97706;">✏️</span> <span style="color:#dc2626;">🗑️</span></td></tr>
+      <tr><td>Comércio Brasil Eireli</td><td>vendas@comerciobrasil.com</td><td>(31) 97777-0003</td><td>8</td><td>20/11/2025</td><td><span class="badge-inadimplente">Sim</span></td><td><span class="badge-inativo">Inativo</span></td><td><span style="color:#2563eb;">👁</span> <span style="color:#d97706;">✏️</span> <span style="color:#dc2626;">🗑️</span></td></tr>
+      <tr><td>Construtora Nova Era</td><td>obras@novaera.com.br</td><td>(41) 96666-0004</td><td>1</td><td>—</td><td><span class="badge-nao">Não</span></td><td><span class="badge-lead">Lead</span></td><td><span style="color:#2563eb;">👁</span> <span style="color:#d97706;">✏️</span> <span style="color:#dc2626;">🗑️</span></td></tr>
+      <tr><td>Farmácia Popular Ltda</td><td>farmacia@popular.com</td><td>(51) 95555-0005</td><td>25</td><td>10/06/2026</td><td><span class="badge-nao">Não</span></td><td><span class="badge-ativo">Ativo</span></td><td><span style="color:#2563eb;">👁</span> <span style="color:#d97706;">✏️</span> <span style="color:#dc2626;">🗑️</span></td></tr>
+      <tr><td>Auto Peças Veloz</td><td>pedidos@pecasveloz.com</td><td>(61) 94444-0006</td><td>0</td><td>—</td><td><span class="badge-nao">Não</span></td><td><span class="badge-lead">Lead</span></td><td><span style="color:#2563eb;">👁</span> <span style="color:#d97706;">✏️</span> <span style="color:#dc2626;">🗑️</span></td></tr>
+      <tr><td>Distribuidora Solar</td><td>logistica@distribsolar.com</td><td>(71) 93333-0007</td><td>7</td><td>22/04/2026</td><td><span class="badge-inadimplente">Sim</span></td><td><span class="badge-inativo">Inativo</span></td><td><span style="color:#2563eb;">👁</span> <span style="color:#d97706;">✏️</span> <span style="color:#dc2626;">🗑️</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="flex-between" style="margin-top:12px;font-size:12px;color:#64748b;">
+    <div>Página 1 de 2 (15 itens)</div>
+    <div class="flex gap-2">
+      <button style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;background:#fff;">Anterior</button>
+      <button style="padding:4px 8px;border:1px solid #3b82f6;border-radius:4px;background:#3b82f6;color:#fff;">1</button>
+      <button style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;background:#fff;">2</button>
+      <button style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;background:#fff;">Próximo</button>
+    </div>
+  </div>
+
+  <div class="mock-banner" style="margin-top:10px;">
+    <strong>⚠️ TABELA 100% MOCK:</strong> Linhas 4-20 do arquivo <code>ClientesTabela.tsx</code> contêm 15 objetos mockados. Nenhuma chamada à API. Ícones de ação 👁 ✏️ 🗑️ são decorativos (não fazem nada). Filtros não funcionam.
+  </div>
+</div>
+
+</body>
+</html>

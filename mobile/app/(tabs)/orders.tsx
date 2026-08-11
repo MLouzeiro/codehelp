@@ -13,7 +13,7 @@ import type { ServiceOrder } from '../../src/types';
 
 const STATUS_COLORS: Record<string, string> = {
   aberta: '#3b82f6',
-  em_andamento: '#f59e0b',
+  em_atendimento: '#f59e0b',
   concluida: '#22c55e',
   cancelada: '#ef4444',
   aguardando_peca: '#8b5cf6',

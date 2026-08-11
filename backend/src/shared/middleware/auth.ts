@@ -29,11 +29,11 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 
   const token = authHeader.substring(7);
   try {
-    const decoded = jwt.verify(token, env.jwtSecret) as { id: string; role: string };
+    const decoded = jwt.verify(token, env.jwtSecret) as { id: string; role: string; sessionToken?: string };
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       select: {
-        id: true, name: true, email: true, role: true, isMaster: true, active: true,
+        id: true, name: true, email: true, role: true, isMaster: true, active: true, sessionToken: true,
         departamentos: {
           select: {
             departamento: { select: { id: true, slug: true, nome: true } },
@@ -43,6 +43,9 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     });
     if (!user || !user.active) {
       return res.status(401).json({ error: 'Usuário inativo ou não encontrado' });
+    }
+    if (decoded.sessionToken && user.sessionToken !== decoded.sessionToken) {
+      return res.status(401).json({ error: 'Sessão encerrada em outro dispositivo' });
     }
     req.user = {
       id: user.id,

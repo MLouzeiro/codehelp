@@ -1,0 +1,82 @@
+squad:
+  code: codehelp-fullstack
+  setor: desenvolvimento
+  grupo: sistema
+  sessao: codehelp
+  name: CodeHelp Full-Stack
+  description: Equipe especializada em evolução, manutenção e qualidade do sistema CodeHelp CRM/Helpdesk
+  icon: code
+  version: "1.0.0"
+
+  company: "_expxagents/_memory/company.md"
+  preferences: "_expxagents/_memory/preferences.md"
+  memory: "_memory/memories.md"
+
+  target_audience: "Desenvolvedores do sistema CodeHelp"
+  platform: "web"
+  format: "code"
+
+  schedule:
+    enabled: true
+
+  skills:
+    - web_search
+    - web_fetch
+
+  data: []
+
+  agents:
+    - id: tech-lead
+      name: "Ricardo Almeida"
+      icon: brain
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Ricardo"
+      prompt: agents/tech-lead.md
+
+    - id: backend-dev
+      name: "Fernando Costa"
+      icon: server
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Fernando"
+      prompt: agents/backend-dev.md
+
+    - id: frontend-dev
+      name: "Mariana Oliveira"
+      icon: layout
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Mariana"
+      prompt: agents/frontend-dev.md
+
+    - id: qa-engineer
+      name: "Lucas Pereira"
+      icon: check-circle
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Lucas"
+      prompt: agents/qa-engineer.md
+
+  pipeline:
+    steps:
+      - id: step-01
+        agent: tech-lead
+        label: "Análise técnica e planejamento"
+        execution: inline
+
+      - id: step-02
+        agent: backend-dev
+        label: "Implementação backend"
+        deliverFrom: tech-lead
+        execution: inline
+
+      - id: step-03
+        agent: frontend-dev
+        label: "Implementação frontend"
+        deliverFrom: backend-dev
+        execution: inline
+
+      - id: step-04
+        agent: qa-engineer
+        label: "Testes e validação"
+        deliverFrom: frontend-dev
+        execution: inline
+
+      - id: step-05
+        agent: tech-lead
+        label: "Code review final"
+        deliverFrom: qa-engineer
+        execution: inline

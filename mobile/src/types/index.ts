@@ -104,7 +104,7 @@ export interface PipelineStage {
 // ─── Helpdesk ───────────────────────────────────────────
 export type EtapaSlug = 'fila' | 'triagem' | 'em_atendimento' | 'aguardando_cliente' | 'aguardando_os' | 'concluido';
 
-export type StatusSlug = 'aberto' | 'em_andamento' | 'pendente' | 'escalonado' | 'resolvido' | 'fechado' | 'cancelado';
+export type StatusSlug = 'aberto' | 'em_atendimento' | 'pendente' | 'escalonado' | 'resolvido' | 'fechado' | 'cancelado';
 
 export interface HelpdeskEtapa {
   id: string;

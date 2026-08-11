@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  evolution-db:
+    image: postgres:15-alpine
+    container_name: evolution-db
+    restart: always
+    ports:
+      - '5434:5432'
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution_pass_2024
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - evolution-db-data:/var/lib/postgresql/data
+    networks:
+      - evolution-network
+
+  evolution-redis:
+    image: redis:7-alpine
+    container_name: evolution-redis
+    restart: always
+    ports:
+      - '6379:6379'
+    networks:
+      - evolution-network
+
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution-api
+    restart: always
+    ports:
+      - '8080:8080'
+    depends_on:
+      - evolution-db
+      - evolution-redis
+    environment:
+      - SERVER_URL=http://localhost:8080
+      - AUTHENTICATION_API_KEY=your-api-key-here-change-me
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://evolution:evolution_pass_2024@evolution-db:5432/evolution
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=true
+      - DATABASE_SAVE_DATA_CONTACTS=true
+      - DATABASE_SAVE_DATA_CHATS=true
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://evolution-redis:6379
+      - CACHE_REDIS_PREFIX_KEY=evolution
+      - LOG_LEVEL=ERROR
+      - DEL_INSTANCE=false
+      - STORE_CLEANING_INTERVAL=7200
+      - STORE_CLEANING_TERMINAL=7200
+    networks:
+      - evolution-network
+
+volumes:
+  evolution-db-data:
+
+networks:
+  evolution-network:
+    driver: bridge

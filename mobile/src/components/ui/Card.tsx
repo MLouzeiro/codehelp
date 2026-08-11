@@ -10,24 +10,20 @@ interface CardProps {
 
 export function Card({ children, onPress, style }: CardProps) {
   const { colors } = useTheme();
-  const Comp = onPress ? Pressable : View;
+  const cardStyle = [styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }, style];
 
-  return (
-    <Comp
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.card,
-        {
-          backgroundColor: colors.bgCard,
-          borderColor: colors.border,
-          opacity: onPress && pressed ? 0.9 : 1,
-        },
-        style,
-      ]}
-    >
-      {children}
-    </Comp>
-  );
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [...cardStyle, { opacity: pressed ? 0.9 : 1 }]}
+      >
+        {children}
+      </Pressable>
+    );
+  }
+
+  return <View style={cardStyle}>{children}</View>;
 }
 
 interface StatCardProps {

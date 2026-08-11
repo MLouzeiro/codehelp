@@ -77,17 +77,33 @@ export default function TicketDetail() {
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2 mb-4 bg-gray-50 rounded-xl p-4">
-        {ticket.messages?.map((msg: any) => (
-          <div key={msg.id} className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[75%] rounded-lg px-4 py-2 ${msg.fromMe ? 'bg-codemed-600 text-white' : 'bg-white border border-gray-200 text-gray-900'}`}>
-              <p className="text-sm">{msg.content}</p>
-              <p className={`text-xs mt-1 ${msg.fromMe ? 'text-codemed-200' : 'text-gray-400'}`}>
-                {msg.sentAt ? new Date(msg.sentAt).toLocaleTimeString('pt-BR') : ''}
-                {msg.usuario?.name && ` - ${msg.usuario.name}`}
-              </p>
+        {ticket.messages?.map((msg: any) => {
+          const isSystem = msg.tipo === 'system' || msg.source === 'bot';
+          if (isSystem) {
+            return (
+              <div key={msg.id} className="flex justify-center">
+                <div className="max-w-[85%] bg-violet-50 border border-violet-200 rounded-xl px-4 py-2 text-center">
+                  <p className="text-[10px] font-bold text-violet-500 mb-0.5 uppercase">🤖 Sistema</p>
+                  <p className="text-xs text-violet-700">{msg.content}</p>
+                  <p className="text-[10px] text-violet-400 mt-1">
+                    {msg.sentAt ? new Date(msg.sentAt).toLocaleTimeString('pt-BR') : ''}
+                  </p>
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div key={msg.id} className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[75%] rounded-lg px-4 py-2 ${msg.fromMe ? 'bg-codemed-600 text-white' : 'bg-white dark:bg-slate-800 border border-gray-200 text-gray-900'}`}>
+                <p className="text-sm">{msg.content}</p>
+                <p className={`text-xs mt-1 ${msg.fromMe ? 'text-codemed-200' : 'text-gray-400'}`}>
+                  {msg.sentAt ? new Date(msg.sentAt).toLocaleTimeString('pt-BR') : ''}
+                  {msg.usuario?.name && ` - ${msg.usuario.name}`}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {(!ticket.messages || ticket.messages.length === 0) && (
           <div className="text-center py-8 text-gray-400 text-sm">Nenhuma mensagem ainda</div>
         )}

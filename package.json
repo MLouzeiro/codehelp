@@ -4,7 +4,7 @@
   "private": true,
   "description": "Codemed Hub — CRM + OS Digital + WhatsApp Nativo + Dashboard IA",
   "scripts": {
-    "dev": "concurrently -k -n api,web -c blue,green \"npm run dev:backend\" \"node wait-for-port.js 3010 30000 && npm run dev:frontend\"",
+    "dev": "concurrently -k -n api,web -c blue,green \"npm run dev:backend\" \"node wait-for-port.js 3010 && npm run dev:frontend\"",
     "dev:backend": "cd backend && npx tsx watch src/server.ts",
     "dev:frontend": "cd frontend && npx vite --host",
     "build": "npm run build:prisma && npm run build:frontend",
@@ -20,7 +20,8 @@
     "postinstall": "cd backend && npm install && cd ../frontend && npm install"
   },
   "dependencies": {
-    "concurrently": "^9.0.1"
+    "concurrently": "^9.0.1",
+    "pptxgenjs": "^4.0.1"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -4,6 +4,7 @@ export interface WhatsAppConnectionInput {
   nome: string;
   numero: string;
   slug?: string;
+  provider?: string; // baileys | whatsapp-webjs
   departamentoId?: string;
   ativo?: boolean;
 }
@@ -54,11 +55,18 @@ export async function createConnection(input: WhatsAppConnectionInput) {
   });
   if (existingNum) throw new Error('Ja existe uma conexao com este numero');
 
+  // Validate provider
+  const provider = input.provider || 'baileys';
+  if (!['baileys', 'whatsapp-webjs'].includes(provider)) {
+    throw new Error('Provider invalido. Use "baileys" ou "whatsapp-webjs"');
+  }
+
   return prisma.whatsAppConnection.create({
     data: {
       nome: input.nome.trim(),
       numero: input.numero.trim(),
       slug,
+      provider,
       departamentoId: input.departamentoId || null,
     },
     include: {
@@ -76,6 +84,12 @@ export async function updateConnection(id: string, input: Partial<WhatsAppConnec
   if (input.numero !== undefined) data.numero = input.numero.trim();
   if (input.departamentoId !== undefined) data.departamentoId = input.departamentoId || null;
   if (input.ativo !== undefined) data.ativo = input.ativo;
+  if (input.provider !== undefined) {
+    if (!['baileys', 'whatsapp-webjs'].includes(input.provider)) {
+      throw new Error('Provider invalido. Use "baileys" ou "whatsapp-webjs"');
+    }
+    data.provider = input.provider;
+  }
 
   return prisma.whatsAppConnection.update({
     where: { id },
@@ -97,6 +111,20 @@ export async function toggleConnection(id: string) {
       departamento: { select: { id: true, nome: true, slug: true, cor: true } },
     },
   });
+}
+
+export async function deleteConnection(id: string) {
+  const conn = await prisma.whatsAppConnection.findUnique({ where: { id } });
+  if (!conn) return null;
+
+  // Check if there are tickets linked
+  const ticketCount = await prisma.ticket.count({ where: { whatsappConnectionId: id } });
+  if (ticketCount > 0) {
+    throw new Error(`Esta conexao possui ${ticketCount} ticket(s) vinculado(s). Desvincule os tickets antes de excluir.`);
+  }
+
+  await prisma.whatsAppConnection.delete({ where: { id } });
+  return true;
 }
 
 export async function findByNumero(numero: string) {

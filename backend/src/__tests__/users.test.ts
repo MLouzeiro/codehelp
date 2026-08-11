@@ -79,7 +79,7 @@ describe('Users Controller — Task 2.2', () => {
 
   describe('getUser', () => {
     it('GET /api/users/:id — deve retornar usuário por id', async () => {
-      const mockUser = { id: '1', name: 'Admin', email: 'admin@test.com', role: 'admin', active: true, phone: null, avatar: null, password: 'hash', createdAt: new Date(), updatedAt: new Date() };
+      const mockUser = { id: '1', name: 'Admin', email: 'admin@test.com', role: 'admin', active: true, phone: null, avatar: null, password: 'hash', sessionToken: null, isMaster: false, createdAt: new Date(), updatedAt: new Date() };
 
       vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
 

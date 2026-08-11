@@ -4,11 +4,12 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log('🌱 Seeding database (idempotent — existing data preserved)...');
 
   const adminPassword = await bcrypt.hash('admin123', 12);
   const techPassword = await bcrypt.hash('tecnico123', 12);
 
+  // ── Usuários (upsert — seguro) ───────────────────────────────────
   const admin = await prisma.user.upsert({
     where: { email: 'admin@codemed.com.br' },
     update: { isMaster: true },
@@ -39,7 +40,7 @@ async function main() {
     create: { name: 'Pedro Comercial', email: 'comercial@codemed.com.br', password: techPassword, role: 'comercial' },
   });
 
-  // ── Departamentos ──────────────────────────────────────────────
+  // ── Departamentos (upsert — seguro) ──────────────────────────────
   console.log('  ↳ Departamentos...');
 
   const deptSuporte = await prisma.departamento.upsert({
@@ -66,7 +67,7 @@ async function main() {
     create: { slug: 'demandas-internas', nome: 'Demandas Internas', descricao: 'Chamados internos (TI, RH, administrativo)', cor: '#f59e0b', icone: 'building', ordem: 3 },
   });
 
-  // ── Níveis de Suporte ──────────────────────────────────────────
+  // ── Níveis de Suporte (upsert — seguro) ───────────────────────────
   console.log('  ↳ Níveis de suporte...');
 
   const nivelN1 = await prisma.nivelSuporte.upsert({
@@ -97,12 +98,21 @@ async function main() {
   await prisma.fila.updateMany({ where: { slug: 'fila' }, data: { departamentoId: deptSuporte.id, nivelSuporteId: nivelN1.id } });
   await prisma.fila.updateMany({ where: { slug: 'em_atendimento' }, data: { departamentoId: deptSuporte.id, nivelSuporteId: nivelN1.id } });
 
-  // Vincular usuários aos departamentos
-  await prisma.user.update({ where: { id: tecnico1.id }, data: { departamentoId: deptSuporte.id } });
-  await prisma.user.update({ where: { id: tecnico2.id }, data: { departamentoId: deptSuporte.id } });
-  await prisma.user.update({ where: { id: comercial.id }, data: { departamentoId: deptComercial.id } });
+  // Vincular usuários aos departamentos (skipDuplicates)
+  await prisma.userDepartamento.createMany({
+    data: [
+      { userId: tecnico1.id, departamentoId: deptSuporte.id },
+      { userId: tecnico2.id, departamentoId: deptSuporte.id },
+      { userId: comercial.id, departamentoId: deptComercial.id },
+    ],
+    skipDuplicates: true,
+  });
 
-  const client1 = await prisma.client.create({
+  // ── Clientes (verificar se já existe pelo CNPJ) ──────────────────
+  console.log('  ↳ Clientes...');
+
+  const existingClient1 = await prisma.client.findFirst({ where: { cnpjCpf: '11.222.333/0001-44' } });
+  const client1 = existingClient1 || await prisma.client.create({
     data: {
       razaoSocial: 'Laboratório São Lucas Ltda',
       nomeFantasia: 'Lab São Lucas',
@@ -118,7 +128,8 @@ async function main() {
     },
   });
 
-  const client2 = await prisma.client.create({
+  const existingClient2 = await prisma.client.findFirst({ where: { cnpjCpf: '22.333.444/0001-55' } });
+  const client2 = existingClient2 || await prisma.client.create({
     data: {
       razaoSocial: 'Hospital Geral de Messejana',
       nomeFantasia: 'HGM',
@@ -134,7 +145,8 @@ async function main() {
     },
   });
 
-  const client3 = await prisma.client.create({
+  const existingClient3 = await prisma.client.findFirst({ where: { cnpjCpf: '33.444.555/0001-66' } });
+  const client3 = existingClient3 || await prisma.client.create({
     data: {
       razaoSocial: 'Clínica Saúde Total',
       cnpjCpf: '33.444.555/0001-66',
@@ -148,40 +160,55 @@ async function main() {
     },
   });
 
-  await prisma.ticket.create({
-    data: {
-      clientId: client1.id,
-      contactName: 'Dr. Roberto',
-      contactPhone: '5585999991111',
-      assunto: 'Problema no módulo LIS',
-      status: 'aberto',
-      canal: 'whatsapp',
-      usuarioId: tecnico1.id,
-    },
-  });
+  // ── Tickets (verificar se já existe pelo assunto + contato) ──────
+  console.log('  ↳ Tickets...');
 
-  await prisma.ticket.create({
-    data: {
-      clientId: client2.id,
-      contactName: 'Enf. Ana Paula',
-      contactPhone: '5585999992222',
-      assunto: 'Sistema lento no GLPI',
-      status: 'em_andamento',
-      canal: 'whatsapp',
-      usuarioId: tecnico2.id,
-    },
-  });
+  const existingTicket1 = await prisma.ticket.findFirst({ where: { assunto: 'Problema no módulo LIS', contactPhone: '5585999991111' } });
+  if (!existingTicket1) {
+    await prisma.ticket.create({
+      data: {
+        clientId: client1.id,
+        contactName: 'Dr. Roberto',
+        contactPhone: '5585999991111',
+        assunto: 'Problema no módulo LIS',
+        status: 'aberto',
+        canal: 'whatsapp',
+        usuarioId: tecnico1.id,
+      },
+    });
+  }
 
-  await prisma.ticket.create({
-    data: {
-      contactName: 'Dr. Marcos',
-      contactPhone: '5585999994444',
-      assunto: 'Orçamento de implantação',
-      status: 'aberto',
-      canal: 'whatsapp',
-      usuarioId: comercial.id,
-    },
-  });
+  const existingTicket2 = await prisma.ticket.findFirst({ where: { assunto: 'Sistema lento no GLPI', contactPhone: '5585999992222' } });
+  if (!existingTicket2) {
+    await prisma.ticket.create({
+      data: {
+        clientId: client2.id,
+        contactName: 'Enf. Ana Paula',
+        contactPhone: '5585999992222',
+        assunto: 'Sistema lento no GLPI',
+        status: 'em_atendimento',
+        canal: 'whatsapp',
+        usuarioId: tecnico2.id,
+      },
+    });
+  }
+
+  const existingTicket3 = await prisma.ticket.findFirst({ where: { assunto: 'Orçamento de implantação', contactPhone: '5585999994444' } });
+  if (!existingTicket3) {
+    await prisma.ticket.create({
+      data: {
+        contactName: 'Dr. Marcos',
+        contactPhone: '5585999994444',
+        assunto: 'Orçamento de implantação',
+        status: 'aberto',
+        canal: 'whatsapp',
+        usuarioId: comercial.id,
+      },
+    });
+  }
+
+  // ── Ordens de Serviço (upsert — seguro) ──────────────────────────
+  console.log('  ↳ Ordens de serviço...');
 
   const os1 = await prisma.serviceOrder.upsert({
     where: { numeroOs: 'OS-2024-0001' },
@@ -232,53 +259,87 @@ async function main() {
     },
   });
 
-  await prisma.opportunity.create({
-    data: {
-      clientId: client3.id,
-      titulo: 'Implantação completa LIS + GLPI',
-      valorEstimado: 45000.0,
-      etapa: 'negociacao',
-      probabilidade: 70,
-      responsavelId: comercial.id,
-    },
-  });
+  // ── Oportunidades (verificar se já existe) ────────────────────────
+  console.log('  ↳ Oportunidades...');
 
-  await prisma.opportunity.create({
-    data: {
-      clientId: client1.id,
-      titulo: 'Upgrade módulo fiscal',
-      valorEstimado: 8000.0,
-      etapa: 'prospeccao',
-      probabilidade: 30,
-      responsavelId: comercial.id,
-    },
-  });
+  const existingOpp1 = await prisma.opportunity.findFirst({ where: { titulo: 'Implantação completa LIS + GLPI', clientId: client3.id } });
+  if (!existingOpp1) {
+    await prisma.opportunity.create({
+      data: {
+        clientId: client3.id,
+        titulo: 'Implantação completa LIS + GLPI',
+        valorEstimado: 45000.0,
+        etapa: 'negociacao',
+        probabilidade: 70,
+        responsavelId: comercial.id,
+      },
+    });
+  }
 
-  await prisma.alertRecipient.create({
-    data: { nome: 'Admin Codemed', whatsapp: '5585999999999', cargo: 'Gestor', ativo: true },
-  });
+  const existingOpp2 = await prisma.opportunity.findFirst({ where: { titulo: 'Upgrade módulo fiscal', clientId: client1.id } });
+  if (!existingOpp2) {
+    await prisma.opportunity.create({
+      data: {
+        clientId: client1.id,
+        titulo: 'Upgrade módulo fiscal',
+        valorEstimado: 8000.0,
+        etapa: 'prospeccao',
+        probabilidade: 30,
+        responsavelId: comercial.id,
+      },
+    });
+  }
 
-  await prisma.task.create({
-    data: { titulo: 'Finalizar implantação LIS Lab São Lucas', descricao: 'Configurar integração com sistema de faturamento', status: 'em_andamento', prioridade: 'alta', responsavelId: tecnico1.id, projeto: 'Lab São Lucas' },
-  });
+  // ── Destinatários de alerta (verificar se já existe) ──────────────
+  const existingRecipient = await prisma.alertRecipient.findFirst({ where: { nome: 'Admin Codemed' } });
+  if (!existingRecipient) {
+    await prisma.alertRecipient.create({
+      data: { nome: 'Admin Codemed', whatsapp: '5585999999999', cargo: 'Gestor', ativo: true },
+    });
+  }
 
-  await prisma.task.create({
-    data: { titulo: 'Corrigir lentidão GLPI HGM', status: 'aberta', prioridade: 'urgente', responsavelId: tecnico2.id, projeto: 'HGM' },
-  });
+  // ── Tarefas (verificar se já existe) ─────────────────────────────
+  console.log('  ↳ Tarefas...');
 
-  await prisma.task.create({
-    data: { titulo: 'Preparar proposta Clínica Saúde Total', status: 'aberta', prioridade: 'media', responsavelId: comercial.id, projeto: 'Prospecção' },
-  });
+  const existingTask1 = await prisma.task.findFirst({ where: { titulo: 'Finalizar implantação LIS Lab São Lucas' } });
+  if (!existingTask1) {
+    await prisma.task.create({
+      data: { titulo: 'Finalizar implantação LIS Lab São Lucas', descricao: 'Configurar integração com sistema de faturamento', status: 'em_andamento', prioridade: 'alta', responsavelId: tecnico1.id, projeto: 'Lab São Lucas' },
+    });
+  }
 
-  await prisma.contact.create({
-    data: { clientId: client1.id, tipo: 'ligacao', descricao: 'Ligação para alinhar cronograma de implantação', usuarioId: tecnico1.id, duracaoMinutos: 15 },
-  });
+  const existingTask2 = await prisma.task.findFirst({ where: { titulo: 'Corrigir lentidão GLPI HGM' } });
+  if (!existingTask2) {
+    await prisma.task.create({
+      data: { titulo: 'Corrigir lentidão GLPI HGM', status: 'aberta', prioridade: 'urgente', responsavelId: tecnico2.id, projeto: 'HGM' },
+    });
+  }
 
-  await prisma.contact.create({
-    data: { clientId: client2.id, tipo: 'reuniao', descricao: 'Reunião presencial sobre contrato de suporte', usuarioId: tecnico2.id, duracaoMinutos: 60 },
-  });
+  const existingTask3 = await prisma.task.findFirst({ where: { titulo: 'Preparar proposta Clínica Saúde Total' } });
+  if (!existingTask3) {
+    await prisma.task.create({
+      data: { titulo: 'Preparar proposta Clínica Saúde Total', status: 'aberta', prioridade: 'media', responsavelId: comercial.id, projeto: 'Prospecção' },
+    });
+  }
 
-  // Robots
+  // ── Contatos (verificar se já existe) ────────────────────────────
+  console.log('  ↳ Contatos...');
+
+  const existingContact1 = await prisma.contact.findFirst({ where: { clientId: client1.id, tipo: 'ligacao', descricao: 'Ligação para alinhar cronograma de implantação' } });
+  if (!existingContact1) {
+    await prisma.contact.create({
+      data: { clientId: client1.id, tipo: 'ligacao', descricao: 'Ligação para alinhar cronograma de implantação', usuarioId: tecnico1.id, duracaoMinutos: 15 },
+    });
+  }
+
+  const existingContact2 = await prisma.contact.findFirst({ where: { clientId: client2.id, tipo: 'reuniao', descricao: 'Reunião presencial sobre contrato de suporte' } });
+  if (!existingContact2) {
+    await prisma.contact.create({
+      data: { clientId: client2.id, tipo: 'reuniao', descricao: 'Reunião presencial sobre contrato de suporte', usuarioId: tecnico2.id, duracaoMinutos: 60 },
+    });
+  }
+
+  // ── Robots (upsert — seguro) ─────────────────────────────────────
   const hasClaude = Boolean(process.env.ANTHROPIC_API_KEY);
 
   const roboVendas = await prisma.robot.upsert({
@@ -323,7 +384,7 @@ async function main() {
     },
   });
 
-  // Regras padrão para o robô de vendas
+  // Regras padrão para o robô de vendas (verificar se já existe)
   const existingVendasRules = await prisma.robotRule.count({ where: { robotId: roboVendas.id } });
   if (existingVendasRules === 0) {
     await prisma.robotRule.create({
@@ -348,7 +409,7 @@ async function main() {
     });
   }
 
-  console.log('✅ Seed completed!');
+  console.log('✅ Seed completed! (existing data preserved)');
   console.log('   Admin: admin@codemed.com.br / admin123');
   console.log('   Users: joao@, maria@, gerente@, comercial@ / tecnico123');
 }

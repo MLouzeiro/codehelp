@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeHelp CRM/Helpdesk — Demonstração</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            color: #f1f5f9;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            pointer-events: none;
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: all;
+        }
+
+        /* Slide 0: Intro */
+        .slide-0 {
+            background: radial-gradient(circle at center, #1e3a5f 0%, #0f172a 70%);
+        }
+
+        .logo-container {
+            text-align: center;
+            animation: fadeInUp 1s ease;
+        }
+
+        .logo-icon {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+            margin: 0 auto 24px;
+            box-shadow: 0 20px 60px rgba(59, 130, 246, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 20px 60px rgba(59, 130, 246, 0.4); }
+            50% { box-shadow: 0 20px 80px rgba(59, 130, 246, 0.6); }
+        }
+
+        .logo-text {
+            font-size: 56px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+        }
+
+        .logo-subtitle {
+            font-size: 24px;
+            color: #94a3b8;
+            font-weight: 300;
+        }
+
+        .logo-tagline {
+            font-size: 18px;
+            color: #64748b;
+            margin-top: 40px;
+            font-style: italic;
+        }
+
+        /* Slide 1: Dashboard */
+        .slide-1 {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 40px;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .section-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 20px;
+            font-size: 14px;
+            color: #60a5fa;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .section-title {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .section-desc {
+            font-size: 18px;
+            color: #94a3b8;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .kpi-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .kpi-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .kpi-value {
+            font-size: 36px;
+            font-weight: 800;
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+
+        .kpi-label {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+        }
+
+        .chart-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .chart-title {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .chart-bar {
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            animation: barGrow 1s ease forwards;
+            transform-origin: left;
+        }
+
+        @keyframes barGrow {
+            from { transform: scaleX(0); }
+            to { transform: scaleX(1); }
+        }
+
+        .bar-1 { background: linear-gradient(90deg, #3b82f6, #60a5fa); width: 85%; }
+        .bar-2 { background: linear-gradient(90deg, #8b5cf6, #a78bfa); width: 72%; }
+        .bar-3 { background: linear-gradient(90deg, #ec4899, #f472b6); width: 58%; }
+        .bar-4 { background: linear-gradient(90deg, #10b981, #34d399); width: 45%; }
+        .bar-5 { background: linear-gradient(90deg, #f59e0b, #fbbf24); width: 65%; }
+
+        .pie-chart {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: conic-gradient(#3b82f6 0% 35%, #8b5cf6 35% 55%, #ec4899 55% 75%, #10b981 75% 100%);
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .pie-chart::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: #1e293b;
+            border-radius: 50%;
+        }
+
+        /* Slide 2: Kanban */
+        .slide-2 {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 40px;
+        }
+
+        .kanban-board {
+            display: flex;
+            gap: 16px;
+            width: 100%;
+            max-width: 1200px;
+            overflow-x: auto;
+        }
+
+        .kanban-column {
+            flex: 1;
+            min-width: 180px;
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .column-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid;
+        }
+
+        .column-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .column-count {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .col-triage { border-color: #f59e0b; }
+        .col-triage .column-title { color: #f59e0b; }
+        .col-waiting { border-color: #3b82f6; }
+        .col-waiting .column-title { color: #3b82f6; }
+        .col-active { border-color: #10b981; }
+        .col-active .column-title { color: #10b981; }
+        .col-paused { border-color: #8b5cf6; }
+        .col-paused .column-title { color: #8b5cf6; }
+        .col-done { border-color: #22c55e; }
+        .col-done .column-title { color: #22c55e; }
+
+        .ticket-card {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 3px solid;
+            transition: transform 0.2s ease;
+        }
+
+        .ticket-card:hover { transform: translateX(4px); }
+        .ticket-card.priority-high { border-color: #f97316; }
+        .ticket-card.priority-medium { border-color: #fbbf24; }
+        .ticket-card.priority-low { border-color: #60a5fa; }
+
+        .ticket-protocol {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 4px;
+            font-family: monospace;
+        }
+
+        .ticket-subject {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .ticket-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        .ticket-client {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .ticket-time {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Slide 3: WhatsApp */
+        .slide-3 {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 40px;
+        }
+
+        .whatsapp-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+            height: 500px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .chat-list {
+            border-right: 1px solid rgba(148, 163, 184, 0.1);
+            overflow-y: auto;
+        }
+
+        .chat-list-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.05);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .chat-item:hover { background: rgba(59, 130, 246, 0.1); }
+        .chat-item.active { background: rgba(59, 130, 246, 0.2); }
+
+        .chat-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .chat-info { flex: 1; min-width: 0; }
+
+        .chat-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .chat-preview {
+            font-size: 12px;
+            color: #94a3b8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-time {
+            font-size: 11px;
+            color: #64748b;
+            margin-left: 8px;
+        }
+
+        .chat-main {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-header-name { font-weight: 700; font-size: 16px; }
+        .chat-header-status { font-size: 12px; color: #10b981; }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .message.incoming {
+            background: rgba(30, 41, 59, 0.8);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.outgoing {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .chat-input {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            display: flex;
+            gap: 12px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 24px;
+            padding: 12px 20px;
+            color: #f1f5f9;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .chat-input button {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        /* Slide 4: Connections */
+        .slide-4 {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 40px;
+        }
+
+        .connections-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .connection-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .connection-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+
+        .connection-card.connected::before {
+            background: linear-gradient(90deg, #10b981, #34d399);
+        }
+
+        .connection-card.disconnected::before {
+            background: linear-gradient(90deg, #ef4444, #f87171);
+        }
+
+        .connection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .connection-name {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .connection-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-connected {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .status-disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .connection-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 8px;
+        }
+
+        .connection-department {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 20px;
+        }
+
+        .connection-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-connect {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-connect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-connect.primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .btn-connect.danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .btn-connect.secondary {
+            background: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+        }
+
+        /* Slide 5: Settings */
+        .slide-5 {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 40px;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .settings-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .settings-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .settings-icon {
+            font-size: 40px;
+            margin-bottom: 16px;
+        }
+
+        .settings-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .settings-desc {
+            font-size: 13px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        /* Slide 6: Outro */
+        .slide-6 {
+            background: radial-gradient(circle at center, #1e3a5f 0%, #0f172a 70%);
+        }
+
+        .outro-content {
+            text-align: center;
+            animation: fadeInUp 1s ease;
+        }
+
+        .outro-title {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 24px;
+        }
+
+        .outro-features {
+            display: flex;
+            gap: 32px;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+
+        .outro-feature {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            color: #94a3b8;
+        }
+
+        .feature-icon {
+            font-size: 24px;
+        }
+
+        .outro-cta {
+            padding: 16px 48px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .outro-cta:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Navigation */
+        .nav-controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            width: 48px;
+            height: 48px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(30, 41, 59, 0.9);
+            color: #f1f5f9;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .nav-btn:hover {
+            background: rgba(59, 130, 246, 0.3);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .nav-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(148, 163, 184, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-dot.active {
+            background: #3b82f6;
+            transform: scale(1.3);
+        }
+
+        /* Slide counter */
+        .slide-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 41, 59, 0.9);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #94a3b8;
+            z-index: 100;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-counter">
+        <span id="currentSlide">1</span> / <span id="totalSlides">7</span>
+    </div>
+
+    <!-- Slide 0: Intro -->
+    <div class="slide slide-0 active">
+        <div class="logo-container">
+            <div class="logo-icon">🏥</div>
+            <div class="logo-text">CodeHelp</div>
+            <div class="logo-subtitle">CRM / Helpdesk</div>
+            <div class="logo-tagline">Sistema completo para gestão de atendimento ao cliente</div>
+        </div>
+    </div>
+
+    <!-- Slide 1: Dashboard -->
+    <div class="slide slide-1">
+        <div class="section-header">
+            <div class="section-badge">Visão Geral</div>
+            <div class="section-title">Painel Geral</div>
+            <div class="section-desc">Dashboard executivo com métricas em tempo real</div>
+        </div>
+        <div class="dashboard-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon">📊</div>
+                <div class="kpi-value">156</div>
+                <div class="kpi-label">Chamados no Mês</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">⏳</div>
+                <div class="kpi-value">23</div>
+                <div class="kpi-label">Em Aberto</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">✅</div>
+                <div class="kpi-value">128</div>
+                <div class="kpi-label">Fechados</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">⚡</div>
+                <div class="kpi-value">4.2h</div>
+                <div class="kpi-label">Tempo Médio</div>
+            </div>
+        </div>
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-title">Por Departamento</div>
+                <div class="chart-bar bar-1"></div>
+                <div class="chart-bar bar-2"></div>
+                <div class="chart-bar bar-3"></div>
+                <div class="chart-bar bar-4"></div>
+                <div class="chart-bar bar-5"></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Por Categoria</div>
+                <div class="pie-chart"></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">CSAT Trending</div>
+                <div class="chart-bar bar-1"></div>
+                <div class="chart-bar bar-2"></div>
+                <div class="chart-bar bar-3"></div>
+                <div class="chart-bar bar-4"></div>
+                <div class="chart-bar bar-5"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 2: Kanban -->
+    <div class="slide slide-2">
+        <div class="section-header">
+            <div class="section-badge">Operações</div>
+            <div class="section-title">Chamados</div>
+            <div class="section-desc">Kanban principal de atendimento com drag-and-drop</div>
+        </div>
+        <div class="kanban-board">
+            <div class="kanban-column">
+                <div class="column-header col-triage">
+                    <div class="column-title">Triagem</div>
+                    <div class="column-count">3</div>
+                </div>
+                <div class="ticket-card priority-high">
+                    <div class="ticket-protocol">TKT-001</div>
+                    <div class="ticket-subject">Sistema travando</div>
+                    <div class="ticket-meta">
+                        <div class="ticket-client">👤 Laboratório ABC</div>
+                        <div class="ticket-time">5min</div>
+                    </div>
+                </div>
+                <div class="ticket-card priority-medium">
+                    <div class="ticket-protocol">TKT-002</div>
+                    <div class="ticket-subject">Erro ao gerar relatório</div>
+                    <div class="ticket-meta">
+                        <div class="ticket-client">👤 Lab XYZ</div>
+                        <div class="ticket-time">12min</div>
+                    </div>
+                </div>
+            </div>
+            <div class="kanban-column">
+                <div class="column-header col-waiting">
+                    <div class="column-title">Fila</div>
+                    <div class="column-count">2</div>
+                </div>
+                <div class="ticket-card priority-low">
+                    <div class="ticket-protocol">TKT-003</div>
+                    <div class="ticket-subject">Dúvida sobre integração</div>
+                    <div class="ticket-meta">
+                        <div class="ticket-client">👤 Lab DEF</div>
+                        <div class="ticket-time">18min</div>
+                    </div>
+                </div>
+            </div>
+            <div class="kanban-column">
+                <div class="column-header col-active">
+                    <div class="column-title">Em Atendimento</div>
+                    <div class="column-count">4</div>
+                </div>
+                <div class="ticket-card priority-high">
+                    <div class="ticket-protocol">TKT-004</div>
+                    <div class="ticket-subject">Impressão não funciona</div>
+                    <div class="ticket-meta">
+                        <div class="ticket-client">👤 Lab GHI</div>
+                        <div class="ticket-time">32min</div>
+                    </div>
+                </div>
+            </div>
+            <div class="kanban-column">
+                <div class="column-header col-paused">
+                    <div class="column-title">Aguardando</div>
+                    <div class="column-count">1</div>
+                </div>
+                <div class="ticket-card priority-medium">
+                    <div class="ticket-protocol">TKT-005</div>
+                    <div class="ticket-subject">Aguardando OS</div>
+                    <div class="ticket-meta">
+                        <div class="ticket-client">👤 Lab JKL</div>
+                        <div class="ticket-time">1h</div>
+                    </div>
+                </div>
+            </div>
+            <div class="kanban-column">
+                <div class="column-header col-done">
+                    <div class="column-title">Concluído</div>
+                    <div class="column-count">8</div>
+                </div>
+                <div class="ticket-card priority-low">
+                    <div class="ticket-protocol">TKT-006</div>
+                    <div class="ticket-subject">Consulta resolvida</div>
+                    <div class="ticket-meta">
+                        <div class="ticket-client">👤 Lab MNO</div>
+                        <div class="ticket-time">✓</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: WhatsApp -->
+    <div class="slide slide-3">
+        <div class="section-header">
+            <div class="section-badge">Integração</div>
+            <div class="section-title">WhatsApp</div>
+            <div class="section-desc">Chat integrado com atendimento via WhatsApp</div>
+        </div>
+        <div class="whatsapp-container">
+            <div class="chat-list">
+                <div class="chat-list-header">💬 Conversas</div>
+                <div class="chat-item active">
+                    <div class="chat-avatar">🔬</div>
+                    <div class="chat-info">
+                        <div class="chat-name">Laboratório ABC</div>
+                        <div class="chat-preview">Preciso de ajuda com...</div>
+                    </div>
+                    <div class="chat-time">10:30</div>
+                </div>
+                <div class="chat-item">
+                    <div class="chat-avatar">🏥</div>
+                    <div class="chat-info">
+                        <div class="chat-name">Lab XYZ</div>
+                        <div class="chat-preview">Obrigado pela ajuda!</div>
+                    </div>
+                    <div class="chat-time">09:15</div>
+                </div>
+                <div class="chat-item">
+                    <div class="chat-avatar">💊</div>
+                    <div class="chat-info">
+                        <div class="chat-name">Lab DEF</div>
+                        <div class="chat-preview">Quando teremos suporte?</div>
+                    </div>
+                    <div class="chat-time">Ontem</div>
+                </div>
+                <div class="chat-item">
+                    <div class="chat-avatar">🩺</div>
+                    <div class="chat-info">
+                        <div class="chat-name">Lab GHI</div>
+                        <div class="chat-preview">Erro na integração</div>
+                    </div>
+                    <div class="chat-time">Ontem</div>
+                </div>
+            </div>
+            <div class="chat-main">
+                <div class="chat-header">
+                    <div class="chat-avatar">🔬</div>
+                    <div>
+                        <div class="chat-header-name">Laboratório ABC</div>
+                        <div class="chat-header-status">● Online</div>
+                    </div>
+                </div>
+                <div class="chat-messages">
+                    <div class="message incoming">
+                        Olá, estou com problemas no sistema. Ele está travando toda vez que tento gerar o relatório de laudos.
+                        <div class="message-time">10:28</div>
+                    </div>
+                    <div class="message outgoing">
+                        Bom dia! Vou verificar o problema. Pode me informar qual navegador está usando?
+                        <div class="message-time">10:30</div>
+                    </div>
+                    <div class="message incoming">
+                        Estou usando o Chrome versão mais recente.
+                        <div class="message-time">10:32</div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" placeholder="Digite sua mensagem..." disabled>
+                    <button>➤</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Connections -->
+    <div class="slide slide-4">
+        <div class="section-header">
+            <div class="section-badge">Multi-Conexão</div>
+            <div class="section-title">Conexão WhatsApp</div>
+            <div class="section-desc">Gerencie múltiplas conexões WhatsApp simultaneamente</div>
+        </div>
+        <div class="connections-grid">
+            <div class="connection-card connected">
+                <div class="connection-header">
+                    <div class="connection-name">Suporte Geral</div>
+                    <div class="connection-status status-connected">● Conectado</div>
+                </div>
+                <div class="connection-number">+55 11 99999-1234</div>
+                <div class="connection-department">Departamento: Suporte Técnico</div>
+                <div class="connection-actions">
+                    <button class="btn-connect danger">Desconectar</button>
+                    <button class="btn-connect secondary">Configurar</button>
+                </div>
+            </div>
+            <div class="connection-card disconnected">
+                <div class="connection-header">
+                    <div class="connection-name">Vendas</div>
+                    <div class="connection-status status-disconnected">● Desconectado</div>
+                </div>
+                <div class="connection-number">+55 11 99999-5678</div>
+                <div class="connection-department">Departamento: Comercial</div>
+                <div class="connection-actions">
+                    <button class="btn-connect primary">Conectar</button>
+                    <button class="btn-connect secondary">Configurar</button>
+                </div>
+            </div>
+            <div class="connection-card connected">
+                <div class="connection-header">
+                    <div class="connection-name">Laboratórios</div>
+                    <div class="connection-status status-connected">● Conectado</div>
+                </div>
+                <div class="connection-number">+55 11 99999-9012</div>
+                <div class="connection-department">Departamento: Lab</div>
+                <div class="connection-actions">
+                    <button class="btn-connect danger">Desconectar</button>
+                    <button class="btn-connect secondary">Configurar</button>
+                </div>
+            </div>
+            <div class="connection-card disconnected">
+                <div class="connection-header">
+                    <div class="connection-name">Financeiro</div>
+                    <div class="connection-status status-disconnected">● Desconectado</div>
+                </div>
+                <div class="connection-number">+55 11 99999-3456</div>
+                <div class="connection-department">Departamento: Financeiro</div>
+                <div class="connection-actions">
+                    <button class="btn-connect primary">Conectar</button>
+                    <button class="btn-connect secondary">Configurar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Settings -->
+    <div class="slide slide-5">
+        <div class="section-header">
+            <div class="section-badge">Administração</div>
+            <div class="section-title">Configurações</div>
+            <div class="section-desc">Painel centralizado de administração do sistema</div>
+        </div>
+        <div class="settings-grid">
+            <div class="settings-card">
+                <div class="settings-icon">👥</div>
+                <div class="settings-title">Usuários</div>
+                <div class="settings-desc">Gerenciar usuários e permissões de acesso</div>
+            </div>
+            <div class="settings-card">
+                <div class="settings-icon">📋</div>
+                <div class="settings-title">Helpdesk</div>
+                <div class="settings-desc">Mensagens automáticas e configurações</div>
+            </div>
+            <div class="settings-card">
+                <div class="settings-icon">🏢</div>
+                <div class="settings-title">Departamentos</div>
+                <div class="settings-desc">Gerenciar setores da organização</div>
+            </div>
+            <div class="settings-card">
+                <div class="settings-icon">📞</div>
+                <div class="settings-title">Filas</div>
+                <div class="settings-desc">Filas de atendimento por departamento</div>
+            </div>
+            <div class="settings-card">
+                <div class="settings-icon">🔧</div>
+                <div class="settings-title">Níveis</div>
+                <div class="settings-desc">N1, N2, N3 e Supervisor</div>
+            </div>
+            <div class="settings-card">
+                <div class="settings-icon">📅</div>
+                <div class="settings-title">Feriados</div>
+                <div class="settings-desc">Calendário de feriados</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 6: Outro -->
+    <div class="slide slide-6">
+        <div class="outro-content">
+            <div class="outro-title">CodeHelp CRM/Helpdesk</div>
+            <div class="outro-features">
+                <div class="outro-feature">
+                    <span class="feature-icon">📊</span>
+                    <span>Dashboard</span>
+                </div>
+                <div class="outro-feature">
+                    <span class="feature-icon">📋</span>
+                    <span>Chamados</span>
+                </div>
+                <div class="outro-feature">
+                    <span class="feature-icon">💬</span>
+                    <span>WhatsApp</span>
+                </div>
+                <div class="outro-feature">
+                    <span class="feature-icon">📈</span>
+                    <span>Relatórios</span>
+                </div>
+            </div>
+            <button class="outro-cta">Comece Agora</button>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <button class="nav-btn" id="prevBtn" onclick="prevSlide()">◀</button>
+        <div class="nav-dots" id="navDots"></div>
+        <button class="nav-btn" id="nextBtn" onclick="nextSlide()">▶</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        // Create navigation dots
+        const navDots = document.getElementById('navDots');
+        for (let i = 0; i < totalSlides; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+            dot.onclick = () => goToSlide(i);
+            navDots.appendChild(dot);
+        }
+        
+        document.getElementById('totalSlides').textContent = totalSlides;
+        
+        function goToSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            document.querySelectorAll('.nav-dot')[currentSlide].classList.remove('active');
+            
+            currentSlide = n;
+            
+            slides[currentSlide].classList.add('active');
+            document.querySelectorAll('.nav-dot')[currentSlide].classList.add('active');
+            document.getElementById('currentSlide').textContent = currentSlide + 1;
+        }
+        
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                goToSlide(currentSlide + 1);
+            }
+        }
+        
+        function prevSlide() {
+            if (currentSlide > 0) {
+                goToSlide(currentSlide - 1);
+            }
+        }
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevSlide();
+            }
+        });
+        
+        // Auto-play (optional - uncomment to enable)
+        // setInterval(nextSlide, 5000);
+    </script>
+</body>
+</html>

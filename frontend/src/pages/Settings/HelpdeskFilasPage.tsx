@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Edit2, Power, PowerOff, Save, X, RefreshCw,
   ListTodo, Building2, Layers, Hash,
@@ -104,17 +104,17 @@ export default function HelpdeskFilasPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[60vh]"><RefreshCw className="animate-spin text-blue-600" size={32} /></div>;
+    return <div className="flex items-center justify-center min-h-[60vh]"><RefreshCw className="animate-spin text-blue-600 dark:text-blue-400" size={32} /></div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <ListTodo className="text-blue-600" size={24} /> Filas de Atendimento
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2">
+            <ListTodo className="text-blue-600 dark:text-blue-400" size={24} /> Filas de Atendimento
           </h1>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 dark:text-slate-400 text-sm">
             {filas.length} fila(s) cadastrada(s)
           </p>
         </div>
@@ -122,7 +122,7 @@ export default function HelpdeskFilasPage() {
           <select
             value={filterDept}
             onChange={(e) => setFilterDept(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white"
+            className="text-xs border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800"
           >
             <option value="">Todos departamentos</option>
             {departamentos.filter(d => d.ativo).map(d => (
@@ -139,14 +139,14 @@ export default function HelpdeskFilasPage() {
       </div>
 
       {feedback && (
-        <div className={`text-sm px-3 py-2 rounded-lg ${feedback.type === 'ok' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+        <div className={`text-sm px-3 py-2 rounded-lg ${feedback.type === 'ok' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700' : 'bg-red-50 dark:bg-red-900/30 text-red-700'}`}>
           {feedback.msg}
         </div>
       )}
 
       <div className="space-y-2">
         {filas.length === 0 && (
-          <p className="text-center text-neutral-400 py-8 text-sm">Nenhuma fila cadastrada.</p>
+          <p className="text-center text-neutral-400 dark:text-slate-500 py-8 text-sm">Nenhuma fila cadastrada.</p>
         )}
         {filas.map((fila) => {
           const deptNome = fila.departamento?.nome || 'Sem depto';
@@ -161,13 +161,13 @@ export default function HelpdeskFilasPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-sm text-gray-900 truncate">{fila.nome}</h3>
-                  <code className="text-[10px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded font-mono">{fila.slug}</code>
+                  <h3 className="font-semibold text-sm text-gray-900 dark:text-slate-100 truncate">{fila.nome}</h3>
+                  <code className="text-[10px] text-neutral-500 dark:text-slate-400 bg-neutral-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono">{fila.slug}</code>
                   {!fila.ativo && (
-                    <span className="text-[10px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded font-medium uppercase">Inativa</span>
+                    <span className="text-[10px] text-neutral-500 dark:text-slate-400 bg-neutral-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-medium uppercase">Inativa</span>
                   )}
                 </div>
-                <div className="flex items-center gap-3 mt-1 text-[10px] text-neutral-500">
+                <div className="flex items-center gap-3 mt-1 text-[10px] text-neutral-500 dark:text-slate-400">
                   <span className="flex items-center gap-1">
                     <Building2 size={10} style={{ color: fila.departamento?.cor }} />
                     {deptNome}
@@ -184,14 +184,14 @@ export default function HelpdeskFilasPage() {
                   )}
                   {fila._count && <span>{fila._count.tickets} ticket(s)</span>}
                 </div>
-                {fila.descricao && <p className="text-xs text-neutral-400 truncate mt-0.5">{fila.descricao}</p>}
+                {fila.descricao && <p className="text-xs text-neutral-400 dark:text-slate-500 truncate mt-0.5">{fila.descricao}</p>}
               </div>
               {isMaster && (
                 <div className="flex items-center gap-1">
-                  <button onClick={() => { setEditing(fila); setCreating(false); }} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-600" title="Editar">
+                  <button onClick={() => { setEditing(fila); setCreating(false); }} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-slate-700 rounded text-neutral-600 dark:text-slate-300" title="Editar">
                     <Edit2 size={14} />
                   </button>
-                  <button onClick={() => handleToggle(fila)} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-600" title={fila.ativo ? 'Desativar' : 'Reativar'}>
+                  <button onClick={() => handleToggle(fila)} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-slate-700 rounded text-neutral-600 dark:text-slate-300" title={fila.ativo ? 'Desativar' : 'Reativar'}>
                     {fila.ativo ? <PowerOff size={14} className="text-red-500" /> : <Power size={14} className="text-emerald-500" />}
                   </button>
                 </div>
@@ -243,36 +243,36 @@ function FilaEditor({ fila, departamentos, niveis, onClose, onSave, saving }: Ed
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl p-5 w-full max-w-lg space-y-3 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-5 w-full max-w-lg space-y-3 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-gray-900">{isNew ? 'Nova Fila' : `Editar "${fila!.nome}"`}</h3>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600"><X size={18} /></button>
+          <h3 className="font-bold text-gray-900 dark:text-slate-100">{isNew ? 'Nova Fila' : `Editar "${fila!.nome}"`}</h3>
+          <button onClick={onClose} className="text-neutral-400 dark:text-slate-500 hover:text-neutral-600"><X size={18} /></button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Nome *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Nome *</label>
             <input type="text" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })}
-              placeholder="Ex: Suporte N1" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" />
+              placeholder="Ex: Suporte N1" className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2" />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Slug (auto-gerado)</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Slug (auto-gerado)</label>
             <input type="text" value={form.slug} disabled placeholder="suporte-n1"
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 disabled:bg-gray-50 disabled:text-gray-500 font-mono" />
+              className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 disabled:bg-gray-50 disabled:text-gray-500 font-mono" />
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-700 block mb-1">Descricao</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Descricao</label>
           <input type="text" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" />
+            className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2" />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Departamento *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Departamento *</label>
             <select value={form.departamentoId} onChange={(e) => setForm({ ...form, departamentoId: e.target.value })}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white">
+              className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800">
               <option value="">Selecione...</option>
               {activeDepts.map(d => (
                 <option key={d.id} value={d.id}>{d.nome}</option>
@@ -280,9 +280,9 @@ function FilaEditor({ fila, departamentos, niveis, onClose, onSave, saving }: Ed
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Nivel de Suporte *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Nivel de Suporte *</label>
             <select value={form.nivelSuporteId} onChange={(e) => setForm({ ...form, nivelSuporteId: e.target.value })}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white">
+              className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800">
               <option value="">Selecione...</option>
               {activeNiveis.map(n => (
                 <option key={n.id} value={n.id}>{n.nome}{n.slaMinutos ? ` (${n.slaMinutos}min)` : ''}</option>
@@ -293,17 +293,17 @@ function FilaEditor({ fila, departamentos, niveis, onClose, onSave, saving }: Ed
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">SLA (minutos)</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">SLA (minutos)</label>
             <input type="number" min={0} value={form.slaMinutos} onChange={(e) => setForm({ ...form, slaMinutos: parseInt(e.target.value) || 0 })}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" />
+              className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2" />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Ordem</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Ordem</label>
             <input type="number" min={0} value={form.ordem} onChange={(e) => setForm({ ...form, ordem: parseInt(e.target.value) || 0 })}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" />
+              className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2" />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Cor</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-200 block mb-1">Cor</label>
             <div className="flex flex-wrap gap-1.5">
               {CORES_OPCOES.map((c) => (
                 <button key={c} type="button" onClick={() => setForm({ ...form, cor: c })}
@@ -315,7 +315,7 @@ function FilaEditor({ fila, departamentos, niveis, onClose, onSave, saving }: Ed
         </div>
 
         <div className="flex gap-2 pt-3 border-t">
-          <button onClick={onClose} disabled={saving} className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+          <button onClick={onClose} disabled={saving} className="flex-1 px-4 py-2 text-sm border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50">Cancelar</button>
           <button onClick={() => onSave({
             ...form,
             slaMinutos: form.slaMinutos || undefined,

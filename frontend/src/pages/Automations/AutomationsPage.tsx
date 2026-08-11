@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../services/auth';
 import {
@@ -235,10 +235,10 @@ export default function AutomationsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-navy-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-navy-900 dark:text-slate-100 flex items-center gap-2">
             <Zap className="text-amber-500" size={24} /> Automacoes (WHEN/IF/THEN)
           </h1>
-          <p className="text-neutral-500 text-sm">
+          <p className="text-neutral-500 dark:text-slate-400 text-sm">
             {regras.length} regra(s) • {totalAtivas} ativa(s)
           </p>
         </div>
@@ -260,23 +260,23 @@ export default function AutomationsPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 p-3 shadow-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-200 dark:border-slate-700 p-3 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div className="relative">
-            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
             <select value={filtroTrigger} onChange={(e) => setFiltroTrigger(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-1 focus:ring-amber-500 outline-none appearance-none bg-white">
+              className="w-full pl-8 pr-3 py-2 text-sm border border-neutral-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-amber-500 outline-none appearance-none bg-white dark:bg-slate-800">
               <option value="">Todos os gatilhos</option>
               {TRIGGERS.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
           </div>
-          <div className="flex bg-neutral-50 rounded-lg p-0.5 border border-neutral-200">
+          <div className="flex bg-neutral-50 dark:bg-slate-900 rounded-lg p-0.5 border border-neutral-200 dark:border-slate-700">
             {(['todos', 'ativos', 'inativos'] as const).map((opt) => (
               <button key={opt} onClick={() => setFiltroAtivo(opt)}
                 className={`flex-1 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors capitalize ${
-                  filtroAtivo === opt ? 'bg-amber-100 text-amber-700' : 'text-neutral-600 hover:bg-neutral-100'
+                  filtroAtivo === opt ? 'bg-amber-100 text-amber-700' : 'text-neutral-600 dark:text-slate-300 hover:bg-neutral-100 dark:hover:bg-slate-700'
                 }`}>
                 {opt}
               </button>
@@ -285,16 +285,16 @@ export default function AutomationsPage() {
         </div>
       </div>
 
-      {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">{erro}</div>}
+      {erro && <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 rounded-xl p-4 text-sm text-red-700">{erro}</div>}
 
       {loading && regras.length === 0 ? (
         <div className="flex items-center justify-center py-12">
           <RefreshCw className="animate-spin text-amber-500" size={32} />
         </div>
       ) : regras.length === 0 ? (
-        <div className="bg-white rounded-xl border border-neutral-200 p-12 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-200 dark:border-slate-700 p-12 text-center">
           <Zap className="mx-auto text-neutral-300 mb-3" size={48} />
-          <p className="text-sm text-neutral-500">Nenhuma regra de automacao cadastrada.</p>
+          <p className="text-sm text-neutral-500 dark:text-slate-400">Nenhuma regra de automacao cadastrada.</p>
           {canEdit(user?.role) && (
             <button onClick={abrirNova} className="btn-primary text-sm mt-4 inline-flex items-center gap-1">
               <Plus size={14} /> Criar primeira regra
@@ -304,38 +304,38 @@ export default function AutomationsPage() {
       ) : (
         <div className="space-y-3">
           {regras.map((r) => (
-            <div key={r.id} className={`bg-white rounded-xl border shadow-sm p-4 ${r.ativo ? 'border-neutral-200' : 'border-neutral-200 opacity-60'}`}>
+            <div key={r.id} className={`bg-white dark:bg-slate-800 rounded-xl border shadow-sm p-4 ${r.ativo ? 'border-neutral-200 dark:border-slate-700' : 'border-neutral-200 dark:border-slate-700 opacity-60'}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-navy-900">{r.nome}</h3>
+                    <h3 className="font-semibold text-navy-900 dark:text-slate-100">{r.nome}</h3>
                     {r.ativo ? (
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">ATIVA</span>
                     ) : (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">INATIVA</span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-slate-800 text-neutral-600 dark:text-slate-300">INATIVA</span>
                     )}
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
                       {r.logicOperator === 'all' ? 'TODAS' : 'ALGUMA'}
                     </span>
                   </div>
-                  {r.descricao && <p className="text-xs text-neutral-500 mt-1">{r.descricao}</p>}
+                  {r.descricao && <p className="text-xs text-neutral-500 dark:text-slate-400 mt-1">{r.descricao}</p>}
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded font-semibold">
+                    <span className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 rounded font-semibold">
                       WHEN {triggerLabel(r.trigger)}
                     </span>
-                    <span className="text-neutral-400">IF</span>
+                    <span className="text-neutral-400 dark:text-slate-500">IF</span>
                     {r.condicoes.length === 0 ? (
-                      <span className="text-neutral-500 italic">sempre</span>
+                      <span className="text-neutral-500 dark:text-slate-400 italic">sempre</span>
                     ) : (
                       r.condicoes.map((c, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded">
+                        <span key={i} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 rounded">
                           {c.campo} {OPERATORS.find((o) => o.value === c.operador)?.label || c.operador} {String(c.valor)}
                         </span>
                       ))
                     )}
-                    <span className="text-neutral-400">THEN</span>
+                    <span className="text-neutral-400 dark:text-slate-500">THEN</span>
                     {r.acoes.map((a, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded">
+                      <span key={i} className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 rounded">
                         {actionLabel(a.tipo)}
                       </span>
                     ))}
@@ -349,7 +349,7 @@ export default function AutomationsPage() {
                         title={r.ativo ? 'Desativar' : 'Ativar'}>
                         {r.ativo ? <PowerOff size={14} /> : <Power size={14} />}
                       </button>
-                      <button onClick={() => abrirEdicao(r)} className="p-1.5 rounded hover:bg-blue-50 text-blue-600" title="Editar">
+                      <button onClick={() => abrirEdicao(r)} className="p-1.5 rounded hover:bg-blue-50 text-blue-600 dark:text-blue-400" title="Editar">
                         <Edit size={14} />
                       </button>
                       <button onClick={() => deletar(r)} className="p-1.5 rounded hover:bg-red-50 text-red-600" title="Deletar">
@@ -366,10 +366,10 @@ export default function AutomationsPage() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !salvando && setShowForm(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="font-semibold text-gray-900">{form.id ? 'Editar Regra' : 'Nova Regra'}</h3>
-              <button onClick={() => setShowForm(false)} disabled={salvando} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-neutral-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
+              <h3 className="font-semibold text-gray-900 dark:text-slate-100">{form.id ? 'Editar Regra' : 'Nova Regra'}</h3>
+              <button onClick={() => setShowForm(false)} disabled={salvando} className="text-neutral-400 dark:text-slate-500 hover:text-neutral-600 p-1 disabled:opacity-50">
                 <X size={20} />
               </button>
             </div>
@@ -377,14 +377,14 @@ export default function AutomationsPage() {
             <div className="p-6 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">Nome da Regra *</label>
+                  <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-1 block">Nome da Regra *</label>
                   <input type="text" value={form.nome}
                     onChange={(e) => setForm({ ...form, nome: e.target.value })}
                     placeholder="Ex: Auto-classificar financeiro como alta"
                     className="input w-full" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">Ordem</label>
+                  <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-1 block">Ordem</label>
                   <input type="number" value={form.ordem}
                     onChange={(e) => setForm({ ...form, ordem: parseInt(e.target.value, 10) || 0 })}
                     className="input w-full" />
@@ -392,7 +392,7 @@ export default function AutomationsPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-700 mb-1 block">Descricao</label>
+                <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-1 block">Descricao</label>
                 <input type="text" value={form.descricao}
                   onChange={(e) => setForm({ ...form, descricao: e.target.value })}
                   placeholder="Frase curta explicando o que a regra faz"
@@ -407,10 +407,10 @@ export default function AutomationsPage() {
                   {TRIGGERS.map((t) => (
                     <button key={t.value} onClick={() => setForm({ ...form, trigger: t.value })}
                       className={`text-left p-3 rounded-lg border transition-colors ${
-                        form.trigger === t.value ? 'border-amber-500 bg-amber-50' : 'border-neutral-200 hover:bg-neutral-50'
+                        form.trigger === t.value ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30' : 'border-neutral-200 dark:border-slate-700 hover:bg-neutral-50 dark:hover:bg-slate-700'
                       }`}>
-                      <div className="text-sm font-semibold text-navy-900">{t.label}</div>
-                      <div className="text-[11px] text-neutral-500 mt-0.5">{t.desc}</div>
+                      <div className="text-sm font-semibold text-navy-900 dark:text-slate-100">{t.label}</div>
+                      <div className="text-[11px] text-neutral-500 dark:text-slate-400 mt-0.5">{t.desc}</div>
                     </button>
                   ))}
                 </div>
@@ -423,18 +423,18 @@ export default function AutomationsPage() {
                   </label>
                   <div className="flex items-center gap-1">
                     <button onClick={() => setForm({ ...form, logicOperator: 'all' })}
-                      className={`text-[10px] px-2 py-0.5 rounded ${form.logicOperator === 'all' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-neutral-500'}`}>
+                      className={`text-[10px] px-2 py-0.5 rounded ${form.logicOperator === 'all' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-neutral-500 dark:text-slate-400'}`}>
                       TODAS (AND)
                     </button>
                     <button onClick={() => setForm({ ...form, logicOperator: 'any' })}
-                      className={`text-[10px] px-2 py-0.5 rounded ${form.logicOperator === 'any' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-neutral-500'}`}>
+                      className={`text-[10px] px-2 py-0.5 rounded ${form.logicOperator === 'any' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-neutral-500 dark:text-slate-400'}`}>
                       ALGUMA (OR)
                     </button>
                   </div>
                 </div>
                 <div className="space-y-2">
                   {form.condicoes.map((c, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 bg-blue-50/50 rounded-lg">
+                    <div key={idx} className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/30/50 rounded-lg">
                       <input type="text" placeholder="campo (ex: categoria, prioridade)"
                         value={c.campo}
                         onChange={(e) => {
@@ -465,7 +465,7 @@ export default function AutomationsPage() {
                       </button>
                     </div>
                   ))}
-                  <button onClick={adicionarCondicao} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                  <button onClick={adicionarCondicao} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1">
                     <Plus size={12} /> Adicionar condicao
                   </button>
                 </div>
@@ -479,7 +479,7 @@ export default function AutomationsPage() {
                   {form.acoes.map((a, idx) => {
                     const def = ACTIONS.find((x) => x.value === a.tipo);
                     return (
-                      <div key={idx} className="p-3 bg-emerald-50/50 rounded-lg space-y-2">
+                      <div key={idx} className="p-3 bg-emerald-50 dark:bg-emerald-900/30/50 rounded-lg space-y-2">
                         <div className="flex items-center gap-2">
                           <select value={a.tipo}
                             onChange={(e) => {
@@ -498,7 +498,7 @@ export default function AutomationsPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-2">
                             {def.params.map((p) => (
                               <div key={p.key}>
-                                <label className="text-[10px] text-neutral-600 mb-0.5 block">{p.label}</label>
+                                <label className="text-[10px] text-neutral-600 dark:text-slate-300 mb-0.5 block">{p.label}</label>
                                 {p.type === 'select' ? (
                                   <select value={a.parametros[p.key] || ''}
                                     onChange={(e) => {
@@ -537,17 +537,17 @@ export default function AutomationsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+              <div className="flex items-center gap-2 p-3 bg-neutral-50 dark:bg-slate-900 rounded-lg border border-neutral-200 dark:border-slate-700">
                 <input type="checkbox" id="ativo" checked={form.ativo}
                   onChange={(e) => setForm({ ...form, ativo: e.target.checked })} className="rounded" />
-                <label htmlFor="ativo" className="text-xs text-gray-700 cursor-pointer">
+                <label htmlFor="ativo" className="text-xs text-gray-700 dark:text-slate-200 cursor-pointer">
                   Regra ativa (sera executada quando o gatilho ocorrer)
                 </label>
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-3 flex gap-2 justify-end">
-              <button onClick={() => setShowForm(false)} disabled={salvando} className="px-4 py-2 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-50">
+            <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-neutral-200 dark:border-slate-700 px-6 py-3 flex gap-2 justify-end">
+              <button onClick={() => setShowForm(false)} disabled={salvando} className="px-4 py-2 border border-neutral-200 dark:border-slate-700 rounded-lg text-sm hover:bg-neutral-50 dark:hover:bg-slate-700 disabled:opacity-50">
                 Cancelar
               </button>
               <button onClick={salvar} disabled={!form.nome.trim() || form.condicoes.length === 0 || form.acoes.length === 0 || salvando}
@@ -561,47 +561,47 @@ export default function AutomationsPage() {
 
       {showTester && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowTester(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-neutral-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2">
                 <Play className="text-purple-600" size={16} /> Testar Regras
               </h3>
-              <button onClick={() => setShowTester(false)} className="text-neutral-400 hover:text-neutral-600 p-1">
+              <button onClick={() => setShowTester(false)} className="text-neutral-400 dark:text-slate-500 hover:text-neutral-600 p-1">
                 <X size={20} />
               </button>
             </div>
             <div className="p-6 space-y-3">
               <div>
-                <label className="text-xs font-semibold text-gray-700 mb-1 block">Gatilho a simular</label>
+                <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-1 block">Gatilho a simular</label>
                 <select value={testForm.trigger} onChange={(e) => setTestForm({ ...testForm, trigger: e.target.value as AutomationTrigger })}
                   className="input w-full">
                   {TRIGGERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-700 mb-1 block flex items-center gap-1">
+                <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-1 block flex items-center gap-1">
                   <Code size={12} /> Contexto (JSON)
                 </label>
                 <textarea rows={10} value={testForm.contexto}
                   onChange={(e) => setTestForm({ ...testForm, contexto: e.target.value })}
                   className="input w-full font-mono text-xs" />
-                <p className="text-[10px] text-neutral-500 mt-1">
+                <p className="text-[10px] text-neutral-500 dark:text-slate-400 mt-1">
                   Campos comuns: ticketId, categoria, prioridade, status, etapa, slaPausadoEm, etc.
                 </p>
               </div>
               {testResultado && (
-                <div className="border border-neutral-200 rounded-lg overflow-hidden">
-                  <div className="bg-neutral-50 px-3 py-2 text-xs font-semibold text-gray-700 border-b border-neutral-200">
+                <div className="border border-neutral-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                  <div className="bg-neutral-50 dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 border-b border-neutral-200 dark:border-slate-700">
                     Resultado ({testResultado.regrasExecutadas?.length || 0} regra(s) executada(s))
                   </div>
-                  <pre className="p-3 text-[11px] font-mono bg-white overflow-x-auto max-h-64 overflow-y-auto">
+                  <pre className="p-3 text-[11px] font-mono bg-white dark:bg-slate-800 overflow-x-auto max-h-64 overflow-y-auto">
                     {JSON.stringify(testResultado, null, 2)}
                   </pre>
                 </div>
               )}
             </div>
-            <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-3 flex gap-2 justify-end">
-              <button onClick={() => setShowTester(false)} className="px-4 py-2 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-50">
+            <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-neutral-200 dark:border-slate-700 px-6 py-3 flex gap-2 justify-end">
+              <button onClick={() => setShowTester(false)} className="px-4 py-2 border border-neutral-200 dark:border-slate-700 rounded-lg text-sm hover:bg-neutral-50 dark:hover:bg-slate-700">
                 Fechar
               </button>
               <button onClick={executarTeste} disabled={testLoading} className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center gap-1 disabled:opacity-50">

@@ -1101,3 +1101,88 @@ export async function criarKanbanTaskHandler(req: AuthRequest, res: Response) {
     return res.status(500).json({ error: 'Erro ao criar tarefa Kanban' });
   }
 }
+
+export async function getDetailedDashboard(req: AuthRequest, res: Response) {
+  try {
+    const { dataInicio, dataFim, status, etapa } = req.query;
+
+    const where: any = { status: { not: 'arquivado' } };
+    if (dataInicio && dataFim) {
+      where.dataAbertura = { gte: new Date(dataInicio as string), lte: new Date(dataFim as string) };
+    }
+    if (status) where.status = status as string;
+    if (etapa) where.etapa = etapa as string;
+
+    const tickets = await prisma.ticket.findMany({
+      where,
+      include: {
+        client: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+        assignee: { select: { id: true, name: true, email: true } },
+        departamento: { select: { id: true, nome: true, cor: true } },
+        messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+        _count: { select: { messages: true, orders: true, checklists: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+    });
+
+    const agora = new Date();
+    const result = tickets.map(t => {
+      const tempoAberturaMin = Math.floor((agora.getTime() - new Date(t.dataAbertura).getTime()) / 60000);
+      return {
+        id: t.id,
+        protocolo: t.protocolo,
+        contactName: t.contactName,
+        assunto: t.assunto,
+        categoria: t.categoria,
+        etapa: t.etapa,
+        status: t.status,
+        prioridade: t.prioridade,
+        cliente: t.client?.razaoSocial || t.client?.nomeFantasia || null,
+        assignee: t.assignee ? { id: t.assignee.id, name: t.assignee.name } : null,
+        departamento: t.departamento ? { id: t.departamento.id, nome: t.departamento.nome, cor: t.departamento.cor } : null,
+        dataAbertura: t.dataAbertura,
+        dataInicioAtendimento: t.dataInicioAtendimento,
+        dataFechamento: t.dataFechamento,
+        tempoAberturaMin,
+        ultimaMensagem: t.messages[0]?.content?.substring(0, 120) || null,
+        totalMensagens: t._count.messages,
+        totalOrdens: t._count.orders,
+      };
+    });
+
+    const porEtapa: Record<string, any[]> = {};
+    const porStatus: Record<string, any[]> = {};
+    for (const t of result) {
+      if (!porEtapa[t.etapa]) porEtapa[t.etapa] = [];
+      porEtapa[t.etapa].push(t);
+      if (!porStatus[t.status]) porStatus[t.status] = [];
+      porStatus[t.status].push(t);
+    }
+
+    return res.json({
+      total: result.length,
+      tickets: result,
+      porEtapa,
+      porStatus,
+    });
+  } catch (error) {
+    console.error('Erro no dashboard detalhado:', error);
+    return res.status(500).json({ error: 'Erro ao carregar dashboard detalhado' });
+  }
+}
+
+export async function getAgentAuditHandler(req: AuthRequest, res: Response) {
+  try {
+    const { dataInicio, dataFim } = req.query;
+    const { getAgentPerformance } = await import('./ai-audit.service');
+    const result = await getAgentPerformance(
+      dataInicio as string | undefined,
+      dataFim as string | undefined
+    );
+    return res.json(result);
+  } catch (error) {
+    console.error('Erro na auditoria de agentes:', error);
+    return res.status(500).json({ error: 'Erro ao auditar agentes' });
+  }
+}

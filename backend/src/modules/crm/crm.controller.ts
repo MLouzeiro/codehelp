@@ -93,9 +93,24 @@ export async function createClient(req: AuthRequest, res: Response) {
 
 export async function updateClient(req: AuthRequest, res: Response) {
   try {
+    const { razaoSocial, nomeFantasia, cnpjCpf, segmento, origem, status, ativo, observacoes, telefone, email, cidade, estado, responsavelTecnicoId } = req.body;
     const client = await prisma.client.update({
       where: { id: req.params.id },
-      data: req.body,
+      data: {
+        ...(razaoSocial !== undefined && { razaoSocial }),
+        ...(nomeFantasia !== undefined && { nomeFantasia }),
+        ...(cnpjCpf !== undefined && { cnpjCpf: cnpjCpf?.trim() || null }),
+        ...(segmento !== undefined && { segmento }),
+        ...(origem !== undefined && { origem }),
+        ...(status !== undefined && { status }),
+        ...(ativo !== undefined && { ativo }),
+        ...(observacoes !== undefined && { observacoes }),
+        ...(telefone !== undefined && { telefone }),
+        ...(email !== undefined && { email }),
+        ...(cidade !== undefined && { cidade }),
+        ...(estado !== undefined && { estado }),
+        ...(responsavelTecnicoId !== undefined && { responsavelTecnicoId }),
+      },
     });
     return res.json(client);
   } catch (error) {
@@ -192,9 +207,18 @@ export async function createOpportunity(req: AuthRequest, res: Response) {
 
 export async function updateOpportunity(req: AuthRequest, res: Response) {
   try {
+    const { titulo, valorEstimado, etapa, probabilidade, dataFechamentoPrevista, responsavelId, clientId } = req.body;
     const opportunity = await prisma.opportunity.update({
       where: { id: req.params.id },
-      data: req.body,
+      data: {
+        ...(titulo !== undefined && { titulo }),
+        ...(valorEstimado !== undefined && { valorEstimado: valorEstimado ? parseFloat(valorEstimado) : null }),
+        ...(etapa !== undefined && { etapa }),
+        ...(probabilidade !== undefined && { probabilidade: parseInt(probabilidade) }),
+        ...(dataFechamentoPrevista !== undefined && { dataFechamentoPrevista: dataFechamentoPrevista ? new Date(dataFechamentoPrevista) : null }),
+        ...(responsavelId !== undefined && { responsavelId }),
+        ...(clientId !== undefined && { clientId }),
+      },
     });
     return res.json(opportunity);
   } catch (error) {
@@ -219,6 +243,30 @@ export async function getPipeline(req: AuthRequest, res: Response) {
     return res.json(pipeline);
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao buscar pipeline' });
+  }
+}
+
+export async function deleteOpportunity(req: AuthRequest, res: Response) {
+  try {
+    const opportunity = await prisma.opportunity.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!opportunity) return res.status(404).json({ error: 'Oportunidade não encontrada' });
+
+    await prisma.opportunity.delete({ where: { id: req.params.id } });
+    return res.status(204).send();
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao deletar oportunidade' });
+  }
+}
+
+export async function deleteContact(req: AuthRequest, res: Response) {
+  try {
+    const contact = await prisma.contact.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!contact) return res.status(404).json({ error: 'Contato não encontrado' });
+
+    await prisma.contact.delete({ where: { id: req.params.id } });
+    return res.status(204).send();
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao deletar contato' });
   }
 }
 

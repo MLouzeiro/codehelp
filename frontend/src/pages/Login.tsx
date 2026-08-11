@@ -1,11 +1,12 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/auth';
-import { LogIn, ArrowRight, Shield, Zap, BarChart3 } from 'lucide-react';
+import { LogIn, ArrowRight, Shield, Zap, BarChart3, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -62,7 +63,7 @@ export default function Login() {
 
             <div className="mt-14 space-y-5">
               {[
-                { icon: Shield, text: 'Gestão completa de clientes' },
+                  { icon: Shield, text: 'Gestao completa de clientes' },
                 { icon: Zap, text: 'OS Digital com assinatura via WhatsApp' },
                 { icon: BarChart3, text: 'Dashboard com insights de IA' },
                 { icon: ArrowRight, text: 'Kanban de tarefas integrado' },
@@ -127,17 +128,28 @@ export default function Login() {
                          style={{ fontFamily: 'Lexend, sans-serif' }}>
                     Senha
                   </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3.5 min-h-[48px] bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-slate-500
-                             focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200"
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                    required
-                    style={{ fontFamily: 'Lexend, sans-serif' }}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3.5 min-h-[48px] bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-slate-500
+                               focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 pr-12"
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      required
+                      style={{ fontFamily: 'Lexend, sans-serif' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors p-1"
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
 
                 <button

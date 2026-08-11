@@ -3,7 +3,24 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* :root {
+    --bg-app: #F8FAFC;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F8FAFC;
+    --bg-input: #FFFFFF;
+    --fg-primary: #1E293B;
+    --fg-secondary: #64748B;
+    --fg-muted: #94A3B8;
+    --border: #E2E8F0;
+    --border-light: #F1F5F9;
+    --accent: #3B82F6;
+    --accent-light: #60A5FA;
+    --accent-dark: #1D4ED8;
+    --font-scale: 1;
+  } */
+
+
+    :root {
     --bg-app: #F8FAFC;
     --bg-card: #FFFFFF;
     --bg-card-hover: #F8FAFC;
@@ -99,9 +116,10 @@
   }
 
   .btn-secondary {
-    @apply bg-white border-2 px-6 py-3 rounded-xl font-semibold
+    @apply border-2 px-6 py-3 rounded-xl font-semibold
            transition-all duration-200 ease-out
            focus:outline-none focus:ring-2 focus:ring-offset-2;
+    background-color: var(--bg-card);
     color: var(--accent-dark);
     border-color: var(--accent-light);
     font-family: 'Khand', sans-serif;
@@ -241,7 +259,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 568px) {
   .touch-target {
     min-height: 44px;
     min-width: 44px;

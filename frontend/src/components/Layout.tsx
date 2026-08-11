@@ -1,34 +1,37 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/auth';
 import { useThemeSettings } from '../services/ThemeContext';
-import ThemeSettings from './ThemeSettings';
+import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import {
   LayoutDashboard, Users, FileText, MessageSquare, Kanban,
   Settings, LogOut, Menu, X, ChevronDown, Bot, TrendingUp, BarChart3,
   Stethoscope, Activity, LineChart, BookOpen, Zap, ArrowUpDown,
-  Bell, Check, CheckCheck, Sun, Moon, Shield,
+  Bell, Check, CheckCheck, Sun, Moon, Shield, Timer,
 } from 'lucide-react';
-import SearchBar from './SearchBar';
-import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import type { Notificacao } from '../types';
 
+const ThemeSettings = lazy(() => import('./ThemeSettings'));
+const SearchBar = lazy(() => import('./SearchBar'));
+
 const navItems = [
-  { path: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/app/helpdesk', label: 'Helpdesk', icon: Stethoscope },
-  { path: '/app/helpdesk/painel', label: 'Painel ao Vivo', icon: Activity, roles: ['admin', 'gerente'] },
-  { path: '/app/helpdesk/metrics', label: 'Métricas', icon: LineChart, roles: ['admin', 'gerente'] },
-  { path: '/app/helpdesk/board', label: 'Board', icon: ArrowUpDown, roles: ['admin', 'gerente'] },
-  { path: '/app/helpdesk/aprovacoes', label: 'Aprovações', icon: Shield, roles: ['admin', 'gerente'] },
-  { path: '/app/kb', label: 'KB', icon: BookOpen, roles: ['admin', 'gerente', 'tecnico', 'vendedor'] },
-  { path: '/app/automations', label: 'Automações', icon: Zap, roles: ['admin', 'gerente', 'supervisor'] },
-  { path: '/app/crm', label: 'CRM', icon: Users },
-  { path: '/app/crm/pipeline', label: 'Pipeline', icon: TrendingUp },
-  { path: '/app/orders', label: 'OS', icon: FileText },
+  { path: '/app/dashboard', label: 'Painel Geral', icon: LayoutDashboard },
+  { path: '/app/helpdesk', label: 'Chamados', icon: Stethoscope },
+  { path: '/app/helpdesk/painel', label: 'Atendimento Ao Vivo', icon: Activity, roles: ['admin', 'gerente'] },
+  { path: '/app/helpdesk/metrics', label: 'Metricas Operacionais', icon: LineChart, roles: ['admin', 'gerente'] },
+  { path: '/app/helpdesk/business-metrics', label: 'Metricas de Negocio', icon: BarChart3, roles: ['admin', 'gerente'] },
+  { path: '/app/helpdesk/board', label: 'Quadro de Status', icon: ArrowUpDown, roles: ['admin', 'gerente'] },
+  // { path: '/app/helpdesk/aprovacoes', label: 'Aprovacoes', icon: Shield, roles: ['admin', 'gerente'] },
+  { path: '/app/kb', label: 'Base de Conhecimento', icon: BookOpen, roles: ['admin', 'gerente', 'tecnico', 'vendedor'] },
+  { path: '/app/automations', label: 'Automacoes', icon: Zap, roles: ['admin', 'gerente', 'supervisor'] },
+  { path: '/app/crm', label: 'Clientes', icon: Users },
+  { path: '/app/crm/pipeline', label: 'Pipeline de Vendas', icon: TrendingUp },
+  { path: '/app/orders', label: 'Ordens de Servico', icon: FileText },
+  { path: '/app/timetracking', label: 'Time Tracking', icon: Timer },
   { path: '/app/whatsapp', label: 'WhatsApp', icon: MessageSquare },
-  { path: '/app/kanban', label: 'Tarefas', icon: Kanban },
-  { path: '/app/robos', label: 'Robôs', icon: Bot },
-  { path: '/app/crm/temas', label: 'Temas', icon: FileText, roles: ['admin', 'gerente', 'vendedor'] },
+  { path: '/app/kanban', label: 'Tarefas Internas', icon: Kanban },
+  { path: '/app/robos', label: 'Chatbots', icon: Bot },
+  // { path: '/app/crm/temas', label: 'Temas CRM', icon: FileText, roles: ['admin', 'gerente', 'vendedor'] },
 ];
 
 export default function Layout() {
@@ -179,10 +182,14 @@ export default function Layout() {
         </Link>
       )}
       <div className="flex-1 max-w-md mx-4 hidden sm:block">
-        <SearchBar compact />
+        <Suspense fallback={<div className="h-10 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
+          <SearchBar compact />
+        </Suspense>
       </div>
       <div className="flex-1" />
-      <ThemeSettings />
+      <Suspense fallback={<div className="w-10 h-10" />}>
+        <ThemeSettings />
+      </Suspense>
       <div className="relative" ref={notifRef}>
         <button onClick={() => setNotifOpen(!notifOpen)} className="relative p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
           <Bell size={18} />

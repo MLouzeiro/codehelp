@@ -1,17 +1,11 @@
 import prisma from '../../config/database';
 import { getSaudacao, getHorarioConfig } from './horario';
 
-const DEFAULT_BOAS_VINDAS =
-  'Olá!! {{nome}} {{saudacao}} 👋\n\nQue bom ter você por aqui!\n\nComo podemos te ajudar hoje(Apenas números)?\n1️⃣ Suporte\n2️⃣ Comercial';
-
-const DEFAULT_OPCAO_INVALIDA =
-  'Hmm, não entendi sua resposta, {{nome}} 😅\n\nPor favor, responda com *1* para Suporte ou *2* para Comercial.';
-
-export type OpcaoMenu = '1' | '2';
+export type OpcaoMenu = string;
 
 export function detectarOpcaoMenu(text: string): OpcaoMenu | null {
-  const limpo = text.trim().replace(/[^12]/g, '');
-  if (limpo === '1' || limpo === '2') return limpo as OpcaoMenu;
+  const limpo = text.trim();
+  if (/^\d+$/.test(limpo)) return limpo;
   return null;
 }
 
@@ -20,24 +14,106 @@ function interpolar(template: string, vars: Record<string, string>): string {
 }
 
 export async function montarBoasVindas(nome: string, now: Date = new Date()): Promise<string> {
-  let template = DEFAULT_BOAS_VINDAS;
+  const departamentos = await prisma.departamento.findMany({
+    where: { ativo: true },
+    orderBy: { ordem: 'asc' },
+  });
+
+  if (departamentos.length === 0) {
+    return `Olá! ${getSaudacao(now)}, ${nome || 'cliente'} 👋\n\nNo momento não há departamentos disponíveis. Entre em contato com o administrador do sistema.`;
+  }
+
+  const opcoes = departamentos.map((d, i) => `${i + 1}️⃣ ${d.nome}`).join('\n');
+
+  let baseMsg = `Olá! ${getSaudacao(now)}, ${nome || 'cliente'} 👋\n\nQue bom ter você por aqui!\n\nPor favor, selecione o departamento desejado:\n\n${opcoes}`;
+
   try {
     const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
-    if (config?.mensagemBoasVindas) template = config.mensagemBoasVindas;
+    if (config?.mensagemBoasVindas) {
+      baseMsg = interpolar(config.mensagemBoasVindas, {
+        nome: nome || 'cliente',
+        saudacao: getSaudacao(now),
+        departamentos: opcoes,
+      });
+    }
   } catch {}
-  return interpolar(template, {
-    nome: nome || 'cliente',
-    saudacao: getSaudacao(now),
-  });
+
+  // SEMPRE anexar a lista de departamentos se não estiver presente na mensagem
+  if (!baseMsg.includes('1️⃣')) {
+    baseMsg += `\n\nPor favor, selecione o departamento desejado:\n\n${opcoes}`;
+  }
+
+  return baseMsg;
 }
 
 export async function montarOpcaoInvalida(nome: string): Promise<string> {
-  let template = DEFAULT_OPCAO_INVALIDA;
+  const departamentos = await prisma.departamento.findMany({
+    where: { ativo: true },
+    orderBy: { ordem: 'asc' },
+  });
+
+  const maxOpcao = departamentos.length;
+  const defaultMsg = `Hmm, não entendi sua resposta, ${nome || 'cliente'} 😅\n\nPor favor, responda com um número de *1* a *${maxOpcao}* para selecionar o departamento.`;
+
   try {
     const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
-    if ((config as any)?.mensagemOpcaoInvalida) template = (config as any).mensagemOpcaoInvalida;
+    if ((config as any)?.mensagemOpcaoInvalida) {
+      return interpolar((config as any).mensagemOpcaoInvalida, {
+        nome: nome || 'cliente',
+        maxOpcao: String(maxOpcao),
+        departamentos: departamentos.map((d, i) => `${i + 1}️⃣ ${d.nome}`).join('\n'),
+      });
+    }
   } catch {}
-  return interpolar(template, { nome: nome || 'cliente' });
+
+  return defaultMsg;
+}
+
+export async function resolverOpcaoMenu(opcao: string): Promise<{
+  departamentoId: string;
+  departamentoNome: string;
+} | null> {
+  const idx = parseInt(opcao, 10) - 1;
+  const departamentos = await prisma.departamento.findMany({
+    where: { ativo: true },
+    orderBy: { ordem: 'asc' },
+  });
+
+  if (idx < 0 || idx >= departamentos.length) return null;
+
+  const dept = departamentos[idx];
+  return { departamentoId: dept.id, departamentoNome: dept.nome };
+}
+
+export async function montarAckDepartamento(nome: string, deptNome: string): Promise<string> {
+  // Verificar se existe mensagem customizada no HelpdeskConfig
+  try {
+    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'auto_atendimento' } });
+    if ((config as any)?.mensagemDescricaoProblema) {
+      return interpolar((config as any).mensagemDescricaoProblema, {
+        nome: nome || 'cliente',
+        departamento: deptNome,
+      });
+    }
+  } catch {}
+
+  return `Perfeito, ${nome || 'cliente'}! ✅\nVocê selecionou *${deptNome}*.\n\n📝 Por favor, descreva detalhadamente seu problema ou solicitação. Quanto mais informações, melhor poderemos ajudá-lo.\n\nAguardamos sua mensagem!`;
+}
+
+export async function montarPosicaoFilaComInfo(nome: string, posicao: number, jaInformouAssunto: boolean, jaInformouLab: boolean): Promise<string> {
+  const pendencias: string[] = [];
+  if (!jaInformouAssunto) pendencias.push('📋 *Descrição do problema*');
+  if (!jaInformouLab) pendencias.push('🏢 *Empresa/Laboratório*');
+
+  let msg = `📋 Sua posição na fila é *${posicao}º*.\nAguarde um instante, por favor.`;
+
+  if (pendencias.length > 0) {
+    msg += `\n\n⚠️ Ainda faltam algumas informações:\n${pendencias.join('\n')}\n\nPor favor, envie os dados acima para que possamos dar andamento ao seu chamado.`;
+  } else {
+    msg += `\n\n✅ Informações completas! Um analista te atenderá em breve.`;
+  }
+
+  return msg;
 }
 
 export async function montarAckSuporte(nome: string): Promise<string> {

@@ -1,0 +1,11 @@
+2026/07/14-14:19:07.423 6de4 Reusing MANIFEST C:\Users\Louzeiro\Documents\Louzeiro\Projeto\code-help\backend\whatsapp-session\session-code-help\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/07/14-14:19:07.442 6de4 Recovering log #207
+2026/07/14-14:19:07.491 6de4 Reusing old log C:\Users\Louzeiro\Documents\Louzeiro\Projeto\code-help\backend\whatsapp-session\session-code-help\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000207.log 
+2026/07/14-14:19:16.283 6de4 Level-0 table #213: started
+2026/07/14-14:19:16.331 6de4 Level-0 table #213: 1158749 bytes OK
+2026/07/14-14:19:16.336 6de4 Delete type=0 #207
+2026/07/14-14:19:16.342 6de4 Compacting 1@1 + 2@2 files
+2026/07/14-14:19:16.480 6de4 Generated table #214@1: 54061 keys, 2237822 bytes
+2026/07/14-14:19:16.541 6de4 Generated table #215@1: 14235 keys, 885567 bytes
+2026/07/14-14:19:16.541 6de4 Compacted 1@1 + 2@2 files => 3123389 bytes
+2026/07/14-14:19:16.545 6de4 compacted to: files[ 0 0 2 0 0 0 0 ]

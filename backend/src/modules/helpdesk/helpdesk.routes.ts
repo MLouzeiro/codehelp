@@ -26,6 +26,8 @@ import {
   getTicketDepartmentTime,
   criarKanbanTaskHandler,
   getMetricasFCR,
+  getDetailedDashboard,
+  getAgentAuditHandler,
 } from './helpdesk.controller';
 import {
   getStages,
@@ -104,5 +106,7 @@ router.get('/tickets/:id/fcr', requireTicketAccess('view'), getTicketFCR);
 router.get('/tickets/:id/department-time', requireTicketAccess('view'), getTicketDepartmentTime);
 router.post('/tickets/:id/criar-kanban', requireTicketAccess('edit'), criarKanbanTaskHandler);
 router.get('/fcr/metricas', authorize('admin', 'gerente'), getMetricasFCR);
+router.get('/dashboard/detalhado', authorize('admin', 'gerente'), getDetailedDashboard);
+router.get('/audit/agent-performance', authorize('admin', 'gerente'), getAgentAuditHandler);
 
 export default router;

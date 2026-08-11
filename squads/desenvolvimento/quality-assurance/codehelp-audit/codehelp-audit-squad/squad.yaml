@@ -1,0 +1,98 @@
+squad:
+  code: codehelp-audit-squad
+  setor: desenvolvimento
+  grupo: quality-assurance
+  sessao: codehelp-audit
+  name: "CodeHelp CRM — Auditoria e Documentacao Completa"
+  description: "Squad especializado em auditar, testar e documentar o sistema CodeHelp CRM. Cobre testes de QA como cliente, revisao de codigo, auditoria de UX/UI, analise de experiencia do cliente e geracao de manual completo de funcionalidades."
+  icon: magnifying-glass
+  version: "1.0.0"
+
+  company: "_expxagents/_memory/company.md"
+  preferences: "_expxagents/_memory/preferences.md"
+  memory: "_memory/memories.md"
+
+  target_audience: "Equipe de desenvolvimento e produto da Codemed Tecnologia"
+  platform: "web"
+  format: "technical-documentation"
+
+  schedule:
+    enabled: true
+
+  skills:
+    - web_search
+    - web_fetch
+
+  data:
+    - "backend/src/**/*.ts"
+    - "frontend/src/**/*.{ts,tsx}"
+    - "backend/prisma/schema.prisma"
+    - "AGENTS.md"
+    - "SPEC.md"
+
+  agents:
+    - id: qa-senior
+      name: "Rafael Costa"
+      icon: shield-check
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Rafael"
+      prompt: agents/qa-senior.md
+
+    - id: code-reviewer-senior
+      name: "Andre Lima"
+      icon: magnifying-glass
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Andre"
+      prompt: agents/code-reviewer-senior.md
+
+    - id: ux-auditor
+      name: "Camila Ferreira"
+      icon: sparkles
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Camila"
+      prompt: agents/ux-auditor.md
+
+    - id: csm-auditor
+      name: "Fernando Alves"
+      icon: star
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Fernando"
+      prompt: agents/csm-auditor.md
+
+    - id: tech-writer-senior
+      name: "Beatriz Santos"
+      icon: file-text
+      avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Beatriz"
+      prompt: agents/tech-writer-senior.md
+
+  pipeline:
+    steps:
+      - id: step-01
+        agent: qa-senior
+        label: "Testes de QA como cliente — Validar todos os fluxos do usuario final"
+        execution: inline
+        produces_format: false
+
+      - id: step-02
+        agent: code-reviewer-senior
+        label: "Revisao de codigo — Analise tecnica, seguranca e performance"
+        execution: inline
+        deliverFrom: qa-senior
+        produces_format: false
+
+      - id: step-03
+        agent: ux-auditor
+        label: "Auditoria de UX/UI — Usabilidade, acessibilidade e design"
+        execution: inline
+        deliverFrom: code-reviewer-senior
+        produces_format: false
+
+      - id: step-04
+        agent: csm-auditor
+        label: "Analise de experiencia do cliente — Pontos de fricao e adocao"
+        execution: inline
+        deliverFrom: ux-auditor
+        produces_format: false
+
+      - id: step-05
+        agent: tech-writer-senior
+        label: "Documentacao — Gerar manual completo de funcionalidades"
+        execution: inline
+        deliverFrom: csm-auditor
+        produces_format: true

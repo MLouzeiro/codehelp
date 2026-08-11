@@ -6,6 +6,7 @@ import {
   postResponderCsatPublic,
   getEstatisticasCsatRoute,
   postProcessarCsat,
+  getCsatPorAgente,
 } from './csat.controller';
 
 const router = Router();
@@ -17,5 +18,6 @@ router.post('/ticket/:ticketId/agendar', postAgendarCsat);
 router.post('/ticket/:ticketId/enviar', postEnviarCsat);
 router.post('/processar', authorize('admin', 'gerente', 'supervisor'), postProcessarCsat);
 router.get('/estatisticas', authorize('admin', 'gerente', 'supervisor'), getEstatisticasCsatRoute);
+router.get('/por-agente', authorize('admin', 'gerente', 'supervisor'), getCsatPorAgente);
 
 export default router;

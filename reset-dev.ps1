@@ -130,7 +130,7 @@ if (-not $KeepSession) {
 # 4) Iniciar dev (opcional)
 # -----------------------------------------------------------------------------
 if ($NoStart) {
-    Write-Step "Reset concluído. Use 'npm run dev' para iniciar."
+    Write-Step "Reset concluido. Use npm run dev para iniciar."
     exit 0
 }
 

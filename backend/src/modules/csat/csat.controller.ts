@@ -79,3 +79,64 @@ export async function postProcessarCsat(req: AuthRequest, res: Response) {
     return res.status(500).json({ error: 'Erro ao processar CSAT' });
   }
 }
+
+export async function getCsatPorAgente(req: AuthRequest, res: Response) {
+  try {
+    const { dataInicio, dataFim } = req.query;
+    const where: any = {
+      respondidoEm: { not: null },
+    };
+    if (dataInicio && dataFim) {
+      where.respondidoEm = { gte: new Date(dataInicio as string), lte: new Date(dataFim as string) };
+    }
+
+    const respostas = await (await import('../../config/database')).default.cSATResposta.findMany({
+      where,
+      include: {
+        ticket: {
+          select: {
+            id: true, protocolo: true, assigneeId: true,
+            assignee: { select: { id: true, name: true } },
+            contactName: true,
+          },
+        },
+      },
+      orderBy: { respondidoEm: 'desc' },
+    });
+
+    const porAgente: Record<string, { nome: string; total: number; somaNotas: number; notas: number[]; respostas: any[] }> = {};
+
+    for (const r of respostas) {
+      const agenteId = r.ticket.assigneeId || 'sem_agente';
+      const agenteNome = r.ticket.assignee?.name || 'Sem atendente';
+      if (!porAgente[agenteId]) {
+        porAgente[agenteId] = { nome: agenteNome, total: 0, somaNotas: 0, notas: [], respostas: [] };
+      }
+      porAgente[agenteId].total++;
+      porAgente[agenteId].somaNotas += r.nota || 0;
+      if (r.nota) porAgente[agenteId].notas.push(r.nota);
+      porAgente[agenteId].respostas.push({
+        ticketId: r.ticketId,
+        protocolo: r.ticket.protocolo,
+        contactName: r.ticket.contactName,
+        nota: r.nota,
+        comentario: r.comentario,
+        respondidoEm: r.respondidoEm,
+      });
+    }
+
+    const resultado = Object.entries(porAgente).map(([id, d]) => ({
+      agenteId: id,
+      agenteNome: d.nome,
+      totalRespostas: d.total,
+      mediaNotas: d.total > 0 ? Math.round((d.somaNotas / d.total) * 10) / 10 : 0,
+      distribuicao: [1, 2, 3, 4, 5].map(n => d.notas.filter(x => x === n).length),
+      ultimasRespostas: d.respostas.slice(0, 10),
+    }));
+
+    return res.json(resultado.sort((a, b) => b.mediaNotas - a.mediaNotas));
+  } catch (error) {
+    console.error('Erro ao buscar CSAT por agente:', error);
+    return res.status(500).json({ error: 'Erro ao buscar CSAT por agente' });
+  }
+}

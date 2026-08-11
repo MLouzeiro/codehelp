@@ -45,20 +45,51 @@ export async function enviarMenuInicial(ticketId: string) {
     console.warn(`[Fila] Menu inicial: ticket ${ticketId} nao encontrado ou sem telefone`);
     return;
   }
-  if (ticket.etapa !== 'triagem' || ticket.departamentoId) {
+  if ((ticket.etapa !== 'triagem' && ticket.etapa !== 'boas_vindas' && ticket.etapa !== 'fila') || ticket.departamentoId) {
     console.log(`[Fila] Menu inicial ignorado: ticket ${ticketId} etapa=${ticket.etapa} depto=${ticket.departamentoId}`);
     return;
   }
-  const texto = await montarBoasVindas(ticket.contactName || '');
+
+  const departamentos = await prisma.departamento.findMany({
+    where: { ativo: true },
+    orderBy: { ordem: 'asc' },
+  });
+
+  if (departamentos.length === 0) {
+    console.warn(`[Fila] Nenhum departamento ativo encontrado para ticket ${ticketId}`);
+    return;
+  }
+
+  let baseText = `Olá! 👋\n\nQue bom ter você por aqui!\n\nPor favor, selecione o departamento desejado:`;
+  try {
+    const config = await getEtapaConfig('fila');
+    if (config?.mensagemBoasVindas) {
+      const nome = ticket.contactName || 'cliente';
+      const saudacao = interpolate('{{saudacao}}', buildMessageVars({ contactName: nome }));
+      baseText = interpolate(config.mensagemBoasVindas, { nome, saudacao, departamentos: '' })
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+  } catch {}
+
+  const deptList = departamentos.map((d, i) => `*${i + 1}* - ${d.nome}`).join('\n');
+  const menuText = `${baseText}\n\n${deptList}\n\nResponda com o *número* do departamento.`;
+
   const phone = sanitizePhoneNumber(ticket.contactPhone).replace(/@c\.us$/i, '');
-  const result = await sendWhatsAppMessage(phone, texto, undefined, ticket.contactJid || undefined);
+  const result = await sendWhatsAppMessage(
+    phone,
+    menuText,
+    (ticket as any).whatsappConnectionId || undefined,
+    ticket.contactJid || undefined,
+  );
+
   if (result.success) {
     await prisma.message.create({
-      data: { ticketId, fromMe: true, content: texto, source: 'bot', tipo: 'system' },
+      data: { ticketId, fromMe: true, content: '[Bot] Menu de departamentos enviado', source: 'bot', tipo: 'system' },
     });
-    console.log(`[Fila] Saudacao enviada para ticket ${ticketId}`);
+    console.log(`[Fila] Menu enviado para ticket ${ticketId}`);
   } else {
-    console.warn(`[Fila] Falha ao enviar saudacao para ticket ${ticketId}: ${result.error}`);
+    console.warn(`[Fila] Falha ao enviar menu para ticket ${ticketId}: ${result.error}`);
   }
 }
 
@@ -66,7 +97,7 @@ export async function iniciarOuResetarTriagem(ticketId: string) {
   await ensureHelpdeskConfigs();
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket) return;
-  if (ticket.protocolo || (ticket.etapa !== 'triagem' && ticket.etapa !== 'fila')) {
+  if (ticket.protocolo || (ticket.etapa !== 'triagem' && ticket.etapa !== 'boas_vindas' && ticket.etapa !== 'fila')) {
     cancelarTriagem(ticketId);
     return;
   }
@@ -84,7 +115,7 @@ export async function iniciarOuResetarTriagem(ticketId: string) {
     timersAtivos.delete(ticketId);
     if (followupEnviado.has(ticketId)) return;
     const t = await prisma.ticket.findUnique({ where: { id: ticketId } });
-    if (!t || t.protocolo || (t.etapa !== 'triagem' && t.etapa !== 'fila') || t.status === 'fechado') return;
+    if (!t || t.protocolo || (t.etapa !== 'triagem' && t.etapa !== 'boas_vindas' && t.etapa !== 'fila') || t.status === 'fechado') return;
     await enviarFollowUp(ticketId);
   }, ms);
 

@@ -67,7 +67,11 @@ export async function migrarStatusETickets(): Promise<{ atualizados: number; sem
     console.log(`[Helpdesk] Migracao status: ${atualizados} tickets com status sincronizado`);
   }
   if (semMapeamento > 0) {
-    console.log(`[Helpdesk] Migracao status: ${semMapeamento} tickets com etapa sem mapeamento (ignorados)`);
+    const unmapped = tickets.filter((t) => !ETAPA_PARA_STATUS[t.etapa]);
+    console.log(`[Helpdesk] Migracao status: ${semMapeamento} tickets com etapa sem mapeamento (ignorados):`);
+    for (const t of unmapped) {
+      console.log(`  - Ticket ${t.id}: etapa="${t.etapa}" status="${t.status}"`);
+    }
   }
   return { atualizados, semMapeamento };
 }

@@ -1,5 +1,10 @@
 version: '3.8'
 
+# ============================================
+# CODEMED HUB — Docker Compose (Producao)
+# Uso: docker-compose up -d
+# ============================================
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -10,7 +15,7 @@ services:
     environment:
       POSTGRES_USER: codemed
       POSTGRES_PASSWORD: codemed123
-      POSTGRES_DB: codemed
+      POSTGRES_DB: codemed_hub
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,6 +37,41 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: codemed-backend
+    restart: unless-stopped
+    ports:
+      - '3010:3010'
+    environment:
+      DATABASE_URL: postgresql://codemed:codemed123@postgres:5432/codemed_hub?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_me_in_production}
+      APP_URL: http://localhost:3000
+      API_URL: http://localhost:3010
+      PORT: '3010'
+      NODE_ENV: production
+      TIMEZONE: America/Fortaleza
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: codemed-frontend
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

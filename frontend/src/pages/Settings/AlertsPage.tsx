@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import { Plus, X, Bell, Trash2, Send, AlertCircle } from 'lucide-react';
 
@@ -64,12 +64,12 @@ export default function AlertsPage() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/30 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
           <AlertCircle size={16} /> {error}
         </div>
       )}
       <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold text-gray-900">Alertas Semanais</h1><p className="text-gray-500">Configuração do relatório automático de segunda-feira</p></div>
+        <div><h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Alertas Semanais</h1><p className="text-gray-500 dark:text-slate-400">Configuração do relatório automático de segunda-feira</p></div>
         <div className="flex gap-2">
           <button onClick={triggerNow} className="btn-primary flex items-center gap-2"><Send size={16} /> Disparar Agora</button>
           <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2"><Plus size={18} /> Novo Destinatário</button>
@@ -77,8 +77,8 @@ export default function AlertsPage() {
       </div>
 
       <div className="card">
-        <p className="text-sm text-gray-500 mb-1">Próximo disparo automático</p>
-        <p className="font-medium text-gray-900">Toda segunda-feira às 08:00 (America/Fortaleza)</p>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mb-1">Próximo disparo automático</p>
+        <p className="font-medium text-gray-900 dark:text-slate-100">Toda segunda-feira às 08:00 (America/Fortaleza)</p>
       </div>
 
       {showForm && (
@@ -92,35 +92,35 @@ export default function AlertsPage() {
       )}
 
       <div className="card">
-        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Bell size={18} /> Destinatários ({recipients.length})</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4 flex items-center gap-2"><Bell size={18} /> Destinatários ({recipients.length})</h3>
         <div className="space-y-2">
           {recipients.map((r) => (
-            <div key={r.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div key={r.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
               <div>
-                <p className="text-sm font-medium text-gray-900">{r.nome} {!r.ativo && <span className="badge bg-gray-100 text-gray-500">Inativo</span>}</p>
-                <p className="text-xs text-gray-500">{r.whatsapp}{r.cargo ? ` • ${r.cargo}` : ''}</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{r.nome} {!r.ativo && <span className="badge bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400">Inativo</span>}</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">{r.whatsapp}{r.cargo ? ` • ${r.cargo}` : ''}</p>
               </div>
               <button onClick={() => deleteRecipient(r.id)} className="text-red-400 hover:text-red-600"><Trash2 size={16} /></button>
             </div>
           ))}
-          {recipients.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Nenhum destinatário cadastrado</p>}
+          {recipients.length === 0 && <p className="text-sm text-gray-400 dark:text-slate-500 text-center py-4">Nenhum destinatário cadastrado</p>}
         </div>
       </div>
 
       <div className="card">
-        <h3 className="font-semibold text-gray-900 mb-4">Histórico de Disparos</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Histórico de Disparos</h3>
         <div className="space-y-2">
           {history.slice(0, 10).map((h) => (
-            <div key={h.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg text-sm">
+            <div key={h.id} className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg text-sm">
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${h.status === 'enviado' ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="text-gray-500">{h.tipo}</span>
-                <span className="text-gray-400">{h.destinatarios}</span>
+                <span className="text-gray-500 dark:text-slate-400">{h.tipo}</span>
+                <span className="text-gray-400 dark:text-slate-500">{h.destinatarios}</span>
               </div>
-              <span className="text-gray-400 text-xs">{new Date(h.enviadoEm).toLocaleString('pt-BR')}</span>
+              <span className="text-gray-400 dark:text-slate-500 text-xs">{new Date(h.enviadoEm).toLocaleString('pt-BR')}</span>
             </div>
           ))}
-          {history.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Nenhum disparo realizado</p>}
+          {history.length === 0 && <p className="text-sm text-gray-400 dark:text-slate-500 text-center py-4">Nenhum disparo realizado</p>}
         </div>
       </div>
     </div>

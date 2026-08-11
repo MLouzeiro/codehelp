@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { processarAlertasSLA } from './sla.service';
 import { avaliarRegras } from '../automations/automations.service';
+import { calcularPosicaoFila, recalcularFilaDepartamento } from './fila.service';
 import prisma from '../../config/database';
 
 const CRON_EXPRESSION = '*/5 * * * *';
@@ -12,7 +13,7 @@ async function autoEscalation(): Promise<number> {
 
   const tickets = await prisma.ticket.findMany({
     where: {
-      status: { in: ['aberto', 'em_andamento', 'pendente'] },
+      status: { in: ['aberto', 'em_atendimento', 'pendente'] },
       etapa: { in: ['fila', 'em_atendimento'] },
     },
     include: {
@@ -39,12 +40,18 @@ async function autoEscalation(): Promise<number> {
     if (jaNotificado) continue;
 
     try {
+      const proximaFila = await prisma.fila.findUnique({ where: { id: ticket.fila.proximaFilaId } });
+      const deptId = proximaFila?.departamentoId || ticket.departamentoId || null;
+      const filaOrder = await calcularPosicaoFila(deptId);
+
       await prisma.ticket.update({
         where: { id: ticket.id },
         data: {
           status: 'escalonado',
           etapa: 'fila',
           idFila: ticket.fila.proximaFilaId,
+          filaOrder,
+          assigneeId: null,
         },
       });
 

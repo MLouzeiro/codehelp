@@ -11,6 +11,9 @@ import {
   getKb,
   getKbPorSlug,
   sugerirKbParaTicket,
+  listarVersoes,
+  getVersao,
+  gerarVideoHtml,
 } from './kb.service';
 import { logAction, getIpFromRequest } from '../audit/audit.service';
 import { canEditKB, canPublishKB, canManageUsers } from '../auth/rbac';
@@ -20,7 +23,7 @@ export async function postKb(req: AuthRequest, res: Response) {
     if (!canEditKB(req.user?.role)) {
       return res.status(403).json({ error: 'Acesso nao autorizado' });
     }
-    const { titulo, conteudo, resumo, categoriaId, tags, publicado, ordem } = req.body;
+    const { titulo, conteudo, resumo, categoriaId, tags, publicado, ordem, passos, imagens } = req.body;
     if (!titulo || !conteudo) {
       return res.status(400).json({ error: 'titulo e conteudo sao obrigatorios' });
     }
@@ -33,6 +36,8 @@ export async function postKb(req: AuthRequest, res: Response) {
       autorId: req.user?.id ?? null,
       publicado: publicado ?? false,
       ordem: ordem ?? 0,
+      passos: passos ?? null,
+      imagens: imagens ?? null,
     });
     await logAction({
       usuarioId: req.user?.id,
@@ -108,7 +113,7 @@ export async function patchKb(req: AuthRequest, res: Response) {
       return res.status(403).json({ error: 'Acesso nao autorizado' });
     }
     const { id } = req.params;
-    const kb = await atualizarKb(id, req.body);
+    const kb = await atualizarKb(id, req.body, req.user?.id ?? null);
     await logAction({
       usuarioId: req.user?.id,
       acao: 'kb_atualizar',
@@ -197,5 +202,51 @@ export async function getSugerirKb(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('Erro ao sugerir KB:', error);
     return res.status(500).json({ error: 'Erro ao sugerir artigos' });
+  }
+}
+
+export async function getVersoesKb(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const versoes = await listarVersoes(id);
+    return res.json(versoes);
+  } catch (error) {
+    console.error('Erro ao listar versoes:', error);
+    return res.status(500).json({ error: 'Erro ao listar versoes' });
+  }
+}
+
+export async function getVersaoKb(req: AuthRequest, res: Response) {
+  try {
+    const { id, version } = req.params;
+    const versao = await getVersao(id, parseInt(version, 10));
+    if (!versao) return res.status(404).json({ error: 'Versao nao encontrada' });
+    return res.json(versao);
+  } catch (error) {
+    console.error('Erro ao buscar versao:', error);
+    return res.status(500).json({ error: 'Erro ao buscar versao' });
+  }
+}
+
+export async function gerarVideoKb(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const kb = await getKb(id);
+    if (!kb) return res.status(404).json({ error: 'Artigo nao encontrado' });
+
+    const html = gerarVideoHtml({
+      titulo: kb.titulo,
+      conteudo: kb.conteudo,
+      resumo: kb.resumo,
+      passos: kb.passos,
+      imagens: kb.imagens,
+    });
+
+    // Return HTML directly — frontend opens in iframe/new tab
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(html);
+  } catch (error) {
+    console.error('Erro ao gerar video:', error);
+    return res.status(500).json({ error: 'Erro ao gerar video' });
   }
 }

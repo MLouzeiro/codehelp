@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../shared/middleware/auth';
 import { getLogs, getLogsByEntidade } from './audit.service';
+import { getAuditStats } from './auditStats.service';
 
 export async function listAuditLogs(req: AuthRequest, res: Response) {
   try {
@@ -30,5 +31,19 @@ export async function getTicketAuditLogs(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('Erro ao listar audit logs do ticket:', error);
     return res.status(500).json({ error: 'Erro ao listar logs do ticket' });
+  }
+}
+
+export async function getAuditStatsHandler(req: AuthRequest, res: Response) {
+  try {
+    const { dataInicio, dataFim } = req.query;
+    const stats = await getAuditStats(
+      dataInicio ? new Date(dataInicio as string) : undefined,
+      dataFim ? new Date(dataFim as string) : undefined
+    );
+    return res.json(stats);
+  } catch (error) {
+    console.error('Erro ao buscar stats de auditoria:', error);
+    return res.status(500).json({ error: 'Erro ao buscar stats' });
   }
 }

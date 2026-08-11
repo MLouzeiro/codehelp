@@ -22,29 +22,39 @@ const SESSION_BASE_DIR = path.resolve(env.whatsappSessionPath || './whatsapp-ses
 const MAX_RECONNECT = 10;
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const HEARTBEAT_TIMEOUT_MS = 90_000;
+const PERIODIC_RETRY_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
 const logger = pino({ level: 'silent' });
 
 interface ConnectionState {
   socket: WASocket | null;
   connected: boolean;
+  connecting: boolean;
   qrCode: string | null;
   error: string | null;
   reconnectAttempts: number;
   lastMessageAt: Date | null;
   manualDisconnect: boolean;
   heartbeatTimer: ReturnType<typeof setInterval> | null;
+  periodicRetryTimer: ReturnType<typeof setInterval> | null;
+  sessionId: string;
+  onQr?: (qr: string) => void;
+  onConnected?: () => void;
+  onError?: (error: string) => void;
 }
 
 function createEmptyState(sessionId: string): ConnectionState {
   return {
     socket: null,
     connected: false,
+    connecting: false,
     qrCode: null,
     error: null,
     reconnectAttempts: 0,
     lastMessageAt: null,
     manualDisconnect: false,
     heartbeatTimer: null,
+    periodicRetryTimer: null,
+    sessionId,
   };
 }
 
@@ -106,6 +116,7 @@ class BaileysProviderService {
     const state = this.connections.get(connectionId);
     if (state) {
       this.stopHeartbeat(state);
+      this.stopPeriodicRetry(state);
     }
     if (state?.socket) {
       try { state.socket.end(undefined); } catch {}
@@ -151,29 +162,46 @@ class BaileysProviderService {
       }
       const lastMsg = state.lastMessageAt?.getTime() || 0;
       const now = Date.now();
-      const elapsed = lastMsg > 0 ? Math.round((now - lastMsg) / 1000) : 'N/A';
+      const elapsed = lastMsg > 0 ? Math.round((now - lastMsg) / 1000) : -1;
       const wsState = (state.socket as any)?.ws?.readyState;
-      console.log(`[Baileys ${sessionId}] Heartbeat: lastMsg=${elapsed}s, ws=${wsState}`);
-      if (lastMsg > 0 && (now - lastMsg) > HEARTBEAT_TIMEOUT_MS) {
-        console.log(`[Baileys ${sessionId}] Heartbeat: TIMEOUT — reconectando...`);
-        state.connected = false;
-        try { state.socket?.end(undefined); } catch {}
-        state.socket = null;
-        this.stopHeartbeat(state);
-        state.reconnectAttempts = 0;
-        this.connectSession(sessionId, state);
+
+      // Se nao ha mensagensregistradas ou ha actividaderecente,so ping
+      if (elapsed < 0 || elapsed < HEARTBEAT_TIMEOUT_MS) {
+        try {
+          const ws = (state.socket as any)?.ws;
+          if (ws?.readyState === 1 && typeof ws.ping === 'function') {
+            ws.ping();
+          }
+        } catch {}
         return;
       }
+
+      // Se WS nao esta OPEN, reconectar imediatamente
       if (wsState !== 1) {
-        console.log(`[Baileys ${sessionId}] Heartbeat: WebSocket nao esta OPEN (state=${wsState}), reconectando...`);
+        console.warn(`[Baileys ${sessionId}] Heartbeat: WebSocket state=${wsState} (nao OPEN), reconectando...`);
         state.connected = false;
         try { state.socket?.end(undefined); } catch {}
         state.socket = null;
         this.stopHeartbeat(state);
         state.reconnectAttempts = 0;
-        this.connectSession(sessionId, state);
+        this.connectSession(sessionId, state, state.onQr, state.onConnected, state.onError);
         return;
       }
+
+      // Se ultima mensagemha muito tempo (5 min) mesmo com WS OPEN, forcar reconexao
+      const SILENT_THRESHOLD_MS = 5 * 60 * 1000;
+      if (elapsed * 1000 > SILENT_THRESHOLD_MS) {
+        console.warn(`[Baileys ${sessionId}] Heartbeat: sem atividade por ${elapsed}s com WS OPEN, reconectando...`);
+        state.connected = false;
+        try { state.socket?.end(undefined); } catch {}
+        state.socket = null;
+        this.stopHeartbeat(state);
+        state.reconnectAttempts = 0;
+        this.connectSession(sessionId, state, state.onQr, state.onConnected, state.onError);
+        return;
+      }
+
+      // Ping normal
       try {
         const ws = (state.socket as any)?.ws;
         if (ws?.readyState === 1 && typeof ws.ping === 'function') {
@@ -187,6 +215,33 @@ class BaileysProviderService {
     if (state.heartbeatTimer) {
       clearInterval(state.heartbeatTimer);
       state.heartbeatTimer = null;
+    }
+  }
+
+  // ── Private: Periodic retry after reconnect exhaustion ──────────────
+  private startPeriodicRetry(state: ConnectionState): void {
+    this.stopPeriodicRetry(state);
+    console.log(`[Baileys ${state.sessionId}] Periodic retry: tentando reconectar a cada ${PERIODIC_RETRY_INTERVAL_MS / 1000}s`);
+    state.periodicRetryTimer = setInterval(async () => {
+      if (state.connected || state.manualDisconnect) {
+        this.stopPeriodicRetry(state);
+        return;
+      }
+      console.log(`[Baileys ${state.sessionId}] Periodic retry: tentando reconectar...`);
+      state.reconnectAttempts = 0;
+      state.error = null;
+      try {
+        await this.connectSession(state.sessionId, state, state.onQr, state.onConnected, state.onError);
+      } catch (err: any) {
+        console.error(`[Baileys ${state.sessionId}] Periodic retry: falha —`, err?.message || err);
+      }
+    }, PERIODIC_RETRY_INTERVAL_MS);
+  }
+
+  private stopPeriodicRetry(state: ConnectionState): void {
+    if (state.periodicRetryTimer) {
+      clearInterval(state.periodicRetryTimer);
+      state.periodicRetryTimer = null;
     }
   }
 
@@ -215,6 +270,8 @@ class BaileysProviderService {
     this.legacyState.error = null;
     this.legacyState.reconnectAttempts = 0;
     this.legacyState.manualDisconnect = true;
+    this.stopHeartbeat(this.legacyState);
+    this.stopPeriodicRetry(this.legacyState);
   }
 
   isLegacyConnected(): boolean {
@@ -248,6 +305,10 @@ class BaileysProviderService {
     onConnected?: () => void,
     onError?: (error: string) => void,
   ): Promise<void> {
+    state.onQr = onQr;
+    state.onConnected = onConnected;
+    state.onError = onError;
+
     const sessionDir = path.join(SESSION_BASE_DIR, sessionId);
     if (!fs.existsSync(sessionDir)) {
       fs.mkdirSync(sessionDir, { recursive: true });
@@ -319,11 +380,13 @@ class BaileysProviderService {
         } else if (state.reconnectAttempts < MAX_RECONNECT) {
           state.reconnectAttempts++;
           const delay = Math.min(5000 * Math.pow(2, state.reconnectAttempts - 1), 60000);
-          console.log(`[Baileys ${sessionId}] Reconectando em ${delay / 1000}s (tentativa ${state.reconnectAttempts})`);
+          console.log(`[Baileys ${sessionId}] Reconectando em ${delay / 1000}s (tentativa ${state.reconnectAttempts}/${MAX_RECONNECT})`);
           setTimeout(() => this.connectSession(sessionId, state, onQr, onConnected, onError), delay);
         } else {
-          state.error = `Falha apos ${MAX_RECONNECT} tentativas. Tente novamente.`;
+          state.error = `Falha apos ${MAX_RECONNECT} tentativas. Tentando reconexao periodica a cada ${PERIODIC_RETRY_INTERVAL_MS / 60000}min...`;
+          console.warn(`[Baileys ${sessionId}] ${state.error}`);
           onError?.(state.error);
+          this.startPeriodicRetry(state);
         }
       }
 
@@ -333,6 +396,7 @@ class BaileysProviderService {
         state.error = null;
         state.reconnectAttempts = 0;
         state.lastMessageAt = new Date();
+        this.stopPeriodicRetry(state);
         console.log(`[Baileys ${sessionId}] Conectado com sucesso!`);
         this.startHeartbeat(sessionId, state);
         onConnected?.();

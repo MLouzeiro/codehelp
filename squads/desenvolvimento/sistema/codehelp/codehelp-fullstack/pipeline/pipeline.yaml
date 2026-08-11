@@ -1,0 +1,46 @@
+steps:
+  - id: step-01
+    agent: tech-lead
+    label: "Análise técnica e planejamento"
+    execution: inline
+    model_tier: powerful
+
+  - id: step-02
+    type: checkpoint
+    label: "Aprovar escopo"
+    options:
+      - approve
+      - reject
+    on_reject: step-01
+
+  - id: step-03
+    agent: backend-dev
+    label: "Implementação backend"
+    deliverFrom: tech-lead
+    execution: inline
+
+  - id: step-04
+    agent: frontend-dev
+    label: "Implementação frontend"
+    deliverFrom: backend-dev
+    execution: inline
+
+  - id: step-05
+    agent: qa-engineer
+    label: "Testes e validação"
+    deliverFrom: frontend-dev
+    execution: inline
+
+  - id: step-06
+    type: checkpoint
+    label: "Aprovar implementação"
+    options:
+      - approve
+      - reject
+    on_reject: step-03
+
+  - id: step-07
+    agent: tech-lead
+    label: "Code review final"
+    deliverFrom: qa-engineer
+    execution: inline

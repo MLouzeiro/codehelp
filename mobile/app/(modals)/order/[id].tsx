@@ -9,7 +9,7 @@ import { Badge } from '../../../src/components/ui/Card';
 import { LoadingScreen } from '../../../src/components/ui/Feedback';
 
 const STATUS_COLORS: Record<string, string> = {
-  aberta: '#3b82f6', em_andamento: '#f59e0b', concluida: '#22c55e',
+  aberta: '#3b82f6', em_atendimento: '#f59e0b', concluida: '#22c55e',
   cancelada: '#ef4444', aguardando_peca: '#8b5cf6',
 };
 
@@ -87,7 +87,7 @@ export default function OrderDetailScreen() {
         <View style={styles.actions}>
           {o.status === 'aberta' && (
             <Pressable
-              onPress={() => updateStatus(o.id, 'em_andamento')}
+              onPress={() => updateStatus(o.id, 'em_atendimento')}
               style={[styles.actionBtn, { backgroundColor: '#f59e0b' }]}
             >
               <Text style={styles.actionText}>Iniciar</Text>

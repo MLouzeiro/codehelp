@@ -22,7 +22,12 @@ function handleError(res: Response, err: any, fallback: string) {
 export async function getDepartamentos(req: AuthRequest, res: Response) {
   try {
     const includeInativos = req.query.includeInativos === 'true' || req.query.includeInativos === '1';
-    const lista = await listDepartamentos({ includeInativos });
+    const mine = req.query.mine === 'true' || req.query.mine === '1';
+    const onlyMine = mine && req.user?.role === 'tecnico';
+    const lista = await listDepartamentos({
+      includeInativos,
+      userId: onlyMine ? req.user?.id : undefined,
+    });
     return res.json(lista);
   } catch (err) {
     return handleError(res, err, 'Erro ao listar departamentos');

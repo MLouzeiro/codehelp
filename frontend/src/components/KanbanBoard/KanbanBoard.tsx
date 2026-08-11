@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, useRef, lazy, Suspense, Component, type ReactNode } from 'react';
 import {
   DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors,
   type DragStartEvent, type DragEndEvent,
@@ -22,6 +22,22 @@ import { matchSearch } from '../../utils/text';
 import type { KanbanBoard, KanbanColumn, KanbanTask, KanbanAttachment, KanbanTaskTag } from '../../types/kanban';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor').then(m => ({ default: m.RichTextEditor })));
+
+class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }, { hasError: boolean; error: any }> {
+  state = { hasError: false, error: null };
+  static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="p-4 text-center text-sm text-red-500 dark:text-red-400">
+          <p>Erro ao carregar componente.</p>
+          <button onClick={() => this.setState({ hasError: false, error: null })} className="mt-2 text-xs text-codemed-600 hover:underline">Tentar novamente</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const priorityColors: Record<string, string> = {
   baixa: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300',
@@ -232,7 +248,7 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showNewTask, setShowNewTask] = useState(false);
   const [newTaskColumnId, setNewTaskColumnId] = useState('');
-  const [newTaskForm, setNewTaskForm] = useState({ titulo: '', descricao: '', prioridade: 'media', categoria: '' });
+  const [newTaskForm, setNewTaskForm] = useState({ titulo: '', descricao: '', prioridade: 'media', categoria: '', classificacao: '', responsavelId: '', dataInicio: '', prazoEntrega: '', tags: [] as string[] });
   const [showNewColumn, setShowNewColumn] = useState(false);
   const [newColumnForm, setNewColumnForm] = useState({ nome: '', cor: '#3b82f6' });
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
@@ -240,7 +256,14 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
   const [searchTitle, setSearchTitle] = useState('');
   const [searchId, setSearchId] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  useEffect(() => {
+    if (showNewTask && users.length === 0) {
+      api.get('/auth/users').then(({ data }) => setUsers(data)).catch(() => {});
+    }
+  }, [showNewTask]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => setActiveId(event.active.id as string), []);
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
@@ -260,10 +283,21 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
     }
   }, [moveTask, onRefresh]);
 
-  const handleAddTask = (columnId: string) => { setNewTaskColumnId(columnId); setNewTaskForm({ titulo: '', descricao: '', prioridade: 'media', categoria: '' }); setShowNewTask(true); };
+  const handleAddTask = (columnId: string) => { setNewTaskColumnId(columnId); setNewTaskForm({ titulo: '', descricao: '', prioridade: 'media', categoria: '', classificacao: '', responsavelId: '', dataInicio: '', prazoEntrega: '', tags: [] }); setShowNewTask(true); };
   const handleSubmitTask = async () => {
     if (!newTaskForm.titulo.trim()) return;
-    await createTask(board.id, { titulo: newTaskForm.titulo, columnId: newTaskColumnId, descricao: newTaskForm.descricao || undefined, prioridade: newTaskForm.prioridade, categoria: newTaskForm.categoria || undefined });
+    await createTask(board.id, {
+      titulo: newTaskForm.titulo,
+      columnId: newTaskColumnId,
+      descricao: newTaskForm.descricao || undefined,
+      prioridade: newTaskForm.prioridade,
+      categoria: newTaskForm.categoria || undefined,
+      classificacao: newTaskForm.classificacao || undefined,
+      responsavelId: newTaskForm.responsavelId || undefined,
+      dataInicio: newTaskForm.dataInicio || undefined,
+      prazoEntrega: newTaskForm.prazoEntrega || undefined,
+      tags: newTaskForm.tags.length > 0 ? newTaskForm.tags : undefined,
+    });
     setShowNewTask(false); onRefresh?.();
   };
   const handleSubmitColumn = async () => {
@@ -277,6 +311,7 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
   };
 
   const activeTask = activeId ? board.columns.flatMap(c => c.tasks).find(t => t.id === activeId) : null;
+  const currentTask = selectedTask ? board.columns.flatMap(c => c.tasks).find(t => t.id === selectedTask.id) || selectedTask : null;
   const isAdmin = user?.role === 'admin' || user?.role === 'gerente';
 
   return (
@@ -346,7 +381,7 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
 
       {showNewTask && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowNewTask(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900 dark:text-slate-100">Nova Tarefa</h3>
               <button onClick={() => setShowNewTask(false)}><X size={18} className="text-gray-400" /></button>
@@ -355,6 +390,16 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
               <input type="text" placeholder="Título *" value={newTaskForm.titulo} onChange={e => setNewTaskForm({ ...newTaskForm, titulo: e.target.value })} className="input w-full" autoFocus />
               <textarea placeholder="Descrição" value={newTaskForm.descricao} onChange={e => setNewTaskForm({ ...newTaskForm, descricao: e.target.value })} className="input w-full" rows={2} />
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Início Previsto</label>
+                  <input type="datetime-local" value={newTaskForm.dataInicio} onChange={e => setNewTaskForm({ ...newTaskForm, dataInicio: e.target.value })} className="input w-full" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Prazo de Entrega</label>
+                  <input type="datetime-local" value={newTaskForm.prazoEntrega} onChange={e => setNewTaskForm({ ...newTaskForm, prazoEntrega: e.target.value })} className="input w-full" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
                 <select value={newTaskForm.prioridade} onChange={e => setNewTaskForm({ ...newTaskForm, prioridade: e.target.value })} className="input">
                   <option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option><option value="urgente">Urgente</option>
                 </select>
@@ -362,7 +407,41 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
                   <option value="">Categoria</option>
                   {['Outros', 'Suporte', 'Desenvolvimento', 'Marketing', 'Financeiro', 'Comercial'].map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
+                <select value={newTaskForm.classificacao} onChange={e => setNewTaskForm({ ...newTaskForm, classificacao: e.target.value })} className="input">
+                  <option value="">Classificação</option>
+                  {['Tarefa sem classificação específica', 'Bug', 'Feature', 'Melhoria', 'Documentação', 'Refatoração'].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Responsável</label>
+                <select value={newTaskForm.responsavelId} onChange={e => setNewTaskForm({ ...newTaskForm, responsavelId: e.target.value })} className="input w-full">
+                  <option value="">Selecionar responsável...</option>
+                  {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              </div>
+              {board.tags && board.tags.length > 0 && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Tags</label>
+                  <div className="flex flex-wrap gap-2">
+                    {board.tags.map(tag => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => {
+                          const newTags = newTaskForm.tags.includes(tag.id)
+                            ? newTaskForm.tags.filter(t => t !== tag.id)
+                            : [...newTaskForm.tags, tag.id];
+                          setNewTaskForm({ ...newTaskForm, tags: newTags });
+                        }}
+                        className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${newTaskForm.tags.includes(tag.id) ? 'ring-2 ring-offset-1' : ''}`}
+                        style={{ backgroundColor: tag.cor || '#6b7280', color: '#fff' }}
+                      >
+                        {tag.nome}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <button onClick={handleSubmitTask} className="btn-primary w-full" disabled={!newTaskForm.titulo.trim()}>Criar Tarefa</button>
             </div>
           </div>
@@ -387,7 +466,11 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
         </div>
       )}
 
-      {selectedTask && <TaskDetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} onRefresh={onRefresh} />}
+      {currentTask && (
+        <ErrorBoundary fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setSelectedTask(null)}><div className="bg-white dark:bg-slate-800 rounded-xl p-6 text-center" onClick={e => e.stopPropagation()}><p className="text-red-500 dark:text-red-400 text-sm mb-3">Erro ao carregar detalhes da tarefa.</p><button onClick={() => setSelectedTask(null)} className="btn-primary text-xs px-4 py-2">Fechar</button></div></div>}>
+          <TaskDetailPanel task={currentTask} onClose={() => setSelectedTask(null)} onRefresh={onRefresh} />
+        </ErrorBoundary>
+      )}
       {showBoardSettings && <BoardSettingsModal board={board} onClose={() => setShowBoardSettings(false)} onRefresh={onRefresh} />}
     </div>
   );
@@ -441,7 +524,7 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
     setLocalSubtasks(task?.subtasks || []);
     setTaskTags(task?.tags || []);
     api.get('/users', { params: { active: 'true' } }).then(({ data }) => setUsers(data?.users || [])).catch(() => {});
-  }, [task?.id]);
+  }, [task?.id, task?.subtasks]);
 
   if (!task) return null;
 
@@ -643,9 +726,11 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
             <div className="space-y-5">
               {editing ? (
                 <div className="space-y-3">
-                  <Suspense fallback={<div className="h-32 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
-                    <RichTextEditor content={form.descricao} onChange={html => setForm({ ...form, descricao: html })} placeholder="Descrição da tarefa..." minHeight="120px" />
-                  </Suspense>
+                  <ErrorBoundary fallback={<div className="h-32 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-sm text-gray-400">Editor indisponível</div>}>
+                    <Suspense fallback={<div className="h-32 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
+                      <RichTextEditor content={form.descricao} onChange={html => setForm({ ...form, descricao: html })} placeholder="Descrição da tarefa..." minHeight="120px" />
+                    </Suspense>
+                  </ErrorBoundary>
                   <div className="grid grid-cols-2 gap-3">
                     <select value={form.prioridade} onChange={e => setForm({ ...form, prioridade: e.target.value })} className="input">
                       <option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option><option value="urgente">Urgente</option>
@@ -688,9 +773,11 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <span className="text-xs text-gray-400 dark:text-slate-500 font-medium uppercase tracking-wide">Descrição</span>
                     </div>
-                    <Suspense fallback={<div className="h-32 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
-                      <RichTextEditor content={descricaoLocal} onChange={handleDescricaoChange} placeholder="Adicione uma descrição..." minHeight="100px" />
-                    </Suspense>
+                    <ErrorBoundary fallback={<div className="h-32 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-sm text-gray-400">Editor indisponível</div>}>
+                      <Suspense fallback={<div className="h-32 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
+                        <RichTextEditor content={descricaoLocal} onChange={handleDescricaoChange} placeholder="Adicione uma descrição..." minHeight="100px" />
+                      </Suspense>
+                    </ErrorBoundary>
                   </div>
 
                   {/* Responsável — sempre visível */}
@@ -725,13 +812,13 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs text-gray-400 dark:text-slate-500 mb-1 block">Prioridade</label>
-                      <select value={task.prioridade} onChange={e => { updateTask(task.id, { prioridade: e.target.value }); onRefresh?.(); }} className="input w-full text-sm">
+                      <select value={task.prioridade} onChange={async e => { await updateTask(task.id, { prioridade: e.target.value }); onRefresh?.(); }} className="input w-full text-sm">
                         <option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option><option value="urgente">Urgente</option>
                       </select>
                     </div>
                     <div>
                       <label className="text-xs text-gray-400 dark:text-slate-500 mb-1 block">Categoria</label>
-                      <select value={task.categoria || ''} onChange={e => { updateTask(task.id, { categoria: e.target.value || undefined }); onRefresh?.(); }} className="input w-full text-sm">
+                      <select value={task.categoria || ''} onChange={async e => { await updateTask(task.id, { categoria: e.target.value || undefined }); onRefresh?.(); }} className="input w-full text-sm">
                         <option value="">Sem categoria</option>
                         {['Outros', 'Suporte', 'Desenvolvimento', 'Marketing', 'Financeiro', 'Comercial'].map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
@@ -739,7 +826,7 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
                     <div>
                       <label className="text-xs text-gray-400 dark:text-slate-500 mb-1 block">Classificação</label>
                       <div className="flex gap-1.5">
-                        <select value={task.classificacao || ''} onChange={e => { updateTask(task.id, { classificacao: e.target.value || undefined }); onRefresh?.(); }} className="input flex-1 text-sm">
+                        <select value={task.classificacao || ''} onChange={async e => { await updateTask(task.id, { classificacao: e.target.value || undefined }); onRefresh?.(); }} className="input flex-1 text-sm">
                           <option value="">Sem classificação</option>
                           {['Bug', 'Melhoria', 'Feature', 'Manutenção', 'Correção', 'Implantação', 'Treinamento', 'Outros'].map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
@@ -750,7 +837,7 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
                     </div>
                     <div>
                       <label className="text-xs text-gray-400 dark:text-slate-500 mb-1 block">Prazo de Entrega</label>
-                      <input type="date" value={task.prazoEntrega ? task.prazoEntrega.split('T')[0] : ''} onChange={e => { updateTask(task.id, { prazoEntrega: e.target.value ? new Date(e.target.value).toISOString() : null }); onRefresh?.(); }} className="input w-full text-sm" />
+                      <input type="date" value={task.prazoEntrega ? task.prazoEntrega.split('T')[0] : ''} onChange={async e => { await updateTask(task.id, { prazoEntrega: e.target.value ? new Date(e.target.value).toISOString() : null }); onRefresh?.(); }} className="input w-full text-sm" />
                     </div>
                     {task.ticketId && (
                       <div className="col-span-2"><span className="text-gray-400 dark:text-slate-500 text-xs">Ticket</span><span className="ml-2 text-purple-600 dark:text-purple-400 text-xs font-mono">#{task.ticketId.slice(0, 8)}</span></div>
@@ -800,7 +887,7 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Subtarefas ({subtasksDone}/{subtasksTotal})</h4>
                 <div className="space-y-1.5">
-                  {task.subtasks?.map(st => (
+                  {localSubtasks.map(st => (
                     <div key={st.id} className="flex items-center gap-2 text-sm group">
                       <button onClick={() => handleToggleSubtask(st.id)} className="flex-shrink-0">
                         {st.concluida ? <CheckCircle2 size={16} className="text-green-500" /> : <Circle size={16} className="text-gray-300 dark:text-slate-600" />}

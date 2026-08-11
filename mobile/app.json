@@ -40,7 +40,6 @@
       "googleServicesFile": "./google-services.json"
     },
     "plugins": [
-      "expo-router",
       "expo-secure-store",
       "expo-local-authentication",
       "expo-notifications",
@@ -49,6 +48,15 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "http://192.168.0.199:3001/api",
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

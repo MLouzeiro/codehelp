@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import { Plus, X, User, Shield, Mail, Phone, ChevronDown, Check, AlertCircle, Building2 } from 'lucide-react';
 import type { Departamento } from '../../types';
@@ -20,7 +20,7 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; permissions: s
     permissions: [
       'Gerenciar equipe',
       'Acessar relatórios',
-      'Visualizar CRM e OS',
+      'Visualizar Clientes e OS',
       'Gerenciar alertas',
     ],
   },
@@ -38,7 +38,7 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; permissions: s
     label: 'Comercial',
     color: 'bg-amber-100 text-amber-700',
     permissions: [
-      'Gerenciar CRM (clientes)',
+      'Gerenciar Clientes',
       'Abrir oportunidades',
       'WhatsApp',
       'Visualizar dashboard',
@@ -142,7 +142,7 @@ export default function UsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-codemed-700">Funcionários</h1>
-          <p className="text-neutral-500">{users.length} usuários cadastrados</p>
+          <p className="text-neutral-500 dark:text-slate-400">{users.length} usuários cadastrados</p>
         </div>
         <button onClick={openNew} className="btn-primary text-sm flex items-center gap-2">
           <Plus size={16} /> Novo Funcionário
@@ -150,21 +150,21 @@ export default function UsersPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/30 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
           <AlertCircle size={16} /> {error}
         </div>
       )}
 
       <div className="grid gap-3">
         {loading && !initialLoadedRef.current ? (
-          <div className="text-center py-12 text-neutral-400">Carregando...</div>
+          <div className="text-center py-12 text-neutral-400 dark:text-slate-500">Carregando...</div>
         ) : !error && users.length === 0 ? (
-          <div className="text-center py-12 text-neutral-400">Nenhum funcionário cadastrado</div>
+          <div className="text-center py-12 text-neutral-400 dark:text-slate-500">Nenhum funcionário cadastrado</div>
         ) : !loading && !error && users.length > 0 ? (
           users.map((u) => {
             const roleCfg = ROLE_CONFIG[u.role] || ROLE_CONFIG.tecnico;
             return (
-              <div key={u.id} className="bg-white rounded-xl border border-neutral-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+              <div key={u.id} className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-100 dark:border-slate-700/50 shadow-sm p-5 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
@@ -178,14 +178,14 @@ export default function UsersPage() {
                         <span className={`badge ${roleCfg.color}`}>{roleCfg.label}</span>
                         {!u.active && <span className="badge bg-red-100 text-red-700">Inativo</span>}
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-neutral-500">
+                      <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-slate-400">
                         <span className="flex items-center gap-1"><Mail size={12} /> {u.email}</span>
                         {u.phone && <span className="flex items-center gap-1"><Phone size={12} /> {u.phone}</span>}
                       </div>
                       {u.departamentos && u.departamentos.length > 0 && (
                         <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                           {u.departamentos.map((d: Departamento) => (
-                            <span key={d.id} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">
+                            <span key={d.id} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 font-medium">
                               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.cor }} />
                               {d.nome}
                             </span>
@@ -195,10 +195,10 @@ export default function UsersPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setRoleInfo(roleInfo === u.id ? null : u.id)} className="text-xs text-neutral-400 hover:text-green-500 p-1.5 rounded-lg hover:bg-green-50 transition-colors" title="Ver permissões">
+                    <button onClick={() => setRoleInfo(roleInfo === u.id ? null : u.id)} className="text-xs text-neutral-400 dark:text-slate-500 hover:text-green-500 p-1.5 rounded-lg hover:bg-green-50 transition-colors" title="Ver permissões">
                       <Shield size={16} />
                     </button>
-                    <button onClick={() => openEdit(u)} className="text-xs text-neutral-400 hover:text-green-500 p-1.5 rounded-lg hover:bg-green-50 transition-colors">
+                    <button onClick={() => openEdit(u)} className="text-xs text-neutral-400 dark:text-slate-500 hover:text-green-500 p-1.5 rounded-lg hover:bg-green-50 transition-colors">
                       Editar
                     </button>
                     <button onClick={() => toggleActive(u.id, u.active)}
@@ -209,13 +209,13 @@ export default function UsersPage() {
                 </div>
 
                 {roleInfo === u.id && (
-                  <div className="mt-4 pt-4 border-t border-neutral-100">
+                  <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-slate-700/50">
                     <p className="text-xs font-semibold text-codemed-700 mb-2 uppercase tracking-wider">
                       Permissões de {roleCfg.label}
                     </p>
                     <div className="grid grid-cols-2 gap-1.5">
                       {roleCfg.permissions.map((perm, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs text-neutral-600">
+                        <div key={i} className="flex items-center gap-2 text-xs text-neutral-600 dark:text-slate-300">
                           <Check size={12} className="text-green-400 flex-shrink-0" />
                           {perm}
                         </div>
@@ -231,54 +231,54 @@ export default function UsersPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-lg text-codemed-700">
                 {editingId ? 'Editar Funcionário' : 'Novo Funcionário'}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-neutral-400 hover:text-neutral-600 p-1">
+              <button onClick={() => setShowModal(false)} className="text-neutral-400 dark:text-slate-500 hover:text-neutral-600 p-1">
                 <X size={20} />
               </button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-neutral-500 mb-1 block">Nome completo</label>
+                <label className="text-xs font-medium text-neutral-500 dark:text-slate-400 mb-1 block">Nome completo</label>
                 <input type="text" placeholder="Ex: João Silva" value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })} className="input" />
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500 mb-1 block">Email</label>
+                <label className="text-xs font-medium text-neutral-500 dark:text-slate-400 mb-1 block">Email</label>
                 <input type="email" placeholder="Ex: joao@exemplo.com" value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })} className="input" />
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500 mb-1 block">Telefone (opcional)</label>
+                <label className="text-xs font-medium text-neutral-500 dark:text-slate-400 mb-1 block">Telefone (opcional)</label>
                 <input type="text" placeholder="Ex: 5511999999999" value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input" />
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500 mb-1 block">
+                <label className="text-xs font-medium text-neutral-500 dark:text-slate-400 mb-1 block">
                   {editingId ? 'Nova senha (deixe em branco para manter)' : 'Senha'}
                 </label>
                 <input type="password" placeholder={editingId ? 'Nova senha' : 'Mínimo 6 caracteres'} value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })} className="input" />
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500 mb-1 block">Perfil de acesso</label>
+                <label className="text-xs font-medium text-neutral-500 dark:text-slate-400 mb-1 block">Perfil de acesso</label>
                 <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  className="input appearance-none bg-white">
+                  className="input appearance-none bg-white dark:bg-slate-800">
                   {Object.entries(ROLE_CONFIG).map(([key, cfg]) => (
                     <option key={key} value={key}>{cfg.label}</option>
                   ))}
                 </select>
-                <div className="mt-2 bg-neutral-50 rounded-lg p-3">
+                <div className="mt-2 bg-neutral-50 dark:bg-slate-900 rounded-lg p-3">
                   <p className="text-xs font-medium text-codemed-700 mb-1.5">
                     {ROLE_CONFIG[form.role]?.label} pode:
                   </p>
                   <div className="space-y-1">
                     {ROLE_CONFIG[form.role]?.permissions.map((perm, i) => (
-                      <div key={i} className="flex items-center gap-1.5 text-xs text-neutral-600">
+                      <div key={i} className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-slate-300">
                         <Check size={10} className="text-green-400 flex-shrink-0" />
                         {perm}
                       </div>
@@ -287,13 +287,13 @@ export default function UsersPage() {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500 mb-1 block">
+                <label className="text-xs font-medium text-neutral-500 dark:text-slate-400 mb-1 block">
                   <Building2 size={12} className="inline mr-1" />
                   Departamentos (pode pertencer a mais de um)
                 </label>
-                <div className="border border-gray-200 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1">
+                <div className="border border-gray-200 dark:border-slate-700 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1">
                   {departamentos.filter(d => d.ativo).map((d) => (
-                    <label key={d.id} className="flex items-center gap-2 text-xs text-gray-700 hover:bg-gray-50 rounded px-2 py-1 cursor-pointer">
+                    <label key={d.id} className="flex items-center gap-2 text-xs text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 rounded px-2 py-1 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={selectedDepts.includes(d.id)}
@@ -304,24 +304,24 @@ export default function UsersPage() {
                               : prev.filter(id => id !== d.id)
                           );
                         }}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-gray-300 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
                       />
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.cor }} />
                       {d.nome}
                     </label>
                   ))}
                   {departamentos.filter(d => d.ativo).length === 0 && (
-                    <p className="text-xs text-neutral-400 py-2 text-center">Nenhum departamento cadastrado</p>
+                    <p className="text-xs text-neutral-400 dark:text-slate-500 py-2 text-center">Nenhum departamento cadastrado</p>
                   )}
                 </div>
                 {selectedDepts.length > 0 && (
-                  <p className="text-[10px] text-neutral-400 mt-1">{selectedDepts.length} selecionado(s)</p>
+                  <p className="text-[10px] text-neutral-400 dark:text-slate-500 mt-1">{selectedDepts.length} selecionado(s)</p>
                 )}
               </div>
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs">
+              <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/30 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs">
                 <AlertCircle size={14} /> {error}
               </div>
             )}
