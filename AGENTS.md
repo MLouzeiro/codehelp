@@ -229,6 +229,15 @@ npx expo run:ios             # Build iOS
 
 ## Progresso Recente (SessãoAtual)
 
+### Assinatura do Analista — Completo
+- [x] Campo `signature` adicionado ao model User (Prisma schema)
+- [x] API `updateUsers` aceita e retorna signature
+- [x] WhatsApp controller busca signature do usuario e anexa a mensagem
+- [x] Frontend: campo de assinatura no formulario de usuarios (UsersPage)
+- [x] Formato: `_Nome\Assinatura_` no final da mensagem enviada ao cliente
+- [x] Mensagem original salva no DB (sem assinatura)
+- [x] Typecheck passando (backend + frontend)
+
 ### CSAT Flow — Completo
 - [x] Investigação completa do fluxo: conclusão → CSAT → resposta → novo ticket
 - [x] **Bug corrigido**: CSAT detectava "1-5" mesmo quando cliente escolhia departamento
