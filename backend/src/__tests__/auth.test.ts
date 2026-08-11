@@ -161,6 +161,7 @@ describe('Auth Controller — Task 2.1', () => {
         name: 'Admin',
         avatar: null,
         phone: null,
+        signature: null,
         online: false,
         lastSeenAt: null,
         sessionToken: null,

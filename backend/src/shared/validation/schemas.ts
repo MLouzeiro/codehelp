@@ -30,6 +30,7 @@ export const updateUserSchema = z.object({
   active: z.boolean().optional(),
   isMaster: z.boolean().optional(),
   phone: z.string().max(20).optional(),
+  signature: z.string().max(255).optional(),
   departamentoIds: z.array(z.string().uuid()).optional(),
 });
 
@@ -68,7 +69,7 @@ export const createWhatsAppConnectionSchema = z.object({
 
 export const moveTicketSchema = z.object({
   targetStage: z.enum([
-    'fila', 'triagem', 'em_atendimento',
+    'fila', 'triagem', 'boas_vindas', 'em_atendimento',
     'aguardando_cliente', 'aguardando_os', 'concluido',
     'descartado',
   ]),

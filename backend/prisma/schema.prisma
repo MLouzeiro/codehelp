@@ -20,9 +20,11 @@ model User {
   online                Boolean             @default(false)
   lastSeenAt            DateTime?
   sessionToken          String?             @unique
+  signature             String?
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @default(now())
   aiCorrections         AICorrection[]
+  aiAgentAudits         AIAgentAudit[]
   aprovacoesDecididas   Aprovacao[]         @relation("AprovacaoAprovador")
   aprovacoesSolicitadas Aprovacao[]         @relation("AprovacaoSolicitante")
   auditLogs             AuditLog[]
@@ -287,6 +289,7 @@ model Ticket {
   aiClassifications     AIClassification[]
   aiCorrections         AICorrection[]
   aiEvaluations         AIEvaluation[]
+  aiAgentAudits         AIAgentAudit[]
   aiValidacoes          AIRespostaValidacao[]
   aprovacoes            Aprovacao[]
   csatResposta          CSATResposta?
@@ -403,6 +406,36 @@ model AIMetricas {
   confiancaMediaIa          Float    @default(0)
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @default(now())
+}
+
+/// Auditoria em tempo real do atendimento do agente
+model AIAgentAudit {
+  id                    String   @id @default(uuid())
+  ticketId              String
+  agentId               String
+  mensagemId            String?
+  conteudoMensagem      String
+  notProfissionalismo   Int      @default(0)
+  notCordialidade       Int      @default(0)
+  notClareza            Int      @default(0)
+  notEmpatia            Int      @default(0)
+  notaGeral             Float    @default(0)
+  classificacao         String   @default("neutro")
+  sugestaoResposta      String?
+  alertas               String?
+  pontosFortes          String?
+  pontosMelhoria        String?
+  contextoConversa      String?
+  modeloUsado           String?
+  custoTokens           Float?
+  processadoEm          DateTime @default(now())
+  ticket                Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  agent                 User     @relation(fields: [agentId], references: [id])
+
+  @@index([ticketId])
+  @@index([agentId])
+  @@index([classificacao])
+  @@index([processadoEm])
 }
 
 model Message {
@@ -1022,7 +1055,7 @@ model CSATResposta {
   nota          Int?
   comentario    String?
   tokenResposta String    @unique @default(uuid())
-  enviadoEm     DateTime  @default(now())
+  enviadoEm     DateTime?
   respondidoEm  DateTime?
   createdAt     DateTime  @default(now())
   ticket        Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)

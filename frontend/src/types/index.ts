@@ -48,6 +48,7 @@ export interface User {
   role: 'admin' | 'vendedor' | 'gerente' | 'comercial' | 'tecnico';
   isMaster?: boolean;
   phone?: string;
+  signature?: string;
   active?: boolean;
   online?: boolean;
   lastSeenAt?: string;
@@ -127,6 +128,7 @@ export interface DashboardData {
 export type EtapaSlug =
   | 'fila'
   | 'triagem'
+  | 'boas_vindas'
   | 'em_atendimento'
   | 'aguardando_cliente'
   | 'aguardando_os'

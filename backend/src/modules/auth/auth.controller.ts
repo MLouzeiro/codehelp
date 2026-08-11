@@ -69,7 +69,7 @@ export async function listUsers(req: Request, res: Response) {
   try {
     const users = await prisma.user.findMany({
       select: {
-        id: true, name: true, email: true, role: true, active: true, isMaster: true, phone: true, createdAt: true,
+        id: true, name: true, email: true, role: true, active: true, isMaster: true, phone: true, signature: true, createdAt: true,
         departamentos: {
           select: {
             departamento: { select: { id: true, slug: true, nome: true, cor: true } },
@@ -166,6 +166,7 @@ export async function updateUser(req: Request, res: Response) {
     if (email) data.email = email;
     if (password) data.password = await bcrypt.hash(password, 12);
     if (req.body.phone !== undefined) data.phone = req.body.phone;
+    if (req.body.signature !== undefined) data.signature = req.body.signature;
 
     // ── Seguranca: validacao de role ──────────────────────────────────
     const requestingUser = (req as AuthRequest).user;
@@ -215,7 +216,7 @@ export async function updateUser(req: Request, res: Response) {
       where: { id },
       data,
       select: {
-        id: true, name: true, email: true, role: true, active: true, isMaster: true, phone: true,
+        id: true, name: true, email: true, role: true, active: true, isMaster: true, phone: true, signature: true,
         departamentos: { select: { departamento: { select: { id: true, slug: true, nome: true, cor: true } } } },
       },
     });

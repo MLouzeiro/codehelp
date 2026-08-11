@@ -16,6 +16,7 @@ import { evolutionApiService } from './evolution-api.service';
 import { unifiedWhatsAppService } from './unified-whatsapp.service';
 import path from 'path';
 import { registrarInteracaoAgente } from '../../helpdesk/fcr.service';
+import { avaliarMensagemAgente } from '../../ai/aiAgentMonitor.service';
 
 async function autoMoveTicketOnAgentReply(ticketId: string, userId: string): Promise<void> {
   try {
@@ -57,6 +58,17 @@ async function autoMoveTicketOnAgentReply(ticketId: string, userId: string): Pro
   } catch (err) {
     console.error('[WhatsApp] Erro auto-move:', err);
   }
+}
+
+function triggerAgentAIAudit(
+  ticketId: string,
+  userId: string,
+  messageDbId: string,
+  conteudoMensagem: string
+): void {
+  avaliarMensagemAgente(ticketId, userId, messageDbId, conteudoMensagem).catch((e) =>
+    console.warn('[WhatsApp] AI audit falhou:', e?.message || e)
+  );
 }
 
 export async function getStatus(req: Request, res: Response) {
@@ -342,6 +354,11 @@ export async function closeTicket(req: AuthRequest, res: Response) {
       sendProtocolReply(ticket.contactPhone, ticket.protocolo, 'fechamento').catch(console.error);
     }
 
+    const { enviarCsatImediatamente } = await import('../../csat/csat.service');
+    enviarCsatImediatamente(id).catch((e) =>
+      console.warn('[WhatsApp] Falha ao enviar CSAT imediatamente:', e?.message || e)
+    );
+
     return res.json({ message: 'Ticket fechado com sucesso' });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao fechar ticket' });
@@ -473,8 +490,20 @@ export async function getSubjects(req: Request, res: Response) {
 
 export async function sendMessage(req: AuthRequest, res: Response) {
   try {
-    const { to, message, ticketId, whatsappConnectionId } = req.body;
-    if (!message || !message.trim()) return res.status(400).json({ error: 'Mensagem é obrigatória' });
+    const { to, message: rawMessage, ticketId, whatsappConnectionId } = req.body;
+    if (!rawMessage || !rawMessage.trim()) return res.status(400).json({ error: 'Mensagem é obrigatória' });
+
+    // Fetch agent signature and append to message
+    let message = rawMessage;
+    if (req.user?.id) {
+      const agent = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { name: true, signature: true },
+      });
+      if (agent?.signature) {
+        message = `${rawMessage}\n\n_${agent.name}\n${agent.signature}_`;
+      }
+    }
 
     // Resolve phone from ticket if not provided
     let phone = to;
@@ -499,16 +528,17 @@ export async function sendMessage(req: AuthRequest, res: Response) {
         if (!result.success) return res.status(500).json({ error: result.error || 'Falha ao enviar via Baileys' });
 
         if (ticketId) {
-          await prisma.message.create({
+          const msgDb = await prisma.message.create({
             data: {
               ticketId,
               fromMe: true,
-              content: message,
+              content: rawMessage,
               source: 'agent',
               usuarioId: req.user?.id,
             },
           });
           if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
+          if (req.user?.id && ticketId) triggerAgentAIAudit(ticketId, req.user.id, msgDb.id, rawMessage);
         }
         return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });
       }
@@ -525,16 +555,17 @@ export async function sendMessage(req: AuthRequest, res: Response) {
         if (!result.success) return res.status(500).json({ error: result.error || 'Falha ao enviar via Baileys' });
 
         if (ticketId) {
-          await prisma.message.create({
+          const msgDb = await prisma.message.create({
             data: {
               ticketId,
               fromMe: true,
-              content: message,
+              content: rawMessage,
               source: 'agent',
               usuarioId: req.user?.id,
             },
           });
           if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
+          if (req.user?.id && ticketId) triggerAgentAIAudit(ticketId, req.user.id, msgDb.id, rawMessage);
         }
         return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });
       }
@@ -547,16 +578,17 @@ export async function sendMessage(req: AuthRequest, res: Response) {
           if (!result.success) continue;
 
           if (ticketId) {
-            await prisma.message.create({
+            const msgDb = await prisma.message.create({
               data: {
                 ticketId,
                 fromMe: true,
-                content: message,
+                content: rawMessage,
                 source: 'agent',
                 usuarioId: req.user?.id,
               },
             });
             if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
+            if (req.user?.id && ticketId) triggerAgentAIAudit(ticketId, req.user.id, msgDb.id, rawMessage);
           }
           return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys', connectionId: connId });
         }
@@ -570,16 +602,17 @@ export async function sendMessage(req: AuthRequest, res: Response) {
           if (!result.success) continue;
 
           if (ticketId) {
-            await prisma.message.create({
+            const msgDb = await prisma.message.create({
               data: {
                 ticketId,
                 fromMe: true,
-                content: message,
+                content: rawMessage,
                 source: 'agent',
                 usuarioId: req.user?.id,
               },
             });
             if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
+            if (req.user?.id && ticketId) triggerAgentAIAudit(ticketId, req.user.id, msgDb.id, rawMessage);
           }
           return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'whatsapp-webjs', connectionId: connId });
         }
@@ -599,7 +632,7 @@ export async function sendMessage(req: AuthRequest, res: Response) {
     if (!result.success) return res.status(500).json({ error: result.error || 'Falha ao enviar mensagem WhatsApp' });
 
     if (ticketId) {
-      await prisma.message.create({
+      const msgDb = await prisma.message.create({
         data: {
           ticketId,
           fromMe: true,
@@ -609,6 +642,7 @@ export async function sendMessage(req: AuthRequest, res: Response) {
         },
       });
       if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
+      if (req.user?.id && ticketId) triggerAgentAIAudit(ticketId, req.user.id, msgDb.id, rawMessage);
     }
 
     return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });

@@ -46,7 +46,7 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; permissions: s
   },
 };
 
-const INITIAL_FORM = { name: '', email: '', password: '', phone: '', role: 'tecnico' };
+const INITIAL_FORM = { name: '', email: '', password: '', phone: '', signature: '', role: 'tecnico' };
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -98,7 +98,7 @@ export default function UsersPage() {
 
   const openEdit = (u: any) => {
     setEditingId(u.id);
-    setForm({ name: u.name, email: u.email, password: '', phone: u.phone || '', role: u.role });
+    setForm({ name: u.name, email: u.email, password: '', phone: u.phone || '', signature: u.signature || '', role: u.role });
     setSelectedDepts(u.departamentos?.map((d: Departamento) => d.id) || []);
     setError('');
     setShowModal(true);
@@ -117,7 +117,7 @@ export default function UsersPage() {
     setSaving(true);
     try {
       if (editingId) {
-        const payload: any = { name: form.name, email: form.email, role: form.role, phone: form.phone, departamentoIds: selectedDepts };
+        const payload: any = { name: form.name, email: form.email, role: form.role, phone: form.phone, signature: form.signature, departamentoIds: selectedDepts };
         if (form.password) payload.password = form.password;
         await api.put(`/auth/users/${editingId}`, payload);
       } else {
@@ -256,6 +256,12 @@ export default function UsersPage() {
                 <label className="text-xs font-medium text-neutral-500 dark:text-slate-400 mb-1 block">Telefone (opcional)</label>
                 <input type="text" placeholder="Ex: 5511999999999" value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-neutral-500 dark:text-slate-400 mb-1 block">Assinatura (opcional)</label>
+                <textarea placeholder="Ex: Suporte Técnico" value={form.signature}
+                  onChange={(e) => setForm({ ...form, signature: e.target.value })} className="input" rows={2} />
+                <p className="text-[10px] text-neutral-400 dark:text-slate-500 mt-1">Aparece no final das mensagens enviadas ao cliente</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-neutral-500 dark:text-slate-400 mb-1 block">
