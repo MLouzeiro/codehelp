@@ -229,6 +229,17 @@ npx expo run:ios             # Build iOS
 
 ## Progresso Recente (SessãoAtual)
 
+### CSAT Flow — Completo
+- [x] Investigação completa do fluxo: conclusão → CSAT → resposta → novo ticket
+- [x] **Bug corrigido**: CSAT detectava "1-5" mesmo quando cliente escolhia departamento
+- [x] **Máquina de estados**: `IDLE / AWAITING_CSAT / AWAITING_DEPARTMENT` por conversa (TTL 30min)
+- [x] **Text messages** substituíram list messages (Baileys `relayMessage` retorna success mas WhatsApp não entrega)
+- [x] `enviarMensagemCsat` agora envia texto formatado com opções 1-5 + link fallback
+- [x] `enviarMenuInicial` agora envia texto com departamentos numerados + passa `whatsappConnectionId`
+- [x] **Removido**: criação automática de ticket na resposta CSAT — novo ticket só na próxima mensagem
+- [x] CSAT handler salva mensagem do cliente no ticket
+- [x] Logs de transição de estado para debug
+
 ### Kanban Interno — Completo
 - [x] Modal flutuante centralizado (substituiu painel lateral)
 - [x] Aba Checklist com barra de progresso e importação de templates
