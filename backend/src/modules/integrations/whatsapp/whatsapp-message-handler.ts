@@ -378,15 +378,21 @@ export async function processIncomingMessageHandler(
     // ── Send initial menu if needed (BEFORE department selection) ───
     const needsMenu = (ticket!.etapa === 'triagem' || ticket!.etapa === 'boas_vindas' || ticket!.etapa === 'fila') && !ticket!.protocolo && !ticket!.departamentoId;
     if (needsMenu) {
-      const temMenuEnviado = await prisma.message.findFirst({
-        where: { ticketId: ticket!.id, fromMe: true, content: { contains: 'Menu de departamentos enviado' } },
-      });
-      if (!temMenuEnviado) {
-        await enviarMenuInicial(ticket!.id).catch((e) =>
-          console.error(`[${provider}] Erro ao enviar menu inicial:`, e?.message || e)
-        );
-        setConversationState(phoneDigits, 'AWAITING_DEPARTMENT');
-        return;
+      // Don't send menu if this ticket was reopened after CSAT response
+      const jaTemCsatMenu = await prisma.cSATResposta.findUnique({ where: { ticketId: ticket!.id } });
+      if (jaTemCsatMenu) {
+        console.log(`[WhatsApp] Ticket ${ticket!.id} ja tem CSAT, ignorando menu`);
+      } else {
+        const temMenuEnviado = await prisma.message.findFirst({
+          where: { ticketId: ticket!.id, fromMe: true, content: { contains: 'Menu de departamentos enviado' } },
+        });
+        if (!temMenuEnviado) {
+          await enviarMenuInicial(ticket!.id).catch((e) =>
+            console.error(`[${provider}] Erro ao enviar menu inicial:`, e?.message || e)
+          );
+          setConversationState(phoneDigits, 'AWAITING_DEPARTMENT');
+          return;
+        }
       }
     }
 
@@ -691,6 +697,12 @@ export async function processIncomingMessageHandler(
 
     // ── Initial menu for new triagem tickets ────────────────────────
     if ((ticket!.etapa === 'triagem' || ticket!.etapa === 'boas_vindas' || ticket!.etapa === 'fila') && !ticket!.protocolo && !ticket!.departamentoId) {
+      // Don't send menu if this ticket was reopened after CSAT response
+      const jaTemCsat = await prisma.cSATResposta.findUnique({ where: { ticketId: ticket!.id } });
+      if (jaTemCsat) {
+        console.log(`[WhatsApp] Ticket ${ticket!.id} ja tem CSAT, nao enviando menu`);
+        return;
+      }
       const temAlgumaMsgDoBot = await prisma.message.count({
         where: { ticketId: ticket!.id, fromMe: true },
       });
