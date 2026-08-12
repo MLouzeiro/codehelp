@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { useAuth } from '../../services/auth';
 import {
   MessageSquare, Save, RotateCcw, Check, AlertCircle, ChevronDown, ChevronUp, Variable,
+  FileText, List, BarChart3, Plus, X,
 } from 'lucide-react';
 
 interface AutoMessage {
@@ -14,6 +15,40 @@ interface AutoMessage {
   variaveis: string[];
 }
 
+interface Enquete {
+  id: string;
+  nome: string;
+  tipo: string;
+  opcoes: string;
+}
+
+const MENSAGENS_PRONTAS = [
+  {
+    nome: 'Saudação Padrão',
+    mensagem: 'Olá {{nome}}! {{saudacao}}\n\nQue bom ter você por aqui!\n\nPor favor, selecione o departamento desejado:',
+  },
+  {
+    nome: 'Agradecimento',
+    mensagem: 'Obrigado pelo seu contato, {{nome}}!\n\nSeu atendimento foi concluído com sucesso.',
+  },
+  {
+    nome: 'Fora de Horário',
+    mensagem: 'Olá {{nome}}!\n\nNosso horário de atendimento é de segunda a sexta, das 8h às 18h.\n\nPor favor, aguarde o retorno no próximo dia útil.',
+  },
+  {
+    nome: 'Aguardando Retorno',
+    mensagem: 'Olá {{nome}}!\n\nEstamos aguardando seu retorno para continuar com o atendimento.\n\nSe precisar de ajuda, responda esta mensagem.',
+  },
+  {
+    nome: 'CSAT Padrão',
+    mensagem: 'Olá {{nome}}!\n\nSeu atendimento foi concluído com sucesso.\n\nPor favor, avalie sua experiência com um número de 1 a 5:\n\n*1* - Péssimo\n*2* - Ruim\n*3* - Regular\n*4* - Bom\n*5* - Excelente\n\nResponda com o *número* (1 a 5).',
+  },
+  {
+    nome: 'Confirmação de Departamento',
+    mensagem: 'Obrigado, {{nome}}!\n\nVocê foi direcionado para o departamento de *{{departamento}}*.\n\nUm atendente irá ajudá-lo em breve.',
+  },
+];
+
 export default function AutoMessagesPage() {
   const { user } = useAuth();
   const [messages, setMessages] = useState<AutoMessage[]>([]);
@@ -24,10 +59,23 @@ export default function AutoMessagesPage() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [enquetes, setEnquetes] = useState<Enquete[]>([]);
+  const [showMensagensProntas, setShowMensagensProntas] = useState(false);
+  const [showEnquetes, setShowEnquetes] = useState(false);
 
   useEffect(() => {
     carregarMensagens();
+    carregarEnquetes();
   }, []);
+
+  const carregarEnquetes = async () => {
+    try {
+      const { data } = await api.get('/enquetes');
+      setEnquetes(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const carregarMensagens = async () => {
     try {
@@ -85,6 +133,19 @@ export default function AutoMessagesPage() {
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao resetar');
     }
+  };
+
+  const inserirMensagemPronta = (mensagem: string) => {
+    setEditText(mensagem);
+    setShowMensagensProntas(false);
+  };
+
+  const inserirEnquete = (enquete: Enquete) => {
+    const opcoes = JSON.parse(enquete.opcoes);
+    const opcoesTexto = opcoes.map((o: any) => `*${o.id}* - ${o.titulo}`).join('\n');
+    const texto = `{{mensagem_enquete_${enquete.id}}}\n\n${opcoesTexto}\n\nResponda com o *número* da opção.`;
+    setEditText(prev => prev + '\n\n' + texto);
+    setShowEnquetes(false);
   };
 
   const inserirVariavel = (variavel: string) => {
@@ -147,13 +208,13 @@ export default function AutoMessagesPage() {
                     <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Lexend, sans-serif' }}>
                       {msg.nome}
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                    <p className="text-xs text-slate-500 dark:text-slate-300" style={{ fontFamily: 'Lexend, sans-serif' }}>
                       {msg.descricao}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {isExpanded ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+                  {isExpanded ? <ChevronUp size={18} className="text-slate-400 dark:text-slate-300" /> : <ChevronDown size={18} className="text-slate-400 dark:text-slate-300" />}
                 </div>
               </div>
 
@@ -161,10 +222,10 @@ export default function AutoMessagesPage() {
                 <div className="px-4 pb-4 border-t border-slate-100 dark:border-slate-700">
                   <div className="pt-4">
                     {msg.variaveis.length > 0 && (
-                      <div className="mb-3 p-3 bg-slate-50 dark:bg-slate-750 rounded-xl">
+                      <div className="mb-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
                         <div className="flex items-center gap-1.5 mb-2">
-                          <Variable size={14} className="text-slate-400" />
-                          <span className="text-xs font-medium text-slate-600 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                          <Variable size={14} className="text-slate-400 dark:text-slate-300" />
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-200" style={{ fontFamily: 'Lexend, sans-serif' }}>
                             Variáveis disponíveis:
                           </span>
                         </div>
@@ -173,11 +234,89 @@ export default function AutoMessagesPage() {
                             <button
                               key={v}
                               onClick={() => inserirVariavel(v)}
-                              className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors font-mono"
+                              className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-800/40 text-blue-700 dark:text-blue-200 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-700/50 transition-colors font-mono border border-blue-200 dark:border-blue-700/50"
                             >
                               {v}
                             </button>
                           ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mensagens Prontas e Enquetes */}
+                    <div className="mb-3 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setShowMensagensProntas(!showMensagensProntas)}
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-green-100 dark:bg-green-800/40 text-green-700 dark:text-green-200 rounded-lg hover:bg-green-200 dark:hover:bg-green-700/50 transition-colors border border-green-200 dark:border-green-700/50"
+                      >
+                        <FileText size={12} />
+                        Mensagens Prontas
+                      </button>
+                      <button
+                        onClick={() => setShowEnquetes(!showEnquetes)}
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-purple-100 dark:bg-purple-800/40 text-purple-700 dark:text-purple-200 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-700/50 transition-colors border border-purple-200 dark:border-purple-700/50"
+                      >
+                        <BarChart3 size={12} />
+                        Inserir Enquete
+                      </button>
+                    </div>
+
+                    {/* Lista de Mensagens Prontas */}
+                    {showMensagensProntas && (
+                      <div className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-green-700 dark:text-green-300">Mensagens Prontas</span>
+                          <button onClick={() => setShowMensagensProntas(false)} className="text-green-500 hover:text-green-700">
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {MENSAGENS_PRONTAS.map((mp, i) => (
+                            <button
+                              key={i}
+                              onClick={() => inserirMensagemPronta(mp.mensagem)}
+                              className="w-full text-left p-2 bg-white dark:bg-slate-800 rounded-lg border border-green-200 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                            >
+                              <span className="text-xs font-medium text-green-800 dark:text-green-200">{mp.nome}</span>
+                              <p className="text-[10px] text-green-600 dark:text-green-400 mt-0.5 truncate">{mp.mensagem.substring(0, 60)}...</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Lista de Enquetes */}
+                    {showEnquetes && (
+                      <div className="mb-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-purple-700 dark:text-purple-300">Enquetes Disponíveis</span>
+                          <button onClick={() => setShowEnquetes(false)} className="text-purple-500 hover:text-purple-700">
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {enquetes.length === 0 ? (
+                            <p className="text-xs text-purple-500 dark:text-purple-400 text-center py-2">
+                              Nenhuma enquete criada.{' '}
+                              <a href="/app/settings/enquetes" className="underline">Criar agora</a>
+                            </p>
+                          ) : (
+                            enquetes.map((e) => (
+                              <button
+                                key={e.id}
+                                onClick={() => inserirEnquete(e)}
+                                className="w-full text-left p-2 bg-white dark:bg-slate-800 rounded-lg border border-purple-200 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                              >
+                                <div className="flex items-center gap-2">
+                                  {e.tipo === 'lista' ? <List size={12} className="text-purple-500" /> : <BarChart3 size={12} className="text-purple-500" />}
+                                  <span className="text-xs font-medium text-purple-800 dark:text-purple-200">{e.nome}</span>
+                                </div>
+                                <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5">
+                                  {JSON.parse(e.opcoes).length} opções
+                                </p>
+                              </button>
+                            ))
+                          )}
                         </div>
                       </div>
                     )}
@@ -220,11 +359,11 @@ export default function AutoMessagesPage() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="p-4 bg-slate-50 dark:bg-slate-750 rounded-xl border border-slate-200 dark:border-slate-700">
-                          <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono" style={{ fontFamily: 'monospace' }}>
-                            {msg.mensagemAtual}
-                          </pre>
-                        </div>
+                    <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
+                      <pre className="text-sm text-slate-700 dark:text-slate-100 whitespace-pre-wrap font-mono leading-relaxed" style={{ fontFamily: 'monospace' }}>
+                        {msg.mensagemAtual}
+                      </pre>
+                    </div>
                         <div className="flex gap-3">
                           <button
                             onClick={() => iniciarEdicao(msg)}

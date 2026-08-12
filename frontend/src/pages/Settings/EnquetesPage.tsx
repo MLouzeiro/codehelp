@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Send, List, BarChart3, X, Check, GripVertical } from 'lucide-react';
-import { api } from '../../services/api';
+import api from '../../services/api';
 import { useThemeSettings } from '../../services/ThemeContext';
 
 interface Opcao {
