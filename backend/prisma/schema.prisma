@@ -97,6 +97,7 @@ model Client {
   opportunities        Opportunity[]
   serviceOrders        ServiceOrder[]
   tickets              Ticket[]
+  timeEntries          TimeEntry[]
 }
 
 /// Colaborador de um cliente (pessoa que trabalha na empresa cliente)
@@ -548,6 +549,7 @@ model KanbanTask {
   column           KanbanColumn       @relation(fields: [columnId], references: [id], onDelete: Cascade)
   responsavel      User?              @relation("KanbanTaskResponsavel", fields: [responsavelId], references: [id])
   tags             KanbanTaskTag[]
+  timeEntries      TimeEntry[]
 
   @@index([boardId])
   @@index([columnId])
@@ -876,6 +878,7 @@ model Departamento {
   usuarios            UserDepartamento[]
   whatsappConnections WhatsAppConnection[]
   departmentTimes     TicketDepartmentTime[]
+  timeEntries         TimeEntry[]
 }
 
 /// Nivel de suporte (customizavel: N1, N2, N3, N4, Supervisor, etc.)
@@ -1492,6 +1495,9 @@ model TimeEntry {
   ticketId   String?
   orderId    String?
   projectId  String?
+  clienteId  String?
+  tarefaId   String?
+  setorId    String?
   tipo       String        @default("suporte")
   descricao  String?
   dataInicio DateTime      @default(now())
@@ -1504,11 +1510,17 @@ model TimeEntry {
   updatedAt  DateTime      @updatedAt
   order      ServiceOrder? @relation(fields: [orderId], references: [id])
   ticket     Ticket?       @relation(fields: [ticketId], references: [id])
+  cliente    Client?       @relation(fields: [clienteId], references: [id])
+  tarefa     KanbanTask?   @relation(fields: [tarefaId], references: [id])
+  setor      Departamento? @relation(fields: [setorId], references: [id])
   usuario    User          @relation(fields: [usuarioId], references: [id])
 
   @@index([usuarioId])
   @@index([ticketId])
   @@index([orderId])
+  @@index([clienteId])
+  @@index([tarefaId])
+  @@index([setorId])
   @@index([tipo])
   @@index([dataInicio])
   @@index([billable])

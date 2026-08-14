@@ -1100,6 +1100,31 @@ export async function criarKanbanTaskHandler(req: AuthRequest, res: Response) {
 
     if (!kanbanTask) return res.status(400).json({ error: 'Não foi possível criar tarefa no Kanban' });
 
+    // Time tracking: inicia contagem automaticamente ao criar tarefa no ticket
+    try {
+      const { startTimer, inferirTipoDeDepartamento } = await import('../timetracking/timetracking.service');
+      const ticketCtx = await prisma.ticket.findUnique({
+        where: { id },
+        select: { clientId: true, departamentoId: true },
+      });
+      const deptCtx = await prisma.departamento.findUnique({
+        where: { id: departamentoId },
+        select: { slug: true, nome: true },
+      });
+      await startTimer({
+        usuarioId: responsavelId || req.user?.id,
+        ticketId: id,
+        tarefaId: kanbanTask.id,
+        setorId: departamentoId,
+        clienteId: ticketCtx?.clientId || undefined,
+        tipo: inferirTipoDeDepartamento(deptCtx?.slug || deptCtx?.nome || undefined),
+        descricao: `Tarefa: ${titulo || kanbanTask.titulo}`,
+        tags: ['auto'],
+      });
+    } catch (err: any) {
+      console.warn(`[TimeTracking] Falha ao iniciar timer automatico da tarefa ${kanbanTask.id}:`, err?.message);
+    }
+
     await logAction({
       usuarioId: req.user?.id,
       acao: 'criar_kanban_task',

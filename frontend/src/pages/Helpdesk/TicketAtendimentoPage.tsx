@@ -26,14 +26,34 @@ export default function TicketAtendimentoPage() {
   const [horasDesenv, setHorasDesenv] = useState<number | ''>('');
   const [salvandoHoras, setSalvandoHoras] = useState(false);
   const [deptTempos, setDeptTempos] = useState<any[]>([]);
+  const [timeBlocks, setTimeBlocks] = useState<any[]>([]);
+
+  const formatMin = (min: number | null | undefined) => {
+    if (min == null) return '—';
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
+
+  const formatTimeTotal = (blocks: any[]) =>
+    formatMin(blocks.reduce((acc, b) => acc + (b.duracaoMin || 0), 0));
+
+  const tipoLabel = (tipo: string) => {
+    const map: Record<string, string> = {
+      dev: 'Desenvolvimento', suporte: 'Suporte', implantacao: 'Implantação',
+      treinamento: 'Treinamento', reuniao: 'Reunião', outro: 'Outro',
+    };
+    return map[tipo] || tipo;
+  };
 
   const loadTicket = useCallback(async () => {
     if (!ticketId) return;
     try {
-      const [historyRes, timelineRes, deptTimeRes] = await Promise.all([
+      const [historyRes, timelineRes, deptTimeRes, timeBlocksRes] = await Promise.all([
         api.get(`/helpdesk/tickets/${ticketId}/history`),
         api.get(`/audit-ticket/tickets/${ticketId}/events`).catch(() => ({ data: [] })),
         api.get(`/helpdesk/tickets/${ticketId}/department-time`).catch(() => ({ data: [] })),
+        api.get(`/timetracking/ticket/${ticketId}/blocks`).catch(() => ({ data: [] })),
       ]);
       const t = historyRes.data.ticket || historyRes.data;
       setTicket(t);
@@ -41,6 +61,7 @@ export default function TicketAtendimentoPage() {
       setTimelineEvents(timelineRes.data);
       setHistoricoContato(historyRes.data.historicoContato || []);
       setDeptTempos(deptTimeRes.data);
+      setTimeBlocks(timeBlocksRes.data);
       setPrazoEntrega(t.prazoEntrega ? new Date(t.prazoEntrega).toISOString().slice(0, 16) : '');
       setSemPrazo(t.semPrazo || false);
       setHorasDesenv(t.horasDesenvolvimento ?? '');
@@ -326,6 +347,39 @@ export default function TicketAtendimentoPage() {
             </div>
           ) : (
                 <div className="space-y-0">
+                  {timeBlocks.length > 0 && (
+                    <div className="mb-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock size={14} className="text-indigo-600 dark:text-indigo-400" />
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Blocos de Tempo</span>
+                        <span className="ml-auto text-[11px] text-slate-400 dark:text-slate-500">
+                          {formatTimeTotal(timeBlocks)}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {timeBlocks.map((blk: any, bi: number) => (
+                          <div key={blk.id || bi} className="flex items-start justify-between gap-2 text-sm">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-slate-700 dark:text-slate-300">
+                                {blk.usuario}
+                                {blk.tarefa ? ` — ${blk.tarefa.titulo}` : ''}
+                              </p>
+                              {blk.descricao && (
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{blk.descricao}</p>
+                              )}
+                              <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                                {blk.dataInicio ? new Date(blk.dataInicio).toLocaleString('pt-BR') : ''}
+                                {blk.tipo ? ` · ${tipoLabel(blk.tipo)}` : ''}
+                              </p>
+                            </div>
+                            <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                              {formatMin(blk.duracaoMin)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {timelineEvents.slice(0, 20).map((ev: any, i: number) => {
                     const icon = getTimelineIcon(ev);
                     return (

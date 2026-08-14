@@ -4,6 +4,7 @@ import {
   startTimer, stopTimer, getRunningTimer,
   createEntry, updateEntry, deleteEntry,
   listEntries, getSummary, syncOrderHours,
+  getConsumptionByClient, getTicketTimeBlocks,
 } from './timetracking.controller';
 
 const router = Router();
@@ -25,5 +26,9 @@ router.get('/summary', getSummary);
 
 // ── Sync order hours ─────────────────────────────────────────────────
 router.post('/sync-order/:orderId', syncOrderHours);
+
+// ── Relatorio / Timeline ─────────────────────────────────────────────
+router.get('/consumption/client', getConsumptionByClient);
+router.get('/ticket/:ticketId/blocks', getTicketTimeBlocks);
 
 export default router;

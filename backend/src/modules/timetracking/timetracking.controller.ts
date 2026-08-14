@@ -128,3 +128,26 @@ export async function syncOrderHours(req: AuthRequest, res: Response) {
     return res.status(500).json({ error: 'Erro ao sincronizar horas da OS' });
   }
 }
+
+// ── Consumo por cliente ──────────────────────────────────────────────
+
+export async function getConsumptionByClient(req: AuthRequest, res: Response) {
+  try {
+    const { clienteId, from, to } = req.query as Record<string, string>;
+    const result = await svc.getConsumptionByClient({ clienteId, from, to });
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao gerar consumo por cliente' });
+  }
+}
+
+// ── Blocos de tempo de um ticket ─────────────────────────────────────
+
+export async function getTicketTimeBlocks(req: AuthRequest, res: Response) {
+  try {
+    const blocks = await svc.getTicketTimeBlocks(req.params.ticketId);
+    return res.json(blocks);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao buscar blocos de tempo' });
+  }
+}

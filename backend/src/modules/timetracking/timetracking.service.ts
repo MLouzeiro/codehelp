@@ -5,12 +5,39 @@ export interface TimeEntryInput {
   ticketId?: string;
   orderId?: string;
   projectId?: string;
+  clienteId?: string;
+  tarefaId?: string;
+  setorId?: string;
   tipo?: string;
   descricao?: string;
   dataInicio?: string;
   duracaoMin?: number;
   billable?: boolean;
   tags?: string[];
+}
+
+// Categorias canonicas do relatorio de consumo (spec FASE 4)
+export const CATEGORIA_ATENDIMENTO = 'atendimento';
+export const CATEGORIA_DESENVOLVIMENTO = 'desenvolvimento';
+export const CATEGORIA_IMPLANTACAO = 'implantacao';
+export const CATEGORIA_OUTRO = 'outro';
+
+// Mapeia o tipo gravado na TimeEntry para a categoria canonica
+export function categorizarTipo(tipo: string): string {
+  const t = (tipo || '').toLowerCase();
+  if (t === 'dev' || t.includes('desenvolvimento')) return CATEGORIA_DESENVOLVIMENTO;
+  if (t === 'implantacao' || t.includes('implantac')) return CATEGORIA_IMPLANTACAO;
+  if (t === 'atendimento' || t === 'suporte' || t === 'treinamento' || t === 'reuniao') return CATEGORIA_ATENDIMENTO;
+  return CATEGORIA_OUTRO;
+}
+
+// Infere o tipo da tarefa criada dentro do ticket a partir do departamento
+export function inferirTipoDeDepartamento(slugOrNome?: string): string {
+  const s = (slugOrNome || '').toLowerCase();
+  if (s.includes('dev') || s.includes('desenvolvimento')) return 'dev';
+  if (s.includes('implant')) return 'implantacao';
+  if (s.includes('treinament') || s.includes('treino')) return 'treinamento';
+  return 'suporte';
 }
 
 export interface TimeEntryUpdate {
@@ -40,6 +67,9 @@ export async function startTimer(input: TimeEntryInput) {
       ticketId: input.ticketId || null,
       orderId: input.orderId || null,
       projectId: input.projectId || null,
+      clienteId: input.clienteId || null,
+      tarefaId: input.tarefaId || null,
+      setorId: input.setorId || null,
       tipo: input.tipo || 'suporte',
       descricao: input.descricao || null,
       dataInicio: input.dataInicio ? new Date(input.dataInicio) : new Date(),
@@ -49,6 +79,7 @@ export async function startTimer(input: TimeEntryInput) {
     include: {
       ticket: { select: { id: true, assunto: true, protocolo: true } },
       order: { select: { id: true, numeroOs: true, tipoServico: true } },
+      tarefa: { select: { id: true, titulo: true, numero: true } },
     },
   });
 }
@@ -82,6 +113,9 @@ export async function createManualEntry(input: TimeEntryInput & { duracaoMin: nu
       ticketId: input.ticketId || null,
       orderId: input.orderId || null,
       projectId: input.projectId || null,
+      clienteId: input.clienteId || null,
+      tarefaId: input.tarefaId || null,
+      setorId: input.setorId || null,
       tipo: input.tipo || 'suporte',
       descricao: input.descricao || null,
       dataInicio: input.dataInicio ? new Date(input.dataInicio) : new Date(),
@@ -93,6 +127,7 @@ export async function createManualEntry(input: TimeEntryInput & { duracaoMin: nu
     include: {
       ticket: { select: { id: true, assunto: true, protocolo: true } },
       order: { select: { id: true, numeroOs: true, tipoServico: true } },
+      tarefa: { select: { id: true, titulo: true, numero: true } },
     },
   });
 }
@@ -156,6 +191,9 @@ export async function listEntries(filters: {
       usuario: { select: { id: true, name: true } },
       ticket: { select: { id: true, assunto: true, protocolo: true } },
       order: { select: { id: true, numeroOs: true, tipoServico: true } },
+      tarefa: { select: { id: true, titulo: true, numero: true } },
+      cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+      setor: { select: { id: true, nome: true } },
     },
     orderBy: { dataInicio: 'desc' },
   });
@@ -169,6 +207,9 @@ export async function getRunningTimer(usuarioId: string) {
     include: {
       ticket: { select: { id: true, assunto: true, protocolo: true } },
       order: { select: { id: true, numeroOs: true, tipoServico: true } },
+      tarefa: { select: { id: true, titulo: true, numero: true } },
+      cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+      setor: { select: { id: true, nome: true } },
     },
   });
 }
@@ -265,4 +306,105 @@ export async function syncOrderHours(orderId: string) {
       horasSuporte: +(suporteMin / 60).toFixed(2),
     },
   });
+}
+
+// ── Consumo por cliente (relatorio FASE 4) ──────────────────────────
+
+export async function getConsumptionByClient(filters: {
+  clienteId?: string;
+  from?: string;
+  to?: string;
+}) {
+  const where: any = { dataFim: { not: null } };
+  if (filters.clienteId) where.clienteId = filters.clienteId;
+
+  if (filters.from || filters.to) {
+    where.dataInicio = {};
+    if (filters.from) where.dataInicio.gte = new Date(filters.from);
+    if (filters.to) where.dataInicio.lte = new Date(filters.to);
+  }
+
+  const entries = await prisma.timeEntry.findMany({
+    where,
+    select: {
+      id: true,
+      tipo: true,
+      duracaoMin: true,
+      dataInicio: true,
+      clienteId: true,
+      ticketId: true,
+      tarefaId: true,
+      usuario: { select: { id: true, name: true } },
+      cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+      ticket: { select: { id: true, protocolo: true } },
+      tarefa: { select: { id: true, titulo: true } },
+    },
+    orderBy: { dataInicio: 'desc' },
+  });
+
+  const result: Record<
+    string,
+    {
+      id: string;
+      nome: string;
+      atendimentoMin: number;
+      desenvolvimentoMin: number;
+      implantacaoMin: number;
+      outroMin: number;
+      totalMin: number;
+      entradas: number;
+    }
+  > = {};
+
+  for (const e of entries) {
+    const clienteId = e.clienteId || 'sem-cliente';
+    if (!result[clienteId]) {
+      result[clienteId] = {
+        id: e.cliente?.id || clienteId,
+        nome: e.cliente?.razaoSocial || e.cliente?.nomeFantasia || 'Sem cliente',
+        atendimentoMin: 0,
+        desenvolvimentoMin: 0,
+        implantacaoMin: 0,
+        outroMin: 0,
+        totalMin: 0,
+        entradas: 0,
+      };
+    }
+    const min = e.duracaoMin || 0;
+    const cat = categorizarTipo(e.tipo);
+    if (cat === CATEGORIA_ATENDIMENTO) result[clienteId].atendimentoMin += min;
+    else if (cat === CATEGORIA_DESENVOLVIMENTO) result[clienteId].desenvolvimentoMin += min;
+    else if (cat === CATEGORIA_IMPLANTACAO) result[clienteId].implantacaoMin += min;
+    else result[clienteId].outroMin += min;
+    result[clienteId].totalMin += min;
+    result[clienteId].entradas++;
+  }
+
+  return Object.values(result).sort((a, b) => b.totalMin - a.totalMin);
+}
+
+// ── Blocos de tempo do ticket (timeline FASE 4) ─────────────────────
+
+export async function getTicketTimeBlocks(ticketId: string) {
+  const entries = await prisma.timeEntry.findMany({
+    where: { ticketId },
+    include: {
+      usuario: { select: { id: true, name: true } },
+      tarefa: { select: { id: true, titulo: true, numero: true } },
+      setor: { select: { id: true, nome: true } },
+    },
+    orderBy: { dataInicio: 'desc' },
+  });
+
+  return entries.map((e) => ({
+    id: e.id,
+    usuario: e.usuario.name,
+    tarefa: e.tarefa ? { id: e.tarefa.id, titulo: e.tarefa.titulo } : null,
+    setor: e.setor ? e.setor.nome : null,
+    tipo: e.tipo,
+    descricao: e.descricao,
+    dataInicio: e.dataInicio,
+    dataFim: e.dataFim,
+    duracaoMin: e.duracaoMin,
+  }));
 }

@@ -23,6 +23,17 @@ interface TimeEntry {
   order: { id: string; numeroOs: string; tipoServico: string } | null;
 }
 
+interface ConsumptionRow {
+  id: string;
+  nome: string;
+  atendimentoMin: number;
+  desenvolvimentoMin: number;
+  implantacaoMin: number;
+  outroMin: number;
+  totalMin: number;
+  entradas: number;
+}
+
 interface Summary {
   totalHoras: number;
   totalBillableHoras: number;
@@ -86,6 +97,8 @@ export default function TimeTrackingPage() {
   });
   const [elapsed, setElapsed] = useState('');
   const [now, setNow] = useState(Date.now());
+  const [consumption, setConsumption] = useState<ConsumptionRow[]>([]);
+  const [showConsumption, setShowConsumption] = useState(false);
 
   // Tick every second to update elapsed time
   useEffect(() => {
@@ -119,12 +132,18 @@ export default function TimeTrackingPage() {
       setEntries(entriesRes.data);
       setRunning(runningRes.data);
       setSummary(summaryRes.data);
+      if (showConsumption) {
+        const consumptionRes = await api.get('/timetracking/consumption/client', {
+          params: { from: filters.from || undefined, to: filters.to || undefined },
+        });
+        setConsumption(consumptionRes.data);
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, showConsumption]);
 
   useEffect(() => { loadEntries(); }, [loadEntries]);
 
@@ -181,6 +200,25 @@ export default function TimeTrackingPage() {
     }
   };
 
+  const loadConsumption = useCallback(async () => {
+    try {
+      const res = await api.get('/timetracking/consumption/client', {
+        params: { from: filters.from || undefined, to: filters.to || undefined },
+      });
+      setConsumption(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [filters.from, filters.to]);
+
+  const toggleConsumption = () => {
+    setShowConsumption((v) => {
+      const next = !v;
+      if (next) loadConsumption();
+      return next;
+    });
+  };
+
   const tipoMap = Object.fromEntries(TIPOS.map((t) => [t.value, t]));
 
   return (
@@ -194,6 +232,12 @@ export default function TimeTrackingPage() {
           <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Registre suas horas de desenvolvimento e implantação</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={toggleConsumption}
+            className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${showConsumption ? 'bg-blue-600 border-blue-600 text-white' : isDark ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+          >
+            <BarChart3 size={16} /> Consumo por Cliente
+          </button>
           <button
             onClick={() => setShowForm(!showForm)}
             className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${isDark ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
@@ -380,6 +424,55 @@ export default function TimeTrackingPage() {
                 ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Consumo por Cliente */}
+      {showConsumption && (
+        <div className={`border rounded-xl overflow-hidden ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+          <div className={`px-4 py-3 border-b flex items-center justify-between ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <BarChart3 size={16} className="text-blue-500" />
+              <span className={isDark ? 'text-slate-200' : 'text-gray-800'}>Consumo por Cliente</span>
+            </div>
+            <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+              {consumption.length} clientes
+            </div>
+          </div>
+          {consumption.length === 0 ? (
+            <div className={`text-center py-8 ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
+              <p className="text-sm">Nenhum consumo registrado no período</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className={`border-b ${isDark ? 'bg-slate-900/50 border-slate-700' : 'bg-gray-50 border-gray-200'}`}>
+                  <tr>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Cliente</th>
+                    <th className={`px-4 py-3 text-right text-xs font-medium uppercase text-green-600`}>Atendimento</th>
+                    <th className={`px-4 py-3 text-right text-xs font-medium uppercase text-indigo-600`}>Desenvolvimento</th>
+                    <th className={`px-4 py-3 text-right text-xs font-medium uppercase text-amber-600`}>Implantação</th>
+                    <th className={`px-4 py-3 text-right text-xs font-medium uppercase ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Outro</th>
+                    <th className={`px-4 py-3 text-right text-xs font-medium uppercase ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>Total</th>
+                    <th className={`px-4 py-3 text-center text-xs font-medium uppercase ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Entradas</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDark ? 'divide-slate-700' : 'divide-gray-100'}`}>
+                  {consumption.map((row) => (
+                    <tr key={row.id} className="hover:bg-opacity-50">
+                      <td className={`px-4 py-3 text-sm font-medium ${isDark ? 'text-slate-200' : 'text-gray-800'}`}>{row.nome}</td>
+                      <td className="px-4 py-3 text-right text-sm text-green-600">{formatMinutes(row.atendimentoMin)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-indigo-600">{formatMinutes(row.desenvolvimentoMin)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-amber-600">{formatMinutes(row.implantacaoMin)}</td>
+                      <td className={`px-4 py-3 text-right text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>{formatMinutes(row.outroMin)}</td>
+                      <td className={`px-4 py-3 text-right text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-gray-900'}`}>{formatMinutes(row.totalMin)}</td>
+                      <td className={`px-4 py-3 text-center text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>{row.entradas}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
