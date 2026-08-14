@@ -19,6 +19,7 @@ const OrderForm = lazy(() => import('./pages/Orders/OrderForm'));
 const OrderDetail = lazy(() => import('./pages/Orders/OrderDetail'));
 const SignPage = lazy(() => import('./pages/Sign/SignPage'));
 const AprovacaoPublica = lazy(() => import('./pages/Aprovacoes/AprovacaoPublica'));
+const RelatorioGerencial = lazy(() => import('./pages/Analytics/RelatorioGerencial'));
 const WhatsAppPage = lazy(() => import('./pages/WhatsApp/WhatsAppPage'));
 const TicketDetail = lazy(() => import('./pages/WhatsApp/TicketDetail'));
 const KanbanPage = lazy(() => import('./pages/Kanban/KanbanPage'));
@@ -110,6 +111,7 @@ export default function App() {
             <Route path="helpdesk/audit" element={<AuditStatsPage />} />
             <Route path="helpdesk/auditoria-ia" element={<AuditoriaAtendimento />} />
             <Route path="helpdesk/aprovacoes" element={<Aprovacoes />} />
+            <Route path="relatorios/gerencial" element={<RelatorioGerencial />} />
             <Route path="kb" element={<KBList />} />
             <Route path="automations" element={<AutomationsPage />} />
             <Route path="timetracking" element={<TimeTrackingPage />} />

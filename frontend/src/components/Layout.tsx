@@ -23,6 +23,7 @@ const navItems = [
   { path: '/app/helpdesk/business-metrics', label: 'Metricas de Negocio', icon: BarChart3, roles: ['admin', 'gerente'] },
   { path: '/app/helpdesk/board', label: 'Quadro de Status', icon: ArrowUpDown, roles: ['admin', 'gerente'] },
   { path: '/app/helpdesk/aprovacoes', label: 'Aprovacoes', icon: Shield, roles: ['admin', 'gerente'] },
+  { path: '/app/relatorios/gerencial', label: 'Relatorio Gerencial', icon: BarChart3, roles: ['admin', 'gerente'] },
   { path: '/app/kb', label: 'Base de Conhecimento', icon: BookOpen, roles: ['admin', 'gerente', 'tecnico', 'vendedor'] },
   { path: '/app/automations', label: 'Automacoes', icon: Zap, roles: ['admin', 'gerente', 'supervisor'] },
   { path: '/app/crm', label: 'Clientes', icon: Users },
