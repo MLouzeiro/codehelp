@@ -3,6 +3,20 @@ import prisma from '../../config/database';
 import { AuthRequest } from '../../shared/middleware/auth';
 import { env } from '../../config/env';
 import { callClaude } from '../../shared/aiClient';
+import { gerarDashboardExecutivo } from './dashboardExecutivo.service';
+
+// ── Dashboard Executivo Consolidado ─────────────────────────────────────
+// Endpoint: GET /api/analytics/executivo?dias=30
+export async function getDashboardExecutivo(req: AuthRequest, res: Response) {
+  try {
+    const dias = Math.min(Math.max(parseInt(String(req.query.dias || '30'), 10) || 30, 1), 90);
+    const data = await gerarDashboardExecutivo(dias);
+    res.json(data);
+  } catch (err: any) {
+    console.error('Erro no dashboard executivo:', err?.message || err);
+    res.status(500).json({ error: 'Erro ao carregar dashboard executivo' });
+  }
+}
 
 // ── Métricas de Helpdesk/Suporite e Implantação ────────────────────────
 // Endpoint: GET /api/analytics/helpdesk-metrics
