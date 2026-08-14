@@ -21,6 +21,7 @@ const navItems = [
   { path: '/app/helpdesk/metrics', label: 'Metricas Operacionais', icon: LineChart, roles: ['admin', 'gerente'] },
   { path: '/app/helpdesk/auditoria-ia', label: 'Auditoria IA', icon: Brain, roles: ['admin', 'gerente'] },
   { path: '/app/helpdesk/auditoria-encerramento', label: 'Auditoria Encerramento', icon: Brain, roles: ['admin', 'gerente'] },
+  { path: '/app/helpdesk/auditoria-analista', label: 'Auditoria por Analista', icon: Brain, roles: ['admin', 'gerente'] },
   { path: '/app/helpdesk/business-metrics', label: 'Metricas de Negocio', icon: BarChart3, roles: ['admin', 'gerente'] },
   { path: '/app/helpdesk/board', label: 'Quadro de Status', icon: ArrowUpDown, roles: ['admin', 'gerente'] },
   { path: '/app/helpdesk/aprovacoes', label: 'Aprovacoes', icon: Shield, roles: ['admin', 'gerente'] },
