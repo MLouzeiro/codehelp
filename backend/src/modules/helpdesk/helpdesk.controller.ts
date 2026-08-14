@@ -46,9 +46,11 @@ export async function getKanban(req: AuthRequest, res: Response) {
     if (normalizeRole(req.user.role) === 'agente') {
       const deptIds = req.user.departamentos.map((d) => d.id);
       if (deptIds.length > 0) {
-        // Tecnicos: triagem + fila do seu setor + fila sem depto + seus tickets
+        // Tecnicos: triagem + fila do seu setor + fila sem depto + aguardando
+        // expediente (fora do horário) + seus tickets
         where.OR = [
           { etapa: 'triagem' },
+          { etapa: 'aguardando_expediente', assigneeId: null },
           { etapa: 'fila', departamentoId: { in: deptIds }, assigneeId: null },
           { etapa: 'fila', departamentoId: null, assigneeId: null },
           { assigneeId: req.user.id },
@@ -56,6 +58,7 @@ export async function getKanban(req: AuthRequest, res: Response) {
       } else {
         where.OR = [
           { etapa: 'triagem' },
+          { etapa: 'aguardando_expediente', assigneeId: null },
           { etapa: 'fila', assigneeId: null },
           { assigneeId: req.user.id },
         ];
