@@ -3,41 +3,15 @@ import { useAuth } from '../services/auth';
 import { useThemeSettings } from '../services/ThemeContext';
 import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import {
-  LayoutDashboard, Users, FileText, MessageSquare, Kanban,
-  Settings, LogOut, Menu, X, ChevronDown, Bot, TrendingUp, BarChart3,
-  Stethoscope, Activity, LineChart, BookOpen, Zap, ArrowUpDown,
-  Bell, Check, CheckCheck, Sun, Moon, Shield, Timer, Brain,
+  LayoutDashboard, Settings, LogOut, Menu, X, ChevronDown, Bell, Check, CheckCheck,
 } from 'lucide-react';
 import api from '../services/api';
 import type { Notificacao } from '../types';
+import { filterGroupsByRole, userHasRole } from '../config/navigation';
+import Breadcrumb from './Breadcrumb';
 
 const ThemeSettings = lazy(() => import('./ThemeSettings'));
 const SearchBar = lazy(() => import('./SearchBar'));
-
-const navItems = [
-  { path: '/app/dashboard', label: 'Painel Geral', icon: LayoutDashboard },
-  { path: '/app/helpdesk', label: 'Chamados', icon: Stethoscope },
-  { path: '/app/helpdesk/painel', label: 'Atendimento Ao Vivo', icon: Activity, roles: ['admin', 'gerente'] },
-  { path: '/app/helpdesk/metrics', label: 'Metricas Operacionais', icon: LineChart, roles: ['admin', 'gerente'] },
-  { path: '/app/helpdesk/auditoria-ia', label: 'Auditoria IA', icon: Brain, roles: ['admin', 'gerente'] },
-  { path: '/app/helpdesk/auditoria-encerramento', label: 'Auditoria Encerramento', icon: Brain, roles: ['admin', 'gerente'] },
-  { path: '/app/helpdesk/auditoria-analista', label: 'Auditoria por Analista', icon: Brain, roles: ['admin', 'gerente'] },
-  { path: '/app/helpdesk/business-metrics', label: 'Metricas de Negocio', icon: BarChart3, roles: ['admin', 'gerente'] },
-  { path: '/app/helpdesk/board', label: 'Quadro de Status', icon: ArrowUpDown, roles: ['admin', 'gerente'] },
-  { path: '/app/helpdesk/aprovacoes', label: 'Aprovacoes', icon: Shield, roles: ['admin', 'gerente'] },
-  { path: '/app/relatorios/gerencial', label: 'Relatorio Gerencial', icon: BarChart3, roles: ['admin', 'gerente'] },
-  { path: '/app/relatorios/executivo', label: 'Dashboard Executivo', icon: BarChart3, roles: ['admin', 'gerente'] },
-  { path: '/app/kb', label: 'Base de Conhecimento', icon: BookOpen, roles: ['admin', 'gerente', 'tecnico', 'vendedor'] },
-  { path: '/app/automations', label: 'Automacoes', icon: Zap, roles: ['admin', 'gerente', 'supervisor'] },
-  { path: '/app/crm', label: 'Clientes', icon: Users },
-  { path: '/app/crm/pipeline', label: 'Pipeline de Vendas', icon: TrendingUp },
-  { path: '/app/orders', label: 'Ordens de Servico', icon: FileText },
-  { path: '/app/timetracking', label: 'Time Tracking', icon: Timer },
-  { path: '/app/whatsapp', label: 'WhatsApp', icon: MessageSquare },
-  { path: '/app/kanban', label: 'Tarefas Internas', icon: Kanban },
-  { path: '/app/robos', label: 'Chatbots', icon: Bot },
-  // { path: '/app/crm/temas', label: 'Temas CRM', icon: FileText, roles: ['admin', 'gerente', 'vendedor'] },
-];
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -50,12 +24,37 @@ export default function Layout() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notificacao[]>([]);
   const [naoLidas, setNaoLidas] = useState(0);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const notifRef = useRef<HTMLDivElement>(null);
   const sidebarHoverTimeout = useRef<ReturnType<typeof setTimeout>>();
 
   const isHorizontal = sidebarLayout === 'horizontal';
   const isCollapsed = sidebarLayout === 'collapsed';
   const isVertical = sidebarLayout === 'vertical';
+
+  const groups = filterGroupsByRole(user?.role);
+
+  // Determina grupos que devem abrir automaticamente (contêm a rota ativa)
+  useEffect(() => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      for (const g of groups) {
+        const anyActive = g.items.some((i) => location.pathname === i.path || location.pathname.startsWith(i.path + '/'));
+        if (anyActive) next.add(g.key);
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const toggleGroup = (key: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const carregarNotifs = useCallback(async () => {
     if (!user) return;
@@ -112,7 +111,37 @@ export default function Layout() {
     sidebarHoverTimeout.current = setTimeout(() => setSidebarHovered(false), 200);
   };
 
-  const filteredNav = navItems.filter((item) => !item.roles || (user && item.roles.includes(user.role)));
+  const isItemActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
+
+  const isGroupActive = (groupItems: { path: string }[]) => groupItems.some((i) => isItemActive(i.path));
+
+  const iconClass = (active: boolean) =>
+    `flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 ${
+      active
+        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+        : 'text-slate-400 hover:text-white hover:bg-white/5'
+    }`;
+
+  const renderGroupItems = (groupItems: { path: string; label: string; icon: any; roles?: string[] }[], collapsed?: boolean) =>
+    groupItems
+      .filter((item) => userHasRole(user?.role, item.roles))
+      .map((item) => {
+        const active = isItemActive(item.path);
+        return (
+          <Link key={item.path} to={item.path}
+            title={collapsed ? item.label : undefined}
+            className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 ${
+              active
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+            onClick={() => setSidebarOpen(false)}
+            style={{ fontFamily: 'Lexend, sans-serif', fontSize: collapsed ? '0.75rem' : '0.82rem', letterSpacing: '0.01em' }}>
+            <item.icon size={collapsed ? 18 : 17} className={active ? 'text-blue-200' : ''} />
+            {!collapsed && item.label}
+          </Link>
+        );
+      });
 
   const SidebarContent = ({ collapsed }: { collapsed?: boolean }) => (
     <>
@@ -128,46 +157,77 @@ export default function Layout() {
       </div>
 
       <nav className={`relative p-3 space-y-0.5 overflow-y-auto h-[calc(100%-4rem-3rem)] ${collapsed ? 'px-2' : ''}`}>
-        {filteredNav.map((item) => {
-          const active = location.pathname.startsWith(item.path);
+        {groups.map((group) => {
+          const groupActive = isGroupActive(group.items);
+          const open = openGroups.has(group.key);
+          const visibleItems = group.items.filter((item) => userHasRole(user?.role, item.roles));
+          if (visibleItems.length === 0) return null;
+
+          // Dashboard e grupos com um único item renderizam direto (sem submenu)
+          if (visibleItems.length === 1 && group.key !== 'gestao') {
+            const item = visibleItems[0];
+            const active = isItemActive(item.path);
+            return (
+              <Link key={group.key} to={item.path}
+                title={collapsed ? item.label : undefined}
+                className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 ${
+                  active
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+                onClick={() => setSidebarOpen(false)}
+                style={{ fontFamily: 'Lexend, sans-serif', fontSize: collapsed ? '0.75rem' : '0.82rem', letterSpacing: '0.01em' }}>
+                <group.icon size={collapsed ? 18 : 17} className={active ? 'text-blue-200' : ''} />
+                {!collapsed && group.label}
+              </Link>
+            );
+          }
+
           return (
-            <Link key={item.path} to={item.path}
-              title={collapsed ? item.label : undefined}
-              className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 ${
-                active
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-              onClick={() => setSidebarOpen(false)}
-              style={{ fontFamily: 'Lexend, sans-serif', fontSize: collapsed ? '0.75rem' : '0.82rem', letterSpacing: '0.01em' }}>
-              <item.icon size={collapsed ? 18 : 17} className={active ? 'text-blue-200' : ''} />
-              {!collapsed && item.label}
-            </Link>
+            <div key={group.key}>
+              <button
+                type="button"
+                onClick={() => { if (!collapsed) toggleGroup(group.key); }}
+                title={collapsed ? group.label : undefined}
+                className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 ${
+                  groupActive
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+                style={{ fontFamily: 'Lexend, sans-serif', fontSize: collapsed ? '0.75rem' : '0.82rem', letterSpacing: '0.01em' }}>
+                <group.icon size={collapsed ? 18 : 17} className={groupActive ? 'text-blue-200' : ''} />
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 text-left">{group.label}</span>
+                    <ChevronDown size={15} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''} ${groupActive ? 'text-blue-200' : 'text-slate-500'}`} />
+                  </>
+                )}
+              </button>
+              {!collapsed && open && (
+                <div className="ml-4 mt-0.5 pl-3 border-l border-white/10 space-y-0.5 animate-slide-down">
+                  {renderGroupItems(visibleItems, collapsed)}
+                </div>
+              )}
+            </div>
           );
         })}
         <div className="pt-3 mt-3 border-t border-white/10">
           {(user?.role === 'admin' || user?.role === 'gerente') && (
             <Link to="/app/settings"
               title={collapsed ? 'Configurações' : undefined}
-              className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 ${
-                location.pathname === '/app/settings'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
+              className={iconClass(location.pathname === '/app/settings')}
               onClick={() => setSidebarOpen(false)}
               style={{ fontFamily: 'Lexend, sans-serif', fontSize: collapsed ? '0.75rem' : '0.82rem', letterSpacing: '0.01em' }}>
-              <Settings size={collapsed ? 18 : 1} />
+              <Settings size={collapsed ? 18 : 17} />
               {!collapsed && 'Configurações'}
             </Link>
           )}
         </div>
       </nav>
 
-{/* <div className="p-4 border-t border-white/10 mt-6"></div> */}
-
-      <div className="absolute bottom 10 left-0 right-0 p-4 border-t border-white/10">
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
         <div className={`flex items-center ${collapsed ? 'justify-center' : ''} gap-2 text-white/30 text-xs`} style={{ fontFamily: 'Lexend, sans-serif' }}>
-          <BarChart3 size={12} />
+          <LayoutDashboard size={12} />
           {!collapsed && 'Codemed Hub v1.0'}
         </div>
       </div>
@@ -185,6 +245,33 @@ export default function Layout() {
         <Link to="/app/dashboard" className="flex items-center gap-2 mr-4">
           <img src="/logo-codemed-horizontal.png" alt="Codemed" className="h-7 w-auto" />
         </Link>
+      )}
+      {isHorizontal && (
+        <nav className="flex items-center gap-1 overflow-x-auto">
+          {groups.map((group) => {
+            const groupActive = isGroupActive(group.items);
+            const visibleItems = group.items.filter((item) => userHasRole(user?.role, item.roles));
+            if (visibleItems.length === 0) return null;
+            return (
+              <div key={group.key} className="relative group">
+                <Link to={visibleItems[0].path}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${groupActive ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                  style={{ fontFamily: 'Lexend, sans-serif' }}>
+                  <group.icon size={15} />
+                  <span className="hidden xl:inline">{group.label}</span>
+                  {visibleItems.length > 1 && <ChevronDown size={13} />}
+                </Link>
+                {visibleItems.length > 1 && (
+                  <div className="absolute left-0 top-full pt-2 hidden group-hover:block z-50">
+                    <div className="w-56 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 py-1.5">
+                      {renderGroupItems(visibleItems, false)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
       )}
       <div className="flex-1 max-w-md mx-4 hidden sm:block">
         <Suspense fallback={<div className="h-10 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
@@ -262,15 +349,20 @@ export default function Layout() {
     </>
   );
 
+  const mainContent = (
+    <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6" style={{ backgroundColor: 'var(--bg-app)' }}>
+      <Breadcrumb />
+      <Outlet />
+    </main>
+  );
+
   if (isHorizontal) {
     return (
       <div className="flex flex-col h-screen" style={{ backgroundColor: 'var(--bg-app)' }}>
         <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center px-4 lg:px-6 pt-[env(safe-area-inset-top)] z-[100]">
           {headerContent}
         </header>
-        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6" style={{ backgroundColor: 'var(--bg-app)' }}>
-          <Outlet />
-        </main>
+        {mainContent}
       </div>
     );
   }
@@ -286,25 +378,25 @@ export default function Layout() {
         >
           <div className="absolute inset-0 bg-gradient-to-b from-blue-600/5 via-transparent to-blue-600/5 pointer-events-none" />
           <div className="relative flex flex-col h-full">
-            {/* Logo */}
             <div className="flex items-center justify-center h-16 border-b border-white/10">
               <img src="/logo-codemed-horizontal.png" alt="Codemed" className="h-6 w-auto" />
             </div>
-
-            {/* Icons */}
             <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-              {filteredNav.map((item) => {
-                const active = location.pathname.startsWith(item.path);
+              {groups.map((group) => {
+                const groupActive = isGroupActive(group.items);
+                const visibleItems = group.items.filter((item) => userHasRole(user?.role, item.roles));
+                if (visibleItems.length === 0) return null;
+                const first = visibleItems[0];
                 return (
-                  <Link key={item.path} to={item.path}
-                    title={item.label}
+                  <Link key={group.key} to={first.path}
+                    title={group.label}
                     className={`flex items-center justify-center w-11 h-11 mx-auto rounded-xl text-sm font-medium transition-all duration-200 ${
-                      active
+                      groupActive
                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
                         : 'text-slate-400 hover:text-white hover:bg-white/5'
                     }`}
                     style={{ fontFamily: 'Lexend, sans-serif' }}>
-                    <item.icon size={18} className={active ? 'text-blue-200' : ''} />
+                    <group.icon size={18} className={groupActive ? 'text-blue-200' : ''} />
                   </Link>
                 );
               })}
@@ -322,11 +414,9 @@ export default function Layout() {
                 </div>
               )}
             </nav>
-
-            {/* Footer */}
             <div className="p-3 border-t border-white/10">
               <div className="flex items-center justify-center text-white/30 text-xs">
-                <BarChart3 size={12} />
+                <LayoutDashboard size={12} />
               </div>
             </div>
           </div>
@@ -346,7 +436,6 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Backdrop when expanded */}
         {sidebarHovered && (
           <div
             className="fixed inset-0 bg-black/20 z-30 transition-opacity"
@@ -354,14 +443,11 @@ export default function Layout() {
           />
         )}
 
-        {/* Main content */}
         <div className="flex-1 flex flex-col min-w-0 ml-[70px]">
           <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between px-4 lg:px-6 pt-[env(safe-area-inset-top)] z-[100]">
             {headerContent}
           </header>
-          <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6" style={{ backgroundColor: 'var(--bg-app)' }}>
-            <Outlet />
-          </main>
+          {mainContent}
         </div>
       </div>
     );
@@ -370,7 +456,6 @@ export default function Layout() {
   /* Vertical sidebar (default) */
   return (
     <div className="flex h-screen" style={{ backgroundColor: 'var(--bg-app)' }}>
-      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-30 w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 transform transition-all duration-300 ease-out lg:translate-x-0 lg:static lg:inset-auto ${
           sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
@@ -382,7 +467,6 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-20 lg:hidden backdrop-blur-sm transition-opacity"
@@ -390,14 +474,11 @@ export default function Layout() {
         />
       )}
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between px-4 lg:px-6 pt-[env(safe-area-inset-top)] z-[100]">
           {headerContent}
         </header>
-        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6" style={{ backgroundColor: 'var(--bg-app)' }}>
-          <Outlet />
-        </main>
+        {mainContent}
       </div>
     </div>
   );

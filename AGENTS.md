@@ -286,9 +286,16 @@ npx expo run:ios             # Build iOS
 - [x] Validação: `tsc --noEmit` sem erros nos arquivos editados; `npm test` 294/295 (única falha pré-existente: `csat.test.ts` espera "Pessimo" sem acento, mensagem usa "Péssimo")
 - [x] Nenhum commit feito — mudanças na working tree (branch `feature/helpdesk-enhancements`)
 
+### Reestruturação do Menu — Completo
+- [x] De 22 itens planos para **7 módulos**: Dashboard, Atendimento, Gestão, Clientes, Operação, Integrações, Administração
+- [x] Config central `frontend/src/config/navigation.ts` (`NAV_GROUPS` com grupos/ícones/rotas/permissões) — Layout só renderiza
+- [x] `Layout.tsx` reescrito: submenus expansíveis, auto-abre grupo da rota ativa, colapso manual vence o grupo ativo (fix Gestão), sidebar recolhida (ícones + tooltip), horizontal com dropdown, mobile drawer preservado
+- [x] Novo `Breadcrumb.tsx` no topo do conteúdo
+- [x] Nenhuma rota removida/alterada — todas as funcionalidades acessíveis; permissões preservadas
+- [x] Frontend tsc 0, testes frontend 5/5 (build vite falha pré-existente `@tiptap/pm` — alheio ao menu)
+
 ### Próximos passos
 - [ ] Ordem de serviço (Orders)
 - [ ] Dark mode global (tema escuro para todo o sistema)
 - [ ] Auditoria IA: evoluir agente para detectar encerramento prematuro / resolução real / reabertura (base `aiAgentMonitor.service.ts` + `ai-audit.service.ts` existentes)
 - [ ] Dashboard IA: cards diário/semanal/por analista e insights gerenciais (reusar `weeklyReport.service.ts`, `metrics.service.ts`, `AuditoriaAtendimento.tsx`)
-- [ ] FASE 10 — Documentação final e FASE 11 — Testes finais de regressão
