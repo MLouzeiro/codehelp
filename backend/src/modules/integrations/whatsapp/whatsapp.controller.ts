@@ -12,6 +12,7 @@ import {
 import { whatsappConnectionManager } from './whatsapp.service';
 import { baileysProviderService } from './baileys-provider.service';
 import { whatsappWebJSProviderService } from './whatsapp-webjs.service';
+import { normalizePhone } from './whatsapp-utils';
 import { evolutionApiService } from './evolution-api.service';
 import { unifiedWhatsAppService } from './unified-whatsapp.service';
 import path from 'path';
@@ -248,7 +249,7 @@ export async function createTicketFromChat(req: AuthRequest, res: Response) {
     const { contactName, contactPhone, clientId, assunto, usuarioId, departamentoId } = req.body;
     if (!contactName || !contactPhone) return res.status(400).json({ error: 'Nome e telefone do contato são obrigatórios' });
 
-    const phoneDigits = contactPhone.replace(/[^\d]/g, '');
+    const phoneDigits = normalizePhone(contactPhone);
     const existingTicket = await prisma.ticket.findFirst({
       where: {
         OR: [
@@ -490,7 +491,7 @@ export async function sendMessage(req: AuthRequest, res: Response) {
     if (!phone && ticketId) {
       const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { contactPhone: true, contactJid: true } });
       if (ticket?.contactPhone) {
-        phone = ticket.contactPhone.replace(/[^\d]/g, '');
+        phone = normalizePhone(ticket.contactPhone);
       }
       contactJid = ticket?.contactJid || null;
     } else if (ticketId) {

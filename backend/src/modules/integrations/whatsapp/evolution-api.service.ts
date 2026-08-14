@@ -1,6 +1,7 @@
 import prisma from '../../../config/database';
 import { env } from '../../../config/env';
 import { processIncomingMessageHandler } from './whatsapp-message-handler';
+import { normalizePhone } from './whatsapp-utils';
 
 // ── Evolution API Integration Service ──────────────────────────────────
 // Replaces whatsapp-web.js with Evolution API (Docker-based)
@@ -160,7 +161,7 @@ class EvolutionAPIService {
     instanceName?: string,
   ): Promise<{ success: boolean; error?: string; messageId?: string }> {
     const instance = instanceName || this.config.instanceName;
-    const phone = to.replace(/[^\d]/g, '');
+    const phone = normalizePhone(to);
 
     try {
       const response = await fetch(`${this.config.baseUrl}/message/sendText/${instance}`, {
@@ -194,7 +195,7 @@ class EvolutionAPIService {
     instanceName?: string,
   ): Promise<{ success: boolean; error?: string }> {
     const instance = instanceName || this.config.instanceName;
-    const phone = to.replace(/[^\d]/g, '');
+    const phone = normalizePhone(to);
 
     try {
       const response = await fetch(`${this.config.baseUrl}/message/sendMedia/${instance}`, {

@@ -1,6 +1,7 @@
 import prisma from '../../../config/database';
 import { env } from '../../../config/env';
 import { processIncomingMessageHandler } from './whatsapp-message-handler';
+import { normalizePhone } from './whatsapp-utils';
 
 // ── WhatsApp Cloud API Integration Service (Meta Official) ────────────
 // Free tier: 1,000 conversations/month
@@ -39,7 +40,7 @@ class WhatsAppCloudAPIService {
       return { success: false, error: 'WhatsApp Cloud API not configured' };
     }
 
-    const phone = to.replace(/[^\d]/g, '');
+    const phone = normalizePhone(to);
 
     try {
       const response = await fetch(
@@ -86,7 +87,7 @@ class WhatsAppCloudAPIService {
       return { success: false, error: 'WhatsApp Cloud API not configured' };
     }
 
-    const phone = to.replace(/[^\d]/g, '');
+    const phone = normalizePhone(to);
 
     try {
       const response = await fetch(
@@ -130,7 +131,7 @@ class WhatsAppCloudAPIService {
       return { success: false, error: 'WhatsApp Cloud API not configured' };
     }
 
-    const phone = to.replace(/[^\d]/g, '');
+    const phone = normalizePhone(to);
 
     try {
       const response = await fetch(

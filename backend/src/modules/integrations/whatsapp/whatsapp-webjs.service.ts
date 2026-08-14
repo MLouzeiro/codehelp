@@ -5,6 +5,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import prisma from '../../../config/database';
 import { processIncomingMessageHandler } from './whatsapp-message-handler';
+import { normalizePhone } from './whatsapp-utils';
 
 // ── WhatsApp Web.js Provider (Puppeteer-based) ─────────────────────────
 // Provider opcional baseado em Puppeteer/Chrome
@@ -293,7 +294,7 @@ class WhatsAppWebJSProviderService {
     if (chat.isGroup) return;
 
     const phone = msg.author || msg.from;
-    const phoneDigits = phone.replace(/[^\d]/g, '');
+    const phoneDigits = normalizePhone(phone);
     if (phoneDigits.length < 10 || phoneDigits.length > 15) {
       console.warn(`[WhatsAppWebJS ${sessionId}] Mensagem ignorada — telefone "${phoneDigits}" invalido`);
       return;
@@ -317,7 +318,7 @@ class WhatsAppWebJSProviderService {
 
     const sendFn = async (to: string, message: string) => {
       try {
-        const chatId = to.replace(/[^\d]/g, '') + '@c.us';
+        const chatId = normalizePhone(to) + '@c.us';
         await client.sendMessage(chatId, message);
         return { success: true };
       } catch (err: any) {
@@ -348,7 +349,7 @@ class WhatsAppWebJSProviderService {
     text: string,
   ): Promise<{ success: boolean; error?: string; messageId?: string }> {
     try {
-      const phone = to.replace(/[^\d]/g, '');
+      const phone = normalizePhone(to);
       if (phone.length < 10 || phone.length > 15) {
         return { success: false, error: `Telefone invalido: "${phone}" (${phone.length} digitos).` };
       }
@@ -373,7 +374,7 @@ class WhatsAppWebJSProviderService {
     caption?: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const phone = to.replace(/[^\d]/g, '');
+      const phone = normalizePhone(to);
       const chatId = `${phone}@c.us`;
 
       if (mediaUrl.startsWith('data:')) {

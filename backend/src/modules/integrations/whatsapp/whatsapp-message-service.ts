@@ -1,4 +1,5 @@
 import { sendWhatsAppMessage, sendWhatsAppListMessage } from './whatsapp.service';
+import { normalizePhone } from './whatsapp-utils';
 
 // ── WhatsAppMessageService ─────────────────────────────────────────────
 // Camada de abstração para mensagens interativas.
@@ -38,7 +39,7 @@ export interface SendInteractiveResult {
 // Fallback: mensagem de texto numerada — a lógica continua funcionando porque
 // o cliente pode responder com o número da opção.
 export async function enviarListaInterativa(to: string, opts: InteractiveListOptions): Promise<SendInteractiveResult> {
-  const phone = to.replace(/[^\d]/g, '');
+  const phone = normalizePhone(to);
   const listResult = await sendWhatsAppListMessage(
     phone,
     opts.title,

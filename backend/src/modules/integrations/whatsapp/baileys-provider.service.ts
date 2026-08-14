@@ -18,6 +18,7 @@ import path from 'path';
 import fs from 'fs';
 import { env } from '../../../config/env';
 import { processIncomingMessageHandler } from './whatsapp-message-handler';
+import { normalizePhone } from './whatsapp-utils';
 
 const SESSION_BASE_DIR = path.resolve(env.whatsappSessionPath || './whatsapp-session', 'baileys');
 const MAX_RECONNECT = 10;
@@ -673,7 +674,7 @@ class BaileysProviderService {
         const result = await socket.sendMessage(jid, { text });
         return { success: true, messageId: result?.key?.id || undefined };
       }
-      const phone = to.replace(/[^\d]/g, '');
+      const phone = normalizePhone(to);
       if (phone.length < 10 || phone.length > 15) {
         return { success: false, error: `Telefone invalido: "${phone}" (${phone.length} digitos)` };
       }
