@@ -72,22 +72,39 @@ export async function enviarMenuInicial(ticketId: string) {
     }
   } catch {}
 
-  const deptList = departamentos.map((d, i) => `*${i + 1}* - ${d.nome}`).join('\n');
-  const menuText = `${baseText}\n\n${deptList}\n\nResponda com o *número* do departamento.`;
-
   const phone = sanitizePhoneNumber(ticket.contactPhone).replace(/@c\.us$/i, '');
-  const result = await sendWhatsAppMessage(
-    phone,
-    menuText,
-    (ticket as any).whatsappConnectionId || undefined,
-    ticket.contactJid || undefined,
-  );
+
+  // Lista interativa (clickável) — departamentos do banco com rowId dept_<slug>.
+  // O handler normaliza o clique via interactiveId → detectarOpcaoMenu.
+  const { enviarListaInterativa, montarFallbackTexto } = await import('../integrations/whatsapp/whatsapp-message-service');
+
+  const sections = [
+    {
+      title: 'Departamentos',
+      rows: departamentos.map((d) => ({
+        id: `dept_${(d as any).slug || d.id}`,
+        title: d.nome,
+        description: (d as any).descricao || undefined,
+      })),
+    },
+  ];
+
+  const result = await enviarListaInterativa(phone, {
+    title: 'Selecione o departamento',
+    description: baseText,
+    sections,
+    connectionId: (ticket as any).whatsappConnectionId || undefined,
+    jid: ticket.contactJid || undefined,
+  });
 
   if (result.success) {
+    const conteudoRegistrado = result.usedFallback
+      ? `[Bot] Menu de departamentos enviado (texto)\n\n${montarFallbackTexto({ title: 'Selecione o departamento', description: baseText, sections })}`
+      : `[Bot] Menu de departamentos enviado (interativo)\n\n${baseText}\n\n${departamentos.map((d) => `• ${d.nome}`).join('\n')}`;
     await prisma.message.create({
-      data: { ticketId, fromMe: true, content: '[Bot] Menu de departamentos enviado', source: 'bot', tipo: 'system' },
+      data: { ticketId, fromMe: true, content: conteudoRegistrado, source: 'bot', tipo: 'system' },
     });
-    console.log(`[Fila] Menu enviado para ticket ${ticketId}`);
+    console.log(`[Fila] Menu de departamentos (${result.usedFallback ? 'texto/fallback' : 'interativo'}) enviado para ticket ${ticketId}`);
   } else {
     console.warn(`[Fila] Falha ao enviar menu para ticket ${ticketId}: ${result.error}`);
   }

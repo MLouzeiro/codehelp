@@ -269,6 +269,16 @@ npx expo run:ios             # Build iOS
 - [x] Tempo por departamento (TicketDepartmentTime)
 - [x] Dashboard com card Taxa FCR
 
+### Auditoria + Correção Fluxo Encerramento/Avaliação — Completo
+- [x] FASE 1 (auditoria) concluída: mapeado fluxo completo de encerramento/avaliação e arquitetura
+- [x] **Fix** `buscarTicketAtivo` (flow.service.ts): filtra também por `etapa: { notIn: ETAPAS_ENCERRADAS }` (`concluido`/`descartado`) além de `status` — defesa dupla contra reabertura de ticket encerrado
+- [x] **Fix** `finalizarAtendimento`: novo helper `resetBotState` limpa estado in-memory do bot (`AWAITING_CSAT`/`AWAITING_DEPARTMENT` → `IDLE`) nos caminhos de skip (avaliação já respondida / CSAT já respondido)
+- [x] **Fix** `detectarOpcaoMenu` (menu.ts): aceita o NOME do departamento (ex: "suporte técnico", "financeiro") além de `dept_<slug>`/número — limitado a 80 chars para não engolir descrição de problema
+- [x] Validação: `tsc --noEmit` sem erros nos arquivos editados; `npm test` 294/295 (única falha pré-existente: `csat.test.ts` espera "Pessimo" sem acento, mensagem usa "Péssimo")
+- [x] Nenhum commit feito — mudanças na working tree (branch `feature/helpdesk-enhancements`)
+
 ### Próximos passos
 - [ ] Ordem de serviço (Orders)
 - [ ] Dark mode global (tema escuro para todo o sistema)
+- [ ] Auditoria IA: evoluir agente para detectar encerramento prematuro / resolução real / reabertura (base `aiAgentMonitor.service.ts` + `ai-audit.service.ts` existentes)
+- [ ] Dashboard IA: cards diário/semanal/por analista e insights gerenciais (reusar `weeklyReport.service.ts`, `metrics.service.ts`, `AuditoriaAtendimento.tsx`)

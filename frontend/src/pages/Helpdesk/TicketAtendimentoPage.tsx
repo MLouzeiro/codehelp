@@ -280,7 +280,7 @@ export default function TicketAtendimentoPage() {
                             📎 Arquivo anexo
                           </a>
                         )}
-                        <div>{msg.content || (msg.mediaUrl ? '' : '(sem conteúdo)')}</div>
+                        <div className={isCliente ? 'text-slate-800 dark:text-slate-200' : isIA ? 'text-blue-800 dark:text-blue-200' : 'text-emerald-800 dark:text-emerald-200'}>{msg.content || (msg.mediaUrl ? '' : '(sem conteúdo)')}</div>
                       </div>
                       <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400 dark:text-slate-500">
                         <span>{new Date(msg.createdAt || msg.sentAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>

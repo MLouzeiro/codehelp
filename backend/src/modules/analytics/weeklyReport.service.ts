@@ -1,5 +1,10 @@
 import prisma from '../../config/database';
 import { env } from '../../config/env';
+import { callClaude } from '../../shared/aiClient';
+import {
+  WHERE_TICKET_RESOLVIDO,
+  STATUS_ABERTO,
+} from '../helpdesk/constants';
 
 // ── Interfaces ─────────────────────────────────────────────────
 
@@ -69,19 +74,19 @@ function formatPeriod(inicio: Date, fim: Date): string {
 // ── Coleta de Dados ────────────────────────────────────────────
 
 async function coletarResumo(inicio: Date, fim: Date) {
-  const [totalTickets, ticketsFechados, ticketsAbertos, slaData, csatData, fcrData, tempoResposta] = await Promise.all([
+  const [totalTickets, ticketsFechados, ticketsAbertos, slaData, csatData, fcrData, tempoResposta, tempoResolucao] = await Promise.all([
     prisma.ticket.count({
       where: { createdAt: { gte: inicio, lte: fim } },
     }),
     prisma.ticket.count({
       where: {
         createdAt: { gte: inicio, lte: fim },
-        OR: [{ status: 'fechado' }, { etapa: 'concluido' }],
+        ...WHERE_TICKET_RESOLVIDO,
       },
     }),
     prisma.ticket.count({
       where: {
-        status: { in: ['aberto', 'em_atendimento', 'pendente'] },
+        status: { in: [...STATUS_ABERTO] },
       },
     }),
     prisma.ticket.aggregate({
@@ -104,18 +109,40 @@ async function coletarResumo(inicio: Date, fim: Date) {
     prisma.ticket.count({
       where: {
         createdAt: { gte: inicio, lte: fim },
-        OR: [{ status: 'fechado' }, { etapa: 'concluido' }],
+        ...WHERE_TICKET_RESOLVIDO,
         dataPrimeiraResposta: { not: null },
       },
     }),
-    prisma.ticket.aggregate({
+    // Tempo médio de primeira resposta (dataPrimeiraResposta - dataAbertura)
+    prisma.ticket.findMany({
       where: {
         createdAt: { gte: inicio, lte: fim },
         dataPrimeiraResposta: { not: null },
       },
-      _avg: { slaTotalMinutos: true },
+      select: { dataAbertura: true, dataPrimeiraResposta: true },
+    }),
+    // Tempo médio de resolução (dataFechamento - dataAbertura - pausas SLA)
+    prisma.ticket.findMany({
+      where: {
+        createdAt: { gte: inicio, lte: fim },
+        dataFechamento: { not: null },
+      },
+      select: { dataAbertura: true, dataFechamento: true, slaPausadoTotalMin: true },
     }),
   ]);
+
+  const tempoRespostaTotalMin = tempoResposta.reduce((acc, t) => {
+    const ms = (t.dataPrimeiraResposta!.getTime() - t.dataAbertura.getTime()) / 60000;
+    return acc + Math.max(0, ms);
+  }, 0);
+  const tempoMedioResposta = tempoResposta.length > 0 ? Math.round(tempoRespostaTotalMin / tempoResposta.length) : 0;
+
+  const tempoResolucaoTotalMin = tempoResolucao.reduce((acc, t) => {
+    const pausaMs = (t.slaPausadoTotalMin || 0) * 60 * 1000;
+    const ms = (t.dataFechamento!.getTime() - t.dataAbertura.getTime() - pausaMs) / 60000;
+    return acc + Math.max(0, ms);
+  }, 0);
+  const tempoMedioResolucao = tempoResolucao.length > 0 ? Math.round(tempoResolucaoTotalMin / tempoResolucao.length) : 0;
 
   const slaViolado = await prisma.ticket.count({
     where: {
@@ -132,8 +159,8 @@ async function coletarResumo(inicio: Date, fim: Date) {
     ticketsFechados,
     ticketsAbertos,
     taxaResolucao,
-    tempoMedioResposta: tempoResposta._avg.slaTotalMinutos ? Math.round(tempoResposta._avg.slaTotalMinutos) : 0,
-    tempoMedioResolucao: slaData._avg.slaTotalMinutos ? Math.round(slaData._avg.slaTotalMinutos) : 0,
+    tempoMedioResposta,
+    tempoMedioResolucao,
     slaCumprido: slaData._count.id - slaViolado,
     slaTotal: slaData._count.id,
     taxaSla,
@@ -167,7 +194,7 @@ async function coletarPorCliente(inicio: Date, fim: Date) {
       where: {
         createdAt: { gte: inicio, lte: fim },
         clientId: { in: validClients.map(c => c.clientId!) },
-        OR: [{ status: 'fechado' }, { etapa: 'concluido' }],
+        ...WHERE_TICKET_RESOLVIDO,
       },
       _count: { id: true },
     }),
@@ -203,7 +230,7 @@ async function coletarPorCategoria(inicio: Date, fim: Date) {
     where: {
       createdAt: { gte: inicio, lte: fim },
       categoria: { in: validCategories.map(c => c.categoria!) },
-      OR: [{ status: 'fechado' }, { etapa: 'concluido' }],
+      ...WHERE_TICKET_RESOLVIDO,
     },
     _count: { id: true },
   });
@@ -240,7 +267,7 @@ async function coletarPorDepartamento(inicio: Date, fim: Date) {
       where: {
         createdAt: { gte: inicio, lte: fim },
         departamentoId: { in: validDepts.map(d => d.departamentoId!) },
-        OR: [{ status: 'fechado' }, { etapa: 'concluido' }],
+        ...WHERE_TICKET_RESOLVIDO,
       },
       _count: { id: true },
     }),
@@ -282,18 +309,17 @@ async function coletarPorAgente(inicio: Date, fim: Date) {
       where: {
         assigneeId: { in: agentIds },
         createdAt: { gte: inicio, lte: fim },
-        OR: [{ status: 'fechado' }, { etapa: 'concluido' }],
+        ...WHERE_TICKET_RESOLVIDO,
       },
       _count: { id: true },
     }),
-    prisma.ticket.groupBy({
-      by: ['assigneeId'],
+    prisma.ticket.findMany({
       where: {
         assigneeId: { in: agentIds },
         createdAt: { gte: inicio, lte: fim },
-        slaTotalMinutos: { not: null },
+        dataFechamento: { not: null },
       },
-      _avg: { slaTotalMinutos: true },
+      select: { assigneeId: true, dataAbertura: true, dataFechamento: true, slaPausadoTotalMin: true },
     }),
     prisma.cSATResposta.groupBy({
       by: ['ticketId'],
@@ -309,7 +335,19 @@ async function coletarPorAgente(inicio: Date, fim: Date) {
 
   const userMap = new Map(users.map(u => [u.id, u]));
   const closedMap = new Map(closedCounts.map(c => [c.assigneeId, c._count.id]));
-  const timeMap = new Map(timeAggregates.map(t => [t.assigneeId, t._avg.slaTotalMinutos]));
+  const timeMap = new Map<string, number>();
+  for (const t of timeAggregates) {
+    if (!t.assigneeId) continue;
+    const pausaMs = (t.slaPausadoTotalMin || 0) * 60 * 1000;
+    const min = Math.max(0, (t.dataFechamento!.getTime() - t.dataAbertura.getTime() - pausaMs) / 60000);
+    const prev = timeMap.get(t.assigneeId) || 0;
+    timeMap.set(t.assigneeId, prev + min);
+  }
+  const timeCountMap = new Map<string, number>();
+  for (const t of timeAggregates) {
+    if (!t.assigneeId) continue;
+    timeCountMap.set(t.assigneeId, (timeCountMap.get(t.assigneeId) || 0) + 1);
+  }
 
   const agentTickets = await prisma.ticket.findMany({
     where: { assigneeId: { in: agentIds }, createdAt: { gte: inicio, lte: fim } },
@@ -346,7 +384,7 @@ async function coletarPorAgente(inicio: Date, fim: Date) {
       agenteNome: userMap.get(agentId)?.name || 'Desconhecido',
       atendidos: a._count.id,
       fechados: closedMap.get(agentId) || 0,
-      tempoMedio: timeMap.get(agentId) ? Math.round(timeMap.get(agentId)!) : 0,
+      tempoMedio: timeCountMap.get(agentId) ? Math.round((timeMap.get(agentId) || 0) / timeCountMap.get(agentId)!) : 0,
       csatMedio: avgCsat,
     };
   });
@@ -378,7 +416,7 @@ async function coletarPorDia(inicio: Date, fim: Date) {
     by: ['createdAt'],
     where: {
       createdAt: { gte: inicio, lte: fim },
-      OR: [{ status: 'fechado' }, { etapa: 'concluido' }],
+      ...WHERE_TICKET_RESOLVIDO,
     },
     _count: { id: true },
     orderBy: { createdAt: 'asc' },
@@ -427,29 +465,37 @@ async function identificarTicketsProblema(inicio: Date, fim: Date) {
   const tickets = await prisma.ticket.findMany({
     where: {
       createdAt: { gte: inicio, lte: fim },
-      OR: [{ status: 'fechado' }, { etapa: 'concluido' }],
-      slaTotalMinutos: { not: null },
+      ...WHERE_TICKET_RESOLVIDO,
+      dataFechamento: { not: null },
     },
     select: {
       id: true,
       protocolo: true,
       assunto: true,
-      slaTotalMinutos: true,
+      dataAbertura: true,
+      dataFechamento: true,
+      slaPausadoTotalMin: true,
       client: { select: { razaoSocial: true, nomeFantasia: true } },
       csatResposta: { select: { nota: true } },
     },
-    orderBy: { slaTotalMinutos: 'desc' },
-    take: 5,
   });
 
-  return tickets.map(t => ({
-    ticketId: t.id,
-    protocolo: t.protocolo || t.id.slice(0, 8),
-    cliente: t.client?.nomeFantasia || t.client?.razaoSocial || 'N/A',
-    assunto: t.assunto || 'Sem assunto',
-    tempoHoras: t.slaTotalMinutos ? Math.round(t.slaTotalMinutos / 60 * 10) / 10 : 0,
-    csat: t.csatResposta?.nota || null,
-  }));
+  return tickets
+    .map(t => {
+      const pausaMs = (t.slaPausadoTotalMin || 0) * 60 * 1000;
+      const tempoMs = t.dataFechamento!.getTime() - t.dataAbertura.getTime() - pausaMs;
+      const tempoHoras = Math.max(0, tempoMs / 3600000);
+      return {
+        ticketId: t.id,
+        protocolo: t.protocolo || t.id.slice(0, 8),
+        cliente: t.client?.nomeFantasia || t.client?.razaoSocial || 'N/A',
+        assunto: t.assunto || 'Sem assunto',
+        tempoHoras: Math.round(tempoHoras * 10) / 10,
+        csat: t.csatResposta?.nota || null,
+      };
+    })
+    .sort((a, b) => b.tempoHoras - a.tempoHoras)
+    .slice(0, 5);
 }
 
 // ── IA: Sugestões de Redução de Chamados ───────────────────────
@@ -501,29 +547,12 @@ REGRAS:
 4. Priorize: KB (base de conhecimento), automação, treinamento, processos
 5. Responda APENAS com JSON: { "sugestoes": ["sugestão 1", "sugestão 2", ...] }`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': env.anthropicKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 600,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-
-    if (response.ok) {
-      const data: any = await response.json();
-      const text = data.content?.[0]?.text || '';
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (Array.isArray(parsed.sugestoes) && parsed.sugestoes.length > 0) {
-          return parsed.sugestoes.slice(0, 5);
-        }
+    const text = await callClaude(prompt, 600);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed.sugestoes) && parsed.sugestoes.length > 0) {
+        return parsed.sugestoes.slice(0, 5);
       }
     }
   } catch (e) {

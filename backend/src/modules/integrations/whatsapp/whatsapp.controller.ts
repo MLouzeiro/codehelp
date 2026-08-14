@@ -328,36 +328,21 @@ export async function closeTicket(req: AuthRequest, res: Response) {
     if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
     if (ticket.status === 'fechado') return res.status(400).json({ error: 'Ticket já está fechado' });
 
-    const etapaAnterior = ticket.etapa;
-    await prisma.ticket.update({
-      where: { id },
-      data: {
-        status: 'fechado',
-        etapa: 'concluido',
-        dataFechamento: new Date(),
-        dataConclusao: new Date(),
-        usuarioId: req.user?.id,
-      },
+    const { encerrarTicket } = await import('../../helpdesk/flow.service');
+    const result = await encerrarTicket(id, {
+      status: 'fechado',
+      etapa: 'concluido',
+      usuarioId: req.user?.id,
+      origem: 'manual',
+      dataFechamento: true,
+      dataConclusao: true,
+      finalizarCsat: true,
     });
-
-    await prisma.ticketStageEvent.create({
-      data: {
-        ticketId: id,
-        etapaAnterior,
-        etapaNova: 'concluido',
-        origem: 'manual',
-        usuarioId: req.user?.id,
-      },
-    });
+    if (!result.ok) return res.status(404).json({ error: result.error });
 
     if (ticket.contactPhone && ticket.protocolo) {
       sendProtocolReply(ticket.contactPhone, ticket.protocolo, 'fechamento').catch(console.error);
     }
-
-    const { enviarCsatImediatamente } = await import('../../csat/csat.service');
-    enviarCsatImediatamente(id).catch((e) =>
-      console.warn('[WhatsApp] Falha ao enviar CSAT imediatamente:', e?.message || e)
-    );
 
     return res.json({ message: 'Ticket fechado com sucesso' });
   } catch (error) {
@@ -430,28 +415,18 @@ export async function descartarTicket(req: AuthRequest, res: Response) {
       return res.status(409).json({ error: 'Ticket ja foi descartado' });
     }
 
-    const updated = await prisma.ticket.update({
-      where: { id },
-      data: {
-        etapa: 'descartado',
-        status: 'cancelado',
-        dataConclusao: new Date(),
-        usuarioId: req.user.id,
-      },
+    const { encerrarTicket } = await import('../../helpdesk/flow.service');
+    const result = await encerrarTicket(id, {
+      status: 'cancelado',
+      etapa: 'descartado',
+      usuarioId: req.user.id,
+      origem: 'manual',
+      dataConclusao: true,
+      mensagemAutomatica: 'nao_enviada',
     });
+    if (!result.ok) return res.status(404).json({ error: result.error });
 
-    await prisma.ticketStageEvent.create({
-      data: {
-        ticketId: id,
-        etapaAnterior: ticket.etapa,
-        etapaNova: 'descartado',
-        origem: 'manual',
-        usuarioId: req.user.id,
-        mensagemAutomatica: 'nao_enviada',
-      },
-    });
-
-    return res.json({ ticket: updated, autoMessage: { sent: false, reason: 'ticket_descartado_sem_mensagem' } });
+    return res.json({ ticket: result.ticket, autoMessage: { sent: false, reason: 'ticket_descartado_sem_mensagem' } });
   } catch (error: any) {
     console.error('[WhatsApp] Erro ao descartar ticket:', error?.message || error);
     return res.status(500).json({ error: 'Erro ao descartar ticket' });

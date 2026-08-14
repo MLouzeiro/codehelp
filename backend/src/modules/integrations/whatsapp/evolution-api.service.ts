@@ -256,7 +256,14 @@ class EvolutionAPIService {
       const phone = remoteJid.replace(/@c\.us$/i, '');
       if (!phone) return;
 
-      const messageText = msg.message?.conversation
+      const messageBody = (msg.message || {}) as any;
+      const interactiveId =
+        messageBody.buttonsResponseMessage?.selectedButtonId ||
+        messageBody.listResponseMessage?.singleSelectReply?.selectedRowId ||
+        messageBody.templateButtonReplyMessage?.selectedId ||
+        '';
+      const messageText = interactiveId
+        || msg.message?.conversation
         || msg.message?.extendedTextMessage?.text
         || msg.message?.imageMessage?.caption
         || '';
@@ -288,6 +295,9 @@ class EvolutionAPIService {
           mimeType,
           connectionId: instanceName,
           provider: 'evolution',
+          jid: remoteJid || undefined,
+          interactiveId: interactiveId || undefined,
+          messageId: msg.key?.id,
         },
         sendFn,
       );

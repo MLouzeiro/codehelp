@@ -196,7 +196,17 @@ class WhatsAppCloudAPIService {
       const phone = msg.from || '';
       if (!phone) return;
 
-      const messageText = msg.text?.body || msg.image?.caption || msg.document?.caption || '';
+      const interactiveId =
+        msg.interactive?.button_reply?.id ||
+        msg.interactive?.list_reply?.id ||
+        msg.button?.payload ||
+        msg.button?.text ||
+        '';
+      const messageText = interactiveId
+        || msg.text?.body
+        || msg.image?.caption
+        || msg.document?.caption
+        || '';
       const contactName = msg.profile?.name || phone;
       const messageId = msg.id;
 
@@ -221,7 +231,11 @@ class WhatsAppCloudAPIService {
           contactName,
           mediaUrl,
           mimeType,
+          connectionId: String(metadata?.phone_number_id || ''),
           provider: 'cloud',
+          jid: (msg.from || '').includes('@') ? msg.from : undefined,
+          messageId,
+          interactiveId: interactiveId || undefined,
         },
         sendFn,
       );

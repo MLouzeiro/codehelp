@@ -5,6 +5,7 @@ import { getEstatisticasCsat } from '../csat/csat.service';
 
 export const ETAPAS_PADRAO = [
   { slug: 'triagem', nome: 'Triagem', descricao: 'Tickets aguardando direcionamento para o setor correto', cor: '#8b5cf6', icone: 'filter', ordem: -1, enviarAuto: false, notificarEquipe: true, tempoInatividadeMin: 10 },
+  { slug: 'aguardando_expediente', nome: 'Aguardando Expediente', descricao: 'Tickets recebidos fora do horario aguardando inicio do expediente', cor: '#f97316', icone: 'moon', ordem: -0.5, enviarAuto: false, notificarEquipe: false, tempoInatividadeMin: null },
   { slug: 'fila', nome: 'Fila de Espera', descricao: 'Tickets aguardando atendente do setor', cor: '#f59e0b', icone: 'inbox', ordem: 0, enviarAuto: false, notificarEquipe: true, tempoInatividadeMin: 5 },
   { slug: 'em_atendimento', nome: 'Em Atendimento', descricao: 'Analista responsável conduzindo o atendimento', cor: '#10b981', icone: 'headphones', ordem: 1, enviarAuto: true, notificarEquipe: true },
   { slug: 'aguardando_cliente', nome: 'Aguardando Cliente', descricao: 'Aguardando retorno do cliente', cor: '#0ea5e9', icone: 'clock', ordem: 2, enviarAuto: false, notificarEquipe: false },
@@ -16,6 +17,7 @@ export const ETAPAS_PADRAO = [
 const MENSAGENS_PADRAO: Record<string, string> = {
   fila: 'Olá {{nome_contato}}! 👋\n\nRecebemos sua mensagem e seu chamado foi aberto com sucesso.\n📋 Protocolo: *{{numero_protocolo}}*\n⏱️ Em breve um de nossos analistas irá te atender.\n\nAguarde um instante, por favor.\n\nAtenciosamente,\nEquipe Codemed',
   triagem: 'Olá {{nome_contato}}! 🤖\n\nEstou analisando sua solicitação para direcioná-la ao analista mais adequado.\n📋 Protocolo: *{{numero_protocolo}}*\n\nIsso leva apenas alguns segundos...\n\nEquipe Codemed',
+  aguardando_expediente: 'Olá {{nome_contato}}! 🌙\n\nNosso horário de atendimento é de segunda a sexta, das 08:00 às 18:00.\n\nRecebemos sua mensagem e ela ficou registrada. Assim que o expediente iniciar, um de nossos analistas irá te atender automaticamente.\n\nAtenciosamente,\nEquipe Codemed',
   em_atendimento: 'Olá {{nome_contato}}! 👨‍💻\n\nVocê foi atendido por *{{tecnico}}* e seu atendimento já está em andamento.\n📋 Protocolo: *{{numero_protocolo}}*\n\nCaso precise de algo, é só responder por aqui mesmo.\n\nAtenciosamente,\nEquipe Codemed',
   aguardando_cliente: 'Olá {{nome_contato}}! ⏳\n\nEstamos aguardando um retorno seu para dar continuidade ao atendimento do protocolo *{{numero_protocolo}}*.\n\nQuando puder, responda esta mensagem. Seu chamado continua aberto.\n\nAtenciosamente,\nEquipe Codemed',
   aguardando_os: 'Olá {{nome_contato}}! 📄\n\nVamos gerar a Ordem de Serviço referente ao seu atendimento.\n📋 Protocolo: *{{numero_protocolo}}*\n\nEm breve enviaremos o link para assinatura.\n\nAtenciosamente,\nEquipe Codemed',
@@ -39,6 +41,7 @@ export async function ensureHelpdeskConfigs() {
     const existing = await prisma.helpdeskConfig.findUnique({ where: { slug: etapa.slug } });
     if (!existing) {
       const isFila = etapa.slug === 'fila';
+      const isAguardandoExpediente = etapa.slug === 'aguardando_expediente';
       await prisma.helpdeskConfig.create({
         data: {
           slug: etapa.slug,
@@ -50,7 +53,7 @@ export async function ensureHelpdeskConfigs() {
           enviarAuto: etapa.enviarAuto,
           notificarEquipe: etapa.notificarEquipe,
           autoMessage: MENSAGENS_PADRAO[etapa.slug] || '',
-          tempoInatividadeMin: (etapa as any).tempoInatividadeMin,
+          tempoInatividadeMin: (etapa as any).tempoInatividadeMin ?? null,
           mensagemFollowup: isFila ? FOLLOWUP_PADRAO : null,
           mensagemBoasVindas: isFila ? MENSAGEM_BOAS_VINDAS_PADRAO : null,
           mensagemOpcaoInvalida: isFila ? MENSAGEM_OPCAO_INVALIDA_PADRAO : null,

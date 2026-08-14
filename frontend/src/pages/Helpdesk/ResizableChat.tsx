@@ -318,7 +318,7 @@ export default function ResizableChat({
                       </div>
                     )}
                     {msg.content && (
-                      <div className="text-sm whitespace-pre-wrap break-words">
+                      <div className={`text-sm whitespace-pre-wrap break-words ${msg.fromMe ? 'text-white' : 'text-gray-800 dark:text-slate-200'}`}>
                         {msg.content}
                       </div>
                     )}

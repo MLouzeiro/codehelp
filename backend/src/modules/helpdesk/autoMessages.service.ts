@@ -55,7 +55,7 @@ export const AUTO_MESSAGES: AutoMessageConfig[] = [
     slug: 'csat',
     nome: 'Avaliação (CSAT)',
     descricao: 'Mensagem de avaliação enviada após concluir o atendimento',
-    mensagem: 'Olá! 👋\n\nSeu atendimento foi concluído.\n\nPor favor, avalie de 1 a 5 estrelas como foi sua experiência:\n\n⭐ 1 - Péssimo\n⭐⭐ 2 - Ruim\n⭐⭐⭐ 3 - Regular\n⭐⭐⭐⭐ 4 - Bom\n⭐⭐⭐⭐⭐ 5 - Excelente\n\nResponda esta mensagem com o número de estrelas (1 a 5).\nOu acesse: {{url}}\n\nObrigado pelo feedback! 🙏\n\nEquipe Codemed',
+    mensagem: 'Olá! 👋\n\nSeu atendimento foi concluído.\n\nPor favor, avalie sua experiência:\n\n• 1 - Péssimo\n• 2 - Ruim\n• 3 - Regular\n• 4 - Bom\n• 5 - Excelente\n\nResponda com o *número* (1 a 5).\nOu acesse: {{url}}\n\nObrigado pelo feedback! 🙏\n\nEquipe Codemed',
     variaveis: ['{{url}}'],
   },
   {
@@ -69,7 +69,7 @@ export const AUTO_MESSAGES: AutoMessageConfig[] = [
     slug: 'boas_vindas',
     nome: 'Boas-vindas',
     descricao: 'Mensagem de boas-vindas ao iniciar conversa',
-    mensagem: 'Olá! {{nome}} {{saudacao}} 👋\n\nQue bom ter você por aqui!\n\nPor favor, selecione o departamento desejado:\n\n{{departamentos}}',
+    mensagem: 'Olá! {{nome}} {{saudacao}} 👋\n\nQue bom ter você por aqui!\n\nPor favor, selecione o departamento desejado:\n\n{{departamentos}}\n\nResponda com o *nome* do departamento.',
     variaveis: ['{{nome}}', '{{saudacao}}', '{{departamentos}}'],
   },
   {

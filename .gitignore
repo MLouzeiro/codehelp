@@ -100,3 +100,9 @@ _expxagents/_memory/
 *.tmp
 
 .vercel
+
+# -----------------------------------------------------------------------------
+# Artefatos de teste e scripts de debug pontuais
+# -----------------------------------------------------------------------------
+test-results/
+backend/check_stages.js

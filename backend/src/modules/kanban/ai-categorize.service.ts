@@ -1,5 +1,6 @@
 import { env } from '../../config/env';
 import prisma from '../../config/database';
+import { callClaude } from '../../shared/aiClient';
 
 interface AiCategorization {
   prioridade: string;
@@ -43,24 +44,7 @@ Prioridade atual: ${task.prioridade}
 Responda APENAS com o JSON, sem texto adicional.`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': env.anthropicKey!,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-
-    if (!response.ok) throw new Error('Erro na API Claude');
-
-    const data = await response.json();
-    const text = data.content?.[0]?.text || '{}';
+    const text = await callClaude(prompt, 300);
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Resposta não é JSON válido');

@@ -438,9 +438,10 @@ export async function createTask(boardId: string, data: TaskCreateInput) {
         prioridade: data.prioridade ?? 'media',
         categoria: data.categoria ?? null,
         classificacao: data.classificacao ?? null,
-        dataInicio: data.dataInicio ?? null,
+        dataInicio: data.dataInicio ?? new Date(),
         prazoEntrega: data.prazoEntrega ?? null,
         estimativaHoras: data.estimativaHoras ?? null,
+        horasTrabalhadas: 0,
         ordem: nextOrdem,
         tags: tagsConnect.length > 0 ? { create: tagsConnect } : undefined,
       },
@@ -583,7 +584,7 @@ export async function moveTask(taskId: string, targetColumnId: string, targetOrd
   try {
     const task = await prisma.kanbanTask.findUnique({
       where: { id: taskId },
-      select: { id: true, columnId: true, ordem: true, boardId: true, numero: true },
+      select: { id: true, columnId: true, ordem: true, boardId: true, numero: true, horasTrabalhadas: true, dataInicio: true },
     });
     if (!task) throw new Error('Tarefa nao encontrada');
 
@@ -614,11 +615,48 @@ export async function moveTask(taskId: string, targetColumnId: string, targetOrd
       newOrdem = (maxOrdem._max.ordem ?? -1) + 1;
     }
 
+    let horasAdicionais = 0;
+    if (!task.dataInicio) {
+      await prisma.kanbanTask.update({
+        where: { id: taskId },
+        data: { dataInicio: new Date() },
+      });
+    }
+
+    const ultimaMovimentacao = await prisma.kanbanActivity.findFirst({
+      where: {
+        taskId,
+        tipo: 'moveu',
+        deColuna: { not: null },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (ultimaMovimentacao) {
+      const tempoMs = Date.now() - new Date(ultimaMovimentacao.createdAt).getTime();
+      const tempoHoras = tempoMs / (1000 * 60 * 60);
+      horasAdicionais = Math.round(tempoHoras * 100) / 100;
+    } else {
+      const criacao = await prisma.kanbanActivity.findFirst({
+        where: { taskId, tipo: 'criou' },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (criacao) {
+        const tempoMs = Date.now() - new Date(criacao.createdAt).getTime();
+        const tempoHoras = tempoMs / (1000 * 60 * 60);
+        horasAdicionais = Math.round(tempoHoras * 100) / 100;
+      }
+    }
+
+    const horasAtuais = task.horasTrabalhadas || 0;
+    const novasHoras = Math.round((horasAtuais + horasAdicionais) * 100) / 100;
+
     const updated = await prisma.kanbanTask.update({
       where: { id: taskId },
       data: {
         columnId: targetColumnId,
         ordem: newOrdem,
+        horasTrabalhadas: novasHoras,
       },
     });
 
@@ -626,7 +664,7 @@ export async function moveTask(taskId: string, targetColumnId: string, targetOrd
       data: {
         taskId,
         tipo: 'moveu',
-        descricao: `Tarefa #${task.numero} movida`,
+        descricao: `Tarefa #${task.numero} movida${horasAdicionais > 0 ? ` (+${horasAdicionais}h registradas)` : ''}`,
         deColuna: sourceColumn?.nome ?? null,
         paraColuna: destColumn?.nome ?? null,
       },

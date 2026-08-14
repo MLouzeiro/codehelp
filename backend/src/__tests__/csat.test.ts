@@ -17,7 +17,7 @@ describe('CSAT Service (Bloco 7)', () => {
   describe('montarMensagemCsat', () => {
     it('inclui 5 opcoes de estrelas (1-5)', () => {
       const msg = montarMensagemCsat('token-123', 'https://app.example.com');
-      expect(msg).toContain('1 - Pessimo');
+      expect(msg).toContain('1 - Péssimo');
       expect(msg).toContain('2 - Ruim');
       expect(msg).toContain('3 - Regular');
       expect(msg).toContain('4 - Bom');

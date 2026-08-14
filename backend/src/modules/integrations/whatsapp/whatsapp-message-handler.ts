@@ -2,7 +2,7 @@ import prisma from '../../../config/database';
 import { env } from '../../../config/env';
 import { ensureHelpdeskConfigs } from '../../helpdesk/helpdesk.service';
 import { iniciarOuResetarTriagem, enviarMenuInicial } from '../../helpdesk/triagem.service';
-import { isHorarioAtendimento, getHorarioConfig } from '../../helpdesk/horario';
+import { getHorarioConfig, isAtendimentoAberto } from '../../helpdesk/horario';
 import { etapaInicialSlug } from '../../helpdesk/stages.service';
 import {
   detectarOpcaoMenu,
@@ -16,17 +16,37 @@ import { classificarPorPalavrasChave } from '../../helpdesk/rules.service';
 import { notificarAtendentesFila } from '../../alerts/alerts.service';
 import { processarDescricaoProblema, montarMensagemConfirmacao } from '../../ai/aiTriage.service';
 import { getConfigAutoAtendimento, propostaRespostaIA, enviarRespostaValidada, respostaJaValidada } from '../../ai/aiValidation.service';
-import { responderCsat } from '../../csat/csat.service';
+import {
+  buscarTicketAtivo,
+  buscarCsatPendente,
+  finalizeTicketAfterEvaluation,
+  abandonarAvaliacaoPendente,
+  cancelarAvaliacoesNaoEnviadas,
+  extrairNotaAvaliacao,
+  enviarMensagemObrigadoAvaliacao,
+} from '../../helpdesk/flow.service';
 
 // ── Shared WhatsApp Message Handler ────────────────────────────────────
 // Provider-agnostic bot/triage logic used by all WhatsApp backends.
+//
+// Máquina de estados (fonte de verdade no banco):
+//   Ticket: status/etapa/evaluationStatus
+//   Avaliação: CSATResposta (respondidoEm/enviadoEm) + evaluationStatus
+//   Bot (in-memory, auxiliar): IDLE / AWAITING_DEPARTMENT / AWAITING_CSAT
+//
+// Regra central: ticket fechado NUNCA é reaberto por nova mensagem.
+// Nova mensagem sem ticket ativo → novo chamado (ou resposta de avaliação pendente).
 
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
 const processingLocks = new Set<string>();
 const PROCESSING_LOCK_TIMEOUT_MS = 30_000; // 30 segundos
 
-// ── Conversation State Machine ─────────────────────────────────────────
+// Dedupe de webhooks/eventos repetidos (idempotência de cliques)
+const recentMessageIds = new Map<string, number>();
+const MESSAGE_ID_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+// ── Conversation State Machine (auxiliar, em memória) ─────────────────
 type ConversationState = 'IDLE' | 'AWAITING_CSAT' | 'AWAITING_DEPARTMENT';
 const conversationStates = new Map<string, ConversationState>();
 const STATE_TTL_MS = 30 * 60 * 1000; // 30 minutos
@@ -57,53 +77,6 @@ export function setWhatsAppConversationState(phoneDigits: string, state: Convers
   setConversationState(phoneDigits, state);
 }
 
-async function detectarRespostaCsat(phoneDigits: string, text: string): Promise<boolean> {
-  try {
-    const trimmed = text.trim();
-    
-    // Aceita tanto "1" como "1 - Péssimo" (resposta de lista interativa)
-    let nota: number | null = null;
-    
-    // Tenta extrair apenas o número
-    const numeroMatch = trimmed.match(/^([1-5])/);
-    if (numeroMatch) {
-      nota = parseInt(numeroMatch[1], 10);
-    }
-    
-    if (nota === null) return false;
-
-    const phoneLookup = phoneDigits.slice(-11);
-    console.log(`[CSAT] Detectada possível resposta CSAT: nota=${nota}, phone=${phoneLookup}`);
-
-    const csat = await prisma.cSATResposta.findFirst({
-      where: {
-        respondidoEm: null,
-        enviadoEm: { not: null, gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-        ticket: {
-          OR: [
-            { contactPhone: phoneLookup },
-            { contactPhone: phoneDigits },
-          ],
-        },
-      },
-      include: { ticket: { select: { id: true, protocolo: true, contactName: true, assignee: { select: { name: true } } } } },
-      orderBy: { enviadoEm: 'desc' },
-    });
-
-    if (!csat) {
-      console.log(`[CSAT] Nenhum CSAT pendente encontrado para o telefone ${phoneLookup}`);
-      return false;
-    }
-
-    console.log(`[CSAT] CSAT encontrado: ${csat.id}, respondendo com nota ${nota}`);
-    await responderCsat(csat.tokenResposta, { nota });
-    return true;
-  } catch (err: any) {
-    console.warn('[CSAT] Erro ao detectar/responder CSAT:', err?.message);
-    return false;
-  }
-}
-
 export interface IncomingMessageData {
   phone: string;
   text: string;
@@ -113,6 +86,10 @@ export interface IncomingMessageData {
   connectionId?: string;
   provider: 'baileys' | 'whatsapp-webjs' | 'evolution' | 'cloud';
   jid?: string;
+  /** ID de botão/lista selecionado pelo cliente (interactiveId normalizado). */
+  interactiveId?: string;
+  /** ID único da mensagem no provider (para dedupe de webhooks duplicados). */
+  messageId?: string;
 }
 
 export interface SendMessageFn {
@@ -123,14 +100,24 @@ export async function processIncomingMessageHandler(
   data: IncomingMessageData,
   sendMessage: SendMessageFn,
 ): Promise<void> {
-  const { phone, text, contactName, mediaUrl, mimeType, connectionId, provider } = data;
+  const { phone, contactName, mediaUrl, mimeType, connectionId, provider } = data;
 
   if (!phone) return;
 
   const chatId = phone.replace(/@c\.us$/i, '');
   const phoneDigits = chatId.replace(/[^\d]/g, '');
-  const phoneLookup = phoneDigits.slice(-11);
   const phoneSemSufixo = phoneDigits;
+  const text = data.interactiveId || data.text || '';
+
+  // Idempotência: ignora webhooks/eventos duplicados
+  if (data.messageId) {
+    const last = recentMessageIds.get(data.messageId);
+    if (last && Date.now() - last < MESSAGE_ID_TTL_MS) {
+      console.log(`[WhatsApp] Evento duplicado ignorado messageId=${data.messageId} provider=${provider}`);
+      return;
+    }
+    recentMessageIds.set(data.messageId, Date.now());
+  }
 
   // Aguardar lock com timeout
   const lockStart = Date.now();
@@ -147,144 +134,51 @@ export async function processIncomingMessageHandler(
   const jid = data.jid;
 
   try {
-    // ── CSAT Response Detection ────────────────────────────────────────
-    // Só detecta CSAT se o estado da conversa for AWAITING_CSAT
-    const convState = getConversationState(phoneDigits);
-    console.log(`[WhatsApp] Estado da conversa: ${convState}`);
-
-    if (convState === 'AWAITING_CSAT') {
-      try {
-        console.log(`[WhatsApp] Verificando resposta CSAT para phone: ${phoneDigits}, text: "${text}"`);
-        const isCsatResponse = await detectarRespostaCsat(phoneDigits, text || '');
-        console.log(`[WhatsApp] Resultado detecção CSAT: ${isCsatResponse}`);
-        if (isCsatResponse) {
-          const nota = parseInt(text.trim().match(/^([1-5])/)?.[1] || '0', 10);
-          const stars = '⭐'.repeat(nota);
-          const thankYou = `Obrigado pela sua avaliação! ${stars}\n\nSeu feedback é muito importante para continuarmos melhorando nosso atendimento. 🙏`;
-          await sendMessage(chatId, thankYou).catch(() => {});
-          setConversationState(phoneDigits, 'IDLE');
-          return;
-        }
-      } catch (csatErr: any) {
-        console.warn('[CSAT] Erro na detecção CSAT, continuando como mensagem normal:', csatErr?.message);
-      }
-    }
-
     const horarioCfg = await getHorarioConfig();
-    const horarioOk = isHorarioAtendimento(horarioCfg);
+    const atendimentoAberto = await isAtendimentoAberto(horarioCfg);
 
-    // Find existing open ticket
-    let ticket = await prisma.ticket.findFirst({
-      where: {
-        OR: [
-          ...(jid ? [{ contactJid: jid }] : []),
-          { contactPhone: chatId },
-          { contactPhone: phoneSemSufixo },
-        ],
-        status: { notIn: ['fechado', 'cancelado', 'arquivado'] },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    // ── 1) Resolver ticket ativo (fonte de verdade: banco) ───────────
+    // Ticket fechado/cancelado NÃO é ativo — nova mensagem não o reabre.
+    let ticket = await buscarTicketAtivo(phoneSemSufixo, jid);
+    console.log(`[TICKET_LOOKUP] phone=${phoneSemSufixo} event=RESULT ticketId=${ticket?.id || 'nenhum'}`);
 
-    // If no open ticket, check for a recently closed ticket (CSAT response or follow-up)
     if (!ticket) {
-      // First: check if there's a pending CSAT for this phone
-      const phoneLookupForCsat = phoneDigits.slice(-11);
-      const pendingCsat = await prisma.cSATResposta.findFirst({
-        where: {
-          respondidoEm: null,
-          enviadoEm: { not: null, gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-          ticket: {
-            OR: [
-              { contactPhone: phoneLookupForCsat },
-              { contactPhone: phoneDigits },
-            ],
-          },
-        },
-        include: { ticket: { select: { id: true, contactPhone: true, contactJid: true } } },
-        orderBy: { enviadoEm: 'desc' },
-      });
+      // ── 2) Sem ticket ativo → avaliar avaliação pendente ────────────
+      const notaResposta = extrairNotaAvaliacao(text);
+      const csatPendente = await buscarCsatPendente(phoneDigits, jid);
 
-      // If there's a pending CSAT and message is a valid CSAT response, let it flow to detection at top
-      if (pendingCsat) {
-        const isPotentialCsatResponse = /^[1-5]$/.test((text || '').trim());
-        if (isPotentialCsatResponse) {
-          console.log(`[WhatsApp] CSAT pendente encontrado ${pendingCsat.id} — resposta CSAT detectada, processando`);
+      if (csatPendente) {
+        if (notaResposta !== null) {
+          // Cliente respondeu a avaliação → registra, encerra definitivo, limpa estado
+          console.log(`[EVALUATION_RESPONSE] phone=${phoneDigits} event=RESPONDIDA nota=${notaResposta} ticketId=${csatPendente.ticket.id}`);
+          const resultado = await finalizeTicketAfterEvaluation(phoneDigits, csatPendente.csat, notaResposta);
+          if (resultado.ok) {
+            await enviarMensagemObrigadoAvaliacao(chatId, sendMessage);
+          }
           return;
         }
-        // Message is NOT a CSAT response — treat as a new conversation, create new ticket
-        console.log(`[WhatsApp] CSAT pendente ${pendingCsat.id} ignorado (mensagem não é resposta CSAT) — criando novo ticket`);
+
+        // Mensagem NÃO é avaliação → não prender o cliente. Abandona a avaliação
+        // pendente (marca cancelada) e segue para criar um novo chamado.
+        console.log(`[WhatsApp] Avaliação pendente ignorada (mensagem não é resposta) — criando novo ticket`);
+        await abandonarAvaliacaoPendente(phoneDigits, csatPendente.csat);
       }
 
-      const recentClosed = await prisma.ticket.findFirst({
-        where: {
-          OR: [
-            ...(jid ? [{ contactJid: jid }] : []),
-            { contactPhone: chatId },
-            { contactPhone: phoneSemSufixo },
-          ],
-          status: { in: ['fechado'] },
-          createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-      if (recentClosed) {
-        // Check if CSAT was already created but message failed to send
-        const existingCsat = await prisma.cSATResposta.findUnique({ where: { ticketId: recentClosed.id } });
-        if (existingCsat && !existingCsat.respondidoEm) {
-          // Don't reopen — let the flow continue to create a new ticket below
-          console.log(`[WhatsApp] Ticket ${recentClosed.id} fechado com CSAT pendente, criando novo ticket`);
-        } else {
-          // No pending CSAT — reopen the closed ticket
-          const reopenEtapa = await etapaInicialSlug();
-          ticket = await prisma.ticket.update({
-            where: { id: recentClosed.id },
-            data: { status: 'aberto', etapa: reopenEtapa, departamentoId: null, protocolo: null, dataFechamento: null },
-          });
-          await prisma.ticketStageEvent.create({
-            data: {
-              ticketId: ticket.id,
-              etapaAnterior: 'concluido',
-              etapaNova: reopenEtapa,
-              origem: 'automatico',
-            },
-          });
-        }
-      }
-    }
+      // Cancelar avaliações criadas mas nunca enviadas (evita retry tardio de chamado antigo)
+      await cancelarAvaliacoesNaoEnviadas(phoneDigits, jid);
 
-    if (ticket) {
-      if (ticket.status === 'fechado') {
-        const jaTemCsat = await prisma.cSATResposta.findUnique({ where: { ticketId: ticket.id } });
-        if (!jaTemCsat) {
-          const reopenEtapa = await etapaInicialSlug();
-          ticket = await prisma.ticket.update({
-            where: { id: ticket.id },
-            data: { status: 'em_atendimento', etapa: reopenEtapa, departamentoId: null, protocolo: null, dataFechamento: null },
-          });
-          await prisma.ticketStageEvent.create({
-            data: {
-              ticketId: ticket.id,
-              etapaAnterior: 'concluido',
-              etapaNova: reopenEtapa,
-              origem: 'automatico',
-            },
-          });
-        }
-      }
-    } else {
-      // Find client by phone
+      // ── 3) Criar novo ticket ────────────────────────────────────────
       let client = null;
-      if (phoneLookup) {
+      if (phoneDigits) {
         client = await prisma.client.findFirst({
-          where: { telefone: { contains: phoneLookup } },
+          where: { telefone: { contains: phoneDigits } },
         });
         if (!client) {
           const colaborador = await prisma.colaborador.findFirst({
             where: {
               OR: [
-                { telefone: { contains: phoneLookup } },
-                { whatsapp: { contains: phoneLookup } },
+                { telefone: { contains: phoneDigits } },
+                { whatsapp: { contains: phoneDigits } },
               ],
             },
             include: { client: true },
@@ -306,7 +200,7 @@ export async function processIncomingMessageHandler(
 
       await ensureHelpdeskConfigs();
 
-      const etapaInicial = horarioOk ? await etapaInicialSlug() : 'aguardando_expediente';
+      const etapaInicial = atendimentoAberto ? await etapaInicialSlug() : 'aguardando_expediente';
 
       const created = await prisma.ticket.create({
         data: {
@@ -321,6 +215,7 @@ export async function processIncomingMessageHandler(
         },
       });
       ticket = created;
+      console.log(`[NEW_TICKET] ticketId=${created.id} customerPhone=${phoneSemSufixo} event=CREATED etapa=${etapaInicial}`);
 
       await prisma.ticketStageEvent.create({
         data: {
@@ -331,17 +226,13 @@ export async function processIncomingMessageHandler(
         },
       });
 
-      notificarAtendentesFila(created.id).catch((e) =>
-        console.warn(`[${provider}] Falha ao notificar atendentes:`, e?.message || e)
-      );
-
       const { avaliarRegras } = await import('../../automations/automations.service');
       avaliarRegras('novo_ticket', { ticketId: created.id }).catch((e) =>
         console.warn(`[${provider}] Falha ao avaliar regras novo_ticket:`, e?.message || e)
       );
     }
 
-    // Save incoming message
+    // ── 4) Salvar mensagem recebida ───────────────────────────────────
     if (text || mediaUrl) {
       await prisma.message.create({
         data: {
@@ -358,8 +249,8 @@ export async function processIncomingMessageHandler(
       });
     }
 
-    // ── Business hours check ────────────────────────────────────────
-    if (!horarioOk && (ticket!.etapa === 'aguardando_expediente' || ((ticket!.etapa === 'triagem' || ticket!.etapa === 'boas_vindas' || ticket!.etapa === 'fila') && !ticket!.protocolo && !ticket!.departamentoId))) {
+    // ── 5) Business hours check ───────────────────────────────────────
+    if (!atendimentoAberto && (ticket!.etapa === 'aguardando_expediente' || ((ticket!.etapa === 'triagem' || ticket!.etapa === 'boas_vindas' || ticket!.etapa === 'fila') && !ticket!.protocolo && !ticket!.departamentoId))) {
       const jaEnviouForaHorario = await prisma.message.count({
         where: { ticketId: ticket!.id, fromMe: true, source: 'bot' },
       });
@@ -375,7 +266,7 @@ export async function processIncomingMessageHandler(
       return;
     }
 
-    // ── Send initial menu if needed (BEFORE department selection) ───
+    // ── 6) Send initial menu if needed (BEFORE department selection) ──
     const needsMenu = (ticket!.etapa === 'triagem' || ticket!.etapa === 'boas_vindas' || ticket!.etapa === 'fila') && !ticket!.protocolo && !ticket!.departamentoId;
     if (needsMenu) {
       // Don't send menu if this ticket was reopened after CSAT response
@@ -396,7 +287,7 @@ export async function processIncomingMessageHandler(
       }
     }
 
-    // ── Bot menu: department selection ──────────────────────────────
+    // ── 7) Bot menu: department selection ─────────────────────────────
     if (text && needsMenu) {
       const opcao = detectarOpcaoMenu(text);
       if (opcao) {
@@ -417,6 +308,10 @@ export async function processIncomingMessageHandler(
           where: { id: ticket!.id },
           data: { departamentoId: deptInfo.departamentoId, etapa: 'fila' },
         });
+
+        notificarAtendentesFila(ticket!.id, deptInfo.departamentoId).catch((e) =>
+          console.warn(`[${provider}] Falha ao notificar atendentes:`, e?.message || e)
+        );
 
         const ackMsg = await montarAckDepartamento(ticket!.contactName || 'cliente', deptInfo.departamentoNome);
         const result = await sendMessage(chatId, ackMsg);
@@ -457,7 +352,7 @@ export async function processIncomingMessageHandler(
       }
     }
 
-    // ── Keyword classification ──────────────────────────────────────
+    // ── 8) Keyword classification ─────────────────────────────────────
     if (text && !ticket!.categoria) {
       const match = await classificarPorPalavrasChave(text);
       if (match) {
@@ -469,7 +364,7 @@ export async function processIncomingMessageHandler(
       }
     }
 
-    // ── Queue: AI-powered description analysis ──────────────────────
+    // ── 9) Queue: AI-powered description analysis ─────────────────────
     if (ticket!.etapa === 'fila' && ticket!.departamentoId && !ticket!.protocolo && text) {
       const textoLower = text.toLowerCase().trim();
 
@@ -481,7 +376,6 @@ export async function processIncomingMessageHandler(
         });
         const ultimaMsgTexto = (ultimaMsgBot?.content || '').toLowerCase();
         const perguntouEmpresa = ultimaMsgTexto.includes('laborat') ||
-          ultimaMsgTexto.includes('clinica') ||
           ultimaMsgTexto.includes('clinica') ||
           ultimaMsgTexto.includes('hospital') ||
           ultimaMsgTexto.includes('empresa') ||
@@ -695,7 +589,7 @@ export async function processIncomingMessageHandler(
       return;
     }
 
-    // ── Initial menu for new triagem tickets ────────────────────────
+    // ── 10) Initial menu for new triagem tickets ──────────────────────
     if ((ticket!.etapa === 'triagem' || ticket!.etapa === 'boas_vindas' || ticket!.etapa === 'fila') && !ticket!.protocolo && !ticket!.departamentoId) {
       // Don't send menu if this ticket was reopened after CSAT response
       const jaTemCsat = await prisma.cSATResposta.findUnique({ where: { ticketId: ticket!.id } });

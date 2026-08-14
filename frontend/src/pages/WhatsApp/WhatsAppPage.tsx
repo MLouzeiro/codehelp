@@ -1166,10 +1166,10 @@ export default function WhatsAppPage() {
                   if (isSystem) {
                     return (
                       <div key={msg.id} className="flex justify-center">
-                        <div className="max-w-[85%] bg-violet-50 border border-violet-200 rounded-xl px-4 py-2 text-center">
-                          <p className="text-[10px] font-bold text-violet-500 mb-0.5 uppercase">🤖 Sistema</p>
-                          <p className="text-xs text-violet-700 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                          <p className="text-[10px] text-violet-400 mt-1">
+                        <div className="max-w-[85%] bg-violet-50 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-700 rounded-xl px-4 py-2 text-center">
+                          <p className="text-[10px] font-bold text-violet-500 dark:text-violet-400 mb-0.5 uppercase">🤖 Sistema</p>
+                          <p className="text-xs text-violet-700 dark:text-violet-300 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                          <p className="text-[10px] text-violet-400 dark:text-violet-500 mt-1">
                             {msg.sentAt ? new Date(msg.sentAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
                           </p>
                         </div>
@@ -1205,27 +1205,27 @@ export default function WhatsAppPage() {
                         )}
                         {!isAudio && !isImage && !isVideo && msg.mediaUrl && mediaSrc && (
                           <div className="mb-1">
-                            <a href={mediaSrc} target="_blank" rel="noopener noreferrer" className="underline text-blue-300 hover:text-blue-100">📎 Arquivo</a>
+                            <a href={mediaSrc} target="_blank" rel="noopener noreferrer" className="underline text-blue-300 dark:text-blue-400 hover:text-blue-100">📎 Arquivo</a>
                           </div>
                         )}
                         {msg.content && msg.content !== '(mídia)' && (
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                          <p className={`text-sm leading-relaxed whitespace-pre-wrap ${msg.fromMe ? 'text-white' : 'text-neutral-900 dark:text-slate-200'}`}>{msg.content}</p>
                         )}
                         {msg.content === '(mídia)' && !mediaSrc && (
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap italic opacity-60">{msg.content}</p>
+                          <p className={`text-sm leading-relaxed whitespace-pre-wrap italic opacity-60 ${msg.fromMe ? 'text-white' : 'text-neutral-900 dark:text-slate-200'}`}>{msg.content}</p>
                         )}
                         <div className={`flex items-center gap-2 mt-1 ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
-                          <span className={`text-[10px] ${msg.fromMe ? 'text-white/70' : 'text-gray-400'}`}>
+                          <span className={`text-[10px] ${msg.fromMe ? 'text-white/70' : 'text-gray-400 dark:text-slate-500'}`}>
                             {msg.sentAt ? new Date(msg.sentAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
-                          {msg.usuario?.name && <span className={`text-[10px] ${msg.fromMe ? 'text-white/70' : 'text-gray-400'}`}>{msg.usuario.name}</span>}
+                          {msg.usuario?.name && <span className={`text-[10px] ${msg.fromMe ? 'text-white/70' : 'text-gray-400 dark:text-slate-500'}`}>{msg.usuario.name}</span>}
                         </div>
                       </div>
                     </div>
                   );
                 })}
                 {messages.length === 0 && (
-                  <div className="text-center py-12 text-gray-400 text-sm">Nenhuma mensagem ainda</div>
+                  <div className="text-center py-12 text-gray-400 dark:text-slate-500 text-sm">Nenhuma mensagem ainda</div>
                 )}
                 <div ref={messagesEndRef} />
               </div>

@@ -1,34 +1,5 @@
 import prisma from '../../config/database';
-import { env } from '../../config/env';
-
-// ── Claude API ─────────────────────────────────────────────────
-
-async function callClaude(prompt: string, maxTokens = 800): Promise<string> {
-  if (!env.anthropicKey) throw new Error('Chave Anthropic não configurada');
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': env.anthropicKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Claude API error ${res.status}: ${err}`);
-  }
-  const data: any = await res.json();
-  return data.content?.[0]?.text || '';
-}
-
-function hasClaude(): boolean {
-  return !!env.anthropicKey;
-}
+import { callClaude, hasClaude } from '../../shared/aiClient';
 
 // ── Interfaces ─────────────────────────────────────────────────
 

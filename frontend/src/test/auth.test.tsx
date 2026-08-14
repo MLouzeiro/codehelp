@@ -27,6 +27,10 @@ const TestComponent = () => {
 describe('AuthProvider', () => {
   beforeEach(() => {
     localStorage.clear();
+    document.cookie.split(';').forEach((c) => {
+      const name = c.split('=')[0].trim();
+      if (name) document.cookie = `${name}=; path=/; max-age=0`;
+    });
     vi.clearAllMocks();
   });
 
@@ -54,8 +58,8 @@ describe('AuthProvider', () => {
       expect(screen.getByTestId('user').textContent).toBe('Admin (admin)');
     });
 
-    expect(localStorage.getItem('accessToken')).toBe('abc');
-    expect(localStorage.getItem('refreshToken')).toBe('def');
+    expect(document.cookie).toContain('accessToken=abc');
+    expect(document.cookie).toContain('refreshToken=def');
   });
 
   it('login com credenciais inválidas retorna error sem setar user', async () => {
@@ -77,6 +81,6 @@ describe('AuthProvider', () => {
     });
 
     expect(screen.getByTestId('user').textContent).toBe('null');
-    expect(localStorage.getItem('accessToken')).toBeNull();
+    expect(document.cookie).not.toContain('accessToken=');
   });
 });

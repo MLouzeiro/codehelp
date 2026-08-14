@@ -1,56 +1,18 @@
 import prisma from '../../config/database';
 import { env } from '../../config/env';
 import { logAction } from '../audit/audit.service';
+import { STATUS_FECHADO_CSAT, ETAPAS_ENCERRADAS } from '../helpdesk/constants';
 
 const CSAT_DELAY_MINUTOS = 30;
 const CSAT_NEGATIVO_LIMITE = 2;
 
 export async function enviarCsatImediatamente(ticketId: string): Promise<void> {
-  console.log(`[CSAT] Iniciando envio imediato para ticket ${ticketId}`);
+  console.log(`[EVALUATION] ticketId=${ticketId} event=INICIAR_ENVIO_IMEDIATO`);
   try {
-    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
-    if (!ticket) {
-      console.warn(`[CSAT] Ticket ${ticketId} nao encontrado`);
-      return;
-    }
-    if (!ticket.contactPhone) {
-      console.warn(`[CSAT] Ticket ${ticketId} sem telefone`);
-      return;
-    }
-    console.log(`[CSAT] Ticket encontrado: ${ticket.contactPhone}, status: ${ticket.status}`);
-
-    const existente = await prisma.cSATResposta.findUnique({ where: { ticketId } });
-    if (existente) {
-      if (existente.enviadoEm) {
-        console.log(`[CSAT] CSAT ja existe e enviado para ticket ${ticketId}`);
-        return;
-      }
-      // CSAT exists but was never sent — resend it
-      console.log(`[CSAT] CSAT existe mas nao enviado para ticket ${ticketId}, reenviando...`);
-      const resultado = await enviarMensagemCsat(existente.id);
-      console.log(`[CSAT] Resultado reenvio:`, resultado);
-      if (!resultado.enviado) {
-        console.warn(`[CSAT] Falha ao reenviar CSAT para ticket ${ticketId}: ${resultado.erro}`);
-      }
-      return;
-    }
-
-    const csat = await prisma.cSATResposta.create({
-      data: {
-        ticketId,
-        tokenResposta: crypto.randomUUID(),
-        enviadoEm: null,
-      },
-    });
-    console.log(`[CSAT] CSAT criado: ${csat.id}`);
-
-    const resultado = await enviarMensagemCsat(csat.id);
-    console.log(`[CSAT] Resultado envio:`, resultado);
-    if (!resultado.enviado) {
-      console.warn(`[CSAT] Falha ao enviar CSAT imediatamente para ticket ${ticketId}: ${resultado.erro}`);
-    }
+    const { finalizarAtendimento } = await import('../helpdesk/flow.service');
+    await finalizarAtendimento(ticketId);
   } catch (err: any) {
-    console.error(`[CSAT] Erro ao enviar CSAT imediatamente:`, err);
+    console.error(`[EVALUATION] ticketId=${ticketId} event=ENVIO_IMEDIATO_ERRO error=${err?.message}`, err);
   }
 }
 
@@ -62,7 +24,7 @@ export interface AgendamentoResult {
 export async function agendarCsat(ticketId: string): Promise<AgendamentoResult> {
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket) throw new Error('Ticket nao encontrado');
-  if (!['fechado', 'cancelado', 'resolvido'].includes(ticket.status) && !['concluido', 'descartado'].includes(ticket.etapa)) {
+  if (![...STATUS_FECHADO_CSAT].includes(ticket.status) && ![...ETAPAS_ENCERRADAS].includes(ticket.etapa)) {
     return { criado: false, csat: null };
   }
   const existente = await prisma.cSATResposta.findUnique({ where: { ticketId } });
@@ -77,7 +39,7 @@ export async function agendarCsat(ticketId: string): Promise<AgendamentoResult> 
   return { criado: true, csat };
 }
 
-const CSAT_DEFAULT_MESSAGE = `Olá! 👋\n\nSeu atendimento foi concluído.\n\nPor favor, avalie sua experiência:\n\n• 1 - Péssimo\n• 2 - Ruim\n• 3 - Regular\n• 4 - Bom\n• 5 - Excelente\n\nResponda com o *número* (1 a 5).\nOu acesse: {{url}}\n\nObrigado pelo feedback! 🙏\n\nEquipe Codemed`;
+const CSAT_DEFAULT_MESSAGE = `Olá! 👋\n\nSeu atendimento foi concluído.\n\nPor favor, avalie sua experiência:\n\n1 - Péssimo\n2 - Ruim\n3 - Regular\n4 - Bom\n5 - Excelente\n\nResponda com o *número* (1 a 5).\nOu acesse: {{url}}\n\nObrigado pelo feedback! 🙏\n\nEquipe Codemed`;
 
 export function montarMensagemCsat(token: string, baseUrl?: string): string {
   const url = baseUrl
@@ -115,61 +77,93 @@ export async function enviarMensagemCsat(csatId: string): Promise<EnviarResult> 
   if (!csat.ticket.contactPhone) {
     return { enviado: false, erro: 'Ticket sem telefone', csat };
   }
+
+  // Idempotência: nunca reenviar avaliação já respondida ou já enviada
+  if (csat.respondidoEm) {
+    return { enviado: false, erro: 'CSAT ja respondido', csat };
+  }
+  if (csat.enviadoEm) {
+    console.log(`[EVALUATION] evaluationId=${csat.id} ticketId=${csat.ticketId} event=SEND_SKIP motivo=ja_enviada`);
+    return { enviado: true, csat };
+  }
+
   try {
-    const { sendWhatsAppMessage } = await import('../integrations/whatsapp/whatsapp.service');
-    const csatText = [
-      `Olá! 👋`,
-      ``,
-      `Seu atendimento foi concluído com sucesso.`,
-      ``,
-      `Por favor, avalie sua experiência com um número de 1 a 5:`,
-      ``,
-      `*1* - Péssimo`,
-      `*2* - Ruim`,
-      `*3* - Regular`,
-      `*4* - Bom`,
-      `*5* - Excelente`,
-      ``,
-      `Responda com o *número* (1 a 5).`,
-      `Ou acesse: ${env.appUrl}/csat/${csat.tokenResposta}`,
-      ``,
-      `Obrigado pelo feedback! 🙏`,
-    ].join('\n');
-    console.log(`[CSAT] Enviando mensagem de avaliação para ${csat.ticket.contactPhone}`);
-    const result = await sendWhatsAppMessage(
-      csat.ticket.contactPhone,
-      csatText,
-      (csat.ticket as any).whatsappConnectionId || undefined,
-      (csat.ticket as any).contactJid || undefined,
+    const ticket = csat.ticket as any;
+    const phone = ticket.contactPhone.replace(/[^\d]/g, '');
+    const jid = ticket.contactJid || undefined;
+    const connectionId = ticket.whatsappConnectionId || undefined;
+
+    const corpo =
+      `Olá! 👋\n\nSeu atendimento foi concluído com sucesso.\n\n` +
+      `Gostaríamos de saber como foi sua experiência.\n\n` +
+      `Como você avalia nosso atendimento?`;
+
+    // Lista interativa (clickável) com rowIds rating_1..rating_5.
+    // O handler extrai a nota via extrairNotaAvaliacao (aceita "rating_N").
+    const { enviarListaInterativa, montarFallbackTexto } = await import('../integrations/whatsapp/whatsapp-message-service');
+
+    const sections = [
+      {
+        title: 'Avalie nosso atendimento',
+        rows: [
+          { id: 'rating_1', title: '⭐ 1 - Péssimo' },
+          { id: 'rating_2', title: '⭐ 2 - Ruim' },
+          { id: 'rating_3', title: '⭐ 3 - Regular' },
+          { id: 'rating_4', title: '⭐ 4 - Bom' },
+          { id: 'rating_5', title: '⭐ 5 - Excelente' },
+        ],
+      },
+    ];
+
+    const result = await enviarListaInterativa(phone, {
+      title: 'Avalie o atendimento',
+      description: corpo,
+      sections,
+      connectionId,
+      jid,
+    });
+    console.log(
+      `[EVALUATION] ticketId=${ticket.id} evaluationId=${csat.id} event=MESSAGE_SENT ` +
+      `sucesso=${result.success} tipo=${result.usedFallback ? 'texto' : 'interativo'}`,
     );
-    console.log(`[CSAT] Resultado envio:`, result);
 
     if (result.success) {
+      const agora = new Date();
       await prisma.cSATResposta.update({
         where: { id: csatId },
-        data: { enviadoEm: new Date() },
+        data: { enviadoEm: agora },
       });
+      // Registra no histórico a mensagem efetivamente exibida ao cliente
+      const textoRegistrado = result.usedFallback
+        ? montarFallbackTexto({ title: 'Avalie o atendimento', description: corpo, sections })
+        : `${corpo}\n\n⭐ 1 Péssimo • 2 Ruim • 3 Regular • 4 Bom • 5 Excelente`;
       await prisma.message.create({
         data: {
           ticketId: csat.ticketId,
           fromMe: true,
-          content: csatText,
+          content: textoRegistrado,
           source: 'bot',
         },
       }).catch(() => {});
-      // Set conversation state to AWAITING_CSAT so handler knows to process CSAT response
+      // Estado auxiliar in-memory (fonte de verdade principal fica no banco via CSAT pendente)
       try {
         const { setWhatsAppConversationState } = await import('../integrations/whatsapp/whatsapp-message-handler');
-        const phoneDigits = csat.ticket.contactPhone.replace(/[^\d]/g, '');
-        setWhatsAppConversationState(phoneDigits, 'AWAITING_CSAT');
+        setWhatsAppConversationState(ticket.contactPhone, 'AWAITING_CSAT');
       } catch {}
-      return { enviado: true, csat: { ...csat, enviadoEm: new Date() } };
+      return { enviado: true, csat: { ...csat, enviadoEm: agora } };
     }
+    console.warn(
+      `[EVALUATION] ticketId=${ticket.id} evaluationId=${csat.id} event=SEND_ERROR error=${result.error}`,
+    );
     return { enviado: false, erro: result.error, csat };
   } catch (err: any) {
-    console.error(`[CSAT] Erro ao enviar mensagem:`, err);
+    console.error(`[EVALUATION] evaluationId=${csatId} event=SEND_EXCEPTION error=${err?.message}`);
     return { enviado: false, erro: err?.message, csat };
   }
+}
+
+function montarTextoAvaliacaoFallback(corpo: string): string {
+  return `${corpo}\n\n1 - Péssimo\n2 - Ruim\n3 - Regular\n4 - Bom\n5 - Excelente\n\nResponda com o *número* (1 a 5).`;
 }
 
 export interface RespostaInput {
@@ -194,7 +188,11 @@ export async function responderCsat(token: string, input: RespostaInput) {
     console.warn(`[CSAT] CSAT ja respondido: ${csat.id}`);
     throw new Error('CSAT ja respondido');
   }
-  console.log(`[CSAT] CSAT encontrado: ${csat.id}, atualizando respondidoEm...`);
+  if (csat.ticket?.evaluationStatus === 'cancelado') {
+    console.warn(`[CSAT] CSAT cancelado previamente: ${csat.id}`);
+    throw new Error('Avaliação cancelada');
+  }
+  console.log(`[EVALUATION] CSAT encontrado: ${csat.id}, atualizando respondidoEm...`);
   const updated = await prisma.cSATResposta.update({
     where: { id: csat.id },
     data: {
@@ -203,11 +201,16 @@ export async function responderCsat(token: string, input: RespostaInput) {
       respondidoEm: new Date(),
     },
   });
-  console.log(`[CSAT] CSAT respondido com sucesso: ${csat.id}, nota=${input.nota}, respondidoEm=${updated.respondidoEm}`);
+  console.log(`[EVALUATION] evaluationId=${csat.id} ticketId=${csat.ticketId} event=ANSWER_SAVED nota=${input.nota} respondidoEm=${updated.respondidoEm}`);
   await prisma.ticket.update({
     where: { id: csat.ticketId },
-    data: { satisfacao: input.nota, dataCSAT: new Date() },
+    data: {
+      satisfacao: input.nota,
+      dataCSAT: new Date(),
+      evaluationStatus: 'respondido',
+    },
   });
+  console.log(`[TICKET] ticketId=${csat.ticketId} event=ENCERRADO_APOS_AVALIACAO nota=${input.nota}`);
   if (input.nota <= CSAT_NEGATIVO_LIMITE) {
     await notificarCsatNegativo(csat.ticketId, input.nota, input.comentario);
   }
@@ -258,8 +261,8 @@ export async function processarAgendamentosCsat(): Promise<ProcessarResult> {
   const ticketsElegiveis = await prisma.ticket.findMany({
     where: {
       OR: [
-        { status: { in: ['fechado', 'cancelado', 'resolvido'] } },
-        { etapa: { in: ['concluido', 'descartado'] } },
+        { status: { in: [...STATUS_FECHADO_CSAT] } },
+        { etapa: { in: [...ETAPAS_ENCERRADAS] } },
       ],
       dataFechamento: { lte: limite },
       csatResposta: null,
@@ -292,8 +295,8 @@ export async function processarAgendamentosCsat(): Promise<ProcessarResult> {
       respondidoEm: null,
       ticket: {
         OR: [
-          { status: { in: ['fechado', 'cancelado', 'resolvido'] } },
-          { etapa: { in: ['concluido', 'descartado'] } },
+          { status: { in: [...STATUS_FECHADO_CSAT] } },
+          { etapa: { in: [...ETAPAS_ENCERRADAS] } },
         ],
       },
     },

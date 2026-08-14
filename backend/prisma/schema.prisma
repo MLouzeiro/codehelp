@@ -250,6 +250,7 @@ model Ticket {
   dataConclusao         DateTime?
   dataResolucao         DateTime?
   dataCSAT              DateTime?
+  evaluationStatus      String?
   assumedAt             DateTime?
   slaTotalMinutos       Int?
   slaPausadoEm          DateTime?

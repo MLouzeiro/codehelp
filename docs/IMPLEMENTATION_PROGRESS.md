@@ -1,0 +1,46 @@
+# IMPLEMENTATION_PROGRESS — CodeHelp CRM/Helpdesk
+
+> Este arquivo é o **registro canônico de progresso**. Atualizar a cada fase concluída.
+> Criado em: 2026-08-13 (FASE 0 — Diagnóstico).
+
+Legenda status: ⏳ pendente · 🔧 em andamento · ✅ concluído · ⛔ bloqueado · 🔄 revisado
+
+## Fases (ordem de execução recomendada)
+
+| # | Fase | Prioridade | Status |
+|---|------|-----------|--------|
+| 0 | Diagnóstico do sistema + documentação base (ARCHITECTURE/FLOWS/PROGRESS) | Alta | ✅ |
+| 1 | Suíte de testes integrada (infra de testes padrão + smoke dos fluxos críticos) | Alta | ✅ |
+| 2 | Fluxos críticos de negócio (WhatsApp → ticket → atendimento → encerramento → avaliação) | Alta | ⏳ |
+| 3 | Time Tracking (apontamento de horas, relatórios, vínculo com OS/ticket) | Alta | ⏳ |
+| 4 | Aprovações (fluxo completo: solicitação → notificação → decisão → histórico) | Média | ⏳ |
+| 5 | Relatórios gerenciais (semanais, por analista, FCR, SLA, CSAT) | Média | ⏳ |
+| 6 | Dashboard de indicadores (painel gerencial consolidado) | Média | ⏳ |
+| 7 | Auditoria IA (agente de monitoramento de conversas) | Média | ⏳ |
+| 8 | Auditoria individual por analista (relatório + replay de conversa) | Média | ⏳ |
+| 9 | Refatoração de código legado (duplicações, handler legado) | Baixa | ⏳ |
+| 10 | Documentação final (arquivos já criados + atualização AGENTS.md) | Média | ⏳ |
+| 11 | Testes finais integrados (regressão completa) | Alta | ⏳ |
+
+## Histórico de mudanças
+
+| Data | Fase | Descrição | Resultado |
+|------|------|-----------|-----------|
+| 2026-08-13 | 1 | Infra de testes padrão: `helpers/test-utils.ts` (cleanup, ambiente helpdesk, horário 24/7, sendMessage mock) + smoke do handler canônico `whatsapp-handler.smoke.test.ts` (4 testes) | 318/318 testes passando; tsc 0 erros novos; cobertura do caminho mensagem→ticket→departamento→fila |
+| 2026-08-13 | 0 | Diagnóstico do sistema; levantamento de módulos, schema, rotas, fluxos | Backlog mapeado — ver DIAGNÓSTICO |
+| 2026-07-10 | — | Correções críticas: encerramento pós-avaliação + lista interativa mascarada | 314/314 testes passando; docs/critical-business-rules/ticket-lifecycle.md criado |
+
+## Regras operacionais
+
+1. **NÃO DESTRUIR**: antes de remover/alterar qualquer fluxo, verificar dependências (grep de chamadores) e rodar testes de regressão.
+2. **Trabalho pendente NÃO é trabalho feito**: uma fase só é `✅` após implementação + testes + documentação.
+3. **Preservar fluxos críticos** documentados em `docs/FLOWS.md` e protegidos por testes em `backend/src/__tests__/ticket-closure-regression.test.ts` e `interactive-message-flow.test.ts`.
+4. Atualizar este arquivo ao final de cada fase com evidências (testes passando, tsc limpo, arquivos tocados).
+
+## Mapa de prioridades abertas (detalhado)
+
+- [ ] Ordem de serviço (Orders) — refinar fluxo de implantação/signature (parcialmente pronto)
+- [ ] Dark mode global
+- [ ] Auditoria IA: detectar encerramento prematuro / resolução real / reabertura (base: `aiAgentMonitor.service.ts` + `ai-audit.service.ts`)
+- [ ] Dashboard IA: cards diário/semanal/por analista (base: `weeklyReport.service.ts`, `metrics.service.ts`, `AuditoriaAtendimento.tsx`)
+- [ ] E2E WhatsApp real (Baileys v6.7.23) — pendente de conexão ativa no ambiente

@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../shared/middleware/auth';
 import { env } from '../../config/env';
+import { callClaude } from '../../shared/aiClient';
 
 // ── Métricas de Helpdesk/Suporite e Implantação ────────────────────────
 // Endpoint: GET /api/analytics/helpdesk-metrics
@@ -489,24 +490,7 @@ Dados:
 - Total de categorias: ${JSON.stringify(charts.ticketsByCategory.slice(0, 5))}`;
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': env.anthropicKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 500,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
-
-      const data: any = await response.json();
-      const content = data.content?.[0]?.text || '';
+      const content = await callClaude(prompt, 500);
       const insights = content.split('\n').filter((l: string) => l.trim()).slice(0, 3);
 
       return res.json({ insights, generated: true });

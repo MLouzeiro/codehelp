@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { authenticate, authorize } from '../../shared/middleware/auth';
+import prisma from '../../config/database';
 import {
   getVendasSugestoes,
   runClassificarTickets,
@@ -114,5 +115,78 @@ router.get('/validacoes', listarTodas);
 router.patch('/validacoes/:id/validar', validar);
 router.patch('/validacoes/:id/rejeitar', rejeitar);
 router.get('/validacoes/metricas', authorize('admin', 'gerente', 'supervisor'), getMetricas);
+
+// ── Robot Dashboard — monitoramento de execucoes ──────────────
+router.get('/robots/dashboard', authorize('admin', 'gerente'), async (req, res) => {
+  try {
+    const { getRobotStats, getExecutionLog } = await import('./robot.scheduler');
+    const robots = await prisma.robot.findMany({
+      include: { rules: { select: { id: true, ativo: true } } },
+      orderBy: { ordem: 'asc' },
+    });
+    const stats = getRobotStats();
+    const recentExecutions = getExecutionLog(20);
+    const dashboard = robots.map((robot) => ({
+      id: robot.id,
+      slug: robot.slug,
+      nome: robot.nome,
+      descricao: robot.descricao,
+      icone: robot.icone,
+      ativo: robot.ativo,
+      inteligente: robot.inteligente,
+      horarioAtivo: robot.horarioAtivo,
+      horaInicio: robot.horaInicio,
+      horaFim: robot.horaFim,
+      totalRegras: robot.rules.length,
+      regrasAtivas: robot.rules.filter((r) => r.ativo).length,
+      stats: stats[robot.slug] || { executions: 0, success: 0, failed: 0, lastExecution: null },
+    }));
+    return res.json({
+      robots: dashboard,
+      recentExecutions,
+      summary: {
+        totalRobots: robots.length,
+        activeRobots: robots.filter((r) => r.ativo).length,
+        totalExecutions: Object.values(stats).reduce((acc, s) => acc + s.executions, 0),
+        totalSuccess: Object.values(stats).reduce((acc, s) => acc + s.success, 0),
+        totalFailed: Object.values(stats).reduce((acc, s) => acc + s.failed, 0),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao buscar dashboard de robôs' });
+  }
+});
+
+router.get('/robots/logs', authorize('admin', 'gerente'), async (req, res) => {
+  try {
+    const { getExecutionLog } = await import('./robot.scheduler');
+    const limit = parseInt(req.query.limit as string) || 50;
+    const logs = getExecutionLog(limit);
+    return res.json({ logs });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao buscar logs de execução' });
+  }
+});
+
+router.post('/robots/:slug/execute', authorize('admin', 'gerente'), async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { executarRobot } = await import('./robot.scheduler');
+    const robot = await prisma.robot.findUnique({ where: { slug } });
+    if (!robot) return res.status(404).json({ error: 'Robô não encontrado' });
+    const robotFunctions: Record<string, () => Promise<any>> = {
+      'vendas': async () => { const { gerarSugestoesVendas } = await import('./ai.service'); return gerarSugestoesVendas(); },
+      'classificador': async () => { const { classificarTicketsPendentes } = await import('./ai.service'); return classificarTicketsPendentes(); },
+      'os-analyst': async () => { const { analisarOsAtrasadas } = await import('./ai.service'); const alerts = await analisarOsAtrasadas(); return { alerts }; },
+      'tarefas': async () => { const { sugerirPrioridadesTarefas } = await import('./ai.service'); const sugestoes = await sugerirPrioridadesTarefas(); return { sugestoes }; },
+    };
+    const robotFn = robotFunctions[slug];
+    if (!robotFn) return res.status(400).json({ error: 'Robô não suporta execução manual' });
+    await executarRobot(slug, robot.nome, robotFn);
+    return res.json({ success: true, message: `Robô "${robot.nome}" executado com sucesso` });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao executar robô' });
+  }
+});
 
 export default router;

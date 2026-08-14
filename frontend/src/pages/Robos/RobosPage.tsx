@@ -6,7 +6,8 @@ import {
   RefreshCw, ChevronRight, Zap, Sparkles, AlertTriangle, Settings2,
   Clock, Power, Save, X, Plus, Trash2, ChevronDown,
   Tag, User, MessageCircle, ClipboardList, Globe,
-  ArrowRight, Filter, Play, ToggleRight,
+  ArrowRight, Filter, Play, ToggleRight, BarChart3, Activity,
+  CheckCircle2, XCircle, TrendingDown,
 } from 'lucide-react';
 
 const TRIGGER_OPTIONS = [
@@ -90,7 +91,7 @@ export default function RobosPage() {
   const [robos, setRobos] = useState<Robot[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRobot, setSelectedRobot] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('vendas');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [vendasData, setVendasData] = useState<any>(null);
   const [osAlerts, setOsAlerts] = useState<any[]>([]);
   const [tarefasSugestoes, setTarefasSugestoes] = useState<any[]>([]);
@@ -98,6 +99,8 @@ export default function RobosPage() {
   const [showNewRobot, setShowNewRobot] = useState(false);
   const [newRobotName, setNewRobotName] = useState('');
   const [newRobotDesc, setNewRobotDesc] = useState('');
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [robotLogs, setRobotLogs] = useState<any[]>([]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -113,14 +116,44 @@ export default function RobosPage() {
   const loadOs = async () => { try { const { data } = await api.get('/ai/os-alerts'); setOsAlerts(data.alerts || []); } catch { } };
   const loadTarefas = async () => { try { const { data } = await api.get('/ai/sugestoes-tarefas'); setTarefasSugestoes(data.sugestoes || []); } catch { } };
   const runClassifier = async () => { setRunning(true); try { const { data } = await api.post('/ai/classificar-tickets'); alert(`${data.classificados} tickets classificados!`); } catch { } finally { setRunning(false); } };
+  
+  const loadDashboard = async () => {
+    try {
+      const { data } = await api.get('/ai/robots/dashboard');
+      setDashboardData(data);
+    } catch { }
+  };
+
+  const loadRobotLogs = async () => {
+    try {
+      const { data } = await api.get('/ai/robots/logs?limit=20');
+      setRobotLogs(data.logs || []);
+    } catch { }
+  };
+
+  const executeRobot = async (slug: string) => {
+    try {
+      await api.post(`/ai/robots/${slug}/execute`);
+      alert('Robô executado com sucesso!');
+      loadDashboard();
+      loadRobotLogs();
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Erro ao executar robô');
+    }
+  };
 
   useEffect(() => {
+    if (activeTab === 'dashboard') {
+      loadDashboard();
+      loadRobotLogs();
+    }
     if (activeTab === 'vendas') loadVendas();
     if (activeTab === 'os') loadOs();
     if (activeTab === 'tarefas') loadTarefas();
   }, [activeTab]);
 
   const tabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'vendas', label: 'Vendas', icon: TrendingUp },
     { id: 'classificador', label: 'Classificador', icon: MessageSquare },
     { id: 'os', label: 'OS', icon: FileText },
@@ -252,6 +285,7 @@ export default function RobosPage() {
           })}
         </div>
         <div className="p-6">
+          {activeTab === 'dashboard' && <DashboardPanel data={dashboardData} logs={robotLogs} onRefresh={loadDashboard} onExecute={executeRobot} />}
           {activeTab === 'vendas' && <VendasPanel data={vendasData} onRefresh={loadVendas} />}
           {activeTab === 'classificador' && <ClassificadorPanel onRun={runClassifier} running={running} />}
           {activeTab === 'os' && <OsAlertsPanel alerts={osAlerts} onRefresh={loadOs} />}
@@ -885,6 +919,200 @@ function TarefasPanel({ sugestoes, onRefresh }: { sugestoes: any[]; onRefresh: (
           </div>
         </div>
       ))}</div>}
+    </div>
+  );
+}
+
+/* -------- Dashboard Panel -------- */
+function DashboardPanel({ 
+  data, 
+  logs, 
+  onRefresh, 
+  onExecute 
+}: { 
+  data: any; 
+  logs: any[]; 
+  onRefresh: () => void;
+  onExecute: (slug: string) => void;
+}) {
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
+      </div>
+    );
+  }
+
+  const { robots, summary } = data;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-navy-900 dark:text-slate-100">Dashboard de Monitoramento</h3>
+        <button onClick={onRefresh} className="text-xs text-emerald-600 font-semibold hover:text-emerald-700 flex items-center gap-1">
+          <RefreshCw size={12} /> Atualizar
+        </button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-100 dark:border-slate-700/50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-navy-100 flex items-center justify-center">
+              <Bot size={20} className="text-navy-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-navy-900 dark:text-slate-100">{summary.totalRobots}</p>
+              <p className="text-xs text-neutral-500 dark:text-slate-400">Total Robôs</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-100 dark:border-slate-700/50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <Activity size={20} className="text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-navy-900 dark:text-slate-100">{summary.activeRobots}</p>
+              <p className="text-xs text-neutral-500 dark:text-slate-400">Ativos</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-100 dark:border-slate-700/50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Play size={20} className="text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-navy-900 dark:text-slate-100">{summary.totalExecutions}</p>
+              <p className="text-xs text-neutral-500 dark:text-slate-400">Execuções</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-100 dark:border-slate-700/50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <CheckCircle2 size={20} className="text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-navy-900 dark:text-slate-100">{summary.totalSuccess}</p>
+              <p className="text-xs text-neutral-500 dark:text-slate-400">Sucessos</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-100 dark:border-slate-700/50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+              <XCircle size={20} className="text-red-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-navy-900 dark:text-slate-100">{summary.totalFailed}</p>
+              <p className="text-xs text-neutral-500 dark:text-slate-400">Falhas</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Robots Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {robots.map((robot: any) => (
+          <div key={robot.id} className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-100 dark:border-slate-700/50 p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${robot.inteligente ? 'bg-emerald-100 text-emerald-700' : 'bg-navy-50 text-navy-600'}`}>
+                  {robot.inteligente ? <Brain size={24} /> : <Bot size={24} />}
+                </div>
+                <div>
+                  <h4 className="font-bold text-navy-900 dark:text-slate-100">{robot.nome}</h4>
+                  <p className="text-xs text-neutral-500 dark:text-slate-400">{robot.descricao}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${robot.ativo ? 'bg-emerald-500' : 'bg-neutral-300'}`} />
+                <button
+                  onClick={() => onExecute(robot.slug)}
+                  disabled={!robot.ativo}
+                  className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Executar agora"
+                >
+                  <Play size={14} />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-navy-900 dark:text-slate-100">{robot.stats.executions}</p>
+                <p className="text-xs text-neutral-500 dark:text-slate-400">Execuções</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-emerald-600">{robot.stats.success}</p>
+                <p className="text-xs text-neutral-500 dark:text-slate-400">Sucessos</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-600">{robot.stats.failed}</p>
+                <p className="text-xs text-neutral-500 dark:text-slate-400">Falhas</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between text-xs text-neutral-500 dark:text-slate-400">
+              <span>{robot.totalRegras} regras ({robot.regrasAtivas} ativas)</span>
+              {robot.horarioAtivo && (
+                <span className="flex items-center gap-1">
+                  <Clock size={12} /> {robot.horaInicio}-{robot.horaFim}
+                </span>
+              )}
+            </div>
+
+            {robot.stats.lastExecution && (
+              <div className="mt-2 text-xs text-neutral-400 dark:text-slate-500">
+                Última execução: {new Date(robot.stats.lastExecution).toLocaleString('pt-BR')}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Recent Executions */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-100 dark:border-slate-700/50 p-4">
+        <h4 className="font-semibold text-navy-900 dark:text-slate-100 mb-4">Execuções Recentes</h4>
+        {logs.length === 0 ? (
+          <p className="text-sm text-neutral-400 dark:text-slate-500 text-center py-4">Nenhuma execução registrada</p>
+        ) : (
+          <div className="space-y-2">
+            {logs.slice(0, 10).map((log, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-slate-900/50 rounded-lg">
+                {log.success ? (
+                  <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
+                ) : (
+                  <XCircle size={16} className="text-red-500 flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-navy-900 dark:text-slate-100">{log.robotNome}</span>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${log.success ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                      {log.success ? 'Sucesso' : 'Falha'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-500 dark:text-slate-400 truncate">{log.details || log.error}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs text-neutral-500 dark:text-slate-400">
+                    {new Date(log.startedAt).toLocaleTimeString('pt-BR')}
+                  </p>
+                  {log.itemsProcessed !== undefined && (
+                    <p className="text-xs text-neutral-400 dark:text-slate-500">{log.itemsProcessed} itens</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

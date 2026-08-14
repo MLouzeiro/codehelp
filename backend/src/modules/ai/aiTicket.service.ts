@@ -1,37 +1,8 @@
 import prisma from '../../config/database';
-import { env } from '../../config/env';
 import { classifyLocal } from '../helpdesk/classificador';
 import { logAction } from '../audit/audit.service';
 import { propostaRespostaIA, getConfigAutoAtendimento } from './aiValidation.service';
-
-// ── Claude API ─────────────────────────────────────────────────
-
-async function callClaude(prompt: string, maxTokens = 1200): Promise<string> {
-  if (!env.anthropicKey) throw new Error('Chave Anthropic não configurada');
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': env.anthropicKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Claude API error ${res.status}: ${err}`);
-  }
-  const data: any = await res.json();
-  return data.content?.[0]?.text || '';
-}
-
-function hasClaude(): boolean {
-  return !!env.anthropicKey;
-}
+import { callClaude, hasClaude } from '../../shared/aiClient';
 
 // ── Helper: buscar ultimas N mensagens do ticket ────────────────
 
@@ -740,17 +711,17 @@ async function enviarRespostaIa(ticketId: string, conteudo: string) {
 export async function resolverTicketPorIa(ticketId: string): Promise<void> {
   const relatorio = await gerarRelatorioCompleto(ticketId);
 
-  await prisma.ticket.update({
-    where: { id: ticketId },
-    data: {
-      resolvidoPorIa: true,
-      status: 'resolvido',
-      etapa: 'concluido',
-      dataConclusao: new Date(),
-      dataResolucao: new Date(),
-      dataFechamento: new Date(),
-      iaNotaEncerramento: relatorio.notaCompleta,
-    },
+  const { encerrarTicket } = await import('../helpdesk/flow.service');
+  await encerrarTicket(ticketId, {
+    status: 'resolvido',
+    etapa: 'concluido',
+    origem: 'ia',
+    dataConclusao: true,
+    dataResolucao: true,
+    dataFechamento: true,
+    extra: { resolvidoPorIa: true, iaNotaEncerramento: relatorio.notaCompleta },
+    finalizarCsat: true,
+    criarStageEvent: false,
   });
 
   await logAction({

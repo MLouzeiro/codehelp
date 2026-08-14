@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { env } from '../../config/env';
 import { ehFeriado } from '../feriados/feriados.service';
+import { callClaude } from '../../shared/aiClient';
 
 type AiProvider = 'claude' | 'local';
 
@@ -43,7 +44,7 @@ function dentroDoHorario(hours: BusinessHours): boolean {
   }
 }
 
-async function robotPodeExecutar(slug: string): Promise<boolean> {
+export async function robotPodeExecutar(slug: string): Promise<boolean> {
   try {
     const robot = await prisma.robot.findUnique({ where: { slug } });
     if (!robot) return true;
@@ -72,26 +73,6 @@ async function getConfig(slug: string): Promise<Record<string, any>> {
   } catch {
     return {};
   }
-}
-
-async function callClaude(prompt: string): Promise<string> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': env.anthropicKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 800,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!response.ok) throw new Error(`Anthropic API error: ${response.status}`);
-  const data: any = await response.json();
-  return data.content?.[0]?.text || '';
 }
 
 /* -------- ROBÔ 1: Assistente de Vendas (CRM) -------- */
@@ -174,7 +155,7 @@ export async function gerarSugestoesVendas(): Promise<{
 
 Sugestões: ${JSON.stringify(sugestoes.slice(0, 10))}`;
 
-      const text = await callClaude(prompt);
+      const text = await callClaude(prompt, 800);
       try {
         const parsed = JSON.parse(text);
         return { sugestoes: parsed.slice(0, 10), generated: true };
@@ -224,7 +205,7 @@ export async function classificarTicketsPendentes(): Promise<{
 
 Assunto: ${ticket.assunto || 'Sem assunto'}
 Mensagem: ${texto.slice(0, 300)}`;
-        const result = await callClaude(prompt);
+        const result = await callClaude(prompt, 800);
         const categoria = result.trim().toLowerCase();
         if (categorias.includes(categoria)) {
           await prisma.ticket.update({ where: { id: ticket.id }, data: { categoria } });

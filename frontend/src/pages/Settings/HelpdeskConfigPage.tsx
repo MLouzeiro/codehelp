@@ -241,7 +241,7 @@ export default function HelpdeskConfigPage() {
 
         <div className="space-y-5">
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
               Mensagem de boas-vindas (menu inicial)
             </label>
             <textarea
@@ -251,14 +251,14 @@ export default function HelpdeskConfigPage() {
               placeholder="Olá!! {{nome}} {{saudacao}} 👋&#10;&#10;Que bom ter você por aqui!&#10;&#10;Como podemos te ajudar hoje(Apenas números)?&#10;1️⃣ Suporte&#10;2️⃣ Comercial"
               className="input resize-none"
             />
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1" style={{ fontFamily: 'Lexend, sans-serif' }}>
+            <p className="text-[11px] text-slate-400 dark:text-slate-400 mt-1" style={{ fontFamily: 'Lexend, sans-serif' }}>
               Enviada quando um cliente entra em contato pela primeira vez
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
                 Resposta — Opção 1 (Suporte)
               </label>
               <textarea
@@ -270,7 +270,7 @@ export default function HelpdeskConfigPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
                 Resposta — Opção 2 (Comercial)
               </label>
               <textarea
@@ -284,7 +284,7 @@ export default function HelpdeskConfigPage() {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
               Resposta — Opção inválida
             </label>
             <textarea
@@ -297,7 +297,7 @@ export default function HelpdeskConfigPage() {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
               Mensagem fora do horário
             </label>
             <textarea
@@ -310,7 +310,7 @@ export default function HelpdeskConfigPage() {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
               Mensagem de follow-up (após inatividade)
             </label>
             <textarea

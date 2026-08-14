@@ -242,25 +242,63 @@ export interface NivelSuporte {
 // ─── Orders / OS ───────────────────────────────────────
 export interface ServiceOrder {
   id: string;
-  numero?: string;
-  titulo: string;
-  descricao?: string;
-  status: string;
-  prioridade?: string;
-  clientId?: string;
+  numeroOs: string;
+  clientId: string;
   client?: CrmClient;
-  assigneeId?: string;
-  assignee?: User;
+  tipoServico: string;
+  descricaoServico?: string;
+  sistemasEnvolvidos: string[];
+  equipamentos?: string;
+  tecnicoResponsavelId: string;
+  tecnicoResponsavel?: { id: string; name: string; email?: string };
+  valorServico?: number;
+  dataEmissao: string;
+  dataPrevistaEntrega?: string;
+  status: string;
   ticketId?: string;
   ticket?: HelpdeskTicket;
-  dataAbertura: string;
-  dataConclusao?: string;
-  valorTotal?: number;
+  criadoPor?: { name: string };
   observacoes?: string;
-  assinaturaUrl?: string;
+  horasDev?: number;
+  horasSuporte?: number;
+  implantacaoConcluida?: boolean;
+  precoImplantacao?: number;
+  tipoImplantacao?: string;
+  dataInicioImplantacao?: string;
+  dataFimImplantacao?: string;
+  signature?: OrderSignature;
+  attachments?: OrderAttachment[];
   createdAt: string;
   updatedAt: string;
 }
+
+export interface OrderSignature {
+  id: string;
+  serviceOrderId: string;
+  assinanteNome: string;
+  assinanteCpf?: string;
+  assinanteCargo?: string;
+  assinaturaBase64?: string;
+  token: string;
+  expiresAt: string;
+  signedAt?: string;
+  pdfPath?: string;
+  ipAssinatura?: string;
+  empresaAssinatura?: string;
+  createdAt: string;
+}
+
+export interface OrderAttachment {
+  id: string;
+  serviceOrderId: string;
+  filename: string;
+  path: string;
+  mimetype: string;
+  size: number;
+  createdAt: string;
+}
+
+export type OrderStatus = 'rascunho' | 'aguardando_assinatura' | 'assinada' | 'em_execucao' | 'concluida' | 'cancelada';
 
 // ─── Notifications ─────────────────────────────────────
 export interface Notificacao {

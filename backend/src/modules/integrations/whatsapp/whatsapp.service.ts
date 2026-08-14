@@ -141,6 +141,38 @@ export async function sendWhatsAppMessage(
   return { success: false, error: 'Nenhum provider WhatsApp disponivel' };
 }
 
+export async function sendWhatsAppListMessage(
+  to: string,
+  buttonText: string,
+  bodyText: string,
+  sections: Array<{ title: string; rows: Array<{ id: string; title: string; description?: string }> }>,
+  connectionId?: string,
+  jid?: string,
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  const phone = to.replace(/[^\d]/g, '');
+
+  if (connectionId) {
+    const baileysState = baileysProviderService.getMultiState(connectionId);
+    if (baileysState?.connected && baileysState.socket) {
+      return baileysProviderService.sendListMessageMulti(connectionId, phone, buttonText, bodyText, sections, jid);
+    }
+  }
+
+  if (baileysProviderService.isLegacyConnected()) {
+    return baileysProviderService.sendListMessageLegacy(phone, buttonText, bodyText, sections, jid);
+  }
+
+  const allBaileysStates = baileysProviderService.getAllMultiStates();
+  for (const [connId, state] of allBaileysStates) {
+    if (state.connected && state.socket) {
+      const result = await baileysProviderService.sendListMessageMulti(connId, phone, buttonText, bodyText, sections, jid);
+      if (result.success) return result;
+    }
+  }
+
+  return { success: false, error: 'Nenhum provider WhatsApp disponivel' };
+}
+
 // ── Status Functions (compatibility) ──────────────────────────────────
 export function isClientConnected(): boolean {
   if (baileysProviderService.isLegacyConnected()) return true;

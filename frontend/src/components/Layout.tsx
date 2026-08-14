@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, FileText, MessageSquare, Kanban,
   Settings, LogOut, Menu, X, ChevronDown, Bot, TrendingUp, BarChart3,
   Stethoscope, Activity, LineChart, BookOpen, Zap, ArrowUpDown,
-  Bell, Check, CheckCheck, Sun, Moon, Shield, Timer,
+  Bell, Check, CheckCheck, Sun, Moon, Shield, Timer, Brain,
 } from 'lucide-react';
 import api from '../services/api';
 import type { Notificacao } from '../types';
@@ -19,9 +19,10 @@ const navItems = [
   { path: '/app/helpdesk', label: 'Chamados', icon: Stethoscope },
   { path: '/app/helpdesk/painel', label: 'Atendimento Ao Vivo', icon: Activity, roles: ['admin', 'gerente'] },
   { path: '/app/helpdesk/metrics', label: 'Metricas Operacionais', icon: LineChart, roles: ['admin', 'gerente'] },
+  { path: '/app/helpdesk/auditoria-ia', label: 'Auditoria IA', icon: Brain, roles: ['admin', 'gerente'] },
   { path: '/app/helpdesk/business-metrics', label: 'Metricas de Negocio', icon: BarChart3, roles: ['admin', 'gerente'] },
   { path: '/app/helpdesk/board', label: 'Quadro de Status', icon: ArrowUpDown, roles: ['admin', 'gerente'] },
-  // { path: '/app/helpdesk/aprovacoes', label: 'Aprovacoes', icon: Shield, roles: ['admin', 'gerente'] },
+  { path: '/app/helpdesk/aprovacoes', label: 'Aprovacoes', icon: Shield, roles: ['admin', 'gerente'] },
   { path: '/app/kb', label: 'Base de Conhecimento', icon: BookOpen, roles: ['admin', 'gerente', 'tecnico', 'vendedor'] },
   { path: '/app/automations', label: 'Automacoes', icon: Zap, roles: ['admin', 'gerente', 'supervisor'] },
   { path: '/app/crm', label: 'Clientes', icon: Users },

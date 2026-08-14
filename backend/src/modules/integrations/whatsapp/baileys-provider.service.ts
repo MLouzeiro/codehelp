@@ -10,6 +10,7 @@ import makeWASocket, {
   isJidGroup,
   isJidBroadcast,
   fetchLatestBaileysVersion,
+  generateWAMessageFromContent,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
@@ -523,7 +524,17 @@ class BaileysProviderService {
         messageText = msg.message.buttonsResponseMessage?.selectedButtonId || '';
       } else if (contentType === 'listResponseMessage') {
         messageText = msg.message.listResponseMessage?.singleSelectReply?.selectedRowId || '';
+      } else if (contentType === 'templateButtonReplyMessage') {
+        messageText = msg.message.templateButtonReplyMessage?.selectedId || '';
+      } else if (contentType === 'interactiveResponseMessage') {
+        messageText = msg.message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson || '';
       }
+
+      const isInteractive =
+        contentType === 'buttonsResponseMessage' ||
+        contentType === 'listResponseMessage' ||
+        contentType === 'templateButtonReplyMessage' ||
+        contentType === 'interactiveResponseMessage';
 
       const contactName = msg.pushName || phone;
 
@@ -551,6 +562,8 @@ class BaileysProviderService {
           connectionId: sessionId,
           provider: 'baileys',
           jid: remoteJid || undefined,
+          interactiveId: isInteractive ? messageText : undefined,
+          messageId: msg.key?.id || undefined,
         },
         sendFn,
       );
@@ -604,7 +617,17 @@ class BaileysProviderService {
       messageText = msg.message.buttonsResponseMessage?.selectedButtonId || '';
     } else if (contentType === 'listResponseMessage') {
       messageText = msg.message.listResponseMessage?.singleSelectReply?.selectedRowId || '';
+    } else if (contentType === 'templateButtonReplyMessage') {
+      messageText = msg.message.templateButtonReplyMessage?.selectedId || '';
+    } else if (contentType === 'interactiveResponseMessage') {
+      messageText = msg.message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson || '';
     }
+
+    const isInteractive =
+      contentType === 'buttonsResponseMessage' ||
+      contentType === 'listResponseMessage' ||
+      contentType === 'templateButtonReplyMessage' ||
+      contentType === 'interactiveResponseMessage';
 
     const contactName = msg.pushName || phone;
 
@@ -630,6 +653,8 @@ class BaileysProviderService {
         connectionId: sessionId,
         provider: 'baileys',
         jid: remoteJid || undefined,
+        interactiveId: isInteractive ? messageText : undefined,
+        messageId: msg.key?.id || undefined,
       },
       sendFn,
     );
@@ -658,6 +683,95 @@ class BaileysProviderService {
     } catch (error: any) {
       console.error('[Baileys] Erro ao enviar:', error?.message);
       return { success: false, error: error.message };
+    }
+  }
+
+  async sendListMessageMulti(
+    connectionId: string,
+    to: string,
+    buttonText: string,
+    bodyText: string,
+    sections: Array<{ title: string; rows: Array<{ id: string; title: string; description?: string }> }>,
+    jid?: string,
+  ): Promise<{ success: boolean; error?: string; messageId?: string }> {
+    const state = this.connections.get(connectionId);
+    if (!state?.socket || !state.connected) {
+      return { success: false, error: `Sessao ${connectionId} nao conectada` };
+    }
+    return this.sendListMessage(state.socket, to, buttonText, bodyText, sections, jid);
+  }
+
+  async sendListMessageLegacy(
+    to: string,
+    buttonText: string,
+    bodyText: string,
+    sections: Array<{ title: string; rows: Array<{ id: string; title: string; description?: string }> }>,
+    jid?: string,
+  ): Promise<{ success: boolean; error?: string; messageId?: string }> {
+    if (!this.legacyState.socket || !this.legacyState.connected) {
+      return { success: false, error: 'Baileys nao conectado' };
+    }
+    return this.sendListMessage(this.legacyState.socket, to, buttonText, bodyText, sections, jid);
+  }
+
+  private async sendListMessage(
+    socket: WASocket,
+    to: string,
+    buttonText: string,
+    bodyText: string,
+    sections: Array<{ title: string; rows: Array<{ id: string; title: string; description?: string }> }>,
+    jid?: string,
+  ): Promise<{ success: boolean; error?: string; messageId?: string }> {
+    const phone = to.replace(/[^\d]/g, '');
+    if (phone.length < 10 || phone.length > 15) {
+      return { success: false, error: `Telefone invalido: "${phone}"` };
+    }
+    const targetJid = jid && jid.includes('@') ? jid : jidNormalizedUser(`${phone}@s.whatsapp.net`);
+
+    try {
+      console.log(`[Baileys] Enviando lista interativa para ${targetJid}`);
+
+      const protoSections: proto.Message.ListMessage.ISection[] = sections.map((s) => ({
+        title: s.title,
+        rows: s.rows.map((r) => ({
+          title: r.title,
+          description: r.description || '',
+          rowId: r.id,
+        })),
+      }));
+
+      const listMsg: proto.Message.IListMessage = {
+        title: buttonText,
+        description: bodyText,
+        buttonText,
+        listType: proto.Message.ListMessage.ListType.SINGLE_SELECT,
+        sections: protoSections,
+        footerText: 'Equipe Codemed',
+      };
+
+      // Caminho canonico do Baileys: generateWAMessageFromContent monta o
+      // WebMessageInfo completo (key.id via generateMessageIDV2 + messageTimestamp).
+      // A versao anterior usava socket.generateMessageTag() como messageId (tag de
+      // stanza, nao ID de mensagem valido) — causa documentada de "relayMessage
+      // retorna success mas WhatsApp nao entrega" (AGENTS.md / commit c8ba79c).
+      const fullMsg = generateWAMessageFromContent(
+        targetJid,
+        { listMessage: listMsg },
+        { userJid: socket.user?.id || targetJid, timestamp: new Date() },
+      );
+      if (!fullMsg.message) throw new Error('generateWAMessageFromContent retornou message vazio');
+      const msgId = fullMsg.key.id || undefined;
+      await socket.relayMessage(targetJid, fullMsg.message, { messageId: msgId });
+      console.log(`[Baileys] Lista interativa enviada com sucesso, messageId: ${msgId}`);
+      return { success: true, messageId: msgId };
+    } catch (error: any) {
+      // NUNCA enviar texto aqui e retornar success:true — isso mascara a falha
+      // do envio interativo e faz a camada superior (enviarListaInterativa)
+      // registrar "interativo" no banco quando o cliente recebeu texto.
+      // O fallback para texto é decisão EXPLÍCITA de enviarListaInterativa
+      // (whatsapp-message-service), que seta usedFallback:true e loga auditoria.
+      console.error('[Baileys] Falha no envio de lista interativa:', error?.message);
+      return { success: false, error: `interativo_falhou: ${error?.message || 'erro_desconhecido'}` };
     }
   }
 }

@@ -53,6 +53,8 @@ async function runBackgroundInit() {
   startCsatScheduler();
   const { startBillingScheduler } = await import('./modules/billing/billing.scheduler');
   startBillingScheduler();
+  const { startRobotScheduler } = await import('./modules/ai/robot.scheduler');
+  startRobotScheduler();
 
   // WhatsApp — reconexao automatica usando o factory (provider por conexao)
   try {

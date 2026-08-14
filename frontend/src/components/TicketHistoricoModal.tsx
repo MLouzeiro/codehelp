@@ -111,7 +111,7 @@ export default function TicketHistoricoModal({ open, onClose, ticketId, protocol
                           : 'bg-emerald-50 border border-emerald-200 rounded-br-sm dark:bg-emerald-900/30 dark:border-emerald-700'
                     }`}>
                       <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">{senderName} <span className="font-normal">{time}</span></div>
-                      <div>{msg.content || '(sem conteúdo)'}</div>
+                      <div className={isCliente ? 'text-slate-800 dark:text-slate-200' : isIA ? 'text-blue-800 dark:text-blue-200' : 'text-emerald-800 dark:text-emerald-200'}>{msg.content || '(sem conteúdo)'}</div>
                     </div>
                   </div>
                 );

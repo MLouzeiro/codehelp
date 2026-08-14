@@ -28,7 +28,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
         params: { page: params?.page || 1, limit: params?.limit || 20, status: params?.status },
       });
       set({
-        orders: data.items || data || [],
+        orders: data.orders || data.items || data || [],
         total: data.total || 0,
         loading: false,
       });

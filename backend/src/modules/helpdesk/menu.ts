@@ -5,9 +5,16 @@ export type OpcaoMenu = string;
 
 export function detectarOpcaoMenu(text: string): OpcaoMenu | null {
   const limpo = text.trim();
+  if (!limpo) return null;
+  // ID interativo de departamento: "dept_<slug>" / "dept_<id>" (lista interativa)
+  if (/^dept_\S+/i.test(limpo)) return limpo;
   // Aceita tanto "1" como "1 - Suporte Técnico" (resposta de lista interativa)
   const match = limpo.match(/^(\d+)/);
   if (match) return match[1];
+  // Aceita o NOME do departamento (ex: "suporte técnico", "financeiro") —
+  // o resolverOpcaoMenu faz o matching por nome. Restrito a textos curtos
+  // para não interpretar uma descrição de problema como opção de menu.
+  if (limpo.length <= 80) return limpo;
   return null;
 }
 
@@ -80,6 +87,16 @@ export async function resolverOpcaoMenu(opcao: string): Promise<{
   });
 
   const limpo = opcao.trim().toLowerCase();
+
+  // ID interativo: dept_<slug> ou dept_<id>
+  const deptIdMatch = limpo.match(/^dept_(.+)$/);
+  if (deptIdMatch) {
+    const ref = deptIdMatch[1].trim();
+    const dept = departamentos.find(
+      (d) => d.slug?.toLowerCase() === ref || d.id.toLowerCase() === ref
+    );
+    if (dept) return { departamentoId: dept.id, departamentoNome: dept.nome };
+  }
 
   if (/^\d+$/.test(limpo)) {
     const idx = parseInt(limpo, 10) - 1;
