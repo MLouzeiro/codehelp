@@ -50,6 +50,7 @@ const TicketRelatorio = lazy(() => import('./pages/Helpdesk/TicketRelatorio'));
 const TicketTimelineExpandida = lazy(() => import('./pages/Helpdesk/TicketTimelineExpandida'));
 const AuditStatsPage = lazy(() => import('./pages/Helpdesk/AuditStatsPage'));
 const AuditoriaAtendimento = lazy(() => import('./pages/Helpdesk/AuditoriaAtendimento'));
+const AuditoriaEncerramentoPage = lazy(() => import('./pages/Helpdesk/AuditoriaEncerramentoPage'));
 const Aprovacoes = lazy(() => import('./pages/Helpdesk/Aprovacoes'));
 const KBList = lazy(() => import('./pages/KB/KBList'));
 const AutomationsPage = lazy(() => import('./pages/Automations/AutomationsPage'));
@@ -111,6 +112,7 @@ export default function App() {
             <Route path="helpdesk/timeline/:ticketId" element={<TicketTimelineExpandida />} />
             <Route path="helpdesk/audit" element={<AuditStatsPage />} />
             <Route path="helpdesk/auditoria-ia" element={<AuditoriaAtendimento />} />
+            <Route path="helpdesk/auditoria-encerramento" element={<AuditoriaEncerramentoPage />} />
             <Route path="helpdesk/aprovacoes" element={<Aprovacoes />} />
             <Route path="relatorios/gerencial" element={<RelatorioGerencial />} />
             <Route path="relatorios/executivo" element={<DashboardExecutivo />} />

@@ -30,6 +30,12 @@ import {
   getAgentAuditHandler,
 } from './helpdesk.controller';
 import {
+  getAuditarEncerramento,
+  getListarEncerrados,
+  getAuditarLote,
+  getResumoAuditoria,
+} from './closureAudit.controller';
+import {
   getStages,
   getEtapaInicialSlug,
   postStage,
@@ -108,5 +114,11 @@ router.post('/tickets/:id/criar-kanban', requireTicketAccess('edit'), criarKanba
 router.get('/fcr/metricas', authorize('admin', 'gerente'), getMetricasFCR);
 router.get('/dashboard/detalhado', authorize('admin', 'gerente'), getDetailedDashboard);
 router.get('/audit/agent-performance', authorize('admin', 'gerente'), getAgentAuditHandler);
+
+// ── Auditoria de encerramento (prematuro / resolução real / reabertura) ──
+router.get('/closure-audit/resumo', authorize('admin', 'gerente'), getResumoAuditoria);
+router.get('/closure-audit/encerrados', authorize('admin', 'gerente'), getListarEncerrados);
+router.get('/closure-audit/lote', authorize('admin', 'gerente'), getAuditarLote);
+router.get('/closure-audit/:id', authorize('admin', 'gerente'), getAuditarEncerramento);
 
 export default router;
