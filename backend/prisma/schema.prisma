@@ -1113,6 +1113,10 @@ model Aprovacao {
   observacao      String?
   status          String    @default("pendente")
   valorAprovado   Float?
+  canal           String    @default("interno")
+  telefoneAprovador String?
+  token           String?   @unique
+  expiraEm        DateTime?
   dataSolicitacao DateTime  @default(now())
   dataDecisao     DateTime?
   createdAt       DateTime  @default(now())

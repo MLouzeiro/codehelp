@@ -18,6 +18,7 @@ const OrderList = lazy(() => import('./pages/Orders/OrderList'));
 const OrderForm = lazy(() => import('./pages/Orders/OrderForm'));
 const OrderDetail = lazy(() => import('./pages/Orders/OrderDetail'));
 const SignPage = lazy(() => import('./pages/Sign/SignPage'));
+const AprovacaoPublica = lazy(() => import('./pages/Aprovacoes/AprovacaoPublica'));
 const WhatsAppPage = lazy(() => import('./pages/WhatsApp/WhatsAppPage'));
 const TicketDetail = lazy(() => import('./pages/WhatsApp/TicketDetail'));
 const KanbanPage = lazy(() => import('./pages/Kanban/KanbanPage'));
@@ -78,6 +79,7 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/assinar/:token" element={<SignPage />} />
+          <Route path="/aprovacoes/:token" element={<AprovacaoPublica />} />
           <Route path="/app" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Navigate to="/app/dashboard" />} />
             <Route path="dashboard" element={<Dashboard />} />

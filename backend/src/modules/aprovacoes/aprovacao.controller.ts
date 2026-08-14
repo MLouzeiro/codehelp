@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import {
   solicitarAprovacao,
   decidirAprovacao,
+  decidirAprovacaoPorToken,
+  enviarAprovacaoWhatsApp,
   listarAprovacoes,
   obterAprovacao,
   contarApendentes,
@@ -13,7 +15,7 @@ interface AuthRequest extends Request {
 
 export async function solicitarAprovacaoHandler(req: AuthRequest, res: Response) {
   try {
-    const { ticketId, tipo, motivo, observacao, valorAprovado } = req.body;
+    const { ticketId, tipo, motivo, observacao, valorAprovado, canal, telefoneAprovador } = req.body;
     if (!ticketId || !motivo) {
       return res.status(400).json({ error: 'ticketId e motivo são obrigatórios' });
     }
@@ -23,11 +25,36 @@ export async function solicitarAprovacaoHandler(req: AuthRequest, res: Response)
       tipo || 'geral',
       motivo,
       observacao,
-      valorAprovado
+      valorAprovado,
+      { canal: canal || 'interno', telefoneAprovador }
     );
     res.status(201).json(aprovacao);
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Erro ao solicitar aprovação' });
+  }
+}
+
+export async function enviarAprovacaoWhatsAppHandler(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const result = await enviarAprovacaoWhatsApp(id);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Erro ao enviar aprovação via WhatsApp' });
+  }
+}
+
+export async function decidirAprovacaoPorTokenHandler(req: Request, res: Response) {
+  try {
+    const { token } = req.params;
+    const { decidido, observacao } = req.body;
+    if (decidido === undefined) {
+      return res.status(400).json({ error: 'decidido é obrigatório (true/false)' });
+    }
+    const aprovacao = await decidirAprovacaoPorToken(token, decidido, observacao);
+    res.json(aprovacao);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Erro ao decidir aprovação' });
   }
 }
 

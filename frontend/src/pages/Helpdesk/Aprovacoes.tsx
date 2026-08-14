@@ -85,6 +85,24 @@ export default function Aprovacoes() {
     }
   };
 
+  const enviarWhatsApp = async (aprovacaoId: string) => {
+    setError('');
+    setSuccess('');
+    try {
+      const { data } = await api.post(`/aprovacoes/${aprovacaoId}/enviar-whatsapp`);
+      if (data?.link) {
+        const copy = `${window.location.origin}${data.link.replace(/\/$/, '')}`;
+        await navigator.clipboard?.writeText(data.link).catch(() => {});
+        setSuccess(`WhatsApp enviado. Link de validação: ${copy}`);
+      } else {
+        setSuccess('Solicitação enviada via WhatsApp.');
+      }
+      carregarAprovacoes();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao enviar via WhatsApp');
+    }
+  };
+
   const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
     pendente: { label: 'Pendente', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30' },
     aprovada: { label: 'Aprovada', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
@@ -237,6 +255,17 @@ export default function Aprovacoes() {
                     >
                       <Eye size={16} />
                     </button>
+                    {canDecide && a.status === 'pendente' && (
+                      <button
+                        onClick={() => enviarWhatsApp(a.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 text-xs font-medium rounded-lg transition-colors min-h-[36px]"
+                        style={{ fontFamily: 'Lexend, sans-serif' }}
+                        title="Enviar aprovação via WhatsApp"
+                      >
+                        <MessageSquare size={14} />
+                        WhatsApp
+                      </button>
+                    )}
                     {canDecide && a.status === 'pendente' && (
                       <button
                         onClick={() => { setSelected(a); setShowDecidir(true); }}

@@ -134,6 +134,26 @@ export async function processIncomingMessageHandler(
   const jid = data.jid;
 
   try {
+    // ── 0) Resposta de aprovação via WhatsApp (NÃO cria ticket) ───────
+    const { processarRespostaAprovacaoWhatsApp } = await import('../../aprovacoes/aprovacao.service');
+    const respAprov = await processarRespostaAprovacaoWhatsApp({
+      phoneDigits,
+      interactiveId: data.interactiveId,
+      text: data.text,
+    });
+    if (respAprov.tratado) {
+      const msgAprov = respAprov.aprovacaoId
+        ? respAprov.decidido === undefined
+          ? '⚠️ A aprovação expirou e foi cancelada.'
+          : respAprov.decidido
+            ? '✅ Aprovação registrada com sucesso!'
+            : '❌ Aprovação rejeitada.'
+        : '';
+      await sendMessage(chatId, msgAprov).catch(() => {});
+      console.log(`[APROVACAO] phone=${phoneDigits} event=RESPONDIDA aprovacaoId=${respAprov.aprovacaoId} decidido=${respAprov.decidido} — nenhum ticket criado`);
+      return;
+    }
+
     const horarioCfg = await getHorarioConfig();
     const atendimentoAberto = await isAtendimentoAberto(horarioCfg);
 
