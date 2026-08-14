@@ -229,6 +229,15 @@ npx expo run:ios             # Build iOS
 
 ## Progresso Recente (SessãoAtual)
 
+### Roadmap v1.4 — Fases 4 a 9 concluídas (commits `2a34760` a `a9a6a06`)
+- [x] **FASE 4 — Aprovações via WhatsApp**: `Aprovacao` + `canal`, `telefoneAprovador`, `token` (@unique), `expiraEm`; `decidirAprovacaoPorToken` (público, sem criar ticket); `processarRespostaAprovacaoWhatsApp` intercepta no handler canônico ANTES da criação de ticket (ZERO novo ticket) via interactiveId `aprovacao_<id>_aprovar|rejeitar` ou texto (aprovar/1/sim/rejeitar/2/não) casado pelo telefone; página pública `/aprovacoes/:token`
+- [x] **FASE 5 — Relatório Gerencial**: página `/app/relatorios/gerencial` consumindo `GET /api/analytics/relatorio-semanal` (cards, delta pills, recharts, sugestões IA, prévia/envio WhatsApp)
+- [x] **FASE 6 — Dashboard Executivo**: `GET /api/analytics/executivo?dias=7|30|90` (`dashboardExecutivo.service.ts`, endpoint único parametrizável, clamp 1–90) + página `/app/relatorios/executivo`
+- [x] **FASE 7 — Auditoria de Encerramento**: `closureAudit.service.ts` classifica `encerramento_prematuro`/`resolucao_real`/`reabertura` (IA + fallback local; reabertura = novo ticket mesmo telefone após `dataFechamento`, exclui o próprio ticket); rotas `/helpdesk/closure-audit/*`; página `/app/helpdesk/auditoria-encerramento`
+- [x] **FASE 8 — Auditoria por Analista**: `agentReport.service.ts` (métricas + FCR + CSAT + nota IA por ticket) e `getReplayConversa` (replay completo com auditoria por mensagem); rotas `/helpdesk/audit/agent/:id` e `/ticket/:ticketId`; página `/app/helpdesk/auditoria-analista`
+- [x] **FASE 9 — Refatoração não-destrutiva**: `whatsapp-utils.ts` (`normalizePhone`, `phoneDigitsFromChat`) deduplica o padrão `replace(/[^\d]/g,'')` (19 pontos: providers cloud/evolution/baileys/webjs, message-service, whatsapp.controller). **Handler canônico e legado intactos**
+- [x] Backend **348/348 testes**, frontend **5/5**, tsc 22 erros pré-existentes (0 novos)
+
 ### Assinatura do Analista — Completo
 - [x] Campo `signature` adicionado ao model User (Prisma schema)
 - [x] API `updateUsers` aceita e retorna signature
@@ -282,3 +291,4 @@ npx expo run:ios             # Build iOS
 - [ ] Dark mode global (tema escuro para todo o sistema)
 - [ ] Auditoria IA: evoluir agente para detectar encerramento prematuro / resolução real / reabertura (base `aiAgentMonitor.service.ts` + `ai-audit.service.ts` existentes)
 - [ ] Dashboard IA: cards diário/semanal/por analista e insights gerenciais (reusar `weeklyReport.service.ts`, `metrics.service.ts`, `AuditoriaAtendimento.tsx`)
+- [ ] FASE 10 — Documentação final e FASE 11 — Testes finais de regressão
