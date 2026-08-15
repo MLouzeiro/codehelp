@@ -14,7 +14,7 @@ import {
 } from '../../helpdesk/menu';
 import { classificarPorPalavrasChave } from '../../helpdesk/rules.service';
 import { notificarAtendentesFila } from '../../alerts/alerts.service';
-import { processarDescricaoProblema, montarMensagemConfirmacao } from '../../ai/aiTriage.service';
+import { processarDescricaoProblema, montarMensagemConfirmacao, analisarDescricaoProblema } from '../../ai/aiTriage.service';
 import { getConfigAutoAtendimento, propostaRespostaIA, enviarRespostaValidada, respostaJaValidada } from '../../ai/aiValidation.service';
 import {
   buscarTicketAtivo,
@@ -49,10 +49,16 @@ const recentMessageIds = new Map<string, number>();
 const MESSAGE_ID_TTL_MS = 5 * 60 * 1000; // 5 minutos
 
 // ── Conversation State Machine (auxiliar, em memória) ─────────────────
-type ConversationState = 'IDLE' | 'AWAITING_CSAT' | 'AWAITING_DEPARTMENT';
+type ConversationState = 'IDLE' | 'AWAITING_CSAT' | 'AWAITING_DEPARTMENT' | 'AWAITING_COMPANY' | 'AWAITING_DESCRIPTION';
 const conversationStates = new Map<string, ConversationState>();
 const STATE_TTL_MS = 30 * 60 * 1000; // 30 minutos
 const stateTimestamps = new Map<string, number>();
+
+// Candidatos de empresa exibidos ao cliente (aguardando escolha por número/nome).
+// Auxiliar de curta duração — a fonte de verdade do passo do bot é Ticket.botFluxo.
+const pendingCompanyCandidates = new Map<string, Array<{ id: string; razaoSocial: string }>>();
+const pendingCompanyTimestamps = new Map<string, number>();
+const PENDING_COMPANY_TTL_MS = 10 * 60 * 1000; // 10 minutos
 
 function getConversationState(phoneDigits: string): ConversationState {
   const key = phoneDigits.slice(-11);
@@ -77,6 +83,263 @@ function setConversationState(phoneDigits: string, state: ConversationState) {
 
 export function setWhatsAppConversationState(phoneDigits: string, state: ConversationState) {
   setConversationState(phoneDigits, state);
+}
+
+// ── Fluxo determinístico pós-departamento ────────────────────────────────
+// Estado persistido em Ticket.botFluxo (fonte de verdade no banco):
+//   awaiting_company      → cliente precisa informar o nome da empresa
+//   awaiting_description  → cliente precisa descrever o problema
+// O fluxo legado (sem botFluxo) permanece intacto abaixo na seção 9.
+
+// Vincula (ou cria) o Colaborador do telefone ao Client confirmado pelo bot.
+async function vincularColaboradorTelefone(
+  contactPhone: string | null | undefined,
+  contactName: string | null | undefined,
+  clientId: string,
+): Promise<void> {
+  if (!contactPhone) return;
+  const phoneNorm = contactPhone.replace(/[^\d]/g, '');
+  const existente = await prisma.colaborador.findFirst({
+    where: {
+      clientId,
+      OR: [
+        { telefone: { contains: phoneNorm } },
+        { whatsapp: { contains: phoneNorm } },
+      ],
+    },
+  });
+  if (!existente) {
+    await prisma.colaborador.create({
+      data: {
+        clientId,
+        nome: contactName || 'Contato WhatsApp',
+        telefone: contactPhone,
+        whatsapp: contactPhone,
+        principal: false,
+      },
+    });
+  }
+}
+
+// Confirma a empresa escolhida, vincula ao ticket/colaborador e pede a descrição.
+async function confirmarEmpresaTicket(
+  ticket: any,
+  clientId: string,
+  razaoSocial: string,
+  chatId: string,
+  sendMessage: SendMessageFn,
+  provider: string,
+): Promise<void> {
+  await prisma.ticket.update({
+    where: { id: ticket.id },
+    data: { clientId, botFluxo: 'awaiting_description' },
+  });
+  await vincularColaboradorTelefone(ticket.contactPhone, ticket.contactName, clientId);
+
+  // Timeline/indicadores: empresa identificada na conversa.
+  await prisma.ticketStageEvent.create({
+    data: {
+      ticketId: ticket.id,
+      etapaAnterior: 'fila',
+      etapaNova: 'fila',
+      origem: 'automatico',
+      mensagemAutomatica: `Empresa identificada: "${razaoSocial}"`,
+    },
+  }).catch(() => undefined);
+
+  console.log(`[BOT FLOW] ticketId=${ticket.id} state=AWAITING_COMPANY companyId=${clientId} nextState=AWAITING_DESCRIPTION`);
+
+  const msg = `${ticket.contactName || 'Cliente'}, empresa confirmada! ✅\n\n*Empresa:* ${razaoSocial}\n\n📝 Agora, por favor, *descreva detalhadamente* seu problema ou solicitação. Quanto mais informações, melhor poderemos ajudá-lo.`;
+  const result = await sendMessage(chatId, msg);
+  if (result?.success) {
+    await prisma.message.create({
+      data: { ticketId: ticket.id, fromMe: true, content: msg, source: 'bot', tipo: 'system' },
+    });
+  }
+  console.log(`[${provider}] Empresa "${razaoSocial}" vinculada ao ticket ${ticket.id}`);
+}
+
+function getPendingCompanyCandidates(phoneDigits: string) {
+  const key = phoneDigits.slice(-11);
+  const ts = pendingCompanyTimestamps.get(key) || 0;
+  if (Date.now() - ts > PENDING_COMPANY_TTL_MS) {
+    pendingCompanyCandidates.delete(key);
+    pendingCompanyTimestamps.delete(key);
+    return undefined;
+  }
+  return pendingCompanyCandidates.get(key);
+}
+
+// Cliente informou/confirmou o nome da empresa (botFluxo = awaiting_company).
+async function processarNomeEmpresaBot(
+  ticket: any,
+  phoneDigits: string,
+  chatId: string,
+  text: string,
+  sendMessage: SendMessageFn,
+  provider: string,
+): Promise<void> {
+  const key = phoneDigits.slice(-11);
+  const nomeEmpresa = text.trim();
+
+  const rePerguntaEmpresa = () =>
+    `${ticket.contactName || 'Cliente'}, confira o *nome do seu laboratório, clínica ou hospital* e envie novamente:\n\n(Ex.: "Lab Central" ou "Hospital São Lucas")`;
+
+  // Cliente escolheu por número na lista de candidatos exibida antes
+  const candidatos = getPendingCompanyCandidates(phoneDigits);
+  const numero = /^(\d+)$/.exec(nomeEmpresa);
+  if (numero && candidatos && candidatos.length > 0) {
+    const idx = parseInt(numero[1], 10) - 1;
+    if (idx >= 0 && idx < candidatos.length) {
+      pendingCompanyCandidates.delete(key);
+      pendingCompanyTimestamps.delete(key);
+      await confirmarEmpresaTicket(ticket, candidatos[idx].id, candidatos[idx].razaoSocial, chatId, sendMessage, provider);
+      setConversationState(phoneDigits, 'AWAITING_DESCRIPTION');
+      return;
+    }
+  }
+
+  if (!nomeEmpresa || nomeEmpresa.length > 120) {
+    pendingCompanyCandidates.delete(key);
+    pendingCompanyTimestamps.delete(key);
+    const msg = rePerguntaEmpresa();
+    const result = await sendMessage(chatId, msg);
+    if (result?.success) {
+      await prisma.message.create({
+        data: { ticketId: ticket.id, fromMe: true, content: msg, source: 'bot', tipo: 'system' },
+      });
+    }
+    return;
+  }
+
+  const matches = await prisma.client.findMany({
+    where: {
+      OR: [
+        { razaoSocial: { contains: nomeEmpresa, mode: 'insensitive' } },
+        { nomeFantasia: { contains: nomeEmpresa, mode: 'insensitive' } },
+      ],
+    },
+    orderBy: { razaoSocial: 'asc' },
+    take: 5,
+    select: { id: true, razaoSocial: true, nomeFantasia: true },
+  });
+
+  const nomeLower = nomeEmpresa.toLowerCase();
+  const exato = matches.find(
+    (c) => c.razaoSocial.toLowerCase() === nomeLower || (c.nomeFantasia || '').toLowerCase() === nomeLower,
+  );
+
+  if (exato || matches.length === 1) {
+    const escolhido = exato || matches[0];
+    pendingCompanyCandidates.delete(key);
+    pendingCompanyTimestamps.delete(key);
+    await confirmarEmpresaTicket(ticket, escolhido.id, escolhido.razaoSocial, chatId, sendMessage, provider);
+    setConversationState(phoneDigits, 'AWAITING_DESCRIPTION');
+    return;
+  }
+
+  if (matches.length > 1) {
+    // Apresenta opções numeradas e aguarda o cliente escolher (por número ou nome)
+    pendingCompanyCandidates.set(key, matches);
+    pendingCompanyTimestamps.set(key, Date.now());
+    const opcoes = matches.map((c, i) => `${i + 1} - ${c.razaoSocial}`).join('\n');
+    const msg = `Encontrei mais de uma empresa com esse nome em nosso sistema. Qual delas?\n\n${opcoes}\n\nResponda com o *número* da opção desejada.`;
+    const result = await sendMessage(chatId, msg);
+    if (result?.success) {
+      await prisma.message.create({
+        data: { ticketId: ticket.id, fromMe: true, content: msg, source: 'bot', tipo: 'system' },
+      });
+    }
+    return;
+  }
+
+  // Nenhuma empresa encontrada → NÃO cria vínculo automático nem inventa dados
+  pendingCompanyCandidates.delete(key);
+  pendingCompanyTimestamps.delete(key);
+  const msg = `Não localizamos a empresa *"${nomeEmpresa}"* em nosso sistema.\n\n${rePerguntaEmpresa()}`;
+  const result = await sendMessage(chatId, msg);
+  if (result?.success) {
+    await prisma.message.create({
+      data: { ticketId: ticket.id, fromMe: true, content: msg, source: 'bot', tipo: 'system' },
+    });
+  }
+}
+
+// Cliente descreveu o problema (botFluxo = awaiting_description).
+async function processarDescricaoBot(
+  ticket: any,
+  phoneDigits: string,
+  chatId: string,
+  text: string,
+  sendMessage: SendMessageFn,
+  provider: string,
+): Promise<void> {
+  // Classifica assunto/categoria/prioridade com regras existentes (IA + fallback local)
+  const triagem = await analisarDescricaoProblema(ticket.id, text);
+  const assuntoFinal = (triagem.assunto || '').trim() || 'Sem assunto';
+
+  const updateData: Record<string, any> = { assunto: assuntoFinal, botFluxo: null };
+  if (triagem.categoria) updateData.categoria = triagem.categoria;
+  if (triagem.prioridade) updateData.prioridade = triagem.prioridade;
+  if (!ticket.observacoes && text) updateData.observacoes = text.trim();
+
+  // Protocolo na criação do chamado (gera apenas se ainda não existir; lock do sistema já serializa).
+  let protocolo = ticket.protocolo;
+  if (!protocolo) {
+    const { generateProtocolo } = await import('./whatsapp.service');
+    for (let attempt = 0; attempt < 3; attempt++) {
+      protocolo = await generateProtocolo();
+      try {
+        await prisma.ticket.update({ where: { id: ticket.id }, data: { protocolo } });
+        break;
+      } catch (err: any) {
+        if (err?.code === 'P2002' && err?.meta?.target?.includes('protocolo') && attempt < 2) continue;
+        throw err;
+      }
+    }
+  }
+
+  await prisma.ticket.update({ where: { id: ticket.id }, data: updateData });
+
+  // Timeline/indicadores: descrição recebida e assunto identificado.
+  await prisma.ticketStageEvent.create({
+    data: {
+      ticketId: ticket.id,
+      etapaAnterior: 'fila',
+      etapaNova: 'fila',
+      origem: 'automatico',
+      mensagemAutomatica: `Descrição recebida; assunto identificado: "${assuntoFinal}"`,
+    },
+  }).catch(() => undefined);
+
+  console.log(`[BOT FLOW] ticketId=${ticket.id} state=AWAITING_DESCRIPTION incomingMessage="${text.slice(0, 80)}" nextState=QUEUED subject="${assuntoFinal}"`);
+  console.log(`[TICKET] ticketId=${ticket.id} department=${ticket.departamentoId} protocolo=${protocolo} company=${ticket.clientId || 'n/a'} queue=fila status=aberto`);
+
+  const msgConfirmacao = `${ticket.contactName || 'Cliente'}, seu atendimento foi registrado com sucesso! ✅\n\n*Protocolo:* #${protocolo}\n*Assunto:* ${assuntoFinal}\n\nSeu chamado foi encaminhado para a fila do departamento. Em breve um analista dará continuidade ao atendimento.`;
+  const result = await sendMessage(chatId, msgConfirmacao);
+  if (result?.success) {
+    await prisma.message.create({
+      data: { ticketId: ticket.id, fromMe: true, content: msgConfirmacao, source: 'bot', tipo: 'system' },
+    });
+  }
+
+  const posicaoFila = await prisma.ticket.count({
+    where: { etapa: 'fila', departamentoId: ticket.departamentoId },
+  });
+  const posicaoMsg = await montarPosicaoFilaComInfo(
+    ticket.contactName || 'cliente',
+    posicaoFila,
+    true,
+    !!ticket.clientId,
+  );
+  const posResult = await sendMessage(chatId, posicaoMsg);
+  if (posResult?.success) {
+    await prisma.message.create({
+      data: { ticketId: ticket.id, fromMe: true, content: posicaoMsg, source: 'bot', tipo: 'system' },
+    });
+  }
+
+  setConversationState(phoneDigits, 'IDLE');
 }
 
 export interface IncomingMessageData {
@@ -338,20 +601,31 @@ export async function processIncomingMessageHandler(
           return;
         }
 
+        // Fluxo determinístico pós-departamento: se o contato já está vinculado
+        // a uma empresa (Client) no CRM → pedir descrição. Caso contrário,
+        // perguntar o nome da empresa ANTES da descrição (sem criar vínculo).
+        const temEmpresaVinculada = !!ticket!.clientId;
+
         await prisma.ticket.update({
           where: { id: ticket!.id },
-          data: { departamentoId: deptInfo.departamentoId, etapa: 'fila' },
+          data: {
+            departamentoId: deptInfo.departamentoId,
+            etapa: 'fila',
+            botFluxo: temEmpresaVinculada ? 'awaiting_description' : 'awaiting_company',
+          },
         });
 
         notificarAtendentesFila(ticket!.id, deptInfo.departamentoId).catch((e) =>
           console.warn(`[${provider}] Falha ao notificar atendentes:`, e?.message || e)
         );
 
-        const ackMsg = await montarAckDepartamento(ticket!.contactName || 'cliente', deptInfo.departamentoNome);
-        const result = await sendMessage(chatId, ackMsg);
+        const proximaMsg = temEmpresaVinculada
+          ? await montarAckDepartamento(ticket!.contactName || 'cliente', deptInfo.departamentoNome)
+          : `${ticket!.contactName || 'Cliente'}, por favor, informe o *nome do seu laboratório, clínica ou hospital* para vincularmos seu atendimento:\n\n(Ex.: "Lab Central" ou "Hospital São Lucas")`;
+        const result = await sendMessage(chatId, proximaMsg);
         if (result?.success) {
           await prisma.message.create({
-            data: { ticketId: ticket!.id, fromMe: true, content: ackMsg, source: 'bot', tipo: 'system' },
+            data: { ticketId: ticket!.id, fromMe: true, content: proximaMsg, source: 'bot', tipo: 'system' },
           });
         }
 
@@ -366,7 +640,7 @@ export async function processIncomingMessageHandler(
         });
 
         console.log(`[${provider}] Departamento "${deptInfo.departamentoNome}" selecionado no ticket ${ticket!.id}`);
-        setConversationState(phoneDigits, 'IDLE');
+        setConversationState(phoneDigits, temEmpresaVinculada ? 'AWAITING_DESCRIPTION' : 'AWAITING_COMPANY');
         return;
       }
 
@@ -400,6 +674,19 @@ export async function processIncomingMessageHandler(
 
     // ── 9) Queue: AI-powered description analysis ─────────────────────
     if (ticket!.etapa === 'fila' && ticket!.departamentoId && !ticket!.protocolo && text) {
+      // ── 9.1) Fluxo determinístico: aguardando nome da empresa ────────
+      if (ticket!.botFluxo === 'awaiting_company') {
+        await processarNomeEmpresaBot(ticket!, phoneDigits, chatId, text, sendMessage, provider);
+        return;
+      }
+
+      // ── 9.2) Fluxo determinístico: aguardando descrição do problema ──
+      if (ticket!.botFluxo === 'awaiting_description') {
+        await processarDescricaoBot(ticket!, phoneDigits, chatId, text, sendMessage, provider);
+        return;
+      }
+
+      // ── Fluxo legado (sem botFluxo persistido) — comportamento original ──
       const textoLower = text.toLowerCase().trim();
 
       // Detect company/lab response

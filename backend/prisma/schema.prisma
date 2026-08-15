@@ -259,6 +259,7 @@ model Ticket {
   motivoStatus          String?
   satisfacao            Int?
   resumoFinal           String?
+  botFluxo              String?
   tipo                  String?
   observacoes           String?
   lastAgentMessageAt    DateTime?

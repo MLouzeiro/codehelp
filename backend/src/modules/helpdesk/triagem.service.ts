@@ -160,20 +160,19 @@ export async function abrirChamadoPorAtendente(
   try {
     const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) return { ok: false, error: 'Ticket nao encontrado' };
-    if (ticket.protocolo) {
-      return { ok: false, error: 'Ticket ja triado', ticket };
-    }
     if (!dados.assunto || !dados.assunto.trim()) {
       return { ok: false, error: 'Assunto obrigatorio' };
     }
 
     let lastError: any = null;
+    // O bot pode já ter gerado o protocolo na criação do chamado — reutiliza em vez de reclamar.
+    const protocoloExistente = ticket.protocolo;
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        const protocolo = await generateProtocolo();
+        const protocolo = protocoloExistente || (await generateProtocolo());
         const etapaNova = 'em_atendimento';
         const updateData: any = {
-          protocolo,
+          ...(protocoloExistente ? {} : { protocolo }),
           assunto: dados.assunto.trim(),
           categoria: dados.categoria || ticket.categoria,
           prioridade: dados.prioridade || ticket.prioridade || 'media',

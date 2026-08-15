@@ -219,6 +219,62 @@ Handlers → whatsapp-message-handler.ts (canônico) → bot/triagem/fluxo FLUXO
 
 ---
 
+## FLUXO 9 — Fluxo pós-departamento (bot NÃO para)  [CRÍTICO]
+
+Protegido por: `whatsapp-flow-pos-departamento.test.ts`.
+
+Regressão corrigida (2026-08-15): depois que o cliente escolhia o departamento, o bot parava
+(estado zerado para IDLE sem persistência, empresa só era perguntada depois da descrição e só se a IA
+rodasse, empresa não encontrada era criada automaticamente, assunto não classificado). Estado agora é
+persistido em `Ticket.botFluxo` (`awaiting_company` / `awaiting_description`) — fonte de verdade no banco,
+sobrevive a reinício do serviço.
+
+```
+Departamento selecionado (dept_<slug> / número / NOME — detectarOpcaoMenu)
+   │  inválido → montarOpcaoInvalida → re-pergunta (NUNCA salva departamento)
+   ▼
+Ticket: departamentoId + etapa='fila' + botFluxo
+   ├─ contato JÁ vinculado a empresa (clientId por telefone)
+   │    └─ botFluxo='awaiting_description' → pergunta descrição (montarAckDepartamento)
+   └─ contato SEM empresa vinculada
+        └─ botFluxo='awaiting_company' → pergunta NOME da empresa
+             ├─ exata/única no CRM → vincula (clientId) + cria/atualiza Colaborador por telefone
+             │    → botFluxo='awaiting_description' → pergunta descrição
+             ├─ múltiplas → lista numerada (pendingCompanyCandidates, TTL 10min)
+             │    → cliente escolhe por número ou nome → vincula
+             └─ NÃO encontrada → "Não localizamos a empresa..." → NÃO cria vínculo,
+                  NUNCA cria empresa nova → re-pergunta (continua awaiting_company)
+   ▼
+Descrição recebida (botFluxo='awaiting_description')
+   → analisarDescricaoProblema (IA + fallback local determinístico)
+   → assunto/categoria/prioridade salvos no ticket + observacoes
+   → PROTOCOLO gerado (#TKT-YYYYMMDD-NNNN) — generateProtocolo (lock thread-safe)
+   → botFluxo=NULL
+   ▼
+Mensagem ao cliente: "atendimento registrado com sucesso! ✅  *Protocolo: #XXXXXX*  *Assunto:* ..."
+   → posição na fila (montarPosicaoFilaComInfo)
+   ▼
+Ticket na fila do departamento → analista assume (FLUXO 1/3)
+```
+
+**Regras de ouro:**
+- Estado da conversa = `Ticket.botFluxo` no banco (não in-memory). Reinício/restart não perde o fluxo.
+- Idempotência: `recentMessageIds` (TTL) + `processingLocks` (30s) + `buscarTicketAtivo` → ZERO tickets duplicados.
+- Empresa não encontrada → NUNCA cria empresa/vínculo automático.
+- Protocolo é gerado na criação (confirmação ao cliente), não só quando o analista abre o chamado;
+  `abrirChamadoPorAtendente` reutiliza protocolo existente (não retorna mais "Ticket ja triado").
+- Timeline: `TicketStageEvent` registra "Departamento selecionado", "Empresa identificada",
+  "Descrição recebida / assunto identificado".
+- Fluxo legado (botFluxo null) preservado intacto na seção 9 do handler.
+- Encerramento/confirmação/CSAT (FLUXO 1) NÃO são alterados por este fluxo.
+
+**Arquivos:** `whatsapp-message-handler.ts` (helpers `vincularColaboradorTelefone`, `confirmarEmpresaTicket`,
+`getPendingCompanyCandidates`, `processarNomeEmpresaBot`, `processarDescricaoBot`), `menu.ts`, `flow.service.ts`
+(`buscarTicketAtivo`), `triagem.service.ts` (`abrirChamadoPorAtendente`), `whatsapp.service.ts`
+(`generateProtocolo`), `schema.prisma` (`Ticket.botFluxo`).
+
+---
+
 ## Fluxos de baixa frequência (referência)
 
 - Notificações internas (`notificacoes/`), Automations (`automations/`), Billing (`billing/`), Alerts (`alerts/`), KB (`kb/`), Enquetes (`enquetes/`), Feriados (`feriados/`), Channels (integração de canais).
