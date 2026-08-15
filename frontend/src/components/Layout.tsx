@@ -225,8 +225,8 @@ export default function Layout() {
         </div>
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
-        <div className={`flex items-center ${collapsed ? 'justify-center' : ''} gap-2 text-white/30 text-xs`} style={{ fontFamily: 'Lexend, sans-serif' }}>
+      <div className="absolute bottom-50 left-0 right-0 p-4 border-t border-white/10">
+        <div className={`flex items-center ${collapsed ? 'justify-center' : ''} gap-2 text-white/40 text-xs`} style={{ fontFamily: 'Lexend, sans-serif' }}>
           <LayoutDashboard size={12} />
           {!collapsed && 'Codemed Hub v1.0'}
         </div>
