@@ -5,6 +5,11 @@ import {
   EVALUATION_CANCELADA,
   EVALUATION_RESPONDIDA,
   EVALUATION_STATES,
+  EVALUATION_AGUARDANDO_CONFIRMACAO,
+  EVALUATION_AGUARDANDO_DESCRICAO,
+  MOTIVO_ENCERRADO_SEM_RESOLUCAO,
+  RESOLUCAO_SIM_KEYWORDS,
+  RESOLUCAO_NAO_KEYWORDS,
   STATUS_ENCERRADO,
   ETAPAS_ENCERRADAS,
 } from './constants';
@@ -14,6 +19,9 @@ export {
   EVALUATION_RESPONDIDA,
   EVALUATION_CANCELADA,
   EVALUATION_STATES,
+  EVALUATION_AGUARDANDO_CONFIRMACAO,
+  EVALUATION_AGUARDANDO_DESCRICAO,
+  MOTIVO_ENCERRADO_SEM_RESOLUCAO,
   STATUS_ENCERRADO,
   ETAPAS_ENCERRADAS,
 };
@@ -22,6 +30,13 @@ export type EvaluationStatus = (typeof EVALUATION_STATES)[number] | null;
 
 export const MENSAGEM_AVALIACAO_OBRIGADO =
   'Obrigado pela sua avaliação! 💙\n\nSua opinião é muito importante para continuarmos melhorando nosso atendimento. 🙏';
+
+export const MENSAGEM_CONFIRMACAO_RESOLUCAO =
+  'Olá! 👋\n\nSeu atendimento foi concluído.\n\n*Seu problema foi resolvido?*\n\n' +
+  'Responda:\n1 - Sim ✅\n2 - Não ❌';
+
+export const MENSAGEM_DESCRICAO_SEM_RESOLUCAO =
+  'Entendemos! 🙁\n\nPara que possamos melhorar, descreva rapidamente o que ainda não foi resolvido.';
 
 export interface TicketCsat {
   csat: any;
@@ -92,6 +107,26 @@ export async function buscarCsatPendente(phone: string, jid?: string | null): Pr
     orderBy: { enviadoEm: 'desc' },
   });
   return csat ? { csat, ticket: (csat as any).ticket } : null;
+}
+
+// Confirmação de resolução pendente (após encerrar, antes da avaliação).
+// Ticket encerrado (status/etapa finais) com evaluationStatus em
+// aguardando_confirmacao (SIM/NÃO) ou aguardando_descricao (após NÃO).
+export async function buscarConfirmacaoPendente(phone: string, jid?: string | null): Promise<any | null> {
+  const phoneDigits = normalizePhone(phone);
+  return prisma.ticket.findFirst({
+    where: {
+      OR: [
+        ...(jid ? [{ contactJid: jid }] : []),
+        { contactPhone: phone },
+        { contactPhone: `${phoneDigits}` },
+      ],
+      status: { in: [...STATUS_ENCERRADO] },
+      evaluationStatus: { in: [EVALUATION_AGUARDANDO_CONFIRMACAO, EVALUATION_AGUARDANDO_DESCRICAO] },
+      dataFechamento: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+    },
+    orderBy: { dataFechamento: 'desc' },
+  });
 }
 
 // Abandona uma avaliação pendente: cliente enviou mensagem que não é resposta
@@ -192,6 +227,184 @@ export async function finalizarAtendimento(ticketId: string): Promise<boolean> {
   return !!resultado.enviado;
 }
 
+// ── Confirmação de resolução (fluxo obrigatório pós-encerramento) ──────
+// Encerrou → pergunta "Seu problema foi resolvido?" (SIM/NÃO) ANTES da avaliação.
+//   SIM → envia avaliação (CSAT) → ticket encerrado definitivamente.
+//   NÃO → pergunta a descrição → ENCERRADO_SEM_RESOLUÇÃO (motivoStatus) →
+//         alerta/notificação/auditoria → envia avaliação.
+// Idempotente: nunca re-pergunta se a avaliação já foi enviada/respondida.
+
+async function enviarTextoBot(ticket: any, msg: string): Promise<boolean> {
+  const { enviarTextoSimples } = await import('../integrations/whatsapp/whatsapp-message-service');
+  const phone = (ticket.contactPhone || '').replace(/[^\d]/g, '');
+  const result = await enviarTextoSimples(phone, msg, ticket.whatsappConnectionId || undefined, ticket.contactJid || undefined);
+  if (result.success) {
+    await prisma.message.create({
+      data: { ticketId: ticket.id, fromMe: true, content: msg, source: 'bot' },
+    }).catch(() => {});
+  }
+  return result.success;
+}
+
+export async function iniciarConfirmacaoResolucao(ticketId: string): Promise<boolean> {
+  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+  if (!ticket) {
+    console.warn(`[FLOW] ticket nao encontrado ticketId=${ticketId} event=INICIAR_CONFIRMACAO`);
+    return false;
+  }
+
+  const estado = ticket.evaluationStatus;
+  if (estado === EVALUATION_RESPONDIDA) {
+    await resetBotState(ticket.contactPhone);
+    return false;
+  }
+  if (estado === EVALUATION_AGUARDANDO_CONFIRMACAO || estado === EVALUATION_AGUARDANDO_DESCRICAO || estado === EVALUATION_AGUARDANDO) {
+    // Já em confirmação ou avaliação em andamento → não re-perguntar
+    console.log(`[FLOW] ticketId=${ticketId} event=INICIAR_CONFIRMACAO_SKIP motivo=estado_${estado}`);
+    return true;
+  }
+
+  const csat = await prisma.cSATResposta.findUnique({ where: { ticketId } });
+  if (csat?.respondidoEm) {
+    await resetBotState(ticket.contactPhone);
+    return false;
+  }
+  if (csat?.enviadoEm) {
+    console.log(`[FLOW] ticketId=${ticketId} event=INICIAR_CONFIRMACAO_SKIP motivo=csat_ja_enviada`);
+    return true;
+  }
+
+  await prisma.ticket.update({
+    where: { id: ticketId },
+    data: { evaluationStatus: EVALUATION_AGUARDANDO_CONFIRMACAO },
+  });
+  console.log(`[FLOW] ticketId=${ticketId} event=CONFIRMACAO_AGUARDANDO`);
+
+  const enviou = await enviarTextoBot(ticket, MENSAGEM_CONFIRMACAO_RESOLUCAO);
+  if (!enviou) {
+    console.warn(`[FLOW] ticketId=${ticketId} event=CONFIRMACAO_ENVIO_FALHOU`);
+  }
+  return enviou;
+}
+
+export interface RespostaEncerramentoResult {
+  ok: boolean;
+  aguardandoDescricao?: boolean;
+  semResolucao?: boolean;
+  respostaInvalida?: boolean;
+}
+
+// Interpreta a resposta do cliente à confirmação de resolução.
+export async function processarRespostaEncerramento(
+  phone: string,
+  ticket: any,
+  text: string,
+): Promise<RespostaEncerramentoResult> {
+  const estado = ticket.evaluationStatus;
+
+  // Cliente já disse NÃO e agora descreve o problema → encerrar sem resolução
+  if (estado === EVALUATION_AGUARDANDO_DESCRICAO) {
+    return finalizarSemResolucao(phone, ticket, text);
+  }
+
+  const t = (text || '').trim().toLowerCase().replace(/[.,!?]+$/, '');
+  // interactiveId de botão/lista (ex: resolucao_sim / resolucao_nao) é normalizado
+  const tSemPrefixo = t.replace(/^resolucao_/, '');
+  const isSim =
+    tSemPrefixo === 'sim' || RESOLUCAO_SIM_KEYWORDS.includes(t) || t.startsWith('sim') || t.startsWith('yes');
+  const isNao =
+    tSemPrefixo === 'nao' ||
+    RESOLUCAO_NAO_KEYWORDS.includes(t) ||
+    t.startsWith('nao') || t.startsWith('não') || t.startsWith('no');
+
+  if (isSim) {
+    console.log(`[FLOW] phone=${normalizePhone(phone)} ticketId=${ticket.id} event=RESOLUCAO_SIM`);
+    const enviou = await finalizarAtendimento(ticket.id);
+    console.log(`[FLOW] ticketId=${ticket.id} event=CSAT_APOS_SIM enviado=${enviou}`);
+    return { ok: true };
+  }
+
+  if (isNao) {
+    console.log(`[FLOW] phone=${normalizePhone(phone)} ticketId=${ticket.id} event=RESOLUCAO_NAO`);
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: { evaluationStatus: EVALUATION_AGUARDANDO_DESCRICAO },
+    });
+    await enviarTextoBot(ticket, MENSAGEM_DESCRICAO_SEM_RESOLUCAO);
+    return { ok: true, aguardandoDescricao: true };
+  }
+
+  // Resposta inválida → re-pergunta a confirmação (não criar novo ticket)
+  console.log(`[FLOW] phone=${normalizePhone(phone)} ticketId=${ticket.id} event=CONFIRMACAO_RESPOSTA_INVALIDA`);
+  await enviarTextoBot(ticket, MENSAGEM_CONFIRMACAO_RESOLUCAO);
+  return { ok: false, respostaInvalida: true };
+}
+
+async function finalizarSemResolucao(phone: string, ticket: any, descricao: string): Promise<RespostaEncerramentoResult> {
+  const descricaoLimpa = (descricao || '').trim().slice(0, 2000);
+  await prisma.ticket.update({
+    where: { id: ticket.id },
+    data: {
+      motivoStatus: MOTIVO_ENCERRADO_SEM_RESOLUCAO,
+      resumoFinal: descricaoLimpa || ticket.resumoFinal || null,
+      ...(descricaoLimpa ? { observacoes: descricaoLimpa } : {}),
+    },
+  });
+  await prisma.ticketStageEvent.create({
+    data: {
+      ticketId: ticket.id,
+      etapaAnterior: ticket.etapa,
+      etapaNova: 'concluido',
+      origem: 'automatico',
+      mensagemAutomatica: 'Encerrado sem resolucao (cliente confirmou NAO)',
+    },
+  }).catch(() => {});
+  console.log(`[FLOW] ticketId=${ticket.id} event=ENCERRADO_SEM_RESOLUCAO descricao=${descricaoLimpa.slice(0, 80)}`);
+
+  // Alerta interno + notificação de supervisor + auditoria
+  await notificarEncerradoSemResolucao(ticket.id, descricaoLimpa);
+  try {
+    const { logAction } = await import('../audit/audit.service');
+    await logAction({
+      acao: 'encerrar_sem_resolucao',
+      entidade: 'Ticket',
+      entidadeId: ticket.id,
+      detalhes: { motivoStatus: MOTIVO_ENCERRADO_SEM_RESOLUCAO, descricao: descricaoLimpa },
+    });
+  } catch {}
+
+  // Avaliação pós-falha
+  await finalizarAtendimento(ticket.id);
+  return { ok: true, semResolucao: true };
+}
+
+async function notificarEncerradoSemResolucao(ticketId: string, descricao: string): Promise<void> {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    include: { assignee: { select: { id: true } } },
+  });
+  if (!ticket) return;
+  const destinatarios = new Set<string>();
+  if (ticket.assigneeId) destinatarios.add(ticket.assigneeId);
+  const supervisores = await prisma.user.findMany({
+    where: { role: { in: ['gerente', 'supervisor', 'admin'] }, active: true },
+    select: { id: true },
+  });
+  for (const s of supervisores) destinatarios.add(s.id);
+  const resumo = descricao.slice(0, 120) || 'cliente confirmou que o problema nao foi resolvido';
+  for (const userId of destinatarios) {
+    await prisma.notificacao.create({
+      data: {
+        tipo: 'encerrado_sem_resolucao',
+        mensagem: `Ticket ${ticket.protocolo || ticket.id.slice(0, 8)} encerrado sem resolucao: ${resumo}`,
+        destinatarioId: userId,
+        ticketId: ticket.id,
+        dados: JSON.stringify({ descricao }),
+      },
+    }).catch(() => {});
+  }
+}
+
 // ── Encerramento canônico de ticket ────────────────────────────────────
 // FASE 2 da refatoração: centraliza o fechamento/descarte manual e o
 // encerramento por IA. Antes cada chamador duplicava o update do ticket,
@@ -242,8 +455,9 @@ export async function encerrarTicket(ticketId: string, params: EncerrarTicketPar
   }
 
   if (params.finalizarCsat) {
-    await finalizarAtendimento(ticketId).catch((e) =>
-      console.warn('[FLOW] Falha ao finalizar atendimento (avaliacao):', e?.message || e)
+    // Fluxo obrigatório: encerrou → confirmação de resolução (SIM/NÃO) → avaliação.
+    await iniciarConfirmacaoResolucao(ticketId).catch((e) =>
+      console.warn('[FLOW] Falha ao iniciar confirmacao de resolucao:', e?.message || e)
     );
   }
 

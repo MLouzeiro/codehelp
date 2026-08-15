@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import prisma from '../config/database';
 import {
   ensureAmbienteHelpdesk,
@@ -6,6 +6,9 @@ import {
   criarDepartamentoTeste,
   criarMensagemBotMenuEnviado,
   makeSendMessageMock,
+  abrirAtendimentoSempre,
+  restaurarHorario,
+  HorarioSnapshot,
 } from './helpers/test-utils';
 import { processIncomingMessageHandler } from '../modules/integrations/whatsapp/whatsapp-message-handler';
 import { buscarTicketAtivo } from '../modules/helpdesk/flow.service';
@@ -19,10 +22,17 @@ import { buscarTicketAtivo } from '../modules/helpdesk/flow.service';
 
 const PHONE = '85999990090';
 const DEPT_SLUG = 'n1';
+let horarioSnapshot: HorarioSnapshot | null = null;
 
 beforeAll(async () => {
   await ensureAmbienteHelpdesk();
   await criarDepartamentoTeste(DEPT_SLUG, 'N1 - Suporte Inicial');
+  // Fluxo do bot exige atendimento aberto (independente do horário real).
+  horarioSnapshot = await abrirAtendimentoSempre();
+});
+
+afterAll(async () => {
+  if (horarioSnapshot) await restaurarHorario(horarioSnapshot);
 });
 
 afterEach(async () => {

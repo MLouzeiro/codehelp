@@ -248,9 +248,14 @@ npx expo run:ios             # Build iOS
 - [x] Typecheck passando (backend + frontend)
 
 ### CSAT Flow — Completo
-- [x] Investigação completa do fluxo: conclusão → CSAT → resposta → novo ticket
+- [x] Investigação completa do fluxo: conclusão → confirmação de resolução → CSAT → resposta → novo ticket
+- [x] **Correção da causa raiz (2026-08-14)**: `enviarListaInterativa` regrediu para lista no Baileys (`relayMessage` não entrega). Agora envia **texto numerado SEMPRE** em Baileys/webjs; lista interativa só em evolution/cloud. Corrige avaliação e saudação que nunca chegavam.
+- [x] **Confirmação de resolução (fluxo obrigatório)**: ao encerrar, bot pergunta "*Seu problema foi resolvido?* (1 Sim / 2 Não)" ANTES da avaliação. SIM → CSAT 1-5. NÃO → pergunta descrição → `motivoStatus='encerrado_sem_resolucao'` + `resumoFinal` + notificação analista/supervisores + auditoria → CSAT. Resposta inválida re-pergunta (ZERO novo ticket).
+- [x] Estados novos: `aguardando_confirmacao` / `aguardando_descricao` (`constants.ts`); `buscarConfirmacaoPendente` + `processarRespostaEncerramento` interceptam no handler canônico ANTES da criação de ticket.
+- [x] `encerrarTicket(finalizarCsat)` e `moveTicketEtapa(concluido)` disparam confirmação; scheduler CSAT ignora tickets em confirmação.
+- [x] Backend 351/351 testes (3 novos), tsc 20 erros pré-existentes (0 novos).
 - [x] **Bug corrigido**: CSAT detectava "1-5" mesmo quando cliente escolhia departamento
-- [x] **Máquina de estados**: `IDLE / AWAITING_CSAT / AWAITING_DEPARTMENT` por conversa (TTL 30min)
+- [x] **Máquina de estados**: `IDLE / AWAITING_CSAT / AWAITING_DEPARTMENT` por conversa (TTL 30min) + estados de confirmação no banco
 - [x] **Text messages** substituíram list messages (Baileys `relayMessage` retorna success mas WhatsApp não entrega)
 - [x] `enviarMensagemCsat` agora envia texto formatado com opções 1-5 + link fallback
 - [x] `enviarMenuInicial` agora envia texto com departamentos numerados + passa `whatsappConnectionId`

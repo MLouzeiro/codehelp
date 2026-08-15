@@ -1,7 +1,12 @@
 import prisma from '../../config/database';
 import { env } from '../../config/env';
 import { logAction } from '../audit/audit.service';
-import { STATUS_FECHADO_CSAT, ETAPAS_ENCERRADAS } from '../helpdesk/constants';
+import {
+  STATUS_FECHADO_CSAT,
+  ETAPAS_ENCERRADAS,
+  EVALUATION_AGUARDANDO_CONFIRMACAO,
+  EVALUATION_AGUARDANDO_DESCRICAO,
+} from '../helpdesk/constants';
 
 const CSAT_DELAY_MINUTOS = 30;
 const CSAT_NEGATIVO_LIMITE = 2;
@@ -260,12 +265,26 @@ export async function processarAgendamentosCsat(): Promise<ProcessarResult> {
   const limite = new Date(agora.getTime() - CSAT_DELAY_MINUTOS * 60 * 1000);
   const ticketsElegiveis = await prisma.ticket.findMany({
     where: {
-      OR: [
-        { status: { in: [...STATUS_FECHADO_CSAT] } },
-        { etapa: { in: [...ETAPAS_ENCERRADAS] } },
+      AND: [
+        {
+          OR: [
+            { status: { in: [...STATUS_FECHADO_CSAT] } },
+            { etapa: { in: [...ETAPAS_ENCERRADAS] } },
+          ],
+        },
+        {
+          // Nunca mandar CSAT automático para ticket aguardando confirmação de
+          // resolução (SIM/NÃO) — o envio acontece após a resposta do cliente.
+          // `notIn` exclui NULL no SQL, então inclui-se evaluationStatus nulo
+          // explicitamente (tickets legados encerrados antes da confirmação).
+          OR: [
+            { evaluationStatus: null },
+            { evaluationStatus: { notIn: [EVALUATION_AGUARDANDO_CONFIRMACAO, EVALUATION_AGUARDANDO_DESCRICAO] } },
+          ],
+        },
+        { dataFechamento: { lte: limite } },
+        { csatResposta: null },
       ],
-      dataFechamento: { lte: limite },
-      csatResposta: null,
     },
     include: { csatResposta: true },
     take: 50,

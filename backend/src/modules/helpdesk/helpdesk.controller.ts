@@ -510,11 +510,13 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
       await saveConversationSnapshot(id, etapa, req.user?.id || 'sistema');
 
       // Fluxo de encerramento: a mensagem de encerramento (sendStageAutoMessage,
-      // executada acima) já foi enviada; dispara a avaliação de forma idempotente.
+      // executada acima) já foi enviada; dispara a CONFIRMAÇÃO DE RESOLUÇÃO
+      // (SIM/NÃO) de forma idempotente — a avaliação só sai após o SIM (ou após
+      // a descrição no caso de NÃO).
       try {
-        const { finalizarAtendimento } = await import('../helpdesk/flow.service');
-        const enviouAvaliacao = await finalizarAtendimento(id);
-        console.log(`[TICKET] ticketId=${id} event=ENCERRAMENTO_FLUXO avaliacao=${enviouAvaliacao ? 'enviada/aguardando' : 'ja_finalizada'}`);
+        const { iniciarConfirmacaoResolucao } = await import('../helpdesk/flow.service');
+        const iniciou = await iniciarConfirmacaoResolucao(id);
+        console.log(`[TICKET] ticketId=${id} event=ENCERRAMENTO_FLUXO confirmacao=${iniciou ? 'enviada/aguardando' : 'ja_respondida'}`);
       } catch (e: any) {
         console.error(`[TICKET] ticketId=${id} event=ENCERRAMENTO_FLUXO_ERRO error=${e?.message}`, e);
       }

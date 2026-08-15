@@ -19,6 +19,8 @@ import { getConfigAutoAtendimento, propostaRespostaIA, enviarRespostaValidada, r
 import {
   buscarTicketAtivo,
   buscarCsatPendente,
+  buscarConfirmacaoPendente,
+  processarRespostaEncerramento,
   finalizeTicketAfterEvaluation,
   abandonarAvaliacaoPendente,
   cancelarAvaliacoesNaoEnviadas,
@@ -163,7 +165,19 @@ export async function processIncomingMessageHandler(
     console.log(`[TICKET_LOOKUP] phone=${phoneSemSufixo} event=RESULT ticketId=${ticket?.id || 'nenhum'}`);
 
     if (!ticket) {
-      // ── 2) Sem ticket ativo → avaliar avaliação pendente ────────────
+      // ── 2) Sem ticket ativo → confirmar resolução pendente / avaliação ──
+      // Confirmação de resolução (após encerrar, antes da avaliação): interceita
+      // a resposta SIM/NÃO/descrição ANTES de criar novo ticket (ZERO ticket novo).
+      const confirmacaoPendente = await buscarConfirmacaoPendente(phoneDigits, jid);
+      if (confirmacaoPendente) {
+        const r = await processarRespostaEncerramento(phoneDigits, confirmacaoPendente, text);
+        console.log(
+          `[CONFIRMACAO_RESOLUCAO] phone=${phoneDigits} ticketId=${confirmacaoPendente.id} ` +
+          `event=RESPONDIDA ok=${r.ok} semResolucao=${!!r.semResolucao} aguardandoDescricao=${!!r.aguardandoDescricao} invalida=${!!r.respostaInvalida}`,
+        );
+        return;
+      }
+
       const notaResposta = extrairNotaAvaliacao(text);
       const csatPendente = await buscarCsatPendente(phoneDigits, jid);
 

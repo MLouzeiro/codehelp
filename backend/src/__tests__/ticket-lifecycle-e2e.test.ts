@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import prisma from '../config/database';
 import {
   ensureAmbienteHelpdesk,
@@ -6,6 +6,9 @@ import {
   criarDepartamentoTeste,
   criarMensagemBotMenuEnviado,
   makeSendMessageMock,
+  abrirAtendimentoSempre,
+  restaurarHorario,
+  HorarioSnapshot,
 } from './helpers/test-utils';
 import { processIncomingMessageHandler } from '../modules/integrations/whatsapp/whatsapp-message-handler';
 import { buscarTicketAtivo, buscarCsatPendente, finalizarAtendimento } from '../modules/helpdesk/flow.service';
@@ -25,10 +28,17 @@ import { encerrarTicket } from '../modules/helpdesk/flow.service';
 
 const PHONE = '85999990091';
 const DEPT_SLUG = 'n1';
+let horarioSnapshot: HorarioSnapshot | null = null;
 
 beforeAll(async () => {
   await ensureAmbienteHelpdesk();
   await criarDepartamentoTeste(DEPT_SLUG, 'N1 - Suporte Inicial');
+  // Fluxo do bot exige atendimento aberto (independente do horário real).
+  horarioSnapshot = await abrirAtendimentoSempre();
+});
+
+afterAll(async () => {
+  if (horarioSnapshot) await restaurarHorario(horarioSnapshot);
 });
 
 afterEach(async () => {
@@ -90,12 +100,32 @@ describe('E2E — ciclo de vida completo (handler + serviços)', () => {
     const encerrado = await prisma.ticket.findUnique({ where: { id: ticket1!.id } });
     expect(encerrado?.status).toBe('fechado');
     expect(encerrado?.etapa).toBe('concluido');
-    expect(encerrado?.evaluationStatus).toBe('aguardando');
+    // Novo fluxo: após encerrar, o bot pergunta "Seu problema foi resolvido?"
+    expect(encerrado?.evaluationStatus).toBe('aguardando_confirmacao');
 
     // Ticket encerrado NÃO é reaberto por buscarTicketAtivo
     expect(await buscarTicketAtivo(PHONE)).toBeNull();
 
-    // ── 4) CSAT agendado/enviado (simula provider conectado) ─────────
+    // Nenhuma avaliação criada ainda (aguarda confirmação SIM)
+    const csatNenhum = await prisma.cSATResposta.findUnique({ where: { ticketId: ticket1!.id } });
+    expect(csatNenhum).toBeNull();
+
+    // ── 4) Cliente responde SIM → avaliação é criada (aguardando envio) ─
+    await processIncomingMessageHandler(
+      {
+        phone: PHONE,
+        text: '1',
+        contactName: 'Cliente E2E',
+        provider: 'baileys',
+        messageId: `e2e-sim-${Date.now()}`,
+      },
+      fn,
+    );
+
+    const aposSim = await prisma.ticket.findUnique({ where: { id: ticket1!.id } });
+    expect(aposSim?.evaluationStatus).toBe('aguardando');
+
+    // Simula o envio da avaliação (provider não conectado em teste)
     const csat = await prisma.cSATResposta.findUnique({ where: { ticketId: ticket1!.id } });
     expect(csat).not.toBeNull();
     await prisma.cSATResposta.update({
@@ -149,6 +179,54 @@ describe('E2E — ciclo de vida completo (handler + serviços)', () => {
 
     const total = await prisma.ticket.count({ where: { contactPhone: PHONE } });
     expect(total).toBe(2);
+  });
+
+  it('nova mensagem com confirmação de resolução pendente NÃO cria novo ticket', async () => {
+    const { fn } = makeSendMessageMock();
+    const t = await prisma.ticket.create({
+      data: {
+        externalId: `e2e-conf-${Date.now()}-${Math.random()}`,
+        contactName: 'Cliente Conf',
+        contactPhone: PHONE,
+        status: 'fechado',
+        etapa: 'concluido',
+        dataFechamento: new Date(),
+        dataConclusao: new Date(),
+        evaluationStatus: 'aguardando_confirmacao',
+      },
+    });
+
+    // Mensagem que NÃO é SIM/NÃO → re-pergunta, não cria novo ticket
+    await processIncomingMessageHandler(
+      {
+        phone: PHONE,
+        text: 'quero falar com alguem',
+        contactName: 'Cliente Conf',
+        provider: 'baileys',
+        messageId: `e2e-conf-1-${Date.now()}`,
+      },
+      fn,
+    );
+    let total = await prisma.ticket.count({ where: { contactPhone: PHONE } });
+    expect(total).toBe(1);
+
+    // Cliente responde SIM → avaliação criada, ainda sem novo ticket
+    await processIncomingMessageHandler(
+      {
+        phone: PHONE,
+        text: 'sim',
+        contactName: 'Cliente Conf',
+        provider: 'baileys',
+        messageId: `e2e-conf-2-${Date.now()}`,
+      },
+      fn,
+    );
+    total = await prisma.ticket.count({ where: { contactPhone: PHONE } });
+    expect(total).toBe(1);
+    const aposSim = await prisma.ticket.findUnique({ where: { id: t.id } });
+    expect(aposSim?.evaluationStatus).toBe('aguardando');
+    const csat = await prisma.cSATResposta.findUnique({ where: { ticketId: t.id } });
+    expect(csat).not.toBeNull();
   });
 
   it('finalizarAtendimento é idempotente: não reenvia CSAT já enviado', async () => {

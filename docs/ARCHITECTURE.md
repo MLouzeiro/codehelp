@@ -75,7 +75,7 @@ backend/src/
 
 - Controllers = `async handler + try/catch`; services = negócio + `AppError`; queries via Prisma.
 - **Fonte única de constantes** do pipeline em `helpdesk/constants.ts` (`STATUS_ENCERRADO`, `ETAPAS_ENCERRADAS`, `EVALUATION_*`, `ETAPAS_FIXAS`).
-- **Encerramento canônico**: `flow.service.ts` — `encerrarTicket` / `finalizeTicketAfterEvaluation`. Todos os caminhos (manual, IA, CSAT) delegam a ele.
+- **Encerramento canônico**: `flow.service.ts` — `encerrarTicket` → `iniciarConfirmacaoResolucao` ("Seu problema foi resolvido?" SIM/NÃO) → `finalizarAtendimento` (CSAT) / `finalizarSemResolucao` (motivoStatus + alerta). Todos os caminhos (manual, IA, CSAT) delegam a ele.
 - **WhatsApp**: handler compartilhado canônico (`whatsapp-message-handler.ts`); provider factory (`whatsapp-provider-factory.ts`); Baileys provider (`baileys-provider.service.ts`). Filtros obrigatórios `fromMe`, `status_update`, `@g.us`, `status@broadcast` em TODOS os providers.
 - **Frontend**: componentes funcionais + hooks + `useCallback`; `usePolling` para refresh; kebab-case de arquivos, PascalCase de componentes/tipos.
 - **Mobile**: Expo Router (file-based), Zustand stores, AsyncStorage offline.

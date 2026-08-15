@@ -5,6 +5,8 @@ import {
   finalizeTicketAfterEvaluation,
   buscarTicketAtivo,
   buscarCsatPendente,
+  buscarConfirmacaoPendente,
+  processarRespostaEncerramento,
   encerrarTicket,
 } from '../modules/helpdesk/flow.service';
 import { ensureHelpdeskEntities } from '../modules/helpdesk/seed.service';
@@ -61,14 +63,26 @@ describe('Fluxo de encerramento do atendimento (guard-rail)', () => {
     expect(encerrado?.status).toBe('fechado');
     expect(encerrado?.etapa).toBe('concluido');
     expect(encerrado?.dataFechamento).toBeInstanceOf(Date);
-    expect(encerrado?.evaluationStatus).toBe('aguardando');
+    // Novo fluxo: encerrou → AGUARDA confirmação de resolução (não CSAT direto)
+    expect(encerrado?.evaluationStatus).toBe('aguardando_confirmacao');
 
     // Ticket fechado NUNCA é reaberto por buscarTicketAtivo
     const reativado = await buscarTicketAtivo(PHONE);
     expect(reativado).toBeNull();
 
+    // Confirmação pendente é encontrada para o telefone
+    const confirmacao = await buscarConfirmacaoPendente(PHONE);
+    expect(confirmacao).not.toBeNull();
+    expect(confirmacao.id).toBe(t.id);
+
+    // Cliente responde SIM → avaliação criada (aguardando envio)
+    const rSim = await processarRespostaEncerramento(PHONE, confirmacao, '1');
+    expect(rSim.ok).toBe(true);
+    const aguardando = await prisma.ticket.findUnique({ where: { id: t.id } });
+    expect(aguardando?.evaluationStatus).toBe('aguardando');
+
     // Ambiente de teste não tem provider WhatsApp → simula o envio bem-sucedido
-    // da lista interativa (enviadoEm preenchido), como ocorre em produção.
+    // da avaliação (enviadoEm preenchido), como ocorre em produção.
     await prisma.cSATResposta.updateMany({
       where: { ticketId: t.id },
       data: { enviadoEm: new Date() },
@@ -77,6 +91,87 @@ describe('Fluxo de encerramento do atendimento (guard-rail)', () => {
     const csatPendente = await buscarCsatPendente(PHONE);
     expect(csatPendente).not.toBeNull();
     expect(csatPendente?.csat.respondidoEm).toBeNull();
+  });
+
+  it('fluxo NÃO: cliente responde que NÃO foi resolvido → descreve → encerrado sem resolucao + alerta + avaliacao', async () => {
+    const supervisor = await prisma.user.create({
+      data: {
+        name: 'Supervisor Teste',
+        email: `supervisor-${Date.now()}@test.com`,
+        password: 'x',
+        role: 'supervisor',
+        active: true,
+      },
+    });
+    try {
+      const t = await prisma.ticket.create({
+        data: {
+          externalId: `closure-nao-${Date.now()}-${Math.random()}`,
+          contactName: 'Cliente Sem Resolucao',
+          contactPhone: PHONE,
+          status: 'fechado',
+          etapa: 'concluido',
+          dataFechamento: new Date(),
+          dataConclusao: new Date(),
+          evaluationStatus: 'aguardando_confirmacao',
+        },
+      });
+
+      const confirmacao = await buscarConfirmacaoPendente(PHONE);
+      expect(confirmacao).not.toBeNull();
+
+      // NÃO → pede a descrição
+      const rNao = await processarRespostaEncerramento(PHONE, confirmacao, '2');
+      expect(rNao.ok).toBe(true);
+      expect(rNao.aguardandoDescricao).toBe(true);
+      const aguardandoDesc = await prisma.ticket.findUnique({ where: { id: t.id } });
+      expect(aguardandoDesc?.evaluationStatus).toBe('aguardando_descricao');
+
+      // Cliente descreve o problema → encerrado sem resolução + alerta + avaliação
+      const confirmacao2 = await buscarConfirmacaoPendente(PHONE);
+      const rDesc = await processarRespostaEncerramento(PHONE, confirmacao2, 'O sistema continua travando ao abrir');
+      expect(rDesc.ok).toBe(true);
+      expect(rDesc.semResolucao).toBe(true);
+
+      const final = await prisma.ticket.findUnique({ where: { id: t.id } });
+      expect(final?.motivoStatus).toBe('encerrado_sem_resolucao');
+      expect(final?.resumoFinal).toContain('travando');
+      expect(final?.evaluationStatus).toBe('aguardando');
+
+      const notif = await prisma.notificacao.findMany({
+        where: { ticketId: t.id, tipo: 'encerrado_sem_resolucao' },
+      });
+      expect(notif.length).toBeGreaterThanOrEqual(1);
+      expect(notif.some((n) => n.destinatarioId === supervisor.id)).toBe(true);
+    } finally {
+      await prisma.user.delete({ where: { id: supervisor.id } }).catch(() => {});
+    }
+  });
+
+  it('resposta inválida na confirmação não cria novo ticket e re-pergunta', async () => {
+    const t = await prisma.ticket.create({
+      data: {
+        externalId: `closure-invalida-${Date.now()}-${Math.random()}`,
+        contactName: 'Cliente Invalida',
+        contactPhone: PHONE,
+        status: 'fechado',
+        etapa: 'concluido',
+        dataFechamento: new Date(),
+        dataConclusao: new Date(),
+        evaluationStatus: 'aguardando_confirmacao',
+      },
+    });
+
+    const confirmacao = await buscarConfirmacaoPendente(PHONE);
+    const r = await processarRespostaEncerramento(PHONE, confirmacao, 'qualquer coisa');
+    expect(r.ok).toBe(false);
+    expect(r.respostaInvalida).toBe(true);
+
+    // Estado mantém aguardando_confirmacao — nenhum CSAT criado
+    const ticket = await prisma.ticket.findUnique({ where: { id: t.id } });
+    expect(ticket?.evaluationStatus).toBe('aguardando_confirmacao');
+    const csat = await prisma.cSATResposta.findUnique({ where: { ticketId: t.id } });
+    expect(csat).toBeNull();
   });
 
   it('resposta da avaliação finaliza definitivamente e limpa o contexto do bot', async () => {

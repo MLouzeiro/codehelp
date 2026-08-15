@@ -5,9 +5,9 @@
 
 ---
 
-## FLUXO 1 — Atendimento WhatsApp → Ticket → Encerramento → Avaliação  [CRÍTICO]
+## FLUXO 1 — Atendimento WhatsApp → Ticket → Encerramento → Confirmação → Avaliação  [CRÍTICO]
 
-Protegido por: `ticket-closure-regression.test.ts` + `interactive-message-flow.test.ts`.
+Protegido por: `ticket-closure-regression.test.ts` + `interactive-message-flow.test.ts` + `ticket-lifecycle-e2e.test.ts`.
 
 ```
 Cliente envia msg WhatsApp
@@ -17,14 +17,16 @@ Baileys recebe (filter fromMe/status_update/@g.us/status@broadcast)
    │
    ▼
 whatsapp-message-handler.ts
-   ├─ Sem ticket ativo (buscarTicketAtivo: status+etapa filtrados) 
-   │    └─ Cria NOVO ticket (etapa inicial) → enviarMenuInicial (lista interativa dept_<slug>)
+   ├─ Sem ticket ativo (buscarTicketAtivo: status+etapa filtrados)
+   │    ├─ Confirmação de resolução pendente (aguardando_confirmacao/descricao)
+   │    │    └─ SIM/NÃO/descrição interceptada → NENHUM novo ticket
+   │    ├─ Avaliação pendente (CSAT respondidoEm vazio)
+   │    │    └─ processa resposta de avaliação → finalizeTicketAfterEvaluation
+   │    └─ Senão → Cria NOVO ticket (etapa inicial) → saudação (texto numerado dept_<slug>)
    ├─ Tem ticket ativo em atendimento → salva mensagem no ticket
-   └─ Tem avaliação pendente (CSAT respondidoEm vazio)
-        └─ processa resposta de avaliação → finalizeTicketAfterEvaluation
    │
    ▼
-Cliente clica departamento (dept_<slug>) → detectarOpcaoMenu (aceita nome/número/slug)
+Cliente clica departamento (dept_<slug> / nome / número) → detectarOpcaoMenu
    → ticket → fila → triagem → em_atendimento (atribuído a analista)
    │
    ▼
@@ -34,24 +36,36 @@ Analista atende (mensagens, checklist, prazo, horas de desenvolvimento)
 Analista conclui: moveTicketEtapa(etapa='concluido') → status='fechado', dataFechamento/Conclusao
    │
    ▼
-finalizarAtendimento → evaluationStatus='aguardando' → CSATResposta criado
-   → enviarMensagemCsat (lista interativa rating_1..5, texto formatado + link fallback)
+iniciarConfirmacaoResolucao → "Seu problema foi resolvido?" (texto numerado: 1 Sim / 2 Não)
+   │  evaluationStatus='aguardando_confirmacao'
+   ├─ SIM (1/sim/yes) → finalizarAtendimento → avaliação texto 1-5 (rating_N)
+   │    → evaluationStatus='aguardando' → CSATResposta criado/enviado
+   │    │
+   │    ▼
+   │    Cliente responde nota → extrairNotaAvaliacao → finalizeTicketAfterEvaluation
+   │    → CSAT respondido, evaluationStatus='respondido', nota salva no ticket
+   │
+   └─ NÃO (2/nao/no) → "descreva o problema" (evaluationStatus='aguardando_descricao')
+        → cliente descreve → ENCERRADO_SEM_RESOLUÇÃO (motivoStatus='encerrado_sem_resolucao',
+          resumoFinal=descrição) → notificação analista/supervisores + auditoria (logAction)
+        → avaliação 1-5 (mesmo fluxo do SIM)
    │
    ▼
-Cliente clica rating_N → extrairNotaAvaliacao → finalizeTicketAfterEvaluation
-   → CSAT respondido, evaluationStatus='respondido', nota salva no ticket
+Resposta inválida → re-pergunta a confirmação (NUNCA cria novo ticket)
    │
    ▼
-Nova mensagem → ticket fechado NÃO reabre → NOVO ticket
+Nova mensagem → ticket fechado NÃO reabre → NOVO ticket → saudação
 ```
 
 **Regras de ouro:**
 - Ticket encerrado NUNCA é reaberto por nova mensagem (defesa dupla: `STATUS_ENCERRADO` + `ETAPAS_ENCERRADAS` em `buscarTicketAtivo`).
+- Avaliação só é enviada DEPOIS do SIM (ou após a descrição no fluxo NÃO) — nunca direto no encerramento.
+- Confirmação/descrição pendente é interceptada ANTES da criação de ticket (ZERO novo ticket).
 - `finalizeTicketAfterEvaluation` é idempotente (clique duplo → `{ok:true, jaFinalizado:true}`, nota original prevalece).
-- Envio interativo NUNCA deve retornar `success:true` em fallback silencioso de texto; fallback é explícito (`usedFallback:true` + log).
+- Envio de mensagens do bot em Baileys/webjs é SEMPRE texto numerado (listas via `relayMessage` não são entregues). Lista interativa só em evolution/cloud.
 - `detectarOpcaoMenu` aceita nome do departamento (limitado a 80 chars), `dept_<slug>` e número.
 
-**Arquivos:** `whatsapp-message-handler.ts`, `flow.service.ts`, `helpdesk.controller.ts` (`moveTicketEtapa`), `csat.service.ts`, `menu.ts`, `constants.ts`, `whatsapp-message-service.ts`, `baileys-provider.service.ts`.
+**Arquivos:** `whatsapp-message-handler.ts`, `flow.service.ts` (`iniciarConfirmacaoResolucao`, `buscarConfirmacaoPendente`, `processarRespostaEncerramento`, `finalizarAtendimento`), `helpdesk.controller.ts` (`moveTicketEtapa`), `csat.service.ts`, `constants.ts`, `menu.ts`, `whatsapp-message-service.ts` (`enviarListaInterativa`), `baileys-provider.service.ts`.
 
 ---
 

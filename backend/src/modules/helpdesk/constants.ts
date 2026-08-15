@@ -44,10 +44,28 @@ export const EVALUATION_AGUARDANDO = 'aguardando';
 export const EVALUATION_RESPONDIDA = 'respondido';
 export const EVALUATION_CANCELADA = 'cancelado';
 
+// ── Estados do fluxo de confirmação de resolução (evaluationStatus) ─────
+// Após encerrar, o bot pergunta "Seu problema foi resolvido?" antes do CSAT:
+//   aguardando_confirmacao → aguardando SIM/NÃO do cliente
+//   aguardando_descricao   → aguardando descrição do problema (após NÃO)
+// O resultado "sem resolução" é persistido em Ticket.motivoStatus
+// ('encerrado_sem_resolucao') + resumoFinal (descrição do cliente).
+export const EVALUATION_AGUARDANDO_CONFIRMACAO = 'aguardando_confirmacao';
+export const EVALUATION_AGUARDANDO_DESCRICAO = 'aguardando_descricao';
+
+// Motivo persistido quando o cliente diz NÃO na confirmação de resolução.
+export const MOTIVO_ENCERRADO_SEM_RESOLUCAO = 'encerrado_sem_resolucao';
+
+// Palavras-chave aceitas para SIM/NÃO na confirmação de resolução.
+export const RESOLUCAO_SIM_KEYWORDS = ['sim', 'yes', '1'];
+export const RESOLUCAO_NAO_KEYWORDS = ['nao', 'não', 'no', '2'];
+
 export const EVALUATION_STATES = [
   EVALUATION_AGUARDANDO,
   EVALUATION_RESPONDIDA,
   EVALUATION_CANCELADA,
+  EVALUATION_AGUARDANDO_CONFIRMACAO,
+  EVALUATION_AGUARDANDO_DESCRICAO,
 ] as const;
 
 export type EvaluationStatus = (typeof EVALUATION_STATES)[number] | null;
