@@ -1,8 +1,10 @@
 import prisma from '../../config/database';
 import { callClaude, hasClaude } from '../../shared/aiClient';
-import { WHERE_TICKET_RESOLVIDO } from '../helpdesk/constants';
+import { WHERE_TICKET_RESOLVIDO, MOTIVO_ENCERRADO_SEM_RESOLUCAO } from '../helpdesk/constants';
 
 // ── Interfaces ─────────────────────────────────────────────────
+
+export type RiscoReabertura = 'BAIXO' | 'MÉDIO' | 'ALTO' | 'CRÍTICO';
 
 export interface AuditoriaEncerramento {
   ticketId: string;
@@ -10,12 +12,17 @@ export interface AuditoriaEncerramento {
   contactName: string | null;
   contactPhone: string | null;
   assigneeName: string | null;
+  clienteId: string | null;
+  clienteNome: string | null;
   dataFechamento: Date | null;
   tipo: 'encerramento_prematuro' | 'resolucao_real' | 'reabertura' | 'sem_dados';
+  riscoReabertura: RiscoReabertura;
   diagnostico: string;
   detalhes: string[];
   nota: number; // 0-10 (10 = encerramento perfeito)
   recomendaReabertura: boolean;
+  semConfirmacao: boolean;
+  motivoStatus: string | null;
   clienteVoltou: boolean;
   mensagensAposEncerramento: number;
   csatNota: number | null;
@@ -71,7 +78,7 @@ function diagnosticarPorRegras(
   csatNota: number | null,
   csatRespondido: boolean,
   mensagensAposEncerramento: number
-): Pick<AuditoriaEncerramento, 'tipo' | 'diagnostico' | 'detalhes' | 'nota' | 'recomendaReabertura' | 'analiseIa'> {
+): Pick<AuditoriaEncerramento, 'tipo' | 'diagnostico' | 'detalhes' | 'nota' | 'recomendaReabertura' | 'semConfirmacao' | 'analiseIa'> {
   const detalhes: string[] = [];
   const ultCliente = ultimaMensagemCliente(mensagens);
   const ultAgente = ultimaMensagemAgente(mensagens);
@@ -85,6 +92,7 @@ function diagnosticarPorRegras(
       detalhes,
       nota: 3,
       recomendaReabertura: true,
+      semConfirmacao: true,
       analiseIa: false,
     };
   }
@@ -98,6 +106,7 @@ function diagnosticarPorRegras(
       detalhes,
       nota: 2,
       recomendaReabertura: true,
+      semConfirmacao: false,
       analiseIa: false,
     };
   }
@@ -111,6 +120,7 @@ function diagnosticarPorRegras(
       detalhes,
       nota: 2,
       recomendaReabertura: true,
+      semConfirmacao: false,
       analiseIa: false,
     };
   }
@@ -124,6 +134,7 @@ function diagnosticarPorRegras(
       detalhes,
       nota: 9,
       recomendaReabertura: false,
+      semConfirmacao: false,
       analiseIa: false,
     };
   }
@@ -137,6 +148,7 @@ function diagnosticarPorRegras(
       detalhes,
       nota: 8,
       recomendaReabertura: false,
+      semConfirmacao: false,
       analiseIa: false,
     };
   }
@@ -150,6 +162,7 @@ function diagnosticarPorRegras(
       detalhes,
       nota: 4,
       recomendaReabertura: true,
+      semConfirmacao: true,
       analiseIa: false,
     };
   }
@@ -163,6 +176,7 @@ function diagnosticarPorRegras(
     detalhes,
     nota: 5,
     recomendaReabertura: true,
+    semConfirmacao: true,
     analiseIa: false,
   };
 }
@@ -174,8 +188,8 @@ async function diagnosticarComIa(
   csatNota: number | null,
   csatRespondido: boolean,
   mensagensAposEncerramento: number,
-  regras: Pick<AuditoriaEncerramento, 'tipo' | 'diagnostico' | 'detalhes' | 'nota' | 'recomendaReabertura'>
-): Promise<Pick<AuditoriaEncerramento, 'tipo' | 'diagnostico' | 'detalhes' | 'nota' | 'recomendaReabertura' | 'analiseIa'>> {
+  regras: Pick<AuditoriaEncerramento, 'tipo' | 'diagnostico' | 'detalhes' | 'nota' | 'recomendaReabertura' | 'semConfirmacao'>
+): Promise<Pick<AuditoriaEncerramento, 'tipo' | 'diagnostico' | 'detalhes' | 'nota' | 'recomendaReabertura' | 'semConfirmacao' | 'analiseIa'>> {
   if (!hasClaude()) return { ...regras, analiseIa: false };
 
   const conversa = mensagens.slice(-12).map(m =>
@@ -216,6 +230,7 @@ Retorne APENAS JSON válido:
       detalhes: Array.isArray(parsed.detalhes) ? parsed.detalhes : regras.detalhes,
       nota: Math.min(10, Math.max(0, Number(parsed.nota) || regras.nota)),
       recomendaReabertura: Boolean(parsed.recomendaReabertura),
+      semConfirmacao: regras.semConfirmacao,
       analiseIa: true,
     };
   } catch (err) {
@@ -226,11 +241,21 @@ Retorne APENAS JSON válido:
 
 // ── Função principal ────────────────────────────────────────────
 
+function calcularRiscoReabertura(tipo: AuditoriaEncerramento['tipo'], nota: number, csatNota: number | null): RiscoReabertura {
+  if (tipo === 'reabertura') return 'CRÍTICO';
+  if (tipo === 'encerramento_prematuro') {
+    if (nota <= 2 || (csatNota !== null && csatNota <= 2)) return 'ALTO';
+    return 'MÉDIO';
+  }
+  return 'BAIXO';
+}
+
 export async function auditarEncerramento(ticketId: string, usarIa = true): Promise<AuditoriaEncerramento> {
   const ticket = await prisma.ticket.findUnique({
     where: { id: ticketId },
     include: {
       assignee: { select: { name: true } },
+      client: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
       csatResposta: { select: { nota: true, respondidoEm: true } },
       messages: {
         select: { fromMe: true, content: true, sentAt: true },
@@ -287,8 +312,13 @@ export async function auditarEncerramento(ticketId: string, usarIa = true): Prom
     contactName: ticket.contactName,
     contactPhone: ticket.contactPhone,
     assigneeName: ticket.assignee?.name || null,
+    clienteId: ticket.client?.id || null,
+    clienteNome: ticket.client?.nomeFantasia || ticket.client?.razaoSocial || null,
     dataFechamento: ticket.dataFechamento,
     ...analise,
+    riscoReabertura: calcularRiscoReabertura(analise.tipo, analise.nota, csatNota),
+    semConfirmacao: analise.semConfirmacao,
+    motivoStatus: ticket.motivoStatus,
     clienteVoltou: mensagensAposEncerramento > 0,
     mensagensAposEncerramento,
     csatNota,
@@ -304,6 +334,7 @@ export interface FiltroAuditoria {
   dataFim?: Date;
   tipo?: string;
   assigneeId?: string;
+  clienteId?: string;
   limit?: number;
 }
 
@@ -319,6 +350,7 @@ export async function listarTicketsEncerrados(filtro: FiltroAuditoria = {}) {
     };
   }
   if (filtro.assigneeId) where.assigneeId = filtro.assigneeId;
+  if (filtro.clienteId) where.clientId = filtro.clienteId;
 
   const tickets = await prisma.ticket.findMany({
     where,
@@ -365,19 +397,97 @@ export async function auditarLoteEncerramentos(filtro: FiltroAuditoria = {}): Pr
 
 // ── Estatísticas agregadas ─────────────────────────────────────
 
-export async function resumoAuditoriaEncerramentos(filtro: FiltroAuditoria = {}): Promise<{
+export interface ResumoAuditoria {
   totalAuditados: number;
   prematuros: number;
   resolucoesReais: number;
   reaberturas: number;
   taxaPrematura: number;
   pctReabertura: number;
-}> {
+  taxaEncerramentoCorreto: number;
+  semConfirmacao: number;
+  problemaNaoResolvido: number;
+  notaMedia: number;
+  porRisco: { risco: RiscoReabertura; total: number }[];
+  porTipo: { tipo: string; total: number }[];
+  porAnalista: { analista: string; auditados: number; prematuros: number; resolucoesReais: number; reaberturas: number; notaMedia: number }[];
+  porCliente: { cliente: string; auditados: number; prematuros: number; resolucoesReais: number; reaberturas: number }[];
+}
+
+export async function resumoAuditoriaEncerramentos(filtro: FiltroAuditoria = {}): Promise<ResumoAuditoria> {
   const { auditados } = await auditarLoteEncerramentos({ ...filtro, limit: filtro.limit || 100 });
+  const total = auditados.length;
+
   const prematuros = auditados.filter(a => a.tipo === 'encerramento_prematuro').length;
   const resolucoesReais = auditados.filter(a => a.tipo === 'resolucao_real').length;
   const reaberturas = auditados.filter(a => a.tipo === 'reabertura').length;
-  const total = auditados.length;
+  const semConfirmacao = auditados.filter(a => a.semConfirmacao).length;
+
+  // Tickets encerrados sem resolução (confirmação "Não" / motivo persistido)
+  const whereProblema: any = {
+    ...WHERE_TICKET_RESOLVIDO,
+    motivoStatus: MOTIVO_ENCERRADO_SEM_RESOLUCAO,
+  };
+  if (filtro.dataInicio || filtro.dataFim) {
+    whereProblema.dataFechamento = {
+      ...(filtro.dataInicio ? { gte: filtro.dataInicio } : {}),
+      ...(filtro.dataFim ? { lte: filtro.dataFim } : {}),
+    };
+  }
+  if (filtro.assigneeId) whereProblema.assigneeId = filtro.assigneeId;
+  if (filtro.clienteId) whereProblema.clientId = filtro.clienteId;
+  const problemaNaoResolvido = await prisma.ticket.count({ where: whereProblema });
+
+  const notaMedia = total > 0
+    ? Math.round((auditados.reduce((s, a) => s + a.nota, 0) / total) * 100) / 100
+    : 0;
+
+  const riscos: RiscoReabertura[] = ['BAIXO', 'MÉDIO', 'ALTO', 'CRÍTICO'];
+  const porRisco = riscos.map(risco => ({
+    risco,
+    total: auditados.filter(a => a.riscoReabertura === risco).length,
+  }));
+
+  const porTipo = (['encerramento_prematuro', 'resolucao_real', 'reabertura', 'sem_dados'] as const).map(tipo => ({
+    tipo,
+    total: auditados.filter(a => a.tipo === tipo).length,
+  }));
+
+  const porAnalistaMap = new Map<string, { auditados: number; prematuros: number; resolucoesReais: number; reaberturas: number; notas: number[] }>();
+  for (const a of auditados) {
+    const nome = a.assigneeName || 'Sem analista';
+    const e = porAnalistaMap.get(nome) || { auditados: 0, prematuros: 0, resolucoesReais: 0, reaberturas: 0, notas: [] };
+    e.auditados += 1;
+    if (a.tipo === 'encerramento_prematuro') e.prematuros += 1;
+    if (a.tipo === 'resolucao_real') e.resolucoesReais += 1;
+    if (a.tipo === 'reabertura') e.reaberturas += 1;
+    e.notas.push(a.nota);
+    porAnalistaMap.set(nome, e);
+  }
+  const porAnalista = Array.from(porAnalistaMap.entries())
+    .map(([analista, e]) => ({
+      analista,
+      auditados: e.auditados,
+      prematuros: e.prematuros,
+      resolucoesReais: e.resolucoesReais,
+      reaberturas: e.reaberturas,
+      notaMedia: e.notas.length > 0 ? Math.round((e.notas.reduce((s, n) => s + n, 0) / e.notas.length) * 100) / 100 : 0,
+    }))
+    .sort((a, b) => b.auditados - a.auditados);
+
+  const porClienteMap = new Map<string, { auditados: number; prematuros: number; resolucoesReais: number; reaberturas: number }>();
+  for (const a of auditados) {
+    const nome = a.clienteNome || 'Sem cliente';
+    const e = porClienteMap.get(nome) || { auditados: 0, prematuros: 0, resolucoesReais: 0, reaberturas: 0 };
+    e.auditados += 1;
+    if (a.tipo === 'encerramento_prematuro') e.prematuros += 1;
+    if (a.tipo === 'resolucao_real') e.resolucoesReais += 1;
+    if (a.tipo === 'reabertura') e.reaberturas += 1;
+    porClienteMap.set(nome, e);
+  }
+  const porCliente = Array.from(porClienteMap.entries())
+    .map(([cliente, e]) => ({ cliente, ...e }))
+    .sort((a, b) => b.auditados - a.auditados);
 
   return {
     totalAuditados: total,
@@ -386,5 +496,39 @@ export async function resumoAuditoriaEncerramentos(filtro: FiltroAuditoria = {})
     reaberturas,
     taxaPrematura: total > 0 ? Math.round((prematuros / total) * 100) : 0,
     pctReabertura: total > 0 ? Math.round((reaberturas / total) * 100) : 0,
+    taxaEncerramentoCorreto: total > 0 ? Math.round((resolucoesReais / total) * 100) : 0,
+    semConfirmacao,
+    problemaNaoResolvido,
+    notaMedia,
+    porRisco,
+    porTipo,
+    porAnalista,
+    porCliente,
   };
+}
+
+// ── Exportação CSV ─────────────────────────────────────────────
+
+export function exportarAuditoriaCsv(auditados: AuditoriaEncerramento[]): string {
+  const linhas: string[] = ['SEPARADOR=;'];
+  linhas.push('Protocolo;Analista;Cliente;Data fechamento;Tipo;Risco reabertura;Nota;Recomenda reabertura;Sem confirmação;Motivo status;Cliente voltou;Mensagens após;CSAT;Diagnóstico');
+  for (const a of auditados) {
+    linhas.push([
+      a.protocolo || '',
+      a.assigneeName || '',
+      a.clienteNome || '',
+      a.dataFechamento ? a.dataFechamento.toISOString().slice(0, 10) : '',
+      a.tipo,
+      a.riscoReabertura,
+      String(a.nota),
+      a.recomendaReabertura ? 'sim' : 'não',
+      a.semConfirmacao ? 'sim' : 'não',
+      a.motivoStatus || '',
+      a.clienteVoltou ? 'sim' : 'não',
+      String(a.mensagensAposEncerramento),
+      a.csatNota ? String(a.csatNota) : '',
+      (a.diagnostico || '').replace(/;/g, ','),
+    ].join(';'));
+  }
+  return linhas.join('\r\n');
 }

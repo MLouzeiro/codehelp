@@ -3,6 +3,7 @@ import api from '../../services/api';
 import {
   Loader2, AlertTriangle, CheckCircle, RotateCcw, Search, RefreshCw,
   ShieldAlert, Star, FileText, Calendar, User, MessageSquare, Sparkles,
+  Download, Gauge,
 } from 'lucide-react';
 
 interface TicketEncerrado {
@@ -22,18 +23,37 @@ interface Auditoria {
   protocolo: string | null;
   contactName: string | null;
   assigneeName: string | null;
+  clienteId: string | null;
+  clienteNome: string | null;
   dataFechamento: string | null;
   tipo: 'encerramento_prematuro' | 'resolucao_real' | 'reabertura' | 'sem_dados';
   diagnostico: string;
   detalhes: string[];
   nota: number;
   recomendaReabertura: boolean;
+  riscoReabertura: 'BAIXO' | 'MÉDIO' | 'ALTO' | 'CRÍTICO';
+  semConfirmacao: boolean;
+  motivoStatus: string | null;
   clienteVoltou: boolean;
   mensagensAposEncerramento: number;
   csatNota: number | null;
   csatRespondido: boolean;
   analiseIa: boolean;
   ticketReaberturaId: string | null;
+}
+
+interface PorRisco {
+  risco: string;
+  total: number;
+}
+
+interface PorAnalista {
+  analista: string;
+  auditados: number;
+  prematuros: number;
+  resolucoesReais: number;
+  reaberturas: number;
+  notaMedia: number;
 }
 
 interface Resumo {
@@ -43,6 +63,14 @@ interface Resumo {
   reaberturas: number;
   taxaPrematura: number;
   pctReabertura: number;
+  taxaEncerramentoCorreto: number;
+  semConfirmacao: number;
+  problemaNaoResolvido: number;
+  notaMedia: number;
+  porRisco: PorRisco[];
+  porTipo: { tipo: string; total: number }[];
+  porAnalista: PorAnalista[];
+  porCliente: { cliente: string; auditados: number; prematuros: number; resolucoesReais: number; reaberturas: number }[];
 }
 
 const TIPO_CONFIG: Record<string, { label: string; cor: string; bg: string; icon: any }> = {
@@ -50,6 +78,20 @@ const TIPO_CONFIG: Record<string, { label: string; cor: string; bg: string; icon
   resolucao_real: { label: 'Resolução Real', cor: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800', icon: CheckCircle },
   reabertura: { label: 'Reabertura', cor: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800', icon: RotateCcw },
   sem_dados: { label: 'Sem Dados', cor: 'text-slate-500', bg: 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700', icon: FileText },
+};
+
+const RISCO_CONFIG: Record<string, { label: string; cor: string; barra: string; badge: string }> = {
+  BAIXO: { label: 'Risco Baixo', cor: 'text-emerald-600 dark:text-emerald-400', barra: 'bg-emerald-500', badge: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' },
+  'MÉDIO': { label: 'Risco Médio', cor: 'text-amber-600 dark:text-amber-400', barra: 'bg-amber-500', badge: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' },
+  ALTO: { label: 'Risco Alto', cor: 'text-orange-600 dark:text-orange-400', barra: 'bg-orange-500', badge: 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' },
+  'CRÍTICO': { label: 'Risco Crítico', cor: 'text-red-600 dark:text-red-400', barra: 'bg-red-500', badge: 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400' },
+};
+
+const TIPO_NOME: Record<string, string> = {
+  encerramento_prematuro: 'Encerramento Prematuro',
+  resolucao_real: 'Resolução Real',
+  reabertura: 'Reabertura',
+  sem_dados: 'Sem Dados',
 };
 
 export default function AuditoriaEncerramentoPage() {
@@ -126,8 +168,12 @@ export default function AuditoriaEncerramentoPage() {
   const resumoCards = resumo ? [
     { label: 'Tickets Auditados', valor: resumo.totalAuditados, icon: FileText, cor: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30' },
     { label: 'Encerramentos Prematuros', valor: resumo.prematuros, icon: AlertTriangle, cor: 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30', extra: `${resumo.taxaPrematura}%` },
-    { label: 'Resoluções Reais', valor: resumo.resolucoesReais, icon: CheckCircle, cor: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30' },
+    { label: 'Encerramento Correto', valor: resumo.resolucoesReais, icon: CheckCircle, cor: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30', extra: `${resumo.taxaEncerramentoCorreto}%` },
     { label: 'Reaberturas', valor: resumo.reaberturas, icon: RotateCcw, cor: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30', extra: `${resumo.pctReabertura}%` },
+    { label: 'Sem Confirmação', valor: resumo.semConfirmacao, icon: MessageSquare, cor: 'text-slate-600 bg-slate-50 dark:text-slate-400 dark:bg-slate-800' },
+    { label: 'Sem Resolução', valor: resumo.problemaNaoResolvido, icon: AlertTriangle, cor: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/30' },
+    { label: 'Nota Média', valor: resumo.notaMedia, icon: Star, cor: 'text-violet-600 bg-violet-50 dark:text-violet-400 dark:bg-violet-900/30', extra: '/10' },
+    { label: 'Risco Crítico', valor: (resumo.porRisco.find(r => r.risco === 'CRÍTICO')?.total ?? 0), icon: ShieldAlert, cor: 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900/40' },
   ] : [];
 
   return (
@@ -143,6 +189,12 @@ export default function AuditoriaEncerramentoPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href={`${api.defaults.baseURL || ''}/helpdesk/closure-audit/exportar?limit=500`}
+            className="flex items-center gap-2 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            style={{ fontFamily: 'Lexend, sans-serif' }}>
+            <Download size={14} /> Exportar CSV
+          </a>
           <button onClick={carregar}
             className="flex items-center gap-2 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             style={{ fontFamily: 'Lexend, sans-serif' }}>
@@ -222,6 +274,11 @@ export default function AuditoriaEncerramentoPage() {
                           <Sparkles size={10} /> IA
                         </span>
                       )}
+                      {auditoria && auditoria.riscoReabertura && auditoria.riscoReabertura !== 'BAIXO' && (
+                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${RISCO_CONFIG[auditoria.riscoReabertura].badge}`} style={{ fontFamily: 'Lexend, sans-serif' }}>
+                          <Gauge size={10} /> Risco {auditoria.riscoReabertura}
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm text-slate-600 dark:text-slate-300 truncate" style={{ fontFamily: 'Lexend, sans-serif' }}>
                       {t.contactName || t.contactPhone || 'Cliente'}
@@ -260,6 +317,123 @@ export default function AuditoriaEncerramentoPage() {
           )}
         </div>
       </div>
+
+      {resumo && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: 'Khand, sans-serif' }}>
+              Distribuição por Risco de Reabertura
+            </h2>
+            <div className="space-y-3">
+              {resumo.porRisco.map(r => {
+                const cfg = RISCO_CONFIG[r.risco];
+                const pct = resumo.totalAuditados > 0 ? Math.round((r.total / resumo.totalAuditados) * 100) : 0;
+                return (
+                  <div key={r.risco}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="font-medium text-slate-700 dark:text-slate-300" style={{ fontFamily: 'Lexend, sans-serif' }}>{cfg.label}</span>
+                      <span className={`text-sm font-semibold ${cfg.cor}`} style={{ fontFamily: 'Khand, sans-serif' }}>{r.total} · {pct}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                      <div className={`h-full rounded-full ${cfg.barra} transition-all`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: 'Khand, sans-serif' }}>
+              Distribuição por Tipo
+            </h2>
+            <div className="space-y-3">
+              {resumo.porTipo.map(t => {
+                const cfg = TIPO_CONFIG[t.tipo];
+                const pct = resumo.totalAuditados > 0 ? Math.round((t.total / resumo.totalAuditados) * 100) : 0;
+                return (
+                  <div key={t.tipo}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="font-medium text-slate-700 dark:text-slate-300" style={{ fontFamily: 'Lexend, sans-serif' }}>{TIPO_NOME[t.tipo] || t.tipo}</span>
+                      <span className={`text-sm font-semibold ${cfg?.cor || 'text-slate-500'}`} style={{ fontFamily: 'Khand, sans-serif' }}>{t.total} · {pct}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                      <div className={`h-full rounded-full ${cfg ? cfg.bg.split(' ')[0] : 'bg-slate-400'} transition-all`} style={{ width: `${pct}%`, backgroundColor: cfg ? undefined : undefined }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 lg:col-span-2">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: 'Khand, sans-serif' }}>
+              Auditoria por Analista
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                    <th className="pb-2 font-medium">Analista</th>
+                    <th className="pb-2 font-medium">Auditados</th>
+                    <th className="pb-2 font-medium">Prematuros</th>
+                    <th className="pb-2 font-medium">Resoluções</th>
+                    <th className="pb-2 font-medium">Reaberturas</th>
+                    <th className="pb-2 font-medium">Nota Média</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumo.porAnalista.map(a => (
+                    <tr key={a.analista} className="border-b border-slate-50 dark:border-slate-700/50" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                      <td className="py-2 text-slate-700 dark:text-slate-300 font-medium">{a.analista}</td>
+                      <td className="py-2 text-slate-600 dark:text-slate-400">{a.auditados}</td>
+                      <td className={`py-2 font-medium ${a.prematuros > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-400'}`}>{a.prematuros}</td>
+                      <td className="py-2 text-emerald-600 dark:text-emerald-400">{a.resolucoesReais}</td>
+                      <td className={`py-2 font-medium ${a.reaberturas > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>{a.reaberturas}</td>
+                      <td className={`py-2 font-semibold ${a.notaMedia >= 8 ? 'text-emerald-600' : a.notaMedia >= 5 ? 'text-amber-600' : 'text-red-600'}`}>{a.notaMedia}</td>
+                    </tr>
+                  ))}
+                  {resumo.porAnalista.length === 0 && (
+                    <tr><td colSpan={6} className="py-4 text-center text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Sem dados</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {resumo.porCliente.length > 0 && (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 lg:col-span-2">
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: 'Khand, sans-serif' }}>
+                Auditoria por Cliente
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                      <th className="pb-2 font-medium">Cliente</th>
+                      <th className="pb-2 font-medium">Auditados</th>
+                      <th className="pb-2 font-medium">Prematuros</th>
+                      <th className="pb-2 font-medium">Resoluções</th>
+                      <th className="pb-2 font-medium">Reaberturas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resumo.porCliente.map(c => (
+                      <tr key={c.cliente} className="border-b border-slate-50 dark:border-slate-700/50" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                        <td className="py-2 text-slate-700 dark:text-slate-300 font-medium">{c.cliente}</td>
+                        <td className="py-2 text-slate-600 dark:text-slate-400">{c.auditados}</td>
+                        <td className={`py-2 font-medium ${c.prematuros > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-400'}`}>{c.prematuros}</td>
+                        <td className="py-2 text-emerald-600 dark:text-emerald-400">{c.resolucoesReais}</td>
+                        <td className={`py-2 font-medium ${c.reaberturas > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>{c.reaberturas}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {ticketAberto && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setTicketAberto(null)}>
@@ -333,6 +507,24 @@ export default function AuditoriaEncerramentoPage() {
                   <div className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Recomendação</div>
                   <div className={`font-medium ${ticketAberto.recomendaReabertura ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`} style={{ fontFamily: 'Lexend, sans-serif' }}>
                     {ticketAberto.recomendaReabertura ? 'Reabrir atenção' : 'OK — sem ação'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/40">
+                  <div className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Risco de Reabertura</div>
+                  <div className={`font-medium ${RISCO_CONFIG[ticketAberto.riscoReabertura]?.cor || 'text-slate-500'}`} style={{ fontFamily: 'Lexend, sans-serif' }}>
+                    {RISCO_CONFIG[ticketAberto.riscoReabertura]?.label || ticketAberto.riscoReabertura || '—'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/40">
+                  <div className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Confirmação de Resolução</div>
+                  <div className={`font-medium ${ticketAberto.semConfirmacao ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`} style={{ fontFamily: 'Lexend, sans-serif' }}>
+                    {ticketAberto.semConfirmacao ? 'Sem confirmação' : 'Confirmado'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/40">
+                  <div className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Motivo Status</div>
+                  <div className="text-slate-700 dark:text-slate-200 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                    {ticketAberto.motivoStatus ? ticketAberto.motivoStatus.replace(/_/g, ' ') : '—'}
                   </div>
                 </div>
               </div>

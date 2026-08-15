@@ -85,7 +85,7 @@ async function autoEscalation(): Promise<number> {
   return escalacoes;
 }
 
-async function processarAguardandoExpediente(): Promise<number> {
+export async function processarAguardandoExpediente(): Promise<number> {
   let processados = 0;
 
   try {
@@ -119,6 +119,9 @@ async function processarAguardandoExpediente(): Promise<number> {
           data: {
             etapa: novaEtapa,
             filaOrder: hasDept ? filaOrder : null,
+            // Limpa estado antigo do bot: contexto de conversa anterior não vale
+            // para o novo fluxo (boas-vindas / fila).
+            botFluxo: null,
           },
         });
 
@@ -133,28 +136,30 @@ async function processarAguardandoExpediente(): Promise<number> {
         });
 
         if (ticket.contactPhone) {
-          let msg: string;
+          // Reutiliza o MESMO mecanismo de boas-vindas de uma nova conversa
+          // (config mensagemBoasVindas + lista interativa dept_<slug> com fallback texto).
+          // NUNCA um fluxo paralelo de "digite o setor".
+          const { limparEstadoConversa } = await import('../integrations/whatsapp/whatsapp-message-handler');
+          const phoneDigits = ticket.contactPhone.replace(/\D/g, '');
+          limparEstadoConversa(phoneDigits);
+
           if (hasDept) {
-            msg = `Olá ${ticket.contactName || 'cliente'}! 🌅\n\nO expediente iniciou! Estamos prontos para te atender.\n\nEm breve um de nossos analistas irá te atender.\n\nAtenciosamente,\nEquipe Codemed`;
+            const msg = `Olá ${ticket.contactName || 'cliente'}! 🌅\n\nO expediente iniciou! Estamos prontos para te atender.\n\nEm breve um de nossos analistas irá te atender.\n\nAtenciosamente,\nEquipe Codemed`;
+            const result = await sendWhatsAppMessage(ticket.contactPhone, msg, undefined, (ticket as any).contactJid || undefined);
+            if (result.success) {
+              await prisma.message.create({
+                data: {
+                  ticketId: ticket.id,
+                  fromMe: true,
+                  content: msg,
+                  source: 'bot',
+                  tipo: 'system',
+                },
+              });
+            }
           } else {
-            const departamentos = await prisma.departamento.findMany({
-              where: { ativo: true },
-              orderBy: { ordem: 'asc' },
-            });
-            const opcoes = departamentos.map((d) => `• ${d.nome}`).join('\n');
-            msg = `Olá ${ticket.contactName || 'cliente'}! 🌅\n\nO expediente iniciou! Estamos prontos para te atender.\n\nPor favor, selecione o departamento desejado:\n\n${opcoes}\n\nResponda com o *nome* do departamento.\n\nAtenciosamente,\nEquipe Codemed`;
-          }
-          const result = await sendWhatsAppMessage(ticket.contactPhone, msg, undefined, (ticket as any).contactJid || undefined);
-          if (result.success) {
-            await prisma.message.create({
-              data: {
-                ticketId: ticket.id,
-                fromMe: true,
-                content: msg,
-                source: 'bot',
-                tipo: 'system',
-              },
-            });
+            const { enviarMenuInicial } = await import('./triagem.service');
+            await enviarMenuInicial(ticket.id);
           }
         }
 

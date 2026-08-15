@@ -85,6 +85,18 @@ export function setWhatsAppConversationState(phoneDigits: string, state: Convers
   setConversationState(phoneDigits, state);
 }
 
+// Limpa todo o estado in-memory da conversa (auxiliar). A fonte de verdade
+// do fluxo é Ticket.botFluxo no banco — este cleanup garante interação limpa
+// ao retornar do expediente (sem estado antigo, candidatos de empresa, etc.).
+export function limparEstadoConversa(phoneDigits: string): void {
+  const key = phoneDigits.slice(-11);
+  conversationStates.delete(key);
+  stateTimestamps.delete(key);
+  pendingCompanyCandidates.delete(key);
+  pendingCompanyTimestamps.delete(key);
+  console.log(`[State] ${key}: estado in-memory limpo (retorno de expediente)`);
+}
+
 // ── Fluxo determinístico pós-departamento ────────────────────────────────
 // Estado persistido em Ticket.botFluxo (fonte de verdade no banco):
 //   awaiting_company      → cliente precisa informar o nome da empresa

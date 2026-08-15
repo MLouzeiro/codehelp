@@ -82,6 +82,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ['admin', 'gerente'],
         children: [
           { path: '/app/relatorios/gerencial', label: 'Relatório Gerencial', icon: FileText, roles: ['admin', 'gerente'] },
+          { path: '/app/relatorios/analitico', label: 'Relatório Analítico', icon: BarChart3, roles: ['admin', 'gerente'] },
         ],
       },
       { path: '/app/helpdesk/aprovacoes', label: 'Aprovações', icon: Shield, roles: ['admin', 'gerente'] },

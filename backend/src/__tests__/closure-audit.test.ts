@@ -5,6 +5,7 @@ import {
   auditarEncerramento,
   resumoAuditoriaEncerramentos,
   listarTicketsEncerrados,
+  exportarAuditoriaCsv,
 } from '../modules/helpdesk/closureAudit.service';
 
 let ticketsIds: string[] = [];
@@ -157,5 +158,88 @@ describe('Auditoria de Encerramento (FASE 7)', () => {
     const lista = await listarTicketsEncerrados({ limit: 50 });
     expect(Array.isArray(lista)).toBe(true);
     expect(lista.some(t => t.id === ticket.id)).toBe(true);
+  });
+
+  it('calcula risco de reabertura por tipo (TESTE #33)', async () => {
+    const prematuro = await prisma.ticket.create({
+      data: {
+        externalId: `aud6a-${Date.now()}-${Math.random()}`,
+        contactName: 'Cliente Audit 6',
+        contactPhone: '85999998805',
+        status: 'fechado',
+        etapa: 'concluido',
+        canal: 'whatsapp_baileys',
+        dataFechamento: new Date(),
+      },
+    });
+    await prisma.message.create({
+      data: { ticketId: prematuro.id, fromMe: true, content: 'Atendimento concluído.', sentAt: new Date() },
+    });
+    ticketsIds.push(prematuro.id);
+
+    const resolvido = await prisma.ticket.create({
+      data: {
+        externalId: `aud6b-${Date.now()}-${Math.random()}`,
+        contactName: 'Cliente Audit 6',
+        contactPhone: '85999998806',
+        status: 'fechado',
+        etapa: 'concluido',
+        canal: 'whatsapp_baileys',
+        dataFechamento: new Date(),
+      },
+    });
+    await prisma.message.create({
+      data: { ticketId: resolvido.id, fromMe: true, content: 'Tentamos, confirma?', sentAt: new Date(Date.now() - 7200000) },
+    });
+    await prisma.message.create({
+      data: { ticketId: resolvido.id, fromMe: false, content: 'Resolveu sim, obrigado!', sentAt: new Date(Date.now() - 3600000) },
+    });
+    ticketsIds.push(resolvido.id);
+
+    const a1 = await auditarEncerramento(prematuro.id, false);
+    const a2 = await auditarEncerramento(resolvido.id, false);
+
+    expect(['BAIXO', 'MÉDIO', 'ALTO', 'CRÍTICO']).toContain(a1.riscoReabertura);
+    expect(a1.semConfirmacao).toBe(true);
+    expect(a2.riscoReabertura).toBe('BAIXO');
+    expect(a2.semConfirmacao).toBe(false);
+  });
+
+  it('resumo evoluído: indicadores, riscos, por analista e por cliente', async () => {
+    const resumo = await resumoAuditoriaEncerramentos({ limit: 100 });
+
+    expect(resumo.taxaEncerramentoCorreto).toBeGreaterThanOrEqual(0);
+    expect(resumo.semConfirmacao).toBeGreaterThanOrEqual(0);
+    expect(resumo.problemaNaoResolvido).toBeGreaterThanOrEqual(0);
+    expect(typeof resumo.notaMedia).toBe('number');
+    expect(Array.isArray(resumo.porRisco)).toBe(true);
+    expect(resumo.porRisco.length).toBe(4);
+    expect(Array.isArray(resumo.porTipo)).toBe(true);
+    expect(Array.isArray(resumo.porAnalista)).toBe(true);
+    expect(Array.isArray(resumo.porCliente)).toBe(true);
+    expect(resumo.porRisco.reduce((s, r) => s + r.total, 0)).toBeLessThanOrEqual(resumo.totalAuditados);
+  });
+
+  it('exporta CSV da auditoria com colunas', async () => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        externalId: `aud7-${Date.now()}-${Math.random()}`,
+        contactName: 'Cliente Audit 7',
+        contactPhone: '85999998807',
+        status: 'fechado',
+        etapa: 'concluido',
+        canal: 'whatsapp_baileys',
+        dataFechamento: new Date(),
+        motivoStatus: 'encerrado_sem_resolucao',
+      },
+    });
+    ticketsIds.push(ticket.id);
+
+    const auditoria = await auditarEncerramento(ticket.id, false);
+    const csv = exportarAuditoriaCsv([auditoria]);
+
+    expect(csv).toContain('Protocolo;Analista;Cliente');
+    expect(csv).toContain('encerrado_sem_resolucao');
+    expect(csv).toContain(auditoria.riscoReabertura);
   });
 });

@@ -21,6 +21,7 @@ const SignPage = lazy(() => import('./pages/Sign/SignPage'));
 const AprovacaoPublica = lazy(() => import('./pages/Aprovacoes/AprovacaoPublica'));
 const RelatorioGerencial = lazy(() => import('./pages/Analytics/RelatorioGerencial'));
 const DashboardExecutivo = lazy(() => import('./pages/Analytics/DashboardExecutivo'));
+const RelatorioAnalitico = lazy(() => import('./pages/Analytics/RelatorioAnalitico'));
 const WhatsAppPage = lazy(() => import('./pages/WhatsApp/WhatsAppPage'));
 const TicketDetail = lazy(() => import('./pages/WhatsApp/TicketDetail'));
 const KanbanPage = lazy(() => import('./pages/Kanban/KanbanPage'));
@@ -118,6 +119,7 @@ export default function App() {
             <Route path="helpdesk/aprovacoes" element={<Aprovacoes />} />
             <Route path="relatorios/gerencial" element={<RelatorioGerencial />} />
             <Route path="relatorios/executivo" element={<DashboardExecutivo />} />
+            <Route path="relatorios/analitico" element={<RelatorioAnalitico />} />
             <Route path="kb" element={<KBList />} />
             <Route path="automations" element={<AutomationsPage />} />
             <Route path="timetracking" element={<TimeTrackingPage />} />
