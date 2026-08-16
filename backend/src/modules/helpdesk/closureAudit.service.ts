@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { callClaude, hasClaude } from '../../shared/aiClient';
 import { WHERE_TICKET_RESOLVIDO, MOTIVO_ENCERRADO_SEM_RESOLUCAO } from '../helpdesk/constants';
+import ExcelJS from 'exceljs';
 
 // ── Interfaces ─────────────────────────────────────────────────
 
@@ -335,6 +336,10 @@ export interface FiltroAuditoria {
   tipo?: string;
   assigneeId?: string;
   clienteId?: string;
+  departamentoId?: string;
+  categoria?: string;
+  prioridade?: string;
+  status?: string;
   limit?: number;
 }
 
@@ -351,6 +356,10 @@ export async function listarTicketsEncerrados(filtro: FiltroAuditoria = {}) {
   }
   if (filtro.assigneeId) where.assigneeId = filtro.assigneeId;
   if (filtro.clienteId) where.clientId = filtro.clienteId;
+  if (filtro.departamentoId) where.departamentoId = filtro.departamentoId;
+  if (filtro.categoria) where.categoria = filtro.categoria;
+  if (filtro.prioridade) where.prioridade = filtro.prioridade;
+  if (filtro.status) where.status = filtro.status;
 
   const tickets = await prisma.ticket.findMany({
     where,
@@ -531,4 +540,78 @@ export function exportarAuditoriaCsv(auditados: AuditoriaEncerramento[]): string
     ].join(';'));
   }
   return linhas.join('\r\n');
+}
+
+// ── Exportação Excel (exceljs) ─────────────────────────────────
+
+export async function exportarAuditoriaExcel(auditados: AuditoriaEncerramento[], resumo: ResumoAuditoria): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Codemed Hub';
+  wb.created = new Date();
+
+  const wsResumo = wb.addWorksheet('Resumo');
+  wsResumo.addRow(['Auditoria de Encerramento']).eachCell(cell => {
+    cell.font = { bold: true, size: 16, color: { argb: 'FF0F172A' } };
+  });
+  wsResumo.addRow([`Gerado em: ${new Date().toISOString()}`]);
+  const indicadores: [string, any][] = [
+    ['Tickets auditados', resumo.totalAuditados],
+    ['Encerramentos prematuros', resumo.prematuros],
+    ['Resoluções reais', resumo.resolucoesReais],
+    ['Reaberturas', resumo.reaberturas],
+    ['Taxa de encerramento correto (%)', resumo.taxaEncerramentoCorreto],
+    ['Sem confirmação', resumo.semConfirmacao],
+    ['Problemas não resolvidos', resumo.problemaNaoResolvido],
+    ['Nota média', resumo.notaMedia],
+  ];
+  wsResumo.addRow([]);
+  wsResumo.addRow(['Indicador', 'Valor']).eachCell(cell => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+  });
+  for (const [label, valor] of indicadores) wsResumo.addRow([label, valor]);
+  wsResumo.getColumn(1).width = 45;
+  wsResumo.getColumn(2).width = 20;
+
+  const wsRisco = wb.addWorksheet('Risco de Reabertura');
+  wsRisco.addRow(['Risco', 'Total']).eachCell(cell => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+  });
+  for (const r of resumo.porRisco) wsRisco.addRow([r.risco, r.total]);
+
+  const wsAnalista = wb.addWorksheet('Por Analista');
+  wsAnalista.addRow(['Analista', 'Auditados', 'Prematuros', 'Resoluções', 'Reaberturas', 'Nota média']).eachCell(cell => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+  });
+  for (const a of resumo.porAnalista) {
+    wsAnalista.addRow([a.analista, a.auditados, a.prematuros, a.resolucoesReais, a.reaberturas, a.notaMedia]);
+  }
+
+  const wsDetalhe = wb.addWorksheet('Detalhamento');
+  wsDetalhe.addRow(['Protocolo', 'Cliente', 'Analista', 'Data fechamento', 'Tipo', 'Risco', 'Nota', 'Sem confirmação', 'Motivo status', 'Cliente voltou', 'CSAT', 'Diagnóstico']).eachCell(cell => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+  });
+  for (const a of auditados) {
+    wsDetalhe.addRow([
+      a.protocolo || '',
+      a.clienteNome || '',
+      a.assigneeName || '',
+      a.dataFechamento ? a.dataFechamento.toISOString().slice(0, 10) : '',
+      a.tipo,
+      a.riscoReabertura,
+      a.nota,
+      a.semConfirmacao ? 'sim' : 'não',
+      a.motivoStatus || '',
+      a.clienteVoltou ? 'sim' : 'não',
+      a.csatNota ? String(a.csatNota) : '',
+      (a.diagnostico || '').replace(/;/g, ','),
+    ]);
+  }
+  wsDetalhe.getColumn(12).width = 60;
+
+  const buffer = await wb.xlsx.writeBuffer();
+  return Buffer.from(buffer);
 }

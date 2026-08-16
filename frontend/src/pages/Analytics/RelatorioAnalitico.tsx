@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import {
-  RefreshCw, Download, FileText, Printer, TrendingUp, TrendingDown, Clock,
+  RefreshCw, Download, FileText, FileSpreadsheet, Printer, TrendingUp, TrendingDown, Clock,
   CheckCircle, Star, Zap, Users, Building2, FolderOpen, Layers, Loader2, Timer, Cpu, Rocket, Calendar,
 } from 'lucide-react';
 import {
@@ -188,7 +188,7 @@ export default function RelatorioAnalitico() {
     setFiltros({ dias: 30, inicio: '', fim: '', filaId: '', canal: '', prioridade: '', status: '', departamentoId: '', analistaId: '', clienteId: '', categoria: '', assunto: '' });
   };
 
-  const urlExportar = (tipo: 'csv' | 'pdf') => {
+  const urlExportar = (tipo: 'csv' | 'pdf' | 'excel') => {
     const params = new URLSearchParams(montarParams(filtros));
     return `${window.location.origin}/api/analytics/relatorios/${tipo}?${params.toString()}`;
   };
@@ -243,6 +243,13 @@ export default function RelatorioAnalitico() {
             style={{ fontFamily: 'Lexend, sans-serif' }}
           >
             <Download size={14} /> CSV
+          </button>
+          <button
+            onClick={() => window.open(urlExportar('excel'), '_blank')}
+            className="flex items-center gap-2 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            style={{ fontFamily: 'Lexend, sans-serif' }}
+          >
+            <FileSpreadsheet size={14} /> Excel
           </button>
           <button
             onClick={() => window.open(urlExportar('pdf'), '_blank')}

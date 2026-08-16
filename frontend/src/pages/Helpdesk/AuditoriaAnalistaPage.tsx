@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import {
-  Loader2, User, FileText, Calendar, Star, Clock, RefreshCw, MessageSquare,
-  CheckCircle, AlertTriangle, XCircle, Sparkles, Play, Eye,
+  Loader2, User, FileText, Calendar, Star, Clock, MessageSquare,
+  CheckCircle, AlertTriangle, Sparkles, Play,
 } from 'lucide-react';
+import ReportActions from '../../components/reports/ReportActions';
+import ReportKpiCard from '../../components/reports/ReportKpiCard';
 
 interface TicketResumo {
   ticketId: string;
@@ -188,7 +190,7 @@ export default function AuditoriaAnalistaPage() {
             Relatório individual com replay de conversa
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={fila}
             onChange={(e) => setFila(e.target.value)}
@@ -205,11 +207,7 @@ export default function AuditoriaAnalistaPage() {
             style={{ fontFamily: 'Lexend, sans-serif' }}>
             {analistas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
-          <button onClick={carregarRelatorio}
-            className="flex items-center gap-2 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-            style={{ fontFamily: 'Lexend, sans-serif' }}>
-            <RefreshCw size={14} /> Atualizar
-          </button>
+          <ReportActions onRefresh={carregarRelatorio} onPrint={() => window.print()} />
         </div>
       </div>
 
@@ -239,21 +237,9 @@ export default function AuditoriaAnalistaPage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
-            {cards.map(c => {
-              const Icon = c.icon;
-              return (
-                <div key={c.label} className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
-                  <div className="flex items-center justify-between">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.cor}`}><Icon size={18} /></div>
-                    {c.extra && <span className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>{c.extra}</span>}
-                  </div>
-                  <div className="mt-3">
-                    <div className="text-xl font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{c.valor}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>{c.label}</div>
-                  </div>
-                </div>
-              );
-            })}
+            {cards.map(c => (
+              <ReportKpiCard key={c.label} label={c.label} valor={c.extra ? `${c.valor} · ${c.extra}` : c.valor} icon={c.icon} cor={c.cor} />
+            ))}
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">

@@ -35,6 +35,7 @@ import {
   getAuditarLote,
   getResumoAuditoria,
   getExportarAuditoria,
+  getExportarAuditoriaExcel,
 } from './closureAudit.controller';
 import { getRelatorioAnalista, getReplayAnalista } from './agentReport.controller';
 import {
@@ -122,6 +123,7 @@ router.get('/closure-audit/resumo', authorize('admin', 'gerente'), getResumoAudi
 router.get('/closure-audit/encerrados', authorize('admin', 'gerente'), getListarEncerrados);
 router.get('/closure-audit/lote', authorize('admin', 'gerente'), getAuditarLote);
 router.get('/closure-audit/exportar', authorize('admin', 'gerente'), getExportarAuditoria);
+router.get('/closure-audit/exportar-excel', authorize('admin', 'gerente'), getExportarAuditoriaExcel);
 router.get('/closure-audit/:id', authorize('admin', 'gerente'), getAuditarEncerramento);
 
 // ── Auditoria individual por analista (relatório + replay de conversa) ──

@@ -23,6 +23,14 @@ Legenda status: ⏳ pendente · 🔧 em andamento · ✅ concluído · ⛔ bloqu
 | 11 | Testes finais integrados (regressão completa) | Alta | ✅ |
 | 12 | Ajustes finais de fluxo, relatórios e auditoria | Alta | 🔧 |
 
+## Gestão Unificada (componentes globais de relatórios)
+
+- [x] **Backend — Excel**: `exceljs ^4.4.0` instalado; `gerarExcelRelatorio` + helpers `estiloCabecalho`/`adicionarSecao` em `relatorios.service.ts`; `getRelatorioExcel` no controller; rota `GET /api/analytics/relatorios/excel` (admin/gerente).
+- [x] **Backend — Auditoria filtros + Excel**: `FiltroAuditoria` estendido (`departamentoId`, `categoria`, `prioridade`, `status`) aplicado em `listarTicketsEncerrados`/lote/resumo; `parseFiltro` do closure-audit estendido; `exportarAuditoriaExcel` (resumo + detalhe) em `closureAudit.service.ts`; `getExportarAuditoriaExcel` + rota `GET /helpdesk/closure-audit/exportar-excel` (admin/gerente).
+- [x] **Frontend — componentes globais** `src/components/reports/`: `ReportFilters` (período Hoje/7/14/30/90 + datas personalizadas, filtros fila/canal/prioridade/status/departamento/analista/cliente/categoria/assunto, contador de filtros ativos + "Limpar filtros"), `ReportKpiCard`, `DeltaPill`, `ReportActions` (Atualizar/CSV/Excel/PDF/Imprimir). CSS `@media print` no `index.css` (oculta aside/header, quebra de página).
+- [x] **Aplicação do padrão**: `AuditoriaEncerramentoPage` (filtros completos ponta a ponta + Excel/print via `ReportActions`), `AuditoriaAnalistaPage` (KPI cards + print), `RelatorioAnalitico` (botão Excel), `TimeTrackingPage` (botão print).
+- [x] Testes novos: Excel relatório (buffer PK) + filtros auditoria (prioridade/categoria) + Excel auditoria. Backend **377 pass / 1 fail pré-existente time-dependent** (TESTE #31 expediente — falha só quando executa fora do horário real, ex. sábado 21h; não relacionado), tsc backend 20 pré-existentes (0 novos), frontend tsc 0, frontend 5/5.
+
 ## Histórico de mudanças
 
 | Data | Fase | Descrição | Resultado |

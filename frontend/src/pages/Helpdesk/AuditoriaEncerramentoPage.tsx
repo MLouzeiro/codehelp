@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import {
-  Loader2, AlertTriangle, CheckCircle, RotateCcw, Search, RefreshCw,
+  Loader2, AlertTriangle, CheckCircle, RotateCcw, Search,
   ShieldAlert, Star, FileText, Calendar, User, MessageSquare, Sparkles,
-  Download, Gauge,
+  Gauge,
 } from 'lucide-react';
+import ReportActions from '../../components/reports/ReportActions';
+import ReportKpiCard from '../../components/reports/ReportKpiCard';
+import ReportFilters, { FiltrosBase, FILTROS_LIMPOS, FiltroOpcoes } from '../../components/reports/ReportFilters';
 
 interface TicketEncerrado {
   id: string;
@@ -103,14 +106,40 @@ export default function AuditoriaEncerramentoPage() {
   const [busca, setBusca] = useState('');
   const [auditorias, setAuditorias] = useState<Record<string, Auditoria>>({});
   const [ticketAberto, setTicketAberto] = useState<Auditoria | null>(null);
+  const [opcoes, setOpcoes] = useState<FiltroOpcoes | null>(null);
+  const [filtros, setFiltros] = useState<FiltrosBase>(FILTROS_LIMPOS);
 
-  const carregar = useCallback(async () => {
+  useEffect(() => {
+    api.get('/analytics/relatorios/opcoes')
+      .then(({ data }) => setOpcoes(data))
+      .catch(() => {});
+  }, []);
+
+  const montarParams = useCallback((f: FiltrosBase) => {
+    const params: Record<string, string> = { limit: '100' };
+    const fim = f.fim || new Date().toISOString();
+    if (f.inicio) {
+      params.dataInicio = new Date(f.inicio).toISOString();
+      params.dataFim = new Date(fim).toISOString();
+    }
+    if (f.filaId) params.filaId = f.filaId;
+    if (f.canal) params.canal = f.canal;
+    if (f.prioridade) params.prioridade = f.prioridade;
+    if (f.status) params.status = f.status;
+    if (f.departamentoId) params.departamentoId = f.departamentoId;
+    if (f.analistaId) params.assigneeId = f.analistaId;
+    if (f.clienteId) params.clienteId = f.clienteId;
+    if (f.categoria) params.categoria = f.categoria;
+    return params;
+  }, []);
+
+  const carregar = useCallback(async (f: FiltrosBase) => {
     setLoading(true);
     setError('');
     try {
       const [ticketsRes, resumoRes] = await Promise.all([
-        api.get('/helpdesk/closure-audit/encerrados', { params: { limit: 50 } }),
-        api.get('/helpdesk/closure-audit/resumo', { params: { limit: 100 } }),
+        api.get('/helpdesk/closure-audit/encerrados', { params: montarParams(f) }),
+        api.get('/helpdesk/closure-audit/resumo', { params: montarParams(f) }),
       ]);
       setTickets(ticketsRes.data || []);
       setResumo(resumoRes.data);
@@ -119,9 +148,9 @@ export default function AuditoriaEncerramentoPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [montarParams]);
 
-  useEffect(() => { carregar(); }, [carregar]);
+  useEffect(() => { carregar(filtros); }, [carregar, filtros]);
 
   const auditarTicket = async (ticketId: string) => {
     setError('');
@@ -138,17 +167,23 @@ export default function AuditoriaEncerramentoPage() {
     setAuditando(true);
     setError('');
     try {
-      const { data } = await api.get('/helpdesk/closure-audit/lote', { params: { limit: 50 } });
+      const { data } = await api.get('/helpdesk/closure-audit/lote', { params: montarParams(filtros) });
       const map: Record<string, Auditoria> = {};
       data.auditados.forEach((a: Auditoria) => { map[a.ticketId] = a; });
       setAuditorias(map);
-      const resumoRes = await api.get('/helpdesk/closure-audit/resumo', { params: { limit: 100 } });
+      const resumoRes = await api.get('/helpdesk/closure-audit/resumo', { params: montarParams(filtros) });
       setResumo(resumoRes.data);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao auditar lote');
     } finally {
       setAuditando(false);
     }
+  };
+
+  const urlExportar = (tipo: 'csv' | 'excel') => {
+    const params = new URLSearchParams(montarParams({ ...filtros, dias: 0 }));
+    params.set('limit', '500');
+    return `${window.location.origin}/api/helpdesk/closure-audit/${tipo === 'csv' ? 'exportar' : 'exportar-excel'}?${params.toString()}`;
   };
 
   const ticketsFiltrados = tickets.filter(t =>
@@ -188,20 +223,15 @@ export default function AuditoriaEncerramentoPage() {
             Detecta encerramento prematuro, resolução real e reabertura por IA
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <a
-            href={`${api.defaults.baseURL || ''}/helpdesk/closure-audit/exportar?limit=500`}
-            className="flex items-center gap-2 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-            style={{ fontFamily: 'Lexend, sans-serif' }}>
-            <Download size={14} /> Exportar CSV
-          </a>
-          <button onClick={carregar}
-            className="flex items-center gap-2 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-            style={{ fontFamily: 'Lexend, sans-serif' }}>
-            <RefreshCw size={14} /> Atualizar
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <ReportActions
+            onRefresh={() => carregar(filtros)}
+            onCsv={() => window.open(urlExportar('csv'), '_blank')}
+            onExcel={() => window.open(urlExportar('excel'), '_blank')}
+            onPrint={() => window.print()}
+          />
           <button onClick={auditarLote} disabled={auditando}
-            className="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors print:hidden"
             style={{ fontFamily: 'Lexend, sans-serif' }}>
             {auditando ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
             Auditar Lote (IA)
@@ -209,26 +239,16 @@ export default function AuditoriaEncerramentoPage() {
         </div>
       </div>
 
+      <ReportFilters opcoes={opcoes} filtros={filtros} onChange={setFiltros} />
+
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-sm" style={{ fontFamily: 'Lexend, sans-serif' }}>{error}</div>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {resumoCards.map(c => {
-          const Icon = c.icon;
-          return (
-            <div key={c.label} className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
-              <div className="flex items-center justify-between">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.cor}`}><Icon size={18} /></div>
-                {c.extra && <span className="text-lg font-bold text-slate-400 dark:text-slate-500" style={{ fontFamily: 'Khand, sans-serif' }}>{c.extra}</span>}
-              </div>
-              <div className="mt-3">
-                <div className="text-xl font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{c.valor}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>{c.label}</div>
-              </div>
-            </div>
-          );
-        })}
+        {resumoCards.map(c => (
+          <ReportKpiCard key={c.label} label={c.label} valor={c.extra ? `${c.valor} · ${c.extra}` : c.valor} icon={c.icon} cor={c.cor} />
+        ))}
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">

@@ -6,11 +6,12 @@ import {
   resumoAuditoriaEncerramentos,
   listarTicketsEncerrados,
   exportarAuditoriaCsv,
+  exportarAuditoriaExcel,
   FiltroAuditoria,
 } from './closureAudit.service';
 
 export function parseFiltro(req: AuthRequest): FiltroAuditoria {
-  const { dataInicio, dataFim, assigneeId, clienteId, limit } = req.query;
+  const { dataInicio, dataFim, assigneeId, clienteId, departamentoId, categoria, prioridade, status, limit } = req.query;
   let inicio: Date | undefined;
   let fim: Date | undefined;
   if (dataInicio) {
@@ -31,6 +32,10 @@ export function parseFiltro(req: AuthRequest): FiltroAuditoria {
     dataFim: fim,
     assigneeId: assigneeId as string | undefined,
     clienteId: clienteId as string | undefined,
+    departamentoId: departamentoId as string | undefined,
+    categoria: categoria as string | undefined,
+    prioridade: prioridade as string | undefined,
+    status: status as string | undefined,
     limit: limite,
   };
 }
@@ -84,5 +89,20 @@ export async function getExportarAuditoria(req: AuthRequest, res: Response) {
     res.send(`\uFEFF${csv}`);
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Erro ao exportar auditoria' });
+  }
+}
+
+export async function getExportarAuditoriaExcel(req: AuthRequest, res: Response) {
+  try {
+    const filtro = parseFiltro(req);
+    if (!filtro.limit) filtro.limit = 500;
+    const { auditados } = await auditarLoteEncerramentos(filtro);
+    const resumo = await resumoAuditoriaEncerramentos(filtro);
+    const buffer = await exportarAuditoriaExcel(auditados, resumo);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="auditoria-encerramento.xlsx"');
+    res.send(buffer);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Erro ao exportar auditoria Excel' });
   }
 }

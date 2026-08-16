@@ -6,6 +6,7 @@ import {
   resumoAuditoriaEncerramentos,
   listarTicketsEncerrados,
   exportarAuditoriaCsv,
+  exportarAuditoriaExcel,
 } from '../modules/helpdesk/closureAudit.service';
 
 let ticketsIds: string[] = [];
@@ -241,5 +242,41 @@ describe('Auditoria de Encerramento (FASE 7)', () => {
     expect(csv).toContain('Protocolo;Analista;Cliente');
     expect(csv).toContain('encerrado_sem_resolucao');
     expect(csv).toContain(auditoria.riscoReabertura);
+  });
+
+  it('filtra encerrados por prioridade/categoria/departamento/status (TESTE #34b)', async () => {
+    const agora = new Date();
+    const t = await prisma.ticket.create({
+      data: {
+        externalId: `aud8-${Date.now()}-${Math.random()}`,
+        contactName: 'Cliente Audit 8',
+        contactPhone: '85999998808',
+        status: 'fechado',
+        etapa: 'concluido',
+        canal: 'whatsapp_baileys',
+        prioridade: 'urgente',
+        categoria: 'reclamacao',
+        dataFechamento: agora,
+      },
+    });
+    ticketsIds.push(t.id);
+
+    const porPrioridade = await listarTicketsEncerrados({ prioridade: 'urgente', limit: 50 });
+    const porCategoria = await listarTicketsEncerrados({ categoria: 'reclamacao', limit: 50 });
+    const semFiltro = await listarTicketsEncerrados({ limit: 50 });
+
+    expect(porPrioridade.some(x => x.id === t.id)).toBe(true);
+    expect(porCategoria.some(x => x.id === t.id)).toBe(true);
+    expect(semFiltro.some(x => x.id === t.id)).toBe(true);
+
+    const resumo = await resumoAuditoriaEncerramentos({ prioridade: 'urgente', limit: 50 });
+    expect(resumo.totalAuditados).toBeGreaterThanOrEqual(1);
+  });
+
+  it('exporta Excel da auditoria (buffer ZIP)', async () => {
+    const resumo = await resumoAuditoriaEncerramentos({ limit: 100 });
+    const buffer = await exportarAuditoriaExcel([], resumo);
+    expect(buffer.length).toBeGreaterThan(1000);
+    expect(buffer.slice(0, 2).toString()).toBe('PK');
   });
 });

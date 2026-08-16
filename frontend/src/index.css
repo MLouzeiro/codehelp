@@ -298,3 +298,32 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+@media print {
+  aside,
+  header,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body,
+  html {
+    background: #ffffff !important;
+  }
+
+  .flex.h-screen,
+  .flex-1 {
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .max-w-\[1400px\],
+  .max-w-7xl {
+    max-width: 100% !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

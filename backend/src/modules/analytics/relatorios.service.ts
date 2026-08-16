@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import PDFDocument from 'pdfkit';
+import ExcelJS from 'exceljs';
 import prisma from '../../config/database';
 import {
   WHERE_TICKET_RESOLVIDO,
@@ -680,4 +681,90 @@ export function gerarPdfRelatorio(dados: RelatorioAnalitico): Promise<Buffer> {
 
     doc.end();
   });
+}
+
+// ── Exportação Excel (exceljs) ──────────────────────────────────────────
+
+function estiloCabecalho(ws: ExcelJS.Worksheet, colunas: string[]) {
+  ws.addRow(colunas).eachCell(cell => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+    cell.alignment = { vertical: 'middle' };
+  });
+  const lastRow = ws.lastRow;
+  if (lastRow) lastRow.height = 20;
+}
+
+function adicionarSecao(ws: ExcelJS.Worksheet, titulo: string, colunas: string[], itens: any[]) {
+  ws.addRow([]);
+  ws.addRow([titulo]).eachCell(cell => {
+    cell.font = { bold: true, size: 12, color: { argb: 'FF0F172A' } };
+  });
+  if (itens.length === 0) return;
+  estiloCabecalho(ws, colunas);
+  for (const item of itens) {
+    ws.addRow(colunas.map(c => item[c] ?? ''));
+  }
+  ws.getColumn(1).width = 40;
+}
+
+export async function gerarExcelRelatorio(dados: RelatorioAnalitico): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Codemed Hub';
+  wb.created = new Date();
+
+  // Planilha 1 — Resumo
+  const wsResumo = wb.addWorksheet('Resumo');
+  wsResumo.addRow(['Relatório Analítico']).eachCell(cell => {
+    cell.font = { bold: true, size: 16, color: { argb: 'FF0F172A' } };
+  });
+  wsResumo.addRow([`Período: ${dados.periodo.label}`]);
+  wsResumo.addRow([`Gerado em: ${dados.atualizadoEm}`]);
+  const r = dados.resumo;
+  const indicadores: [string, any][] = [
+    ['Total de tickets', r.totalTickets],
+    ['Resolvidos', r.ticketsFechados],
+    ['Abertos', r.ticketsAbertos],
+    ['Taxa de resolução (%)', r.taxaResolucao],
+    ['Tempo médio de resposta (min)', r.tempoMedioRespostaMin],
+    ['Tempo médio de resolução (h)', r.tempoMedioResolucaoH],
+    ['SLA cumprido (%)', r.taxaSla],
+    ['CSAT médio', r.csatMedio],
+    ['FCR (%)', r.fcr],
+    ['Horas de desenvolvimento', dados.horasDev?.totalH ?? 0],
+    ['Implantações', dados.implantacoes?.total ?? 0],
+  ];
+  adicionarSecao(wsResumo, 'Indicadores', ['Indicador', 'Valor'], indicadores.map(([label, valor]) => ({ Indicador: label, Valor: valor })));
+
+  // Planilha 2 — Tendência diária
+  const wsDia = wb.addWorksheet('Tendência Diária');
+  adicionarSecao(wsDia, 'Tickets por dia', ['dia', 'total', 'fechados'], dados.tendenciaDiaria);
+
+  // Planilha 3 — Distribuições
+  const wsDist = wb.addWorksheet('Distribuição');
+  adicionarSecao(wsDist, 'Por canal', ['valor', 'total'], dados.porCanal);
+  adicionarSecao(wsDist, 'Por prioridade', ['valor', 'total'], dados.porPrioridade);
+  adicionarSecao(wsDist, 'Por status', ['valor', 'total'], dados.porStatus);
+  adicionarSecao(wsDist, 'Por categoria', ['valor', 'total', 'fechados'], dados.porCategoria);
+  adicionarSecao(wsDist, 'Por departamento', ['valor', 'total', 'fechados'], dados.porDepartamento);
+  adicionarSecao(wsDist, 'Por fila', ['valor', 'total', 'fechados'], dados.porFila);
+  adicionarSecao(wsDist, 'Por assunto', ['valor', 'total'], dados.porAssunto);
+
+  // Planilha 4 — Analistas
+  const wsAnalistas = wb.addWorksheet('Analistas');
+  adicionarSecao(wsAnalistas, 'Por analista', ['valor', 'atendidos', 'fechados', 'tempoMedioMin', 'csatMedio'], dados.porAnalista);
+
+  // Planilha 5 — Clientes
+  const wsClientes = wb.addWorksheet('Clientes');
+  adicionarSecao(wsClientes, 'Por cliente', ['valor', 'total', 'fechados'], dados.porCliente);
+
+  // Planilha 6 — Tempo
+  const wsTempo = wb.addWorksheet('Tempo');
+  adicionarSecao(wsTempo, 'Tempo por tipo', ['valor', 'totalMin', 'qtd'], dados.tempoPorTipo);
+  adicionarSecao(wsTempo, 'Tempo por departamento', ['valor', 'totalMin'], dados.tempoPorDepartamento);
+  adicionarSecao(wsTempo, 'Desenvolvimento', ['totalH', 'porTicket'], [{ totalH: dados.horasDev?.totalH ?? 0, porTicket: dados.horasDev?.porTicket ?? 0 }]);
+  adicionarSecao(wsTempo, 'Implantação', ['total', 'concluidas', 'mediaHorasDev', 'horasSuporteTotal'], [dados.implantacoes ?? {}]);
+
+  const buffer = await wb.xlsx.writeBuffer();
+  return Buffer.from(buffer);
 }

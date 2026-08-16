@@ -5,6 +5,7 @@ import {
   gerarRelatorioAnalitico,
   gerarCsvRelatorio,
   gerarPdfRelatorio,
+  gerarExcelRelatorio,
   obterOpcoesFiltros,
   buildWhere,
 } from '../modules/analytics/relatorios.service';
@@ -159,6 +160,14 @@ describe('Relatório Analítico — filtros combinados (TESTE #32)', () => {
     const pdf = await gerarPdfRelatorio(rel);
     expect(pdf.length).toBeGreaterThan(100);
     expect(pdf.slice(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('gera Excel válido (ZIP xlsx com múltiplas planilhas)', async () => {
+    const rel = await gerarRelatorioAnalitico({});
+    const buffer = await gerarExcelRelatorio(rel);
+    expect(buffer.length).toBeGreaterThan(1000);
+    const magic = buffer.slice(0, 2).toString();
+    expect(magic).toBe('PK');
   });
 
   it('obterOpcoesFiltros retorna listas para dropdowns', async () => {

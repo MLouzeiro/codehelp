@@ -4,6 +4,7 @@ import {
   gerarRelatorioAnalitico,
   gerarCsvRelatorio,
   gerarPdfRelatorio,
+  gerarExcelRelatorio,
   obterOpcoesFiltros,
   RelatorioFiltros,
 } from './relatorios.service';
@@ -69,6 +70,20 @@ export async function getRelatorioPdf(req: AuthRequest, res: Response) {
   } catch (err: any) {
     console.error('[Relatorios] Erro ao exportar PDF:', err?.message || err);
     res.status(500).json({ error: 'Erro ao exportar PDF' });
+  }
+}
+
+export async function getRelatorioExcel(req: AuthRequest, res: Response) {
+  try {
+    const filtros = parseFiltros(req.query);
+    const dados = await gerarRelatorioAnalitico(filtros);
+    const buffer = await gerarExcelRelatorio(dados);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="relatorio-${dados.periodo.dias}d.xlsx"`);
+    res.send(buffer);
+  } catch (err: any) {
+    console.error('[Relatorios] Erro ao exportar Excel:', err?.message || err);
+    res.status(500).json({ error: 'Erro ao exportar Excel' });
   }
 }
 

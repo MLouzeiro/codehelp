@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Play, Pause, Clock, Plus, Trash2, Filter, Download,
+  Play, Pause, Clock, Plus, Trash2, Filter, Download, Printer,
   Calendar, User, Tag, FileText, CheckCircle2, Timer,
   BarChart3, TrendingUp, DollarSign,
 } from 'lucide-react';
@@ -232,6 +232,12 @@ export default function TimeTrackingPage() {
           <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Registre suas horas de desenvolvimento e implantação</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.print()}
+            className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${isDark ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+          >
+            <Printer size={16} /> Imprimir
+          </button>
           <button
             onClick={toggleConsumption}
             className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${showConsumption ? 'bg-blue-600 border-blue-600 text-white' : isDark ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
