@@ -53,6 +53,8 @@ const AuditStatsPage = lazy(() => import('./pages/Helpdesk/AuditStatsPage'));
 const AuditoriaAtendimento = lazy(() => import('./pages/Helpdesk/AuditoriaAtendimento'));
 const AuditoriaEncerramentoPage = lazy(() => import('./pages/Helpdesk/AuditoriaEncerramentoPage'));
 const AuditoriaAnalistaPage = lazy(() => import('./pages/Helpdesk/AuditoriaAnalistaPage'));
+const AuditoriaProfissionalPage = lazy(() => import('./pages/Helpdesk/AuditoriaProfissionalPage'));
+const TomadaDecisaoPage = lazy(() => import('./pages/Helpdesk/TomadaDecisaoPage'));
 const Aprovacoes = lazy(() => import('./pages/Helpdesk/Aprovacoes'));
 const KBList = lazy(() => import('./pages/KB/KBList'));
 const AutomationsPage = lazy(() => import('./pages/Automations/AutomationsPage'));
@@ -116,6 +118,8 @@ export default function App() {
             <Route path="helpdesk/auditoria-ia" element={<AuditoriaAtendimento />} />
             <Route path="helpdesk/auditoria-encerramento" element={<AuditoriaEncerramentoPage />} />
             <Route path="helpdesk/auditoria-analista" element={<AuditoriaAnalistaPage />} />
+            <Route path="helpdesk/auditoria-profissional" element={<AuditoriaProfissionalPage />} />
+            <Route path="helpdesk/tomada-decisao" element={<TomadaDecisaoPage />} />
             <Route path="helpdesk/aprovacoes" element={<Aprovacoes />} />
             <Route path="relatorios/gerencial" element={<RelatorioGerencial />} />
             <Route path="relatorios/executivo" element={<DashboardExecutivo />} />

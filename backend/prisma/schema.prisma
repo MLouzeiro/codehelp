@@ -25,6 +25,8 @@ model User {
   updatedAt             DateTime            @default(now())
   aiCorrections         AICorrection[]
   aiAgentAudits         AIAgentAudit[]
+  auditoriasAgente      AuditoriaProfissional[]  @relation("AuditoriaAgente")
+  auditoriasRevisadas   AuditoriaProfissional[]  @relation("AuditoriaRevisor")
   aprovacoesDecididas   Aprovacao[]         @relation("AprovacaoAprovador")
   aprovacoesSolicitadas Aprovacao[]         @relation("AprovacaoSolicitante")
   auditLogs             AuditLog[]
@@ -293,6 +295,7 @@ model Ticket {
   aiCorrections         AICorrection[]
   aiEvaluations         AIEvaluation[]
   aiAgentAudits         AIAgentAudit[]
+  auditoriasProfissionais AuditoriaProfissional[]
   aiValidacoes          AIRespostaValidacao[]
   aprovacoes            Aprovacao[]
   csatResposta          CSATResposta?
@@ -439,6 +442,87 @@ model AIAgentAudit {
   @@index([agentId])
   @@index([classificacao])
   @@index([processadoEm])
+}
+
+/// Auditoria profissional inteligente de atendimento por ticket
+/// 14 categorias 0-100, evidencias estruturadas, tomada de decisão e revisão humana.
+model AuditoriaProfissional {
+  id                        String   @id @default(uuid())
+  ticketId                  String
+  protocolo                 String?
+  contactName               String?
+  agenteId                  String?
+  clienteId                 String?
+  departamentoId            String?
+  categoria                 String?
+  status                    String   @default("PENDENTE") // PENDENTE | ANALISANDO | ANALISADO | REVISAR | ERRO
+  versao                    Int      @default(1)
+
+  // Notas 0-100 por categoria
+  notaComunicacao           Float    @default(0)
+  notaProfissionalismo      Float    @default(0)
+  notaEmpatia               Float    @default(0)
+  notaClareza               Float    @default(0)
+  notaFormalidade           Float    @default(0)
+  notaConhecimentoTecnico   Float    @default(0)
+  notaDiagnostico           Float    @default(0)
+  notaResolucao             Float    @default(0)
+  notaGestaoTempo           Float    @default(0)
+  notaProcesso              Float    @default(0)
+  notaEncerramento          Float    @default(0)
+  notaSeguranca             Float    @default(0)
+  notaResponsabilidade      Float    @default(0)
+  notaSatisfacaoCliente     Float    @default(0)
+  notaGeral                 Float    @default(0)
+
+  classificacao             String   @default("ATENCAO") // EXCELENTE | MUITO_BOM | BOM | ATENCAO | ABAIXO_DA_MEDIA | CRITICO
+  classificacaoResolucao    String   @default("SEM_CONFIRMACAO") // RESOLVIDO | PROVAVELMENTE_RESOLVIDO | PARCIALMENTE_RESOLVIDO | NAO_RESOLVIDO | SEM_CONFIRMACAO | REABERTO | TRANSFERIDO | PRECISOU_DE_DESENVOLVIMENTO | IMPLANTACAO | OUTRO_SETOR
+  classificacaoEncerramento String   @default("SEM_ENCERRAMENTO") // ADEQUADO | PARCIAL | INADEQUADO | SEM_ENCERRAMENTO
+  padrao                    String   @default("EVENTO_ISOLADO") // EVENTO_ISOLADO | PADRAO_RECORRENTE | PROBLEMA_FREQUENTE | PROBLEMA_CRITICO | PROBLEMA_SISTEMICO
+  confiancaMedia            Float    @default(0) // 0-100
+  analiseInconclusiva       Boolean  @default(false)
+
+  // Análises qualitativas
+  resumoExecutivo           String?
+  analiseQualitativa        String?
+  explicacaoLeiga           String?
+  evidenciaProblemas        String?  // JSON: [{descricao, trecho, autor, data, gravidade, impacto, confianca, categoria}]
+  pontosFortes              String?  // JSON: [{descricao, trecho, confianca}]
+  riscos                    String?  // JSON: [{tipo, descricao, gravidade, confianca}]
+  recomendacoes             String?  // JSON: [{descricao, prioridade, meta, acao}]
+  planoMelhoria             String?  // JSON: [{descricao, prazo, acompanhamento}]
+  alertas                   String?  // JSON: [{tipo, mensagem, gravidade}]
+  riscoInsatisfacao         String   @default("BAIXO") // BAIXO | MEDIO | ALTO | CRITICO
+  retrabalho                Boolean  @default(false)
+  custoOperacionalMin       Float?   // minutos estimados de retrabalho/custo
+  reaberto                  Boolean  @default(false)
+  numeroReaberturas         Int      @default(0)
+
+  // Revisão humana
+  revisaoStatus             String?  // CONFIRMADO | DISCORDO | REVISAR | NAO_SE_APLICA
+  revisaoJustificativa      String?
+  revisadoPorId             String?
+  revisadoEm                DateTime?
+
+  modeloUsado               String?
+  custoTokens               Float?
+  auditadoEm                DateTime @default(now())
+  analisadoEm               DateTime?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @default(now())
+
+  ticket                    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  agente                    User?    @relation("AuditoriaAgente", fields: [agenteId], references: [id])
+  revisadoPor               User?    @relation("AuditoriaRevisor", fields: [revisadoPorId], references: [id])
+
+  @@index([ticketId])
+  @@index([agenteId])
+  @@index([clienteId])
+  @@index([departamentoId])
+  @@index([categoria])
+  @@index([status])
+  @@index([classificacao])
+  @@index([auditadoEm])
 }
 
 model Message {

@@ -461,6 +461,16 @@ export async function encerrarTicket(ticketId: string, params: EncerrarTicketPar
     );
   }
 
+  // Auditoria contínua: ao encerrar um ticket com fluxo completo, dispara a
+  // auditoria profissional inteligente em background (fire-and-forget).
+  // Nunca quebra o fluxo — falha vira apenas log.
+  if (params.finalizarCsat || params.etapa === 'concluido') {
+    import('../ai/auditoriaProfissional.service')
+      .then((m) => m.auditarTicket(ticketId, true))
+      .then(() => {})
+      .catch((e) => console.warn('[FLOW] Auditoria profissional em background falhou:', e?.message || e));
+  }
+
   return { ok: true, ticket: updated };
 }
 

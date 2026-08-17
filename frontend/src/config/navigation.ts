@@ -73,6 +73,8 @@ export const NAV_GROUPS: NavGroup[] = [
           { path: '/app/helpdesk/auditoria-ia', label: 'Auditoria IA', icon: Brain, roles: ['admin', 'gerente'] },
           { path: '/app/helpdesk/auditoria-encerramento', label: 'Auditoria de Encerramento', icon: Brain, roles: ['admin', 'gerente'] },
           { path: '/app/helpdesk/auditoria-analista', label: 'Auditoria por Analista', icon: Brain, roles: ['admin', 'gerente'] },
+          { path: '/app/helpdesk/auditoria-profissional', label: 'Auditoria de Atendimentos', icon: Brain, roles: ['admin', 'gerente'] },
+          { path: '/app/helpdesk/tomada-decisao', label: 'Tomada de Decisão', icon: Brain, roles: ['admin', 'gerente'] },
         ],
       },
       {

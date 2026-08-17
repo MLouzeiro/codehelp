@@ -291,6 +291,14 @@ npx expo run:ios             # Build iOS
 - [x] Validação: `tsc --noEmit` sem erros nos arquivos editados; `npm test` 294/295 (única falha pré-existente: `csat.test.ts` espera "Pessimo" sem acento, mensagem usa "Péssimo")
 - [x] Nenhum commit feito — mudanças na working tree (branch `feature/helpdesk-enhancements`)
 
+### Auditoria IA Profissional — Completo (FASES A–F)
+- [x] **FASE A — Motor**: model `AuditoriaProfissional` (14 notas 0–100 + notaGeral, classificações, JSONs evidencia/pontos fortes/riscos/recomendações/plano/alertas, revisão humana, protocolo, contato) + `auditoriaProfissional.service.ts` com **guardrail anti-alucinação** `validarEvidencias` (descarta trechos inexistentes → alerta) e fallback local determinístico (`fallback-local` quando `hasClaude()` falso); rotas `/api/auditoria/*` (admin/gerente)
+- [x] **FASE B — Agregações**: `auditoriaAgregacao.service.ts` (panorama, ranking analistas, clientes risco, assuntos, evolução, padrões globais)
+- [x] **FASE C — Decisão**: `auditoriaDecisao.service.ts` (tomada de decisão 🟢🟡🔴, recomendações priorizadas, plano 7/30/60, metas, fila, auditoria por amostra) + **auditoria contínua** fire-and-forget em `flow.service.ts` `encerrarTicket` (nunca quebra fluxo)
+- [x] **FASE D — Relatórios**: `auditoriaRelatorio.service.ts` (INTERNO vs CLIENTE com confidencialidade, consolidado, CSV `;`+BOM, Excel exceljs)
+- [x] **FASE E — Frontend**: `AuditoriaProfissionalPage.tsx` (fila + filtros + modal com 14 categorias, trechos reais, revisão humana, exports blob) e `TomadaDecisaoPage.tsx` (saúde, resumo executivo, plano de ação, metas, foco por analista) — rotas + submenu
+- [x] **FASE F — Testes**: `auditoria-profissional.test.ts` (12 novos); Backend **389/390** (1 fail pré-existente TESTE #31 time-dependent), tsc 20 pré-existentes (0 novos), frontend tsc 0
+
 ### Próximos passos
 - [ ] Ordem de serviço (Orders)
 - [ ] Dark mode global (tema escuro para todo o sistema)
