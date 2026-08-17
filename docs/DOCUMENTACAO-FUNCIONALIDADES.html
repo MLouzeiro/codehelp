@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeHelp CRM/Helpdesk — Documentação de Funcionalidades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Khand:wght@400;600;700&family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F8FAFC;
+    --card: #FFFFFF;
+    --sidebar: #0F172A;
+    --border: #E2E8F0;
+    --primary: #2563EB;
+    --primary-light: #60A5FA;
+    --text: #1E293B;
+    --muted: #64748B;
+    --green: #10B981;
+    --red: #EF4444;
+    --amber: #F59E0B;
+    --violet: #8B5CF6;
+    --cyan: #06B6D4;
+    --pink: #EC4899;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    font-family:'Lexend',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:15px;
+    line-height:1.65;
+  }
+  h1,h2,h3,h4 { font-family:'Khand',sans-serif; line-height:1.15; }
+
+  /* Layout */
+  .page { display:flex; min-height:100vh; }
+
+  /* Sidebar TOC */
+  .toc {
+    width:280px;
+    position:fixed;
+    top:0; left:0; bottom:0;
+    background:linear-gradient(180deg,#0F172A,#1E293B);
+    color:#CBD5E1;
+    padding:24px 0;
+    overflow-y:auto;
+    z-index:50;
+  }
+  .toc .brand { padding:0 22px 18px; border-bottom:1px solid #334155; display:flex; align-items:center; gap:10px; }
+  .toc .brand-logo { width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#3B82F6,#8B5CF6); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-family:'Khand'; font-size:18px; }
+  .toc .brand-name { font-family:'Khand'; font-size:20px; font-weight:700; color:#F1F5F9; }
+  .toc nav { padding:14px 12px; }
+  .toc a {
+    display:block;
+    color:#94A3B8;
+    text-decoration:none;
+    font-size:13.5px;
+    padding:7px 12px;
+    border-radius:8px;
+    margin-bottom:1px;
+    transition:all .15s;
+  }
+  .toc a:hover { color:#E2E8F0; background:#1E293B; }
+  .toc a.lvl2 { padding-left:26px; font-size:12.5px; }
+  .toc a.active { color:#60A5FA; background:rgba(59,130,246,.15); }
+
+  /* Content */
+  .content { flex:1; margin-left:280px; padding:0; max-width:1100px; }
+
+  .section {
+    padding:56px 64px;
+    border-bottom:1px solid var(--border);
+    background:var(--card);
+  }
+  .section.alt { background:var(--bg); }
+  .section:last-child { border-bottom:none; }
+
+  .section-tag {
+    display:inline-block;
+    background:rgba(37,99,235,.1);
+    color:var(--primary);
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    padding:5px 14px;
+    border-radius:20px;
+    margin-bottom:14px;
+  }
+  .section h2 { font-size:34px; color:var(--text); margin-bottom:8px; }
+  .section h3 { font-size:22px; color:var(--primary); margin:26px 0 10px; }
+  .section h4 { font-size:18px; margin:18px 0 8px; color:var(--text); }
+  .section p, .section li { color:#475569; }
+  .section .lead { font-size:17px; color:var(--muted); margin-bottom:18px; }
+
+  ul.tick { list-style:none; }
+  ul.tick li { padding:4px 0 4px 26px; position:relative; }
+  ul.tick li::before { content:"✓"; position:absolute; left:0; color:var(--green); font-weight:700; }
+
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:16px 0; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:16px 0; }
+
+  .feature-card {
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px;
+  }
+  .feature-card .fc-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:10px; }
+  .feature-card h4 { margin:0 0 6px; }
+  .feature-card p { font-size:13.5px; color:var(--muted); }
+
+  table.tbl {
+    width:100%;
+    border-collapse:collapse;
+    margin:16px 0;
+    font-size:13.5px;
+  }
+  table.tbl th {
+    text-align:left;
+    background:var(--sidebar);
+    color:#E2E8F0;
+    padding:10px 14px;
+    font-weight:600;
+    font-size:12.5px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+  }
+  table.tbl td { padding:9px 14px; border-bottom:1px solid var(--border); color:#475569; vertical-align:top; }
+  table.tbl tr:nth-child(even) td { background:#F8FAFC; }
+
+  .callout {
+    background:rgba(37,99,235,.06);
+    border-left:4px solid var(--primary);
+    border-radius:0 12px 12px 0;
+    padding:16px 20px;
+    margin:18px 0;
+  }
+  .callout.warn { background:rgba(245,158,11,.08); border-left-color:var(--amber); }
+  .callout.green { background:rgba(16,185,129,.08); border-left-color:var(--green); }
+  .callout p { font-size:14px; }
+
+  /* ============ SCREEN MOCKUPS ============ */
+  .screen {
+    border:1px solid var(--border);
+    border-radius:14px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 12px 30px rgba(15,23,42,.08);
+    margin:20px 0;
+    max-width:960px;
+  }
+  .screen .browser-bar {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:#F1F5F9;
+    border-bottom:1px solid var(--border);
+    padding:9px 14px;
+  }
+  .screen .browser-bar .dot { width:11px; height:11px; border-radius:50%; }
+  .screen .browser-bar .url { flex:1; max-width:420px; background:#fff; border:1px solid var(--border); border-radius:6px; padding:4px 10px; font-size:11.5px; color:var(--muted); }
+  .screen .app-body { display:flex; min-height:340px; }
+  .screen .app-sidebar { width:56px; background:var(--sidebar); display:flex; flex-direction:column; align-items:center; padding:12px 0; gap:6px; }
+  .screen .app-sidebar .s-icon { width:34px; height:34px; border-radius:8px; background:rgba(148,163,184,.15); display:flex; align-items:center; justify-content:center; font-size:14px; color:#94A3B8; }
+  .screen .app-sidebar .s-icon.on { background:linear-gradient(135deg,#3B82F6,#1D4ED8); color:#fff; }
+  .screen .app-sidebar .s-logo { width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,#3B82F6,#8B5CF6); color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center; margin-bottom:10px; font-family:'Khand'; }
+  .screen .app-main { flex:1; background:var(--bg); padding:14px 16px; }
+  .screen .app-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .screen .app-top h4 { font-family:'Khand'; font-size:17px; margin:0; color:var(--text); }
+  .screen .chip { font-size:10.5px; background:#E2E8F0; color:#64748B; padding:3px 8px; border-radius:12px; }
+  .screen .chip.blue { background:rgba(37,99,235,.12); color:var(--primary); }
+  .screen .chip.green { background:rgba(16,185,129,.12); color:var(--green); }
+  .screen .chip.red { background:rgba(239,68,68,.12); color:var(--red); }
+  .screen .chip.amber { background:rgba(245,158,11,.14); color:#B45309; }
+
+  .m-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px; }
+  .m-kpi { background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+  .m-kpi .v { font-family:'Khand'; font-size:20px; font-weight:700; color:var(--text); }
+  .m-kpi .l { font-size:10.5px; color:var(--muted); }
+
+  .m-charts { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .m-chart { background:#fff; border:1px solid var(--border); border-radius:10px; padding:12px; }
+  .m-chart .t { font-size:11.5px; font-weight:600; color:var(--muted); margin-bottom:8px; }
+  .m-bar { height:8px; border-radius:4px; margin-bottom:6px; }
+  .m-bars { display:flex; align-items:flex-end; gap:8px; height:70px; }
+  .m-bars .b { flex:1; border-radius:4px 4px 0 0; }
+
+  /* Kanban mockup */
+  .m-kanban { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+  .m-col { background:#F1F5F9; border-radius:10px; padding:8px; }
+  .m-col .col-h { font-size:10.5px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+  .m-col .col-h .n { background:#fff; border:1px solid var(--border); border-radius:8px; padding:0 6px; font-size:10px; color:var(--muted); }
+  .m-card { background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; margin-bottom:7px; box-shadow:0 1px 2px rgba(15,23,42,.05); }
+  .m-card .mc-t { font-size:11px; font-weight:600; color:var(--text); margin-bottom:3px; }
+  .m-card .mc-s { font-size:9.5px; color:var(--muted); }
+  .m-card .mc-prio { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px; }
+
+  /* Chat mockup */
+  .m-chat { display:flex; height:340px; }
+  .m-chat .list { width:200px; border-right:1px solid var(--border); background:#fff; overflow:hidden; }
+  .m-chat .conv { padding:10px 12px; border-bottom:1px solid var(--border); }
+  .m-chat .conv .c-n { font-size:11.5px; font-weight:600; color:var(--text); }
+  .m-chat .conv .c-p { font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .m-chat .conv.on { background:rgba(37,99,235,.06); border-left:3px solid var(--primary); }
+  .m-chat .thread { flex:1; background:var(--bg); display:flex; flex-direction:column; padding:14px; }
+  .m-bubble { max-width:65%; padding:8px 12px; border-radius:12px; font-size:11.5px; margin-bottom:8px; }
+  .m-bubble.in { background:#fff; border:1px solid var(--border); align-self:flex-start; border-bottom-left-radius:3px; }
+  .m-bubble.out { background:linear-gradient(135deg,#3B82F6,#2563EB); color:#fff; align-self:flex-end; border-bottom-right-radius:3px; }
+  .m-thread-input { margin-top:auto; display:flex; gap:8px; }
+  .m-thread-input .inp { flex:1; background:#fff; border:1px solid var(--border); border-radius:20px; padding:8px 14px; font-size:11.5px; color:var(--muted); }
+  .m-thread-input .send { width:32px; height:32px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; }
+
+  /* Table mockup */
+  .m-table { background:#fff; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .m-table .row { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; gap:8px; padding:8px 12px; font-size:11px; border-bottom:1px solid var(--border); align-items:center; }
+  .m-table .row.head { background:var(--sidebar); color:#CBD5E1; font-weight:600; font-size:10px; text-transform:uppercase; letter-spacing:.4px; }
+  .m-table .row.head span { color:#94A3B8; }
+  .m-table .row:last-child { border-bottom:none; }
+
+  .figure-caption { font-size:12.5px; color:var(--muted); text-align:center; margin:6px 0 4px; }
+
+  .flow { display:flex; align-items:center; gap:10px; margin:16px 0; flex-wrap:wrap; }
+  .flow-step { background:var(--sidebar); color:#E2E8F0; padding:9px 18px; border-radius:10px; font-size:13px; }
+  .flow-arrow { color:var(--primary); font-size:18px; font-weight:700; }
+
+  /* Cover */
+  .cover {
+    min-height:520px;
+    background:radial-gradient(circle at 20% 20%,#1E3A5F 0%,#0F172A 60%);
+    color:#F1F5F9;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:80px 64px;
+    position:relative;
+  }
+  .cover .cover-logo { width:84px; height:84px; border-radius:22px; background:linear-gradient(135deg,#3B82F6,#8B5CF6); display:flex; align-items:center; justify-content:center; font-size:38px; color:#fff; font-weight:700; font-family:'Khand'; margin-bottom:28px; box-shadow:0 20px 60px rgba(59,130,246,.4); }
+  .cover h1 { font-size:60px; margin-bottom:10px; }
+  .cover .cover-sub { font-size:24px; color:#94A3B8; margin-bottom:26px; }
+  .cover .cover-tags { display:flex; gap:10px; flex-wrap:wrap; }
+  .cover .cover-tags span { background:rgba(59,130,246,.15); border:1px solid rgba(59,130,246,.3); color:#93C5FD; padding:8px 18px; border-radius:20px; font-size:14px; }
+  .cover .cover-meta { position:absolute; bottom:36px; right:64px; color:#64748B; font-size:13px; }
+
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:20px 0; }
+  .stat-box { background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:18px; text-align:center; }
+  .stat-box .num { font-family:'Khand'; font-size:34px; font-weight:700; color:var(--primary); }
+  .stat-box .lbl { font-size:12px; color:var(--muted); }
+
+  .hero-img { text-align:center; margin:10px 0; }
+
+  /* Footer */
+  .doc-footer { padding:40px 64px; background:var(--sidebar); color:#94A3B8; font-size:13px; }
+  .doc-footer strong { color:#E2E8F0; }
+
+  /* Print / PDF */
+  @media print {
+    .toc { display:none; }
+    .content { margin-left:0; max-width:none; }
+    .section { padding:28px 40px; page-break-after:always; }
+    .section:last-child { page-break-after:auto; }
+    .cover { min-height:100vh; page-break-after:always; }
+    .screen { box-shadow:none; page-break-inside:avoid; }
+    body { font-size:12.5px; }
+    .grid2,.grid3 { page-break-inside:avoid; }
+    a { color:inherit; text-decoration:none; }
+  }
+
+  @media (max-width:900px) {
+    .toc { display:none; }
+    .content { margin-left:0; }
+    .section { padding:32px 22px; }
+    .grid2,.grid3,.stats { grid-template-columns:1fr; }
+    .m-kpis { grid-template-columns:repeat(2,1fr); }
+    .m-kanban { grid-template-columns:repeat(3,1fr); }
+    .m-charts,.m-chat { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ============ SIDEBAR TOC ============ -->
+<aside class="toc" id="toc">
+  <div class="brand">
+    <div class="brand-logo">CH</div>
+    <div class="brand-name">CodeHelp</div>
+  </div>
+  <nav>
+    <a href="#visao-geral">1. Visão Geral</a>
+    <a href="#modulos" class="lvl2">1.1 Módulos</a>
+    <a href="#stack" class="lvl2">1.2 Stack</a>
+    <a href="#painel">2. Painel Geral</a>
+    <a href="#chamados">3. Chamados (Kanban)</a>
+    <a href="#atendimento">4. Atendimento ao Vivo</a>
+    <a href="#whatsapp">5. WhatsApp</a>
+    <a href="#conexoes">6. Conexões WhatsApp</a>
+    <a href="#relatorios">7. Relatórios e Métricas</a>
+    <a href="#auditoria">8. Auditoria IA</a>
+    <a href="#clientes">9. Clientes (CRM)</a>
+    <a href="#pipeline">10. Pipeline de Vendas</a>
+    <a href="#os">11. Ordens de Serviço</a>
+    <a href="#timetracking">12. Time Tracking</a>
+    <a href="#tarefas">13. Tarefas Internas</a>
+    <a href="#kb">14. Base de Conhecimento</a>
+    <a href="#automacoes">15. Automações e IA</a>
+    <a href="#aprovacoes">16. Aprovações</a>
+    <a href="#config">17. Configurações</a>
+    <a href="#mobile">18. App Mobile</a>
+    <a href="#seguranca">19. Segurança</a>
+    <a href="#fluxos">20. Fluxos de Negócio</a>
+    <a href="#contas">21. Contas e Contato</a>
+  </nav>
+</aside>
+
+<!-- ============ CONTENT ============ -->
+<main class="content">
+
+  <!-- ===== COVER ===== -->
+  <div class="cover">
+    <div class="cover-logo">CH</div>
+    <h1>CodeHelp CRM/Helpdesk</h1>
+    <div class="cover-sub">Plataforma completa de helpdesk, CRM e comunicação WhatsApp para laboratórios, hospitais e clínicas</div>
+    <div class="cover-tags">
+      <span>Helpdesk com Kanban</span>
+      <span>CRM de Clientes</span>
+      <span>WhatsApp nativo</span>
+      <span>OS Digital com assinatura</span>
+      <span>IA e Automações</span>
+      <span>Relatórios gerenciais</span>
+    </div>
+    <div class="cover-meta">Documentação de funcionalidades · Versão 1.4 · 2026</div>
+  </div>
+
+  <!-- ===== 1. VISÃO GERAL ===== -->
+  <section class="section" id="visao-geral">
+    <span class="section-tag">Visão Geral</span>
+    <h2>O que é o CodeHelp?</h2>
+    <p class="lead">Uma plataforma integrada que unifica atendimento, gestão de clientes e comunicação em um único sistema — do primeiro contato no WhatsApp até a ordem de serviço assinada digitalmente.</p>
+    <p>O CodeHelp foi desenhado para o dia a dia de empresas que precisam atender clientes por WhatsApp, organizar chamados, acompanhar o desempenho da equipe e cobrar serviços — tudo com rastreabilidade completa e inteligência artificial ajudando nas decisões.</p>
+
+    <h3 id="modulos">Módulos principais</h3>
+    <div class="grid3">
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(59,130,246,.12)">🎧</div><h4>Helpdesk</h4><p>Kanban com 6 etapas fixas, triagem automática, SLA, escalonamento e encerramento com confirmação.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(139,92,246,.12)">👥</div><h4>Clientes (CRM)</h4><p>Cadastro completo, contatos, colaboradores, pipeline de vendas e histórico por cliente.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(16,185,129,.12)">📱</div><h4>WhatsApp</h4><p>Atendimento nativo com menu de departamentos, multi-número e mensagens automáticas.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(245,158,11,.14)">📄</div><h4>OS Digital</h4><p>Ordens de serviço com assinatura digital no celular e PDF com validade legal.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(6,182,212,.12)">📊</div><h4>Relatórios</h4><p>Analítico, gerencial e executivo com comparação de períodos e exportação CSV/PDF/Excel.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(236,72,153,.12)">🤖</div><h4>IA e Automações</h4><p>Triagem por IA, auditoria de conversas, sugestões de resposta e regras WHEN/IF/THEN.</p></div>
+    </div>
+
+    <h3 id="stack">Stack tecnológica</h3>
+    <table class="tbl">
+      <tr><th>Camada</th><th>Tecnologia</th><th>Por quê</th></tr>
+      <tr><td>Backend</td><td>Node.js + Express + TypeScript</td><td>Alta performance e tipagem segura</td></tr>
+      <tr><td>Banco de dados</td><td>Prisma ORM + PostgreSQL</td><td>Modelagem declarativa e migrações</td></tr>
+      <tr><td>Frontend</td><td>React 18 + Vite + Tailwind CSS</td><td>Interface rápida e responsiva</td></tr>
+      <tr><td>WhatsApp</td><td>Baileys + Evolution API + Cloud API</td><td>Multi-provedor com handler compartilhado</td></tr>
+      <tr><td>IA</td><td>Anthropic Claude API</td><td>Classificação e auditoria inteligente</td></tr>
+      <tr><td>Mobile</td><td>React Native + Expo</td><td>Atendimento na palma da mão</td></tr>
+    </table>
+
+    <div class="stats">
+      <div class="stat-box"><div class="num">30+</div><div class="lbl">Tabelas no banco</div></div>
+      <div class="stat-box"><div class="num">100+</div><div class="lbl">Endpoints de API</div></div>
+      <div class="stat-box"><div class="num">40+</div><div class="lbl">Telas no sistema</div></div>
+      <div class="stat-box"><div class="num">380</div><div class="lbl">Testes automatizados</div></div>
+    </div>
+  </section>
+
+  <!-- ===== 2. PAINEL GERAL ===== -->
+  <section class="section" id="painel">
+    <span class="section-tag">Dashboard</span>
+    <h2>Painel Geral</h2>
+    <p class="lead">Visão executiva do sistema com KPIs, gráficos interativos e insights de IA.</p>
+    <ul class="tick">
+      <li>8 cards de KPIs: chamados no mês, em aberto, resolvidos, tempo médio de resposta, OS, clientes ativos e oportunidades</li>
+      <li>Gráficos de chamados por período (linha), por categoria (pizza), por departamento, por prioridade, por canal e por status</li>
+      <li>CSAT trending e tempo de resposta por área</li>
+      <li>Painel de insights de IA com análises automáticas e sugestões de melhoria</li>
+    </ul>
+
+    <div class="screen">
+      <div class="browser-bar"><span class="dot" style="background:#EF4444"></span><span class="dot" style="background:#F59E0B"></span><span class="dot" style="background:#10B981"></span><div class="url">/app/dashboard</div></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="s-logo">CH</div>
+          <div class="s-icon on">◫</div><div class="s-icon">🎧</div><div class="s-icon">👥</div><div class="s-icon">📱</div><div class="s-icon">📊</div><div class="s-icon">📄</div><div class="s-icon">⚙</div>
+        </div>
+        <div class="app-main">
+          <div class="app-top"><h4>Painel Geral</h4><span class="chip blue">Últimos 30 dias</span></div>
+          <div class="m-kpis">
+            <div class="m-kpi"><div class="v">248</div><div class="l">Chamados no mês</div></div>
+            <div class="m-kpi"><div class="v">32</div><div class="l">Em aberto</div></div>
+            <div class="m-kpi"><div class="v">216</div><div class="l">Resolvidos</div></div>
+            <div class="m-kpi"><div class="v">87%</div><div class="l">Taxa de resolução</div></div>
+          </div>
+          <div class="m-charts">
+            <div class="m-chart">
+              <div class="t">Chamados por período</div>
+              <div class="m-bars">
+                <div class="b" style="height:30%;background:#93C5FD"></div>
+                <div class="b" style="height:45%;background:#93C5FD"></div>
+                <div class="b" style="height:38%;background:#93C5FD"></div>
+                <div class="b" style="height:60%;background:#3B82F6"></div>
+                <div class="b" style="height:52%;background:#3B82F6"></div>
+                <div class="b" style="height:72%;background:#2563EB"></div>
+                <div class="b" style="height:65%;background:#2563EB"></div>
+              </div>
+            </div>
+            <div class="m-chart">
+              <div class="t">Por categoria</div>
+              <div class="m-bar" style="width:82%;background:#3B82F6"></div>
+              <div class="m-bar" style="width:58%;background:#8B5CF6"></div>
+              <div class="m-bar" style="width:44%;background:#10B981"></div>
+              <div class="m-bar" style="width:30%;background:#F59E0B"></div>
+              <div class="m-bar" style="width:18%;background:#EF4444"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">Figura 1 — Painel Geral com KPIs e gráficos</div>
+  </section>
+
+  <!-- ===== 3. CHAMADOS ===== -->
+  <section class="section" id="chamados">
+    <span class="section-tag">Helpdesk</span>
+    <h2>Chamados (Kanban)</h2>
+    <p class="lead">O centro de operações. Cada card é um ticket com prioridade, cliente, protocolo e tempo.</p>
+    <ul class="tick">
+      <li>Board com 6 etapas fixas: Fila, Triagem, Em Atendimento, Aguardando Cliente, Aguardando OS, Concluído</li>
+      <li>Drag-and-drop entre colunas, filtro por departamento e busca</li>
+      <li>Painel lateral com conversa, dados do cliente e ações (assumir, atribuir, transferir, encerrar)</li>
+      <li>Envio de mensagens via WhatsApp com assinatura automática do analista</li>
+      <li>Encerramento com confirmação de resolução e avaliação CSAT</li>
+    </ul>
+
+    <div class="screen">
+      <div class="browser-bar"><span class="dot" style="background:#EF4444"></span><span class="dot" style="background:#F59E0B"></span><span class="dot" style="background:#10B981"></span><div class="url">/app/helpdesk</div></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="s-logo">CH</div>
+          <div class="s-icon">◫</div><div class="s-icon on">🎧</div><div class="s-icon">👥</div><div class="s-icon">📱</div><div class="s-icon">📊</div><div class="s-icon">📄</div><div class="s-icon">⚙</div>
+        </div>
+        <div class="app-main">
+          <div class="app-top"><h4>Chamados</h4><span class="chip blue">Todos os departamentos</span></div>
+          <div class="m-kanban">
+            <div class="m-col"><div class="col-h">Fila <span class="n">4</span></div>
+              <div class="m-card"><span class="m-card-prio" style="background:#F59E0B"></span><div class="mc-t">Impressora sem conexão</div><div class="mc-s">Lab Central · 12 min</div></div>
+              <div class="m-card"><span class="m-card-prio" style="background:#EF4444"></span><div class="mc-t">Faturamento duplicado</div><div class="mc-s">Hospital Norte · 5 min</div></div>
+            </div>
+            <div class="m-col"><div class="col-h">Triagem <span class="n">2</span></div>
+              <div class="m-card"><span class="m-card-prio" style="background:#3B82F6"></span><div class="mc-t">Novo exame disponível</div><div class="mc-s">Clínica Sul · 8 min</div></div>
+            </div>
+            <div class="m-col"><div class="col-h">Em Atend. <span class="n">3</span></div>
+              <div class="m-card"><span class="m-card-prio" style="background:#10B981"></span><div class="mc-t">Erro no envio de laudos</div><div class="mc-s">Maria · 1h 20m</div></div>
+              <div class="m-card"><span class="m-card-prio" style="background:#F59E0B"></span><div class="mc-t">Dúvida sobre interface</div><div class="mc-s">João · 42 min</div></div>
+            </div>
+            <div class="m-col"><div class="col-h">Aguar. Cliente <span class="n">2</span></div>
+              <div class="m-card"><span class="m-card-prio" style="background:#3B82F6"></span><div class="mc-t">Aguardando dados</div><div class="mc-s">Carlos · 2h</div></div>
+            </div>
+            <div class="m-col"><div class="col-h">Aguar. OS <span class="n">1</span></div>
+              <div class="m-card"><span class="m-card-prio" style="background:#8B5CF6"></span><div class="mc-t">OS aguardando assinatura</div><div class="mc-s">Ana · 3h</div></div>
+            </div>
+            <div class="m-col"><div class="col-h">Concluído <span class="n">8</span></div>
+              <div class="m-card"><span class="m-card-prio" style="background:#10B981"></span><div class="mc-t">Reconfiguração de rede</div><div class="mc-s">Ontem</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">Figura 2 — Kanban de chamados com 6 etapas</div>
+
+    <div class="flow">
+      <div class="flow-step">WhatsApp</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Fila</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Triagem</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Em Atendimento</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Aguardando Cliente / OS</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Concluído</div>
+    </div>
+  </section>
+
+  <!-- ===== 4. ATENDIMENTO AO VIVO ===== -->
+  <section class="section alt" id="atendimento">
+    <span class="section-tag">Operação</span>
+    <h2>Atendimento ao Vivo</h2>
+    <p class="lead">Painel operacional em tempo real para supervisores acompanharem a equipe.</p>
+    <ul class="tick">
+      <li>Tickets em atendimento com tempo decorrido (cores por urgência)</li>
+      <li>Status de cada atendente (online/offline) e fila de espera por departamento</li>
+      <li>Últimos movimentos do sistema e quantidade de tickets por etapa</li>
+    </ul>
+    <div class="screen">
+      <div class="browser-bar"><span class="dot" style="background:#EF4444"></span><span class="dot" style="background:#F59E0B"></span><span class="dot" style="background:#10B981"></span><div class="url">/app/helpdesk/painel</div></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="s-logo">CH</div>
+          <div class="s-icon">◫</div><div class="s-icon on">🎧</div><div class="s-icon">👥</div><div class="s-icon">📱</div><div class="s-icon">📊</div><div class="s-icon">📄</div><div class="s-icon">⚙</div>
+        </div>
+        <div class="app-main">
+          <div class="app-top"><h4>Atendimento ao Vivo</h4><span class="chip green">● 5 online</span></div>
+          <div class="m-kpis">
+            <div class="m-kpi"><div class="v">12</div><div class="l">Em atendimento</div></div>
+            <div class="m-kpi"><div class="v">7</div><div class="l">Na fila</div></div>
+            <div class="m-kpi"><div class="v">9</div><div class="l">Aguardando cliente</div></div>
+            <div class="m-kpi"><div class="v">3h 12m</div><div class="l">Maior tempo</div></div>
+          </div>
+          <div class="m-table">
+            <div class="row head"><span>Analista</span><span>Status</span><span>Tickets</span><span>Tempo atual</span><span>Fila</span></div>
+            <div class="row"><span>Maria Santos</span><span class="chip green">Online</span><span>3</span><span>1h 20m</span><span>Suporte</span></div>
+            <div class="row"><span>João Pereira</span><span class="chip green">Online</span><span>2</span><span>42m</span><span>Financeiro</span></div>
+            <div class="row"><span>Ana Costa</span><span class="chip red">Offline</span><span>1</span><span>3h 12m</span><span>Implantação</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">Figura 3 — Painel ao vivo com tempo decorrido</div>
+  </section>
+
+  <!-- ===== 5. WHATSAPP ===== -->
+  <section class="section" id="whatsapp">
+    <span class="section-tag">Integração</span>
+    <h2>WhatsApp Nativo</h2>
+    <p class="lead">Atenda clientes diretamente pelo WhatsApp, com fluxo guiado por bot e triagem automática.</p>
+    <ul class="tick">
+      <li>Mensagem do cliente cria ticket automaticamente e envia menu de departamentos</li>
+      <li>Seleção por número (1-N) ou nome do departamento — com fallback de texto</li>
+      <li>Triagem automática por palavras-chave e IA (Claude API)</li>
+      <li>Follow-up periódico, retorno fora do horário e mensagens automáticas configuráveis</li>
+      <li>Encerramento com confirmação de resolução + avaliação CSAT 1–5</li>
+      <li>Aprovações decididas diretamente pelo WhatsApp</li>
+    </ul>
+
+    <div class="screen">
+      <div class="browser-bar"><span class="dot" style="background:#EF4444"></span><span class="dot" style="background:#F59E0B"></span><span class="dot" style="background:#10B981"></span><div class="url">/app/whatsapp</div></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="s-logo">CH</div>
+          <div class="s-icon">◫</div><div class="s-icon">🎧</div><div class="s-icon">👥</div><div class="s-icon on">📱</div><div class="s-icon">📊</div><div class="s-icon">📄</div><div class="s-icon">⚙</div>
+        </div>
+        <div class="app-main" style="padding:0">
+          <div class="m-chat">
+            <div class="list">
+              <div class="conv on"><div class="c-n">Lab Central</div><div class="c-p">Impressora sem conexão de rede</div></div>
+              <div class="conv"><div class="c-n">Hospital Norte</div><div class="c-p">Faturamento duplicado no módulo</div></div>
+              <div class="conv"><div class="c-n">Clínica Sul</div><div class="c-p">Novo exame disponível?</div></div>
+              <div class="conv"><div class="c-n">Farmácia Vida</div><div class="c-p">Sistema lento à tarde</div></div>
+            </div>
+            <div class="thread">
+              <div class="m-bubble in">Boa tarde! A impressora não conecta na rede do laboratório.</div>
+              <div class="m-bubble out">Olá! Já verifiquei a configuração. Pode reiniciar o equipamento e tentar novamente?</div>
+              <div class="m-bubble in">Consegui! Agora está imprimindo. Obrigado pela ajuda.</div>
+              <div class="m-bubble out">Perfeito! Vou encerrar o chamado. Por favor, confirme: seu problema foi resolvido? (1 Sim / 2 Não)</div>
+              <div class="m-thread-input"><div class="inp">Digite sua mensagem...</div><div class="send">➤</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">Figura 4 — Chat integrado ao WhatsApp com fluxo de confirmação</div>
+
+    <h3>Fluxo do cliente</h3>
+    <div class="flow">
+      <div class="flow-step">Envia mensagem</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Menu de departamentos</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Seleciona por número</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Informa assunto</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Fila</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Atendente assume</div>
+    </div>
+  </section>
+
+  <!-- ===== 6. CONEXÕES WHATSAPP ===== -->
+  <section class="section alt" id="conexoes">
+    <span class="section-tag">Multi-número</span>
+    <h2>Conexões WhatsApp</h2>
+    <p class="lead">Gerencie múltiplos números de WhatsApp, cada um vinculado a um departamento.</p>
+    <ul class="tick">
+      <li>CRUD de conexões (nome, número, departamento) e pareamento via QR Code</li>
+      <li>Status em tempo real: conectado, desconectado ou escaneando</li>
+      <li>Multi-provedor: Baileys (primário), Evolution API e Cloud API da Meta</li>
+      <li>Handler compartilhado garante o mesmo comportamento de bot em todos os provedores</li>
+    </ul>
+    <div class="screen">
+      <div class="browser-bar"><span class="dot" style="background:#EF4444"></span><span class="dot" style="background:#F59E0B"></span><span class="dot" style="background:#10B981"></span><div class="url">/app/whatsapp/conexoes</div></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="s-logo">CH</div>
+          <div class="s-icon">◫</div><div class="s-icon">🎧</div><div class="s-icon">👥</div><div class="s-icon on">📱</div><div class="s-icon">📊</div><div class="s-icon">📄</div><div class="s-icon">⚙</div>
+        </div>
+        <div class="app-main">
+          <div class="app-top"><h4>Conexões WhatsApp</h4><span class="chip blue">+ Nova conexão</span></div>
+          <div class="m-table">
+            <div class="row head"><span>Nome</span><span>Número</span><span>Departamento</span><span>Status</span><span>Ações</span></div>
+            <div class="row"><span>Suporte Geral</span><span>(85) 9999-0001</span><span>Suporte Técnico</span><span class="chip green">Conectado</span><span>•••</span></div>
+            <div class="row"><span>Financeiro</span><span>(85) 9999-0002</span><span>Financeiro</span><span class="chip green">Conectado</span><span>•••</span></div>
+            <div class="row"><span>Comercial</span><span>(85) 9999-0003</span><span>Comercial</span><span class="chip amber">Escaneando</span><span>•••</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">Figura 5 — Multi-número com status por conexão</div>
+  </section>
+
+  <!-- ===== 7. RELATÓRIOS ===== -->
+  <section class="section" id="relatorios">
+    <span class="section-tag">Analytics</span>
+    <h2>Relatórios e Métricas</h2>
+    <p class="lead">Três níveis de visão gerencial com filtros combinados e exportação profissional.</p>
+
+    <h3>Relatório Analítico</h3>
+    <ul class="tick">
+      <li>Filtros combinados: período, fila, canal, prioridade, status, departamento, analista, cliente, categoria e assunto</li>
+      <li>Resumo com taxa de resolução, tempo médio de resposta/resolução, SLA, CSAT e FCR</li>
+      <li>Comparativo com período anterior (delta pills verdes/vermelhos)</li>
+      <li>Gráficos de tendência diária, por canal, prioridade, categoria, analista, cliente, departamento e fila</li>
+      <li>Views de tempo (timetracking), desenvolvimento e implantação</li>
+      <li>Exportação CSV, PDF e Excel com período personalizado</li>
+    </ul>
+
+    <h3>Relatório Gerencial</h3>
+    <ul class="tick">
+      <li>Resumo semanal com comparativo e sugestões de IA</li>
+      <li>Prévia da mensagem de relatório e envio via WhatsApp</li>
+    </ul>
+
+    <h3>Dashboard Executivo</h3>
+    <ul class="tick">
+      <li>Visão 7/30/90 dias parametrizável com cards e gráficos executivos</li>
+    </ul>
+
+    <div class="screen">
+      <div class="browser-bar"><span class="dot" style="background:#EF4444"></span><span class="dot" style="background:#F59E0B"></span><span class="dot" style="background:#10B981"></span><div class="url">/app/relatorios/analitico</div></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="s-logo">CH</div>
+          <div class="s-icon">◫</div><div class="s-icon">🎧</div><div class="s-icon">👥</div><div class="s-icon">📱</div><div class="s-icon on">📊</div><div class="s-icon">📄</div><div class="s-icon">⚙</div>
+        </div>
+        <div class="app-main">
+          <div class="app-top"><h4>Relatório Analítico</h4><span class="chip blue">Últimos 30 dias</span></div>
+          <div class="m-kpis">
+            <div class="m-kpi"><div class="v">248</div><div class="l">Total de tickets</div></div>
+            <div class="m-kpi"><div class="v">216 <small style="color:#10B981">▲ 12%</small></div><div class="l">Resolvidos</div></div>
+            <div class="m-kpi"><div class="v">8min</div><div class="l">Tempo médio resposta</div></div>
+            <div class="m-kpi"><div class="v">4.5/5</div><div class="l">CSAT médio</div></div>
+          </div>
+          <div class="m-charts">
+            <div class="m-chart"><div class="t">Tendência diária</div>
+              <div class="m-bars">
+                <div class="b" style="height:40%;background:#93C5FD"></div>
+                <div class="b" style="height:55%;background:#93C5FD"></div>
+                <div class="b" style="height:35%;background:#93C5FD"></div>
+                <div class="b" style="height:70%;background:#3B82F6"></div>
+                <div class="b" style="height:62%;background:#3B82F6"></div>
+                <div class="b" style="height:85%;background:#2563EB"></div>
+              </div>
+            </div>
+            <div class="m-chart"><div class="t">Por analista</div>
+              <div class="m-table">
+                <div class="row head"><span>Analista</span><span>Atendidos</span><span>Fechados</span><span>Tempo</span><span>CSAT</span></div>
+                <div class="row"><span>Maria Santos</span><span>64</span><span>58</span><span>6min</span><span>4.7</span></div>
+                <div class="row"><span>João Pereira</span><span>52</span><span>47</span><span>9min</span><span>4.3</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">Figura 6 — Relatório analítico com KPIs, comparativo e gráficos</div>
+  </section>
+
+  <!-- ===== 8. AUDITORIA IA ===== -->
+  <section class="section alt" id="auditoria">
+    <span class="section-tag">Qualidade</span>
+    <h2>Auditoria com IA</h2>
+    <p class="lead">Três camadas de auditoria para garantir qualidade de atendimento e aprendizagem contínua.</p>
+
+    <div class="grid2">
+      <div class="feature-card">
+        <div class="fc-icon" style="background:rgba(139,92,246,.12)">🔍</div>
+        <h4>Auditoria de Encerramento</h4>
+        <ul class="tick">
+          <li>Classifica cada encerramento: prematuro, resolução real ou reabertura</li>
+          <li>Nota 0–10, diagnóstico, evidências e risco de reabertura (BAIXO–CRÍTICO)</li>
+          <li>Resumo por risco, tipo, analista e cliente</li>
+          <li>Filtros completos e exportação CSV/Excel</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon" style="background:rgba(236,72,153,.12)">🎯</div>
+        <h4>Auditoria por Analista</h4>
+        <ul class="tick">
+          <li>Relatório individual: FCR, CSAT, nota de auditoria, tempo de resposta</li>
+          <li>Replay completo da conversa com auditoria por mensagem</li>
+          <li>Sugestões de resposta e pontos de melhoria por ticket</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="screen">
+      <div class="browser-bar"><span class="dot" style="background:#EF4444"></span><span class="dot" style="background:#F59E0B"></span><span class="dot" style="background:#10B981"></span><div class="url">/app/helpdesk/auditoria-encerramento</div></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="s-logo">CH</div>
+          <div class="s-icon">◫</div><div class="s-icon">🎧</div><div class="s-icon">👥</div><div class="s-icon">📱</div><div class="s-icon on">📊</div><div class="s-icon">📄</div><div class="s-icon">⚙</div>
+        </div>
+        <div class="app-main">
+          <div class="app-top"><h4>Auditoria de Encerramento</h4><span class="chip red">IA</span></div>
+          <div class="m-kpis">
+            <div class="m-kpi"><div class="v">120</div><div class="l">Auditados</div></div>
+            <div class="m-kpi"><div class="v">18</div><div class="l">Prematuros</div></div>
+            <div class="m-kpi"><div class="v">85%</div><div class="l">Encerramento correto</div></div>
+            <div class="m-kpi"><div class="v">7.8</div><div class="l">Nota média</div></div>
+          </div>
+          <div class="m-table">
+            <div class="row head"><span>Ticket</span><span>Cliente</span><span>Classificação</span><span>Risco</span><span>Nota</span></div>
+            <div class="row"><span>#TKT-001234</span><span>Lab Central</span><span class="chip green">Resolução real</span><span class="chip green">Baixo</span><span>9/10</span></div>
+            <div class="row"><span>#TKT-001258</span><span>Hospital Norte</span><span class="chip red">Encerramento prematuro</span><span class="chip red">Alto</span><span>4/10</span></div>
+            <div class="row"><span>#TKT-001267</span><span>Clínica Sul</span><span class="chip amber">Reabertura</span><span class="chip amber">Médio</span><span>6/10</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">Figura 7 — Auditoria de encerramento com classificação por IA</div>
+  </section>
+
+  <!-- ===== 9. CLIENTES ===== -->
+  <section class="section" id="clientes">
+    <span class="section-tag">CRM</span>
+    <h2>Clientes (CRM)</h2>
+    <p class="lead">Gestão completa de clientes com cadastro, contatos, colaboradores e histórico.</p>
+    <ul class="tick">
+      <li>Cadastro com razão social, CNPJ/CPF, segmento (laboratório, hospital, clínica...), origem e status</li>
+      <li>Detalhe do cliente com abas: visão geral, colaboradores, tickets, OS e oportunidades</li>
+      <li>Contatos (telefone, e-mail, reunião, visita) e colaboradores com contato principal</li>
+      <li>Vinculação automática de tickets e OS ao cliente pelo telefone</li>
+    </ul>
+    <div class="screen">
+      <div class="browser-bar"><span class="dot" style="background:#EF4444"></span><span class="dot" style="background:#F59E0B"></span><span class="dot" style="background:#10B981"></span><div class="url">/app/crm</div></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="s-logo">CH</div>
+          <div class="s-icon">◫</div><div class="s-icon">🎧</div><div class="s-icon on">👥</div><div class="s-icon">📱</div><div class="s-icon">📊</div><div class="s-icon">📄</div><div class="s-icon">⚙</div>
+        </div>
+        <div class="app-main">
+          <div class="app-top"><h4>Clientes</h4><span class="chip blue">+ Novo cliente</span></div>
+          <div class="m-table">
+            <div class="row head"><span>Cliente</span><span>Segmento</span><span>Contato</span><span>Status</span><span>Tickets</span></div>
+            <div class="row"><span>Lab Central Análises</span><span>Laboratório</span><span>(85) 3222-1000</span><span class="chip green">Ativo</span><span>42</span></div>
+            <div class="row"><span>Hospital Norte</span><span>Hospital</span><span>(85) 3222-2000</span><span class="chip green">Ativo</span><span>28</span></div>
+            <div class="row"><span>Clínica Sul Saúde</span><span>Clínica</span><span>(85) 3222-3000</span><span class="chip amber">Inativo</span><span>9</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">Figura 8 — Lista de clientes com busca e filtros</div>
+  </section>
+
+  <!-- ===== 10. PIPELINE ===== -->
+  <section class="section alt" id="pipeline">
+    <span class="section-tag">Comercial</span>
+    <h2>Pipeline de Vendas</h2>
+    <p class="lead">Kanban comercial para acompanhar oportunidades do primeiro contato ao fechamento.</p>
+    <ul class="tick">
+      <li>5 colunas: Prospecção, Qualificação, Proposta, Negociação e Ganho/Perdido</li>
+      <li>Cards com valor estimado, probabilidade e responsável</li>
+      <li>Drag-and-drop e valor total/ponderado do pipeline</li>
+    </ul>
+    <div class="screen">
+      <div class="browser-bar"><span class="dot" style="background:#EF4444"></span><span class="dot" style="background:#F59E0B"></span><span class="dot" style="background:#10B981"></span><div class="url">/app/crm/pipeline</div></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="s-logo">CH</div>
+          <div class="s-icon">◫</div><div class="s-icon">🎧</div><div class="s-icon on">👥</div><div class="s-icon">📱</div><div class="s-icon">📊</div><div class="s-icon">📄</div><div class="s-icon">⚙</div>
+        </div>
+        <div class="app-main">
+          <div class="app-top"><h4>Pipeline de Vendas</h4><span class="chip blue">R$ 1.240.000</span></div>
+          <div class="m-kanban">
+            <div class="m-col"><div class="col-h">Prospecção <span class="n">3</span></div>
+              <div class="m-card"><div class="mc-t">Hospital Santa Luzia</div><div class="mc-s">R$ 45.000 · 20%</div></div>
+            </div>
+            <div class="m-col"><div class="col-h">Qualificação <span class="n">2</span></div>
+              <div class="m-card"><div class="mc-t">Lab Genética</div><div class="mc-s">R$ 120.000 · 40%</div></div>
+            </div>
+            <div class="m-col"><div class="col-h">Proposta <span class="n">2</span></div>
+              <div class="m-card"><div class="mc-t">Clínica Cidade</div><div class="mc-s">R$ 65.000 · 60%</div></div>
+            </div>
+            <div class="m-col"><div class="col-h">Negociação <span class="n">1</span></div>
+              <div class="m-card"><div class="mc-t">Rede Laboratórios</div><div class="mc-s">R$ 300.000 · 80%</div></div>
+            </div>
+            <div class="m-col"><div class="col-h">Ganho/Perdido <span class="n">4</span></div>
+              <div class="m-card"><div class="mc-t">Farmácia Bem Estar</div><div class="mc-s">R$ 18.000 · Ganho</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">Figura 9 — Pipeline com etapas comerciais</div>
+  </section>
+
+  <!-- ===== 11. OS ===== -->
+  <section class="section" id="os">
+    <span class="section-tag">Ordem de Serviço</span>
+    <h2>Ordens de Serviço com Assinatura Digital</h2>
+    <p class="lead">Crie OS, envie o link de assinatura via WhatsApp e receba o PDF assinado com validade legal.</p>
+    <ul class="tick">
+      <li>Criação com tipo de serviço, descrição, equipamento, sistemas afetados e valor</li>
+      <li>Link único de assinatura enviado automaticamente via WhatsApp</li>
+      <li>Assinatura digital no celular com canvas de alta definição (DPI)</li>
+      <li>PDF gerado automaticamente e armazenado no sistema</li>
+      <li>Status: rascunho, em andamento, aguardando assinatura, concluído, cancelado</li>
+    </ul>
+    <div class="flow">
+      <div class="flow-step">Criar OS</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Gerar link</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Enviar WhatsApp</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Cliente assina</div><span class="flow-arrow">→</span>
+      <div class="flow-step">PDF automático</div>
+    </div>
+    <div class="screen">
+      <div class="browser-bar"><span class="dot" style="background:#EF4444"></span><span class="dot" style="background:#F59E0B"></span><span class="dot" style="background:#10B981"></span><div class="url">/app/orders</div></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="s-logo">CH</div>
+          <div class="s-icon">◫</div><div class="s-icon">🎧</div><div class="s-icon">👥</div><div class="s-icon">📱</div><div class="s-icon">📊</div><div class="s-icon on">📄</div><div class="s-icon">⚙</div>
+        </div>
+        <div class="app-main">
+          <div class="app-top"><h4>Ordens de Serviço</h4><span class="chip blue">+ Nova OS</span></div>
+          <div class="m-table">
+            <div class="row head"><span>OS</span><span>Cliente</span><span>Serviço</span><span>Status</span><span>Valor</span></div>
+            <div class="row"><span>OS-2026-0142</span><span>Lab Central</span><span>Implantação sistema</span><span class="chip amber">Aguarda assinatura</span><span>R$ 8.900</span></div>
+            <div class="row"><span>OS-2026-0139</span><span>Hospital Norte</span><span>Manutenção rede</span><span class="chip green">Concluído</span><span>R$ 3.200</span></div>
+            <div class="row"><span>OS-2026-0135</span><span>Clínica Sul</span><span>Desenvolvimento módulo</span><span class="chip blue">Em andamento</span><span>R$ 12.000</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">Figura 10 — Lista de OS com status</div>
+  </section>
+
+  <!-- ===== 12. TIME TRACKING ===== -->
+  <section class="section alt" id="timetracking">
+    <span class="section-tag">Produtividade</span>
+    <h2>Time Tracking</h2>
+    <p class="lead">Registre horas de desenvolvimento, suporte e implantação — com timer ao vivo e consumo por cliente.</p>
+    <ul class="tick">
+      <li>Timer ao vivo com cronômetro e entrada manual por tipo (dev, suporte, implantação, treinamento, reunião)</li>
+      <li>Vínculo das horas a tickets e ordens de serviço</li>
+      <li>Campos billable (cobrável) e faturado para apuração comercial</li>
+      <li>Resumo por tipo e por usuário + tabela de consumo por cliente</li>
+      <li>Relatórios analíticos de tempo por tipo e por departamento</li>
+    </ul>
+    <div class="screen">
+      <div class="browser-bar"><span class="dot" style="background:#EF4444"></span><span class="dot" style="background:#F59E0B"></span><span class="dot" style="background:#10B981"></span><div class="url">/app/timetracking</div></div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="s-logo">CH</div>
+          <div class="s-icon">◫</div><div class="s-icon">🎧</div><div class="s-icon">👥</div><div class="s-icon">📱</div><div class="s-icon">📊</div><div class="s-icon">📄</div><div class="s-icon on">⚙</div>
+        </div>
+        <div class="app-main">
+          <div class="app-top"><h4>Time Tracking</h4><span class="chip green">● Timer rodando</span></div>
+          <div class="m-kpis">
+            <div class="m-kpi"><div class="v">86h</div><div class="l">Total no mês</div></div>
+            <div class="m-kpi"><div class="v">61h</div><div class="l">Cobrável</div></div>
+            <div class="m-kpi"><div class="v">42h</div><div class="l">Faturado</div></div>
+            <div class="m-kpi"><div class="v">112</div><div class="l">Entradas</div></div>
+          </div>
+          <div class="m-chart" style="grid-column:1/-1">
+            <div class="t">Consumo por cliente (minutos)</div>
+            <div class="m-table">
+              <div class="row head"><span>Cliente</span><span>Atendimento</span><span>Desenvolvimento</span><span>Implantação</span><span>Total</span></div>
+              <div class="row"><span>Lab Central</span><span>320</span><span>1180</span><span>540</span><span>2.040</span></div>
+              <div class="row"><span>Hospital Norte</span><span>150</span><span>420</span><span>0</span><span>570</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">Figura 11 — Time tracking com consumo por cliente</div>
+  </section>
+
+  <!-- ===== 13. TAREFAS INTERNAS ===== -->
+  <section class="section" id="tarefas">
+    <span class="section-tag">Equipe</span>
+    <h2>Tarefas Internas</h2>
+    <p class="lead">Kanban interno para organização da equipe com checklist, prioridades e prazos.</p>
+    <ul class="tick">
+      <li>Colunas A Fazer, Em Andamento e Concluído com drag-and-drop</li>
+      <li>Checklist com barra de progresso e importação de templates</li>
+      <li>Prioridade, categoria, classificação e prazo editáveis direto na visualização</li>
+      <li>Botão de IA para auto-categorizar prioridade e classificação</li>
+    </ul>
+  </section>
+
+  <!-- ===== 14. BASE DE CONHECIMENTO ===== -->
+  <section class="section alt" id="kb">
+    <span class="section-tag">Conhecimento</span>
+    <h2>Base de Conhecimento</h2>
+    <p class="lead">Documentação interna com sugestão automática de artigos por IA durante o atendimento.</p>
+    <ul class="tick">
+      <li>Artigos com Markdown, categorias, tags, votos e visualizações</li>
+      <li>Busca por palavra-chave e sugestão de artigos no ticket</li>
+      <li>Publicação/despublicação e rascunhos</li>
+    </ul>
+  </section>
+
+  <!-- ===== 15. AUTOMAÇÕES ===== -->
+  <section class="section" id="automacoes">
+    <span class="section-tag">Inteligência</span>
+    <h2>Automações e IA</h2>
+    <div class="grid2">
+      <div class="feature-card">
+        <div class="fc-icon" style="background:rgba(6,182,212,.12)">⚙</div>
+        <h4>Motor de regras WHEN/IF/THEN</h4>
+        <ul class="tick">
+          <li>Triggers: novo ticket, mensagem recebida, ticket movido, SLA, etc.</li>
+          <li>Condições: campo, operador, valor (prioridade, categoria, departamento...)</li>
+          <li>Ações: definir prioridade, atribuir, notificar, enviar mensagem, mover etapa</li>
+          <li>Log de execução e auditoria</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon" style="background:rgba(139,92,246,.12)">🤖</div>
+        <h4>Inteligência artificial</h4>
+        <ul class="tick">
+          <li>Triagem automática por palavras-chave + Claude API</li>
+          <li>Sugestões de resposta com validação humana (AiValidation)</li>
+          <li>Auditoria de encerramento e de conversas</li>
+          <li>Auto-categorização de tarefas e insights gerenciais</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout">
+      <p><strong>Exemplo:</strong> QUANDO novo_ticket E SE prioridade = urgente ENTÃO atribuir admin + notificar supervisor + definir SLA prioritário.</p>
+    </div>
+  </section>
+
+  <!-- ===== 16. APROVAÇÕES ===== -->
+  <section class="section alt" id="aprovacoes">
+    <span class="section-tag">Workflow</span>
+    <h2>Aprovações via WhatsApp</h2>
+    <p class="lead">Solicitações de aprovação decididas pelo aprovador diretamente no WhatsApp — sem criar novo ticket.</p>
+    <ul class="tick">
+      <li>Solicitação de aprovação com canal, telefone do aprovador e token único</li>
+      <li>Decisão por botão interativo ou texto (aprovar/rejeitar) casada pelo telefone</li>
+      <li>Página pública de aprovação como alternativa (link com token)</li>
+      <li>Expiração automática e histórico completo</li>
+    </ul>
+    <div class="flow">
+      <div class="flow-step">Solicitar</div><span class="flow-arrow">→</span>
+      <div class="flow-step">WhatsApp do aprovador</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Aprovar / Rejeitar</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Histórico</div>
+    </div>
+  </section>
+
+  <!-- ===== 17. CONFIGURAÇÕES ===== -->
+  <section class="section" id="config">
+    <span class="section-tag">Administração</span>
+    <h2>Configurações</h2>
+    <p class="lead">Painel centralizado de administração do sistema.</p>
+    <div class="grid3">
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(59,130,246,.12)">👤</div><h4>Usuários e Permissões</h4><p>Gestão de usuários, roles e matriz RBAC por perfil.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(16,185,129,.12)">💬</div><h4>Mensagens Automáticas</h4><p>Boas-vindas, menu, fora do horário, follow-up e avaliação — tudo editável.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(245,158,11,.14)">🏢</div><h4>Departamentos e Filas</h4><p>Setores, filas por nível de suporte e horários de atendimento.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(236,72,153,.12)">📅</div><h4>Feriados e Etapas</h4><p>Calendário de feriados nacionais e etapas do Kanban.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(139,92,246,.12)">🔔</div><h4>Alertas</h4><p>Alertas semanais, alertas sonoros e notificações internas.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(6,182,212,.12)">🎨</div><h4>Tema</h4><p>Modo claro/escuro, escala de fonte, esquema de cores e layout da sidebar.</p></div>
+    </div>
+  </section>
+
+  <!-- ===== 18. MOBILE ===== -->
+  <section class="section alt" id="mobile">
+    <span class="section-tag">Mobile</span>
+    <h2>App Mobile (React Native + Expo)</h2>
+    <ul class="tick">
+      <li>Atendimento de tickets, CRM, ordens e aprovações no celular</li>
+      <li>Notificações push (Expo Notifications + FCM)</li>
+      <li>Modo offline com sincronização (AsyncStorage)</li>
+      <li>Biometria (expo-local-authentication) e assinatura digital no canvas</li>
+    </ul>
+    <div class="callout green">
+      <p>O sistema é totalmente <strong>responsivo</strong>: em telas pequenas o menu vira hamburger e o Kanban funciona com scroll horizontal.</p>
+    </div>
+  </section>
+
+  <!-- ===== 19. SEGURANÇA ===== -->
+  <section class="section" id="seguranca">
+    <span class="section-tag">Segurança</span>
+    <h2>Segurança e Controle de Acesso</h2>
+    <div class="grid3">
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(59,130,246,.12)">🛡</div><h4>RBAC</h4><p>4 níveis de acesso (admin, gerente, técnico/comercial, solicitante) com permissões granulares e override por role.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(16,185,129,.12)">🔑</div><h4>JWT + sessão</h4><p>Access token de 15 min, refresh de 7 dias e session token que impede login em múltiplos dispositivos.</p></div>
+      <div class="feature-card"><div class="fc-icon" style="background:rgba(236,72,153,.12)">📋</div><h4>Auditoria</h4><p>Log de todas as ações, eventos de ticket, timeline e auditoria de mensagens do WhatsApp.</p></div>
+    </div>
+    <table class="tbl">
+      <tr><th>Nível</th><th>Roles</th><th>Permissões principais</th></tr>
+      <tr><td>Admin</td><td>admin</td><td>Acesso total, gestão de usuários e configurações</td></tr>
+      <tr><td>Supervisor</td><td>gerente</td><td>Aprovar, escalonar, métricas, relatórios, auditorias</td></tr>
+      <tr><td>Agente</td><td>tecnico, comercial</td><td>Atender tickets, criar OS, gerenciar clientes</td></tr>
+      <tr><td>Consulta</td><td>solicitante</td><td>Apenas visualização</td></tr>
+    </table>
+  </section>
+
+  <!-- ===== 20. FLUXOS ===== -->
+  <section class="section alt" id="fluxos">
+    <span class="section-tag">Processos</span>
+    <h2>Fluxos de Negócio</h2>
+
+    <h3>Atendimento completo</h3>
+    <div class="flow">
+      <div class="flow-step">WhatsApp</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Ticket</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Triagem</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Fila</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Atendimento</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Encerramento</div><span class="flow-arrow">→</span>
+      <div class="flow-step">Confirmação + CSAT</div>
+    </div>
+
+    <h3>SLA</h3>
+    <ul class="tick">
+      <li>Contagem automática com pausa em "aguardando cliente" e "aguardando OS"</li>
+      <li>Alertas em 75% e 90% do tempo, com escalonamento automático ao estourar</li>
+      <li>Considera feriados e horário de atendimento configurados</li>
+    </ul>
+
+    <h3>Fora do horário</h3>
+    <ul class="tick">
+      <li>Mensagem fora do expediente é registrada com aviso e reentra na fila automaticamente ao iniciar</li>
+      <li>Reutiliza o mesmo menu de boas-vindas — sem fluxos paralelos</li>
+    </ul>
+  </section>
+
+  <!-- ===== 21. CONTAS ===== -->
+  <section class="section" id="contas">
+    <span class="section-tag">Acesso</span>
+    <h2>Contas padrão (desenvolvimento)</h2>
+    <table class="tbl">
+      <tr><th>E-mail</th><th>Senha</th><th>Role</th></tr>
+      <tr><td>admin@codemed.com.br</td><td>admin123</td><td>Admin</td></tr>
+      <tr><td>gerente@codemed.com.br</td><td>tecnico123</td><td>Gerente</td></tr>
+      <tr><td>joao@codemed.com.br</td><td>tecnico123</td><td>Técnico</td></tr>
+      <tr><td>maria@codemed.com.br</td><td>tecnico123</td><td>Técnico</td></tr>
+      <tr><td>comercial@codemed.com.br</td><td>tecnico123</td><td>Comercial</td></tr>
+    </table>
+    <div class="callout warn">
+      <p><strong>Atenção:</strong> altere as senhas padrão antes de colocar em produção.</p>
+    </div>
+  </section>
+
+  <footer class="doc-footer">
+    <p><strong>CodeHelp CRM/Helpdesk</strong> — Plataforma integrada de atendimento e gestão para laboratórios, hospitais e clínicas.</p>
+    <p style="margin-top:6px">Documentação de funcionalidades · Versão 1.4 · Gerada em 2026</p>
+  </footer>
+</main>
+</div>
+
+<script>
+  // Highlight active TOC link on scroll
+  const links = document.querySelectorAll('.toc a');
+  const sections = document.querySelectorAll('section[id], .cover');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 120) current = s.id || 'visao-geral';
+    });
+    links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current));
+  }, { passive: true });
+</script>
+</body>
+</html>
