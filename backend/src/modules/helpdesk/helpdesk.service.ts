@@ -27,10 +27,22 @@ const MENSAGENS_PADRAO: Record<string, string> = {
 const FOLLOWUP_PADRAO = 'Olá {{nome_contato}}! 👋\n\nNotei que você ficou offline após nos enviar uma mensagem. Ainda precisa de ajuda?\n\nQuando quiser, é só responder esta mensagem por aqui mesmo. Seu atendimento continua registrado e um de nossos analistas irá te atender assim que você retornar.\n\nAtenciosamente,\nEquipe Codemed';
 
 const MENSAGEM_BOAS_VINDAS_PADRAO =
+  'Olá, {{nome}}! 👋\n{{saudacao}}!\n\nQue bom ter você por aqui! 😊\n\nComo podemos ajudar?\n\n🏢 *ESCOLHA O DEPARTAMENTO*\n\n{{departamentos}}\n\n━━━━━━━━━━━━━━━━━━\n\n👉 *Digite o número da opção desejada.*\n\nExemplo:\n*1* para {{primeiro_departamento}}.';
+
+// Versões anteriores (apenas saudação ou formato antigo) — usadas para migrar
+// bancos existentes para o novo layout sem quebrar customizações do admin.
+const MENSAGEM_BOAS_VINDAS_ANTERIOR =
   'Ola!! {{nome}} {{saudacao}} 👋\n\nQue bom ter voce por aqui!\n\nComo podemos te ajudar hoje? Descreva por aqui mesmo que um de nossos analistas te atendera em instantes.';
+const MENSAGEM_BOAS_VINDAS_PADRAO_ANTERIOR =
+  'Olá, {{nome}}! 👋\n{{saudacao}}!\n\nQue bom ter você por aqui! 😊\n\nComo podemos ajudar?';
 
 const MENSAGEM_OPCAO_INVALIDA_PADRAO =
+  '⚠️ Não consegui identificar a opção.\n\nPor favor, escolha uma das opções abaixo:\n\n{{departamentos}}\n\n👉 Digite apenas o *número* da opção desejada.';
+
+const MENSAGEM_OPCAO_INVALIDA_ANTERIOR =
   'Hmm, nao entendi sua resposta, {{nome}} 😅\n\nPor favor, descreva com mais detalhes o que voce precisa.';
+const MENSAGEM_OPCAO_INVALIDA_PADRAO_ANTERIOR =
+  'Hmm, não entendi sua resposta, {{nome}} 😅\n\nPor favor, digite o *número* da opção desejada:\n\n{{departamentos}}';
 
 const MENSAGEM_FORA_HORARIO_PADRAO =
   'Ola! Nosso horario de atendimento e de segunda a sexta, das 08:00 as 18:00. ' +
@@ -69,7 +81,11 @@ export async function ensureHelpdeskConfigs() {
       if (existing.tempoInatividadeMin == null) data.tempoInatividadeMin = 5;
       if (!(existing as any).ordenacaoFila) data.ordenacaoFila = 'updatedAt_desc';
       if (!existing.mensagemBoasVindas) data.mensagemBoasVindas = MENSAGEM_BOAS_VINDAS_PADRAO;
+      if (existing.mensagemBoasVindas === MENSAGEM_BOAS_VINDAS_ANTERIOR) data.mensagemBoasVindas = MENSAGEM_BOAS_VINDAS_PADRAO;
+      if (existing.mensagemBoasVindas === MENSAGEM_BOAS_VINDAS_PADRAO_ANTERIOR) data.mensagemBoasVindas = MENSAGEM_BOAS_VINDAS_PADRAO;
       if (!(existing as any).mensagemOpcaoInvalida) data.mensagemOpcaoInvalida = MENSAGEM_OPCAO_INVALIDA_PADRAO;
+      if ((existing as any).mensagemOpcaoInvalida === MENSAGEM_OPCAO_INVALIDA_ANTERIOR) data.mensagemOpcaoInvalida = MENSAGEM_OPCAO_INVALIDA_PADRAO;
+      if ((existing as any).mensagemOpcaoInvalida === MENSAGEM_OPCAO_INVALIDA_PADRAO_ANTERIOR) data.mensagemOpcaoInvalida = MENSAGEM_OPCAO_INVALIDA_PADRAO;
       if (!existing.mensagemForaHorario) data.mensagemForaHorario = MENSAGEM_FORA_HORARIO_PADRAO;
       if (!existing.horarioInicio) data.horarioInicio = '08:00';
       if (!existing.horarioFim) data.horarioFim = '18:00';

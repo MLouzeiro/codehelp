@@ -747,8 +747,11 @@ export async function getTicketHistory(req: AuthRequest, res: Response) {
         include: {
           client: true,
           assignee: { select: { id: true, name: true, email: true } },
+          departamento: { select: { id: true, nome: true, cor: true, slug: true } },
           messages: { orderBy: { createdAt: 'asc' } },
           channel: true,
+          csatResposta: { select: { nota: true, respondidoEm: true } },
+          metrics: true,
         },
       }),
     ]);

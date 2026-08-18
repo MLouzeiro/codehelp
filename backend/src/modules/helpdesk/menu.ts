@@ -22,37 +22,64 @@ function interpolar(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? `{{${k}}}`);
 }
 
-export async function montarBoasVindas(nome: string, now: Date = new Date()): Promise<string> {
+export const SEPARADOR_MENU = '━━━━━━━━━━━━━━━━━━';
+
+const NUMEROS_EMOJI = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+
+// Única fonte de formatação da lista numerada de departamentos.
+// Reutilizada pelo menu de boas-vindas, mensagem de opção inválida e template {{departamentos}}.
+export function formatarDepartamentosNumerados(departamentos: Array<{ nome: string; descricao?: string | null }>): string {
+  return departamentos
+    .map((d, i) => {
+      const num = NUMEROS_EMOJI[i] ?? `${i + 1}.`;
+      return `${num} *${d.nome}*${d.descricao ? `\n${d.descricao}` : ''}`;
+    })
+    .join('\n\n');
+}
+
+export async function montarBoasVindas(nome: string, now: Date = new Date()): Promise<{ descricao: string; fallbackTexto: string }> {
   const departamentos = await prisma.departamento.findMany({
     where: { ativo: true },
     orderBy: { ordem: 'asc' },
   });
 
+  const nomeFmt = nome || 'cliente';
+  const saudacao = getSaudacao(now);
+
   if (departamentos.length === 0) {
-    return `Olá! ${getSaudacao(now)}, ${nome || 'cliente'} 👋\n\nNo momento não há departamentos disponíveis. Entre em contato com o administrador do sistema.`;
+    const msg = `Olá, ${nomeFmt}! 👋\n${saudacao}!\n\nNo momento não há departamentos disponíveis. Entre em contato com o administrador do sistema.`;
+    return { descricao: msg, fallbackTexto: msg };
   }
 
-  const opcoes = departamentos.map((d) => `• ${d.nome}`).join('\n');
+  const lista = formatarDepartamentosNumerados(departamentos);
 
-  let baseMsg = `Olá! ${getSaudacao(now)}, ${nome || 'cliente'} 👋\n\nQue bom ter você por aqui!\n\nPor favor, selecione o departamento desejado:\n\n${opcoes}\n\nResponda com o *nome* do departamento.`;
+  // Mensagem completa padrão — saudação + departamentos numerados + instrução.
+  // Usada tanto na descrição da lista interativa (evolution/cloud) quanto no
+  // fallback de texto (Baileys/webjs). Mantém a opção de digitar o número.
+  let descricao = `Olá, ${nomeFmt}! 👋\n${saudacao}!\n\nQue bom ter você por aqui! 😊\n\nComo podemos ajudar?\n\n🏢 *ESCOLHA O DEPARTAMENTO*\n\n${lista}\n\n${SEPARADOR_MENU}\n\n👉 *Digite o número da opção desejada.*\n\nExemplo:\n*1* para ${departamentos[0].nome}.`;
 
   try {
     const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
     if (config?.mensagemBoasVindas) {
-      baseMsg = interpolar(config.mensagemBoasVindas, {
-        nome: nome || 'cliente',
-        saudacao: getSaudacao(now),
-        departamentos: opcoes,
-      });
+      descricao = interpolar(config.mensagemBoasVindas, {
+        nome: nomeFmt,
+        saudacao,
+        departamentos: lista,
+        primeiro_departamento: departamentos[0].nome,
+      })
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
     }
   } catch {}
 
-  // SEMPRE anexar a lista de departamentos se não estiver presente na mensagem
-  if (!baseMsg.includes('•') && !baseMsg.includes('1️⃣')) {
-    baseMsg += `\n\nPor favor, selecione o departamento desejado:\n\n${opcoes}\n\nResponda com o *nome* do departamento.`;
-  }
+  // Texto completo (fallback texto) — usado por providers sem lista interativa (Baileys/webjs).
+  // Se o template já embutiu a lista ({{departamentos}}), não duplicar.
+  const temLista = descricao.includes('🏢') || descricao.includes('ESCOLHA O DEPARTAMENTO') || descricao.includes('1️⃣') || descricao.includes('departamentos');
+  const fallbackTexto = temLista
+    ? descricao
+    : `${descricao}\n\n🏢 *ESCOLHA O DEPARTAMENTO*\n\n${lista}\n\n${SEPARADOR_MENU}\n\n👉 *Digite o número da opção desejada.*\n\nExemplo:\n*1* para ${departamentos[0].nome}.`;
 
-  return baseMsg;
+  return { descricao, fallbackTexto };
 }
 
 export async function montarOpcaoInvalida(nome: string): Promise<string> {
@@ -61,15 +88,15 @@ export async function montarOpcaoInvalida(nome: string): Promise<string> {
     orderBy: { ordem: 'asc' },
   });
 
-  const nomes = departamentos.map((d) => `• ${d.nome}`).join('\n');
-  const defaultMsg = `Hmm, não entendi sua resposta, ${nome || 'cliente'} 😅\n\nPor favor, responda com o *nome* do departamento desejado:\n\n${nomes}`;
+  const lista = formatarDepartamentosNumerados(departamentos);
+  const defaultMsg = `⚠️ Não consegui identificar a opção.\n\nPor favor, escolha uma das opções abaixo:\n\n${lista}\n\n👉 Digite apenas o *número* da opção desejada.`;
 
   try {
     const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
     if ((config as any)?.mensagemOpcaoInvalida) {
       return interpolar((config as any).mensagemOpcaoInvalida, {
         nome: nome || 'cliente',
-        departamentos: departamentos.map((d) => `• ${d.nome}`).join('\n'),
+        departamentos: lista,
       });
     }
   } catch {}
@@ -125,7 +152,7 @@ export async function montarAckDepartamento(nome: string, deptNome: string): Pro
     }
   } catch {}
 
-  return `Perfeito, ${nome || 'cliente'}! ✅\nVocê selecionou *${deptNome}*.\n\n📝 Por favor, descreva detalhadamente seu problema ou solicitação. Quanto mais informações, melhor poderemos ajudá-lo.\n\nAguardamos sua mensagem!`;
+  return `✅ Perfeito, ${nome || 'cliente'}!\n\nVocê selecionou:\n🏢 *${deptNome}*\n\nAgora, por favor, descreva brevemente o que está acontecendo.\n\nQuanto mais detalhes você fornecer, mais rápido poderemos ajudar. 😊`;
 }
 
 export async function montarPosicaoFilaComInfo(nome: string, posicao: number, jaInformouAssunto: boolean, jaInformouLab: boolean): Promise<string> {

@@ -1,11 +1,26 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Maximize2, Send, Loader2, ArrowLeft, Calendar, Clock, AlertTriangle, ToggleLeft, ToggleRight, Building2 } from 'lucide-react';
+import { Maximize2, Send, Loader2, ArrowLeft, Calendar, Clock, AlertTriangle, ToggleLeft, ToggleRight, Building2, Timer, MessageSquare, Star, Paperclip, ShieldCheck, ShieldAlert, User, X, Info, BarChart3, ExternalLink, Hash, UserCheck } from 'lucide-react';
 import api from '../../services/api';
 import TicketTopo from '../../components/TicketTopo';
 import TicketSidebar from '../../components/TicketSidebar';
 import TicketRodape from '../../components/TicketRodape';
 import TicketChecklist from '../../components/TicketChecklist';
+
+const STATUS_LABELS: Record<string, string> = {
+  aberto: 'Aberto', em_andamento: 'Em andamento', pendente: 'Pendente',
+  escalonado: 'Escalonado', resolvido: 'Resolvido', fechado: 'Fechado', cancelado: 'Cancelado',
+};
+
+const ETAPA_LABELS: Record<string, string> = {
+  fila: 'Fila', triagem: 'Triagem', em_atendimento: 'Em Atendimento',
+  aguardando_cliente: 'Aguardando Cliente', aguardando_os: 'Aguardando OS',
+  concluido: 'Concluído', descartado: 'Descartado',
+};
+
+const PRIORIDADE_LABELS: Record<string, string> = {
+  baixa: 'Baixa', media: 'Média', alta: 'Alta', urgente: 'Urgente',
+};
 
 export default function TicketAtendimentoPage() {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -27,6 +42,7 @@ export default function TicketAtendimentoPage() {
   const [salvandoHoras, setSalvandoHoras] = useState(false);
   const [deptTempos, setDeptTempos] = useState<any[]>([]);
   const [timeBlocks, setTimeBlocks] = useState<any[]>([]);
+  const [sidebarAberta, setSidebarAberta] = useState(false);
 
   const formatMin = (min: number | null | undefined) => {
     if (min == null) return '—';
@@ -44,6 +60,49 @@ export default function TicketAtendimentoPage() {
       treinamento: 'Treinamento', reuniao: 'Reunião', outro: 'Outro',
     };
     return map[tipo] || tipo;
+  };
+
+  // ── Indicadores do "Resumo do Ticket" (dados reais; '—' quando indisponível) ──
+  const tempoTotalMin = useMemo(() => {
+    if (!ticket?.dataAbertura) return null;
+    const fim = ticket.dataFechamento ? new Date(ticket.dataFechamento).getTime() : Date.now();
+    return Math.max(0, Math.round((fim - new Date(ticket.dataAbertura).getTime()) / 60000));
+  }, [ticket]);
+
+  const primeiraRespostaMin = useMemo(() => {
+    if (!ticket?.dataAbertura || !ticket?.dataPrimeiraResposta) return null;
+    return Math.max(0, Math.round((new Date(ticket.dataPrimeiraResposta).getTime() - new Date(ticket.dataAbertura).getTime()) / 60000));
+  }, [ticket]);
+
+  const ultimaInteracao = useMemo(() => {
+    const comData = (mensagens || []).filter((m: any) => m.createdAt || m.sentAt);
+    if (comData.length === 0) return null;
+    const ultima = comData.reduce((a: any, b: any) =>
+      new Date(b.createdAt || b.sentAt).getTime() > new Date(a.createdAt || a.sentAt).getTime() ? b : a
+    );
+    return ultima.createdAt || ultima.sentAt;
+  }, [mensagens]);
+
+  const csatNota = ticket?.csatResposta?.nota ?? null;
+
+  const slaInfo = useMemo<{ limite: number; consumido: number; status: 'no_prazo' | 'violado' } | null>(() => {
+    const limite = ticket?.slaTotalMinutos ?? null;
+    if (limite == null) return null;
+    const consumido = tempoTotalMin ?? 0;
+    return { limite, consumido, status: consumido <= limite ? 'no_prazo' : 'violado' };
+  }, [ticket, tempoTotalMin]);
+
+  const totalAnexos = useMemo(() => (mensagens || []).filter((m: any) => !!m.mediaUrl).length, [mensagens]);
+
+  const tempoRelativo = (data?: string) => {
+    if (!data) return '—';
+    const diff = Math.max(0, Date.now() - new Date(data).getTime());
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return 'agora';
+    if (min < 60) return `${min}min atrás`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `${h}h atrás`;
+    return `${Math.floor(h / 24)}d atrás`;
   };
 
   const loadTicket = useCallback(async () => {
@@ -165,9 +224,21 @@ export default function TicketAtendimentoPage() {
     return { emoji: '\u25CF', color: 'bg-slate-100 border-slate-300' };
   };
 
+  const renderMetric = (label: string, value: string, icon: React.ReactNode, valueClass = 'text-slate-800 dark:text-slate-100') => (
+    <div className="flex items-center gap-2.5 px-4 py-2.5 min-w-0">
+      <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700/60 flex items-center justify-center text-slate-500 dark:text-slate-300 flex-shrink-0">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500 font-semibold leading-tight">{label}</div>
+        <div className={`text-sm font-semibold truncate ${valueClass}`}>{value}</div>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center h-full min-h-[60vh]">
         <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
       </div>
     );
@@ -185,9 +256,9 @@ export default function TicketAtendimentoPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-full">
+    <div className="flex flex-col h-full min-h-0 max-w-full overflow-y-auto lg:overflow-hidden">
       {/* === BOTAO VOLTAR === */}
-      <div className="flex-shrink-0 mb-3">
+      <div className="flex-shrink-0 px-4 pt-3">
         <button
           onClick={() => navigate('/app/helpdesk')}
           className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors"
@@ -197,15 +268,15 @@ export default function TicketAtendimentoPage() {
         </button>
       </div>
 
-      {/* === TOPO (fixo) === */}
-      <div className="flex-shrink-0">
-        <TicketTopo ticket={ticket} />
+      {/* === CABECALHO DO TICKET (contexto compacto) === */}
+      <div className="flex-shrink-0 px-4 pt-2">
+        <TicketTopo ticket={ticket} slaLabel={slaInfo ? (slaInfo.status === 'no_prazo' ? 'Dentro do prazo' : 'Prazo violado') : undefined} slaStatus={slaInfo?.status} />
       </div>
 
-      {/* === CORPO: grid 2 colunas (chat | sidebar) — ocupa espaço restante === */}
-      <div className="flex-1 grid grid-cols-[1fr_300px] border border-slate-200 border-t-0 rounded-b-xl bg-white dark:bg-slate-800 dark:border-slate-700 overflow-hidden min-h-0">
-        {/* === COLUNA ESQUERDA: CHAT / TIMELINE === */}
-        <div className="flex flex-col min-h-0 relative">
+      {/* === WORKSPACE: CONVERSA | CLIENTE === */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-0 p-4 pb-3">
+        {/* === COLUNA ESQUERDA: CHAT / TIMELINE / CHECKLIST === */}
+        <div className="flex flex-col min-h-0 relative h-[65vh] lg:h-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
           {/* Toggle Chat/Timeline/Checklist */}
           <div className="flex-shrink-0 flex border-b border-slate-200 dark:border-slate-700">
             <button
@@ -237,6 +308,15 @@ export default function TicketAtendimentoPage() {
               }`}
             >
               {'\u2611\uFE0F'} Checklist
+            </button>
+            {/* Botao do painel do cliente (mobile) */}
+            <button
+              onClick={() => setSidebarAberta(true)}
+              className="lg:hidden flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-900 border-b-2 border-transparent transition-colors"
+              title="Painel do cliente"
+            >
+              <User size={15} />
+              <span className="hidden sm:inline">Cliente</span>
             </button>
           </div>
 
@@ -335,17 +415,13 @@ export default function TicketAtendimentoPage() {
                 </button>
               </div>
             </div>
-          ) : (
+          ) : aba === 'timeline' ? (
             <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900">
               {timelineEvents.length === 0 ? (
                 <div className="text-center py-12 text-sm text-slate-400 dark:text-slate-500">
                   Nenhum evento registrado
                 </div>
-          ) : aba === 'checklist' ? (
-            <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900">
-              <TicketChecklist ticketId={ticketId!} onChange={loadTicket} />
-            </div>
-          ) : (
+              ) : (
                 <div className="space-y-0">
                   {timeBlocks.length > 0 && (
                     <div className="mb-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
@@ -402,147 +478,218 @@ export default function TicketAtendimentoPage() {
                 </div>
               )}
             </div>
+          ) : (
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900">
+              <TicketChecklist ticketId={ticketId!} onChange={loadTicket} />
+            </div>
           )}
         </div>
 
-        {/* === COLUNA DIREITA: SIDEBAR === */}
-        <div className="border-l border-slate-200 dark:border-slate-700 p-4 overflow-y-auto space-y-4">
-          {/* Prazo de Entrega */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
-            <div className="flex items-center gap-2 mb-3">
-              <Calendar size={14} className="text-blue-600 dark:text-blue-400" />
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Prazo de Entrega</span>
-            </div>
-            {getDeadlineStatus() && (
-              <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg mb-2 ${getDeadlineStatus()!.color}`}>
-                {(() => { const Icon = getDeadlineStatus()!.icon; return <Icon size={12} />; })()}
-                {getDeadlineStatus()!.label}
-              </div>
-            )}
-            <div className="flex items-center gap-2 mb-2">
-              <button
-                onClick={() => { setSemPrazo(!semPrazo); }}
-                className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400"
-              >
-                {semPrazo ? <ToggleRight size={18} className="text-emerald-500" /> : <ToggleLeft size={18} className="text-slate-400" />}
-                Sem prazo
-              </button>
-            </div>
-            {!semPrazo && (
-              <input
-                type="datetime-local"
-                value={prazoEntrega}
-                onChange={(e) => setPrazoEntrega(e.target.value)}
-                onBlur={salvarPrazo}
-                className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-400 transition-colors text-slate-700 dark:text-slate-300"
-              />
-            )}
-            {prazoEntrega !== (ticket?.prazoEntrega ? new Date(ticket.prazoEntrega).toISOString().slice(0, 16) : '') || semPrazo !== (ticket?.semPrazo || false) ? (
-              <button
-                onClick={salvarPrazo}
-                disabled={salvandoPrazo}
-                className="mt-2 w-full text-xs bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-lg font-medium disabled:opacity-40 transition-colors"
-              >
-                {salvandoPrazo ? 'Salvando...' : 'Salvar Prazo'}
-              </button>
-            ) : null}
+        {/* === PANEL CLIENTE (drawer no mobile / coluna fixa no desktop) === */}
+        {sidebarAberta && (
+          <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarAberta(false)} />
+        )}
+        <aside
+          className={`fixed top-0 right-0 bottom-0 z-50 w-[86%] max-w-sm bg-white dark:bg-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
+            sidebarAberta ? 'translate-x-0' : 'translate-x-full'
+          } lg:static lg:z-auto lg:translate-x-0 lg:shadow-none lg:w-auto lg:max-w-none lg:h-full lg:min-h-0 lg:border-l lg:border-slate-200 lg:dark:border-slate-700 lg:rounded-none`}
+        >
+          <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700 lg:hidden">
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Detalhes do Ticket</span>
+            <button
+              onClick={() => setSidebarAberta(false)}
+              className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* Horas de Desenvolvimento */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock size={14} className="text-amber-600 dark:text-amber-400" />
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Horas Desenvolvimento</span>
-            </div>
-            <div className="flex gap-2 items-center">
-              <input
-                type="number"
-                value={horasDesenv}
-                onChange={(e) => setHorasDesenv(e.target.value === '' ? '' : Number(e.target.value))}
-                onBlur={salvarHorasDesenv}
-                placeholder="0"
-                min={0}
-                step={0.5}
-                className="flex-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-400 transition-colors text-slate-700 dark:text-slate-300"
-              />
-              <span className="text-xs text-slate-500 dark:text-slate-400">horas</span>
-            </div>
-          </div>
-
-          {/* Tempo por Departamento */}
-          {deptTempos.length > 0 && (
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+            {/* Dados do Atendimento */}
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
               <div className="flex items-center gap-2 mb-3">
-                <Building2 size={14} className="text-purple-600 dark:text-purple-400" />
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Tempo por Depto</span>
+                <Info size={14} className="text-blue-600 dark:text-blue-400" />
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Dados do Atendimento</span>
               </div>
-              <div className="space-y-2">
-                {deptTempos.map((dt: any) => {
-                  const mins = dt.duracaoMin || 0;
-                  const horas = Math.floor(mins / 60);
-                  const minsResto = mins % 60;
-                  return (
-                    <div key={dt.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dt.departamento?.cor || '#6366f1' }} />
-                        <span className="text-xs text-slate-600 dark:text-slate-400">{dt.departamento?.nome}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                          {horas > 0 ? `${horas}h ` : ''}{minsResto}min
-                        </span>
-                        {dt.emAndamento && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">agora</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+              <dl className="space-y-1.5 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <Hash size={12} /> Status
+                  </dt>
+                  <dd className="font-semibold text-slate-700 dark:text-slate-200">{STATUS_LABELS[ticket.status] || ticket.status || '—'}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400">Prioridade</dt>
+                  <dd className="font-semibold text-slate-700 dark:text-slate-200">{PRIORIDADE_LABELS[ticket.prioridade] || '—'}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <Building2 size={12} /> Departamento
+                  </dt>
+                  <dd className="font-semibold text-slate-700 dark:text-slate-200 truncate">{ticket.departamento?.nome || '—'}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400">Fila</dt>
+                  <dd className="font-semibold text-slate-700 dark:text-slate-200">{ETAPA_LABELS[ticket.etapa] || ticket.etapa || '—'}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <UserCheck size={12} /> Analista
+                  </dt>
+                  <dd className="font-semibold text-slate-700 dark:text-slate-200 truncate">{ticket.assignee?.name || '—'}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <ShieldCheck size={12} /> SLA
+                  </dt>
+                  <dd className={`font-semibold ${slaInfo && slaInfo.status === 'violado' ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                    {slaInfo ? (slaInfo.status === 'no_prazo' ? 'Dentro do prazo' : `Violado (${slaInfo.consumido}/${slaInfo.limite}min)`) : '—'}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            {/* Prazo de Entrega */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+              <div className="flex items-center gap-2 mb-3">
+                <Calendar size={14} className="text-blue-600 dark:text-blue-400" />
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Prazo de Entrega</span>
+              </div>
+              {getDeadlineStatus() && (
+                <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg mb-2 ${getDeadlineStatus()!.color}`}>
+                  {(() => { const Icon = getDeadlineStatus()!.icon; return <Icon size={12} />; })()}
+                  {getDeadlineStatus()!.label}
+                </div>
+              )}
+              <div className="flex items-center gap-2 mb-2">
+                <button
+                  onClick={() => { setSemPrazo(!semPrazo); }}
+                  className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400"
+                >
+                  {semPrazo ? <ToggleRight size={18} className="text-emerald-500" /> : <ToggleLeft size={18} className="text-slate-400" />}
+                  Sem prazo
+                </button>
+              </div>
+              {!semPrazo && (
+                <input
+                  type="datetime-local"
+                  value={prazoEntrega}
+                  onChange={(e) => setPrazoEntrega(e.target.value)}
+                  onBlur={salvarPrazo}
+                  className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-400 transition-colors text-slate-700 dark:text-slate-300"
+                />
+              )}
+              {prazoEntrega !== (ticket?.prazoEntrega ? new Date(ticket.prazoEntrega).toISOString().slice(0, 16) : '') || semPrazo !== (ticket?.semPrazo || false) ? (
+                <button
+                  onClick={salvarPrazo}
+                  disabled={salvandoPrazo}
+                  className="mt-2 w-full text-xs bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-lg font-medium disabled:opacity-40 transition-colors"
+                >
+                  {salvandoPrazo ? 'Salvando...' : 'Salvar Prazo'}
+                </button>
+              ) : null}
+            </div>
+
+            {/* Horas de Desenvolvimento */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock size={14} className="text-amber-600 dark:text-amber-400" />
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Horas Desenvolvimento</span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  value={horasDesenv}
+                  onChange={(e) => setHorasDesenv(e.target.value === '' ? '' : Number(e.target.value))}
+                  onBlur={salvarHorasDesenv}
+                  placeholder="0"
+                  min={0}
+                  step={0.5}
+                  className="flex-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-400 transition-colors text-slate-700 dark:text-slate-300"
+                />
+                <span className="text-xs text-slate-500 dark:text-slate-400">horas</span>
               </div>
             </div>
-          )}
 
-          <TicketSidebar ticket={ticket} cliente={cliente} lastEvents={timelineEvents} historicoContato={historicoContato} onTagsChange={() => loadTicket()} />
-        </div>
+            {/* Tempo por Departamento */}
+            {deptTempos.length > 0 && (
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Building2 size={14} className="text-purple-600 dark:text-purple-400" />
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Tempo por Depto</span>
+                </div>
+                <div className="space-y-2">
+                  {deptTempos.map((dt: any) => {
+                    const mins = dt.duracaoMin || 0;
+                    const horas = Math.floor(mins / 60);
+                    const minsResto = mins % 60;
+                    return (
+                      <div key={dt.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dt.departamento?.cor || '#6366f1' }} />
+                          <span className="text-xs text-slate-600 dark:text-slate-400">{dt.departamento?.nome}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                            {horas > 0 ? `${horas}h ` : ''}{minsResto}min
+                          </span>
+                          {dt.emAndamento && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">agora</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <TicketSidebar ticket={ticket} cliente={cliente} lastEvents={timelineEvents} historicoContato={historicoContato} onTagsChange={() => loadTicket()} />
+
+            {/* Link para o CRM */}
+            {cliente?.id && (
+              <div className="pt-1">
+                <button
+                  onClick={() => navigate(`/app/crm/${cliente.id}`)}
+                  className="w-full flex items-center justify-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-slate-700 rounded-lg py-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <ExternalLink size={13} /> Ver no CRM
+                </button>
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
 
-      {/* === RODAPE (fixo) === */}
-      <div className="flex-shrink-0">
+      {/* === ACOES DO TICKET === */}
+      <div className="flex-shrink-0 px-4 pb-3">
         <TicketRodape ticket={ticket} ticketId={ticketId!} onFinalizar={loadTicket} onMover={loadTicket} />
       </div>
 
-      {/* === TIMELINE CARD (fora do fluxo fixo) === */}
-      {timelineEvents.length > 0 && (
-        <div className="flex-shrink-0 mt-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-semibold text-sm text-slate-700 dark:text-slate-300">
-            {'\uD83D\uDCCB'} Timeline do Atendimento
+      {/* === RESUMO DO TICKET (indicadores rapidos — dados reais) === */}
+      <div className="flex-shrink-0 px-4 pb-4 lg:pb-6">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+            <BarChart3 size={14} className="text-blue-500" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Resumo do Ticket
+            </span>
           </div>
-          <div className="p-4 max-h-[200px] overflow-y-auto">
-            <div className="space-y-0">
-              {timelineEvents.slice(0, 10).map((ev: any, i: number) => {
-                const icon = getTimelineIcon(ev);
-                return (
-                  <div key={ev.id || i} className="flex gap-3 py-1.5 relative">
-                    {i < Math.min(timelineEvents.length, 10) - 1 && (
-                      <div className="absolute left-[11px] top-[22px] bottom-0 w-0.5 bg-slate-200 dark:bg-slate-700" />
-                    )}
-                    <div className={`w-[22px] h-[22px] rounded-full border-2 ${icon.color} flex items-center justify-center flex-shrink-0 z-10 text-[10px]`}>
-                      {icon.emoji}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-700 dark:text-slate-300">{ev.descricao || ev.tipo}</p>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500">
-                        {ev.createdAt ? new Date(ev.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
-                        {ev.dados ? ` \u00B7 ${ev.dados}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-slate-100 dark:divide-slate-700">
+            {renderMetric('Tempo total', tempoTotalMin != null ? formatMin(tempoTotalMin) : '—', <Timer size={15} className="text-blue-500" />)}
+            {renderMetric('1ª resposta', primeiraRespostaMin != null ? formatMin(primeiraRespostaMin) : '—', <MessageSquare size={15} className="text-emerald-500" />)}
+            {renderMetric('Última interação', tempoRelativo(ultimaInteracao ?? undefined), <Clock size={15} className="text-amber-500" />)}
+            {renderMetric('Satisfação', csatNota != null ? `${csatNota}/5` : 'Não avaliado', <Star size={15} className={csatNota != null ? 'text-yellow-500 fill-yellow-400' : 'text-slate-400'} />)}
+            {renderMetric(
+              'SLA',
+              slaInfo ? (slaInfo.status === 'no_prazo' ? 'Dentro do prazo' : `${slaInfo.consumido}/${slaInfo.limite}min`) : '—',
+              slaInfo && slaInfo.status === 'violado' ? <ShieldAlert size={15} className="text-red-500" /> : <ShieldCheck size={15} className={slaInfo ? 'text-emerald-500' : 'text-slate-400'} />,
+              slaInfo && slaInfo.status === 'violado' ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'
+            )}
+            {renderMetric('Anexos', totalAnexos > 0 ? String(totalAnexos) : '—', <Paperclip size={15} className="text-violet-500" />)}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

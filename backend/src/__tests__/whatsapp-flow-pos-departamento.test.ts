@@ -317,7 +317,7 @@ describe('Fluxo pós-departamento (correção fluxo parado)', () => {
     const semDept = await prisma.ticket.findUnique({ where: { id: ticket.id } });
     expect(semDept?.departamentoId).toBeNull();
     const msgInvalida = await prisma.message.findFirst({
-      where: { ticketId: ticket.id, fromMe: true, content: { contains: 'nao entendi sua resposta' } },
+      where: { ticketId: ticket.id, fromMe: true, content: { contains: 'Não consegui identificar' } },
     });
     expect(msgInvalida).not.toBeNull();
 
