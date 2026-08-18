@@ -25,6 +25,9 @@ export interface InteractiveListOptions {
   description: string;  // Corpo da mensagem
   footer?: string;
   sections: InteractiveSection[];
+  // Texto numerado customizado para o caminho de texto (Baileys/webjs/fallback).
+  // Quando ausente, usa montarFallbackTexto (padrão genérico).
+  fallbackTexto?: string;
   connectionId?: string;
   jid?: string;
 }
@@ -67,7 +70,7 @@ export async function enviarListaInterativa(to: string, opts: InteractiveListOpt
 
   // Texto forçado para providers sem entrega confiável de listas.
   if (!provider || PROVIDERS_TEXTO_FORCADO.has(provider)) {
-    const texto = montarFallbackTexto(opts);
+    const texto = opts.fallbackTexto ?? montarFallbackTexto(opts);
     const textResult = await sendWhatsAppMessage(phone, texto, opts.connectionId, opts.jid);
     console.log(
       `[WHATSAPP_INTERACTIVE] to=${phone} tipo=text motivo=provider_${provider || 'desconhecido'}_sem_lista ` +
@@ -100,7 +103,7 @@ export async function enviarListaInterativa(to: string, opts: InteractiveListOpt
   console.warn(
     `[WHATSAPP_INTERACTIVE] to=${phone} tipo=list success=false fallback=text motivo=${listResult.error || 'nao_suportado'}`,
   );
-  const textoFallback = montarFallbackTexto(opts);
+  const textoFallback = opts.fallbackTexto ?? montarFallbackTexto(opts);
   const textResult = await sendWhatsAppMessage(phone, textoFallback, opts.connectionId, opts.jid);
   if (textResult.success) {
     console.log(

@@ -60,23 +60,13 @@ export async function enviarMenuInicial(ticketId: string) {
     return;
   }
 
-  let baseText = `Olá! 👋\n\nQue bom ter você por aqui!\n\nPor favor, selecione o departamento desejado:`;
-  try {
-    const config = await getEtapaConfig('fila');
-    if (config?.mensagemBoasVindas) {
-      const nome = ticket.contactName || 'cliente';
-      const saudacao = interpolate('{{saudacao}}', buildMessageVars({ contactName: nome }));
-      baseText = interpolate(config.mensagemBoasVindas, { nome, saudacao, departamentos: '' })
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
-    }
-  } catch {}
+  const { descricao, fallbackTexto } = await montarBoasVindas(ticket.contactName || 'cliente');
 
   const phone = sanitizePhoneNumber(ticket.contactPhone).replace(/@c\.us$/i, '');
 
   // Lista interativa (clickável) — departamentos do banco com rowId dept_<slug>.
   // O handler normaliza o clique via interactiveId → detectarOpcaoMenu.
-  const { enviarListaInterativa, montarFallbackTexto } = await import('../integrations/whatsapp/whatsapp-message-service');
+  const { enviarListaInterativa } = await import('../integrations/whatsapp/whatsapp-message-service');
 
   const sections = [
     {
@@ -91,16 +81,17 @@ export async function enviarMenuInicial(ticketId: string) {
 
   const result = await enviarListaInterativa(phone, {
     title: 'Selecione o departamento',
-    description: baseText,
+    description: descricao,
     sections,
+    fallbackTexto,
     connectionId: (ticket as any).whatsappConnectionId || undefined,
     jid: ticket.contactJid || undefined,
   });
 
   if (result.success) {
     const conteudoRegistrado = result.usedFallback
-      ? `[Bot] Menu de departamentos enviado (texto)\n\n${montarFallbackTexto({ title: 'Selecione o departamento', description: baseText, sections })}`
-      : `[Bot] Menu de departamentos enviado (interativo)\n\n${baseText}\n\n${departamentos.map((d) => `• ${d.nome}`).join('\n')}`;
+      ? `[Bot] Menu de departamentos enviado (texto)\n\n${fallbackTexto}`
+      : `[Bot] Menu de departamentos enviado (interativo)\n\n${descricao}\n\n${departamentos.map((d) => `• ${d.nome}`).join('\n')}`;
     await prisma.message.create({
       data: { ticketId, fromMe: true, content: conteudoRegistrado, source: 'bot', tipo: 'system' },
     });

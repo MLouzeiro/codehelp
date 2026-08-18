@@ -44,7 +44,7 @@ export default function TicketDetail() {
   if (!ticket) return <div className="text-center py-12 text-gray-500">Ticket não encontrado</div>;
 
   return (
-    <div className="max-w-3xl mx-auto h-[calc(100vh-6rem)] flex flex-col">
+    <div className="max-w-4xl mx-auto h-full flex flex-col px-4 lg:px-6 pt-3 lg:pt-4 pb-3 lg:pb-4">
       <div className="flex items-center justify-between mb-4">
         <button onClick={() => navigate('/app/whatsapp')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
           <ArrowLeft size={18} /> Voltar

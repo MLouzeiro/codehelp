@@ -33,6 +33,11 @@ export default function Layout() {
   const isCollapsed = sidebarLayout === 'collapsed';
   const isVertical = sidebarLayout === 'vertical';
 
+  // Rotas "workspace" (tela cheia): sem breadcrumb e sem padding do <main>.
+  // A página ocupa todo o viewport e gerencia seus próprios scrolls internos.
+  const WORKSPACE_PREFIXES = ['/app/helpdesk/ticket/', '/app/whatsapp/tickets/'];
+  const isWorkspace = WORKSPACE_PREFIXES.some((p) => location.pathname.startsWith(p));
+
   const groups = filterGroupsByRole(user?.role);
 
   // Determina grupos e submenus que devem abrir automaticamente (contêm a rota ativa)
@@ -415,8 +420,11 @@ export default function Layout() {
   );
 
   const mainContent = (
-    <main className="flex-1 overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6" style={{ backgroundColor: 'var(--bg-app)' }}>
-      <Breadcrumb />
+    <main
+      className={`flex-1 ${isWorkspace ? 'min-h-0 overflow-hidden' : 'overflow-auto p-4 lg:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6'}`}
+      style={{ backgroundColor: 'var(--bg-app)' }}
+    >
+      {!isWorkspace && <Breadcrumb />}
       <Outlet />
     </main>
   );
