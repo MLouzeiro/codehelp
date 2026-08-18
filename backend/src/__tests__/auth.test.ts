@@ -5,6 +5,7 @@ vi.mock('../config/database', () => ({
     user: {
       findUnique: vi.fn(),
       update: vi.fn(),
+      findMany: vi.fn(),
     },
   },
 }));
@@ -12,7 +13,7 @@ vi.mock('../config/database', () => ({
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { login, refreshToken, me } from '../modules/auth/auth.controller';
+import { login, refreshToken, me, listUsers, archiveUser } from '../modules/auth/auth.controller';
 import prisma from '../config/database';
 import { env } from '../config/env';
 import { AuthRequest } from '../shared/middleware/auth';
@@ -22,6 +23,7 @@ function mockReqRes(overrides?: Record<string, any>) {
   const res = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
+    send: vi.fn().mockReturnThis(),
   } as unknown as Response;
   return { req, res };
 }
@@ -228,6 +230,83 @@ describe('Auth Controller — Task 2.1', () => {
 
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({ error: 'Usuário inválido' });
+    });
+  });
+
+  describe('listUsers', () => {
+    it('GET /api/auth/users — deve listar todos os usuários sem filtro', async () => {
+      const mockUsers = [
+        { id: '1', name: 'A', email: 'a@test.com', role: 'tecnico', active: true, isMaster: false, phone: null, signature: null, createdAt: new Date(), departamentos: [] },
+        { id: '2', name: 'B', email: 'b@test.com', role: 'tecnico', active: false, isMaster: false, phone: null, signature: null, createdAt: new Date(), departamentos: [] },
+      ];
+      vi.mocked(prisma.user.findMany).mockResolvedValue(mockUsers as any);
+
+      const { req, res } = mockReqRes({ query: {} });
+      await listUsers(req, res);
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
+      expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ id: '1' })]));
+    });
+
+    it('GET /api/auth/users?active=true — deve filtrar apenas ativos', async () => {
+      vi.mocked(prisma.user.findMany).mockResolvedValue([]);
+
+      const { req, res } = mockReqRes({ query: { active: 'true' } });
+      await listUsers(req, res);
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { active: true } }));
+    });
+
+    it('GET /api/auth/users?active=false — deve filtrar apenas arquivados', async () => {
+      vi.mocked(prisma.user.findMany).mockResolvedValue([]);
+
+      const { req, res } = mockReqRes({ query: { active: 'false' } });
+      await listUsers(req, res);
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { active: false } }));
+    });
+  });
+
+  describe('archiveUser', () => {
+    it('DELETE /api/auth/users/:id — deve arquivar usuário (active: false) e retornar 204', async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: '2', name: 'B', role: 'tecnico', active: true, isMaster: false } as any);
+      vi.mocked(prisma.user.update).mockResolvedValue({} as any);
+
+      const { req, res } = mockReqRes({ params: { id: '2' }, user: { id: '1', role: 'admin' } });
+      await archiveUser(req, res);
+
+      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: '2' }, data: { active: false } });
+      expect(res.status).toHaveBeenCalledWith(204);
+      expect(res.send).toHaveBeenCalled();
+    });
+
+    it('DELETE /api/auth/users/:id — deve retornar 400 se for a si mesmo', async () => {
+      const { req, res } = mockReqRes({ params: { id: '1' }, user: { id: '1', role: 'admin' } });
+
+      await archiveUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Você não pode arquivar a si mesmo' });
+    });
+
+    it('DELETE /api/auth/users/:id — deve retornar 403 se for master', async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: '3', name: 'Master', role: 'admin', active: true, isMaster: true } as any);
+
+      const { req, res } = mockReqRes({ params: { id: '3' }, user: { id: '1', role: 'admin' } });
+      await archiveUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ error: 'O usuário master não pode ser arquivado' });
+    });
+
+    it('DELETE /api/auth/users/:id — deve retornar 404 se não encontrado', async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+
+      const { req, res } = mockReqRes({ params: { id: 'inexistente' }, user: { id: '1', role: 'admin' } });
+      await archiveUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Usuário não encontrado' });
     });
   });
 

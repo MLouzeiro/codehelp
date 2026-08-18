@@ -218,6 +218,104 @@ export async function gerarRelatorioAnalista(
   };
 }
 
+export interface ResumoTodosAnalistas {
+  periodo: { inicio: Date | null; fim: Date | null };
+  totalAnalistas: number;
+  resumo: {
+    totalTickets: number;
+    ticketsResolvidos: number;
+    taxaResolucaoMedia: number;
+    csatMedia: number;
+    fcrMedia: number;
+    notaAuditoriaMedia: number;
+    totalMensagensAgente: number;
+  };
+  analistas: AnalistaResumoRanking[];
+}
+
+export interface AnalistaResumoRanking {
+  agenteId: string;
+  agenteNome: string;
+  totalTickets: number;
+  ticketsResolvidos: number;
+  taxaResolucao: number;
+  tempoMedioRespostaMin: number;
+  notaAuditoriaMedia: number;
+  classificacaoAuditoria: string;
+  csatMedia: number;
+  csatRespondidos: number;
+  totalMensagensAgente: number;
+  fcr: number;
+}
+
+export async function gerarResumoTodosAnalistas(
+  dataInicio?: string,
+  dataFim?: string
+): Promise<ResumoTodosAnalistas> {
+  const agentes = await prisma.user.findMany({
+    where: { active: true, role: { in: ['tecnico', 'gerente', 'admin'] } },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+
+  const analistas: AnalistaResumoRanking[] = [];
+  let totalTickets = 0;
+  let totalResolvidos = 0;
+  let somaCsat = 0;
+  let comCsat = 0;
+  let somaFcr = 0;
+  let comFcr = 0;
+  let somaNota = 0;
+  let comNota = 0;
+  let totalMensagensAgente = 0;
+
+  for (const agente of agentes) {
+    const rel = await gerarRelatorioAnalista(agente.id, dataInicio, dataFim);
+    if (!rel) continue;
+    const r = rel.resumo;
+
+    analistas.push({
+      agenteId: agente.id,
+      agenteNome: agente.name,
+      totalTickets: r.totalTickets,
+      ticketsResolvidos: r.ticketsResolvidos,
+      taxaResolucao: r.taxaResolucao,
+      tempoMedioRespostaMin: r.tempoMedioRespostaMin,
+      notaAuditoriaMedia: r.notaAuditoriaMedia,
+      classificacaoAuditoria: r.classificacaoAuditoria,
+      csatMedia: r.csatMedia,
+      csatRespondidos: r.csatRespondidos,
+      totalMensagensAgente: r.totalMensagensAgente,
+      fcr: r.fcr,
+    });
+
+    totalTickets += r.totalTickets;
+    totalResolvidos += r.ticketsResolvidos;
+    totalMensagensAgente += r.totalMensagensAgente;
+    if (r.csatRespondidos > 0) { comCsat++; somaCsat += r.csatMedia; }
+    if (r.totalTickets > 0) { comFcr++; somaFcr += r.fcr; }
+    if (r.notaAuditoriaMedia > 0) { comNota++; somaNota += r.notaAuditoriaMedia; }
+  }
+
+  return {
+    periodo: {
+      inicio: dataInicio ? new Date(dataInicio) : null,
+      fim: dataFim ? new Date(dataFim) : null,
+    },
+    totalAnalistas: agentes.length,
+    resumo: {
+      totalTickets,
+      ticketsResolvidos: totalResolvidos,
+      taxaResolucaoMedia: totalTickets ? Math.round((totalResolvidos / totalTickets) * 100) : 0,
+      csatMedia: comCsat ? Math.round((somaCsat / comCsat) * 10) / 10 : 0,
+      fcrMedia: comFcr ? Math.round(somaFcr / comFcr) : 0,
+      notaAuditoriaMedia: comNota ? Math.round((somaNota / comNota) * 10) / 10 : 0,
+      totalMensagensAgente,
+    },
+    analistas,
+  };
+}
+
 export async function getReplayConversa(ticketId: string): Promise<ReplayConversa | null> {
   const ticket = await prisma.ticket.findUnique({
     where: { id: ticketId },

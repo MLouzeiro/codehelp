@@ -3,6 +3,7 @@ import prisma from '../config/database';
 import { ensureHelpdeskEntities } from '../modules/helpdesk/seed.service';
 import {
   gerarRelatorioAnalista,
+  gerarResumoTodosAnalistas,
   getReplayConversa,
 } from '../modules/helpdesk/agentReport.service';
 
@@ -177,5 +178,58 @@ describe('Auditoria individual por analista (FASE 8)', () => {
     expect(relatorio!.resumo.csatMedia).toBe(5);
     expect(relatorio!.resumo.fcr).toBeGreaterThanOrEqual(0);
     expect(relatorio!.resumo.tempoMedioRespostaMin).toBe(3);
+  });
+
+  it('resumo de todos os analistas retorna ranking com o analista de teste', async () => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        externalId: `fa8e-${Date.now()}-${Math.random()}`,
+        contactName: 'Cliente Todos Analistas',
+        contactPhone: '85999998814',
+        status: 'fechado',
+        etapa: 'concluido',
+        canal: 'whatsapp_baileys',
+        assigneeId: agenteId,
+        dataAbertura: new Date(),
+      },
+    });
+    ticketsIds.push(ticket.id);
+
+    const resumo = await gerarResumoTodosAnalistas();
+
+    expect(resumo.totalAnalistas).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(resumo.analistas)).toBe(true);
+    const linha = resumo.analistas.find(a => a.agenteId === agenteId);
+    expect(linha).toBeDefined();
+    expect(linha!.agenteNome).toBe('Analista Fase 8');
+    expect(linha!.totalTickets).toBeGreaterThanOrEqual(1);
+    expect(resumo.resumo.totalTickets).toBeGreaterThanOrEqual(1);
+    expect(typeof resumo.resumo.taxaResolucaoMedia).toBe('number');
+    expect(typeof resumo.resumo.csatMedia).toBe('number');
+    expect(typeof resumo.resumo.fcrMedia).toBe('number');
+  });
+
+  it('resumo de todos os analistas filtra por período', async () => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        externalId: `fa8f-${Date.now()}-${Math.random()}`,
+        contactName: 'Cliente Todos Analistas Período',
+        contactPhone: '85999998815',
+        status: 'aberto',
+        etapa: 'em_atendimento',
+        canal: 'whatsapp_baileys',
+        assigneeId: agenteId,
+        dataAbertura: new Date('2019-01-01T00:00:00Z'),
+      },
+    });
+    ticketsIds.push(ticket.id);
+
+    const resumo = await gerarResumoTodosAnalistas('2021-01-01', '2021-12-31');
+
+    const linha = resumo.analistas.find(a => a.agenteId === agenteId);
+    expect(linha).toBeDefined();
+    expect(linha!.totalTickets).toBe(0);
+    expect(resumo.periodo.inicio).not.toBeNull();
+    expect(resumo.periodo.fim).not.toBeNull();
   });
 });

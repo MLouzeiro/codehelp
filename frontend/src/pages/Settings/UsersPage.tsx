@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
-import { Plus, X, User, Shield, Mail, Phone, ChevronDown, Check, AlertCircle, Building2 } from 'lucide-react';
+import { Plus, X, User, Shield, Mail, Phone, ChevronDown, Check, AlertCircle, Building2, Archive, ArchiveRestore } from 'lucide-react';
 import type { Departamento } from '../../types';
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; permissions: string[] }> = {
@@ -59,6 +59,7 @@ export default function UsersPage() {
   const [roleInfo, setRoleInfo] = useState<string | null>(null);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
   const initialLoadedRef = useRef(false);
 
   useEffect(() => { loadUsers(); loadDepartamentos(); }, []);
@@ -70,10 +71,11 @@ export default function UsersPage() {
     } catch {}
   };
 
-  const loadUsers = async () => {
+  const loadUsers = async (archivedOverride?: boolean) => {
     setError('');
     try {
-      const { data } = await api.get('/auth/users');
+      const archived = archivedOverride ?? showArchived;
+      const { data } = await api.get(`/auth/users?active=${archived ? 'false' : 'true'}`);
       setUsers(Array.isArray(data) ? data : []);
     } catch (err: any) {
       const status = err?.response?.status;
@@ -130,11 +132,27 @@ export default function UsersPage() {
     } finally { setSaving(false); }
   };
 
-  const toggleActive = async (id: string, active: boolean) => {
+  const archiveUser = async (id: string, name: string) => {
+    if (!window.confirm(`Arquivar "${name}"?\n\nO usuário será ocultado da lista de funcionários e não poderá mais entrar no sistema.`)) return;
     try {
-      await api.put(`/auth/users/${id}`, { active: !active });
+      await api.delete(`/auth/users/${id}`);
+      loadUsers();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao arquivar usuário');
+    }
+  };
+
+  const restoreUser = async (id: string) => {
+    try {
+      await api.put(`/auth/users/${id}`, { active: true });
       loadUsers();
     } catch { }
+  };
+
+  const toggleArchivedView = () => {
+    const next = !showArchived;
+    setShowArchived(next);
+    loadUsers(next);
   };
 
   return (
@@ -142,11 +160,24 @@ export default function UsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-codemed-700">Funcionários</h1>
-          <p className="text-neutral-500 dark:text-slate-400">{users.length} usuários cadastrados</p>
+          <p className="text-neutral-500 dark:text-slate-400">
+            {showArchived ? `${users.length} usuário(s) arquivado(s)` : `${users.length} usuários ativos`}
+          </p>
         </div>
-        <button onClick={openNew} className="btn-primary text-sm flex items-center gap-2">
-          <Plus size={16} /> Novo Funcionário
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleArchivedView}
+            className={`text-xs font-medium px-3 py-2 rounded-lg border transition-colors flex items-center gap-1.5 ${showArchived
+              ? 'bg-green-50 dark:bg-green-900/30 text-green-700 border-green-200 dark:border-green-800 hover:bg-green-100'
+              : 'bg-white dark:bg-slate-800 text-neutral-600 dark:text-slate-300 border-neutral-200 dark:border-slate-700 hover:bg-neutral-50 dark:hover:bg-slate-700'}`}
+          >
+            {showArchived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+            {showArchived ? 'Ver ativos' : 'Ver arquivados'}
+          </button>
+          <button onClick={openNew} className="btn-primary text-sm flex items-center gap-2">
+            <Plus size={16} /> Novo Funcionário
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -159,7 +190,9 @@ export default function UsersPage() {
         {loading && !initialLoadedRef.current ? (
           <div className="text-center py-12 text-neutral-400 dark:text-slate-500">Carregando...</div>
         ) : !error && users.length === 0 ? (
-          <div className="text-center py-12 text-neutral-400 dark:text-slate-500">Nenhum funcionário cadastrado</div>
+          <div className="text-center py-12 text-neutral-400 dark:text-slate-500">
+            {showArchived ? 'Nenhum usuário arquivado' : 'Nenhum funcionário ativo cadastrado'}
+          </div>
         ) : !loading && !error && users.length > 0 ? (
           users.map((u) => {
             const roleCfg = ROLE_CONFIG[u.role] || ROLE_CONFIG.tecnico;
@@ -176,7 +209,7 @@ export default function UsersPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-codemed-700">{u.name}</span>
                         <span className={`badge ${roleCfg.color}`}>{roleCfg.label}</span>
-                        {!u.active && <span className="badge bg-red-100 text-red-700">Inativo</span>}
+                        {!u.active && <span className="badge bg-red-100 text-red-700">Arquivado</span>}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-slate-400">
                         <span className="flex items-center gap-1"><Mail size={12} /> {u.email}</span>
@@ -201,10 +234,17 @@ export default function UsersPage() {
                     <button onClick={() => openEdit(u)} className="text-xs text-neutral-400 dark:text-slate-500 hover:text-green-500 p-1.5 rounded-lg hover:bg-green-50 transition-colors">
                       Editar
                     </button>
-                    <button onClick={() => toggleActive(u.id, u.active)}
-                      className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${u.active ? 'text-red-600 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}>
-                      {u.active ? 'Desativar' : 'Ativar'}
-                    </button>
+                    {showArchived ? (
+                      <button onClick={() => restoreUser(u.id)}
+                        className="text-xs font-medium px-3 py-1.5 rounded-lg text-green-600 hover:bg-green-50 transition-colors flex items-center gap-1">
+                        <ArchiveRestore size={14} /> Restaurar
+                      </button>
+                    ) : (
+                      <button onClick={() => archiveUser(u.id, u.name)}
+                        className="text-xs font-medium px-3 py-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1">
+                        <Archive size={14} /> Arquivar
+                      </button>
+                    )}
                   </div>
                 </div>
 

@@ -44,6 +44,7 @@ Legenda status: ⏳ pendente · 🔧 em andamento · ✅ concluído · ⛔ bloqu
 
 | Data | Fase | Descrição | Resultado |
 |------|------|-----------|-----------|
+| 2026-08-17 | UX | **Melhoria da mensagem de boas-vindas do WhatsApp + Tela de Atendimento do Ticket** (visual/UX apenas — lógica do bot inalterada). **Boas-vindas centralizada**: `montarBoasVindas` (menu.ts) agora é a fonte única e retorna `{ descricao, fallbackTexto }`; novo `formatarDepartamentosNumerados` (lista `1️⃣..🔟` com nome + descrição) reutilizado pelo menu, mensagem de opção inválida e template `{{departamentos}}`; `enviarListaInterativa` ganhou `fallbackTexto` opcional (Baileys/webjs recebem o texto formatado completo: 🏢 *ESCOLHA O DEPARTAMENTO*, separador `━━━`, 👉 instrução e exemplo); `enviarMenuInicial` usa `montarBoasVindas` (corrigido bug `{{departamentos:''}}` vazio); seeds `MENSAGEM_BOAS_VINDAS_PADRAO`/`MENSAGEM_OPCAO_INVALIDA_PADRAO` + `AUTO_MESSAGES` (UI) no novo padrão; `ensureHelpdeskConfigs` migra bancos existentes apenas quando o valor == texto antigo (preserva customizações). **Tela de atendimento**: `Layout.tsx` novo modo "workspace" (rotas `/app/helpdesk/ticket/` e `/app/whatsapp/tickets/` — sem breadcrumb e sem padding do `<main>`, `overflow-hidden`); páginas com `h-full` (substitui `h-[calc(100vh-4rem)]` — elimina o espaço em branco inferior); grid responsivo `grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px]`; barra **Resumo do Ticket** no rodapé com indicadores reais (tempo total, 1ª resposta, última interação, satisfação CSAT, SLA, anexos — `—` quando indisponível); `getTicketHistory` passou a incluir `csatResposta` e `metrics`; card de timeline duplicado no rodapé removido (mantido na aba Timeline); `TicketDetail` (WhatsApp) `h-full` + padding interno. Teste `whatsapp-flow-pos-departamento` atualizado (acento `não` na nova mensagem de opção inválida). | Backend **389/390** (1 fail pré-existente time-dependent TESTE #31 `expediente-return`), tsc backend 20 pré-existentes (0 novos), frontend tsc 0, frontend 5/5. |
 | 2026-08-17 | 12 | **Auditoria IA Profissional (Fases A–F):** novo motor de auditoria gerencial de atendimentos. **A) Motor** `auditoriaProfissional.service.ts` + model `AuditoriaProfissional` (14 notas 0–100 + `notaGeral`, classificações, JSONs `evidenciaProblemas/pontosFortes/riscos/recomendacoes/planoMelhoria/alertas`, `confiancaMedia`, `analiseInconclusiva`, revisão humana `revisaoStatus/Justificativa/PorId/Em`, versão, protocolo, contato, agente/cliente/departamento/categoria). Guardrail **anti-alucinação** `validarEvidencias` descarta trechos inexistentes na conversa e gera alerta; fallback local determinístico (`modeloUsado='fallback-local'`) quando `hasClaude()` é falso; prompt Claude com pesos por categoria. Rotas `/api/auditoria/*` (admin/gerente). **B) Agregações** `auditoriaAgregacao.service.ts` (panorama, ranking, clientes risco, assuntos, evolução, padrões globais). **C) Decisão** `auditoriaDecisao.service.ts` (tomada de decisão com saúde 🟢🟡🔴, recomendações priorizadas, plano 7/30/60, metas, fila, auditoria por amostra) + **auditoria contínua automática** disparada fire-and-forget em `flow.service.ts` `encerrarTicket`. **D) Relatórios** `auditoriaRelatorio.service.ts` (relatório INTERNO vs CLIENTE com confidencialidade, consolidado, CSV separador `;` com BOM, Excel exceljs). **E) Frontend**: `AuditoriaProfissionalPage.tsx` (fila + filtros + KPIs + modal com 14 categorias, problemas com trechos reais, riscos, recomendações, plano, revisão humana CONFIRMADO/DISCORDO/REVISAR/N/A, exports CSV/Excel via blob) e `TomadaDecisaoPage.tsx` (saúde, resumo executivo, o que o gestor deve fazer, recomendações, plano de ação, metas, foco por analista, padrões críticos) — rotas + submenu "Auditoria de Atendimentos" e "Tomada de Decisão". **F) Testes** `auditoria-profissional.test.ts` (12: classificação, auditagem com 14 notas, consulta por ticket/id, listar, revisão CONFIRMADO/DISCORDO, panorama, decisão, fila, relatório interno, CSV). | Backend **389/390** (1 fail pré-existente time-dependent TESTE #31), 12 novos testes, tsc backend 20 pré-existentes (0 novos), frontend tsc 0. |
 | 2026-08-16 | Docs | **Artefatos comerciais de documentação**: `DOCUMENTACAO-FUNCIONALIDADES.html` (21 seções + 11 mockups HTML/CSS), `.pdf` (28 págs via Puppeteer/Chrome), `DEMO-INTERATIVA.html` (demo animada auto-play 9 cenas), `APRESENTACAO-MOCKUP.html` (11 slides com mockups). Escolha do usuário: imagens Misto (mockups; sistema offline), vídeo demo HTML, tudo novo. Validação: 3 HTMLs sem erros de console, PDF %PDF-1.4 válido. | 4 artefatos gerados e validados. |
 | 2026-08-15 | 12 | **FASE 12 — Fase F: Segurança, performance, fonte única e regressão completa** (item #17/#18). **Segurança/validação**: `parseFiltro` (closure-audit) agora rejeita `dataInicio`/`dataFim` inválidas (throw) e limita `limit` a 1..1000 (export usa default 500); exportado para teste. **Fonte única de dados**: resumo usa constantes `WHERE_TICKET_RESOLVIDO` + `MOTIVO_ENCERRADO_SEM_RESOLUCAO`; risco calculado centralmente em `auditarEncerramento` (sem lógica duplicada no resumo). **Performance**: `problemaNaoResolvido` via `prisma.ticket.count` no banco (agregação, sem carregar tickets); demais indicadores agregados em memória a partir do lote limitado. TESTE #34 (`closure-audit-validation.test.ts`, 6 testes): datas inválidas, limite fora do range (0/1001/abc), limites 1/1000 aceitos, filtros válidos, campos ausentes → undefined. | Backend **375/375** (35 arquivos; 14 em auditoria), tsc backend 20 pré-existentes (0 novos), frontend tsc 0, frontend 5/5. |
@@ -92,3 +93,90 @@ Legenda status: ⏳ pendente · 🔧 em andamento · ✅ concluído · ⛔ bloqu
 - [x] Fase C — Views por analista, cliente, categoria, assunto, fila, departamento, **tempo** (Timetracking por tipo — dev/suporte/implantação/etc — e por departamento via `TicketDepartmentTime`), **desenvolvimento** (`horasDesenvolvimento` ticket + `horasDev` OS) e **implantação** (OS `tipoImplantacao='implantacao'`, concluídas, média horas dev, horas suporte). Aba "Tempo / Dev / Implantação" na página.
 - [x] Fase E — Auditoria de encerramento evoluída: risco de reabertura (BAIXO/MÉDIO/ALTO/CRÍTICO), indicadores de qualidade, auditoria por analista/cliente, gráficos, drill-down e exportação.
 - [x] Fase F — Segurança (validação no backend), performance (agregações no banco), fonte única de dados, TESTES #33–#34 (auditoria) e regressão completa (testes existentes intactos — não quebrar o que funciona).
+
+## FASE 13 — Melhoria da tela de atendimento/ticket + apresentação da mensagem de boas-vindas
+
+**STATUS:** Concluído
+
+### ARQUIVOS ALTERADOS
+
+- `frontend/src/pages/Helpdesk/TicketAtendimentoPage.tsx` — reestruturação do layout (altura total, sidebar como drawer no mobile, card "Dados do Atendimento", barra "Resumo do Ticket" em cards)
+- `frontend/src/components/TicketTopo.tsx` — cabeçalho compacto de contexto (protocolo, status, prioridade, departamento, SLA, analista, assunto)
+- `backend/src/modules/helpdesk/helpdesk.controller.ts` — include de `departamento` no histórico do ticket
+- `backend/src/modules/helpdesk/menu.ts` — novas mensagens de boas-vindas / opção inválida / confirmação de departamento
+- `backend/src/modules/helpdesk/helpdesk.service.ts` — novos templates padrão + migração automática dos templates antigos
+- `backend/src/modules/helpdesk/autoMessages.service.ts` — templates de boas-vindas / opção inválida atualizados
+- `backend/src/__tests__/whatsapp-flow-pos-departamento.test.ts` — assert atualizado para a nova mensagem de opção inválida
+
+### ALTERAÇÕES
+
+- **Tela de atendimento**: eliminação do grande espaço branco. Causa raiz: a coluna de chat usava `h-[65vh] lg:h-auto` (altura explícita que impedia o stretch do grid) e a página dependia só de `h-full`. Agora o grid preenche a altura disponível (`flex-1 min-h-0`, chat `h-[65vh] lg:h-full`, sidebar desktop estica), o scroll da conversa acontece dentro da área da conversa e a página não rola inteira no desktop.
+- **Cabeçalho compacto**: protocolo, status, prioridade, departamento, etapa, SLA, analista, assunto, canal e tempo aberto em um cabeçalho único de contexto.
+- **Painel do cliente**: no mobile vira drawer lateral (botão "Cliente" no topo do chat + backdrop), no desktop permanece coluna fixa com scroll interno. Adicionado card "Dados do Atendimento" (status, prioridade, departamento, fila, analista, SLA) e link "Ver no CRM".
+- **Resumo do Ticket**: indicadores (tempo total, 1ª resposta, última interação, satisfação, SLA, anexos) reorganizados em cards com ícones, usando apenas dados reais ('—' / 'Não avaliado' quando indisponível).
+- **Mensagem de boas-vindas WhatsApp**: texto reformatado (saudação + departamentos numerados com descrição + separador + instrução e exemplo), mesma lógica de fluxo intacta (número continua aceito; `dept_<slug>` continua funcionando). Mensagem de opção inválida e confirmação de departamento também atualizadas. Migração automática dos templates antigos via `ensureHelpdeskConfigs` (mesmo padrão já existente), sem quebrar customizações do admin.
+
+### TESTES
+
+- Backend `npx tsc --noEmit`: 22 erros pré-existentes (0 novos)
+- Backend `npm test`: 389/390 (1 falha pré-existente time-dependent TESTE #31)
+- Frontend `npx tsc --noEmit`: 0 erros
+- Frontend `npm test`: 5/5
+
+### PROBLEMAS ENCONTRADOS
+
+- **FORA DO ESCOPO**: `npm run build` (frontend/vite) falha na resolução de `@tiptap/pm` (`Missing "." specifier` no exports do pacote v3.27.4) — erro pré-existente de dependência, não relacionado a esta tarefa; `tsc -b` passa.
+- **FORA DO ESCOPO**: TESTE #31 (`expediente-return.test.ts`) falha quando a suíte roda dentro do horário comercial real — time-dependent, já documentado como pré-existente.
+
+## FASE 14 — Excluir/Arquivar usuários (remover usuários de teste da lista)
+
+### PROBLEMA
+- Muitos usuários de teste foram criados e apareciam na página de Funcionários (Settings/UsersPage), poluindo a lista.
+- O backend já tinha soft-delete (`DELETE /api/users/:id` → `active: false`), mas a tela usava `/auth/users` (auth.controller) e não oferecia arquivamento nem filtro — listava todos (ativos e inativos).
+
+### ALTERAÇÕES
+
+- `backend/src/modules/auth/auth.controller.ts`:
+  - `listUsers` agora aceita `?active=true|false` (filtro opcional; sem filtro mantém o comportamento de listar todos — retrocompatível com KanbanBoard, OrderForm, AuditoriaAnalistaPage, HelpdeskKanban).
+  - Novo `archiveUser`: soft-delete (arquivamento) que valida não arquivar a si mesmo (400), não arquivar usuário master (403), 404 se não existir, e seta `active: false` (204).
+- `backend/src/modules/auth/auth.routes.ts`: rota `DELETE /users/:id` (authenticate + authorize admin/gerente).
+- `frontend/src/pages/Settings/UsersPage.tsx`:
+  - Por padrão lista apenas usuários **ativos** (`?active=true`).
+  - Botão "Ver arquivados" alterna para `?active=false` com contador e mensagem vazia próprios.
+  - Botão **Arquivar** (com confirm) em cada usuário ativo e **Restaurar** para arquivados.
+  - Badge "Inativo" → "Arquivado".
+- `backend/src/__tests__/auth.test.ts`: mock ganhou `findMany`/`send`; 7 novos testes (filtro ativo/inativo/sem filtro + archiveUser 400/403/404/204).
+
+### TESTES
+
+- Backend: **396/397** (1 falha pré-existente time-dependent TESTE #31 `expediente-return`); `auth.test.ts` 18 testes, `users.test.ts` 19 testes.
+- Frontend: **5/5**.
+- `npx tsc --noEmit` backend: 22 erros pré-existentes (0 novos); frontend: 0.
+
+## FASE 15 — Melhoria da tela "Auditoria por Analista"
+
+### PROBLEMA
+- Tela auditava apenas um analista fixo, com filtros ("Últimos 30 dias" + "Analista Profissional") pouco funcionais.
+- Não havia como auditar "Todos os Analistas" (visão comparativa/ranking), escolher período customizado (dia único ou intervalo) ou buscar analista por nome.
+
+### ALTERAÇÕES
+
+- `backend/src/modules/helpdesk/agentReport.service.ts`:
+  - Novo `gerarResumoTodosAnalistas(dataInicio?, dataFim?)`: itera sobre analistas ativos (tecnico/gerente/admin) reutilizando `gerarRelatorioAnalista` (lógica testada) e monta ranking (`AnalistaResumoRanking[]`) + resumo agregado do time (total tickets, resolução média, CSAT médio, FCR médio, nota média, mensagens).
+- `backend/src/modules/helpdesk/agentReport.controller.ts`: novo `getResumoTodosAnalistas` (ler `dataInicio`/`dataFim`).
+- `backend/src/modules/helpdesk/helpdesk.routes.ts`: nova rota `GET /audit/analistas/resumo` (admin/gerente).
+- `frontend/src/components/reports/AuditoriaFiltros.tsx` (novo): componente de filtros com **Select com busca** (opções com iniciais/avatar, opção fixa "Todos os Analistas") + **período** (presets: Hoje, Ontem, Últimos 7 dias, Últimos 30 dias, Este mês, Mês passado, Personalizado) + painel "Personalizado" com toggle Dia único/Intervalo, validação (fim ≥ início, máximo 90 dias) + botão **Auditar**.
+- `frontend/src/pages/Helpdesk/AuditoriaAnalistaPage.tsx` (reescrita, preservando 7 cards, card de identificação, Imprimir, Atualizar, Replay):
+  - Modo individual: igual ao anterior, agora com filtros reais e período dinâmico.
+  - Modo "Todos os Analistas": cards agregados do time + **tabela/ranking** (Analista | Tickets | Resolvidos % | Nota Auditoria | Tempo Médio Resp. | CSAT | FCR | Mensagens) **sortável** por qualquer coluna; linha clicável abre a visão individual com o mesmo período.
+  - Chip do filtro ativo (ex: "João Silva • 19/07 – 18/08/2026") abaixo do título.
+  - Empty state melhorado com sugestão ("Tente ampliar o período...").
+  - Traço "—" consistente para sem-dados (ex: FCR/CSAT/Nota sem dados não mostram mais "0%").
+  - Grid responsivo dos cards: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7`.
+- `backend/src/__tests__/agent-report.test.ts`: 2 novos testes (resumo todos analistas + filtro por período).
+
+### TESTES
+
+- Backend: **398/399** (1 falha pré-existente time-dependent TESTE #31 `expediente-return`); `agent-report.test.ts` 7 testes.
+- Frontend: **5/5**.
+- `npx tsc --noEmit` backend: 22 erros pré-existentes (0 novos); frontend: 0.

@@ -1,6 +1,20 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
-import { gerarRelatorioAnalista, getReplayConversa } from './agentReport.service';
+import { gerarRelatorioAnalista, gerarResumoTodosAnalistas, getReplayConversa } from './agentReport.service';
+
+export async function getResumoTodosAnalistas(req: Request, res: Response) {
+  try {
+    const { dataInicio, dataFim } = req.query;
+    const resumo = await gerarResumoTodosAnalistas(
+      dataInicio as string | undefined,
+      dataFim as string | undefined
+    );
+    return res.json(resumo);
+  } catch (error) {
+    console.error('Erro no resumo de todos os analistas:', error);
+    return res.status(500).json({ error: 'Erro ao gerar resumo de analistas' });
+  }
+}
 
 export async function getRelatorioAnalista(req: Request, res: Response) {
   try {

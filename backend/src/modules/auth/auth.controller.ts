@@ -67,7 +67,14 @@ export async function me(req: AuthRequest, res: Response) {
 
 export async function listUsers(req: Request, res: Response) {
   try {
+    const { active } = req.query;
+
+    const where: any = {};
+    if (active === 'true') where.active = true;
+    else if (active === 'false') where.active = false;
+
     const users = await prisma.user.findMany({
+      where,
       select: {
         id: true, name: true, email: true, role: true, active: true, isMaster: true, phone: true, signature: true, createdAt: true,
         departamentos: {
@@ -227,5 +234,34 @@ export async function updateUser(req: Request, res: Response) {
     });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao atualizar usuário' });
+  }
+}
+
+export async function archiveUser(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const requestingUser = req.user;
+
+    if (id === requestingUser?.id) {
+      return res.status(400).json({ error: 'Você não pode arquivar a si mesmo' });
+    }
+
+    const existing = await prisma.user.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    if (existing.isMaster) {
+      return res.status(403).json({ error: 'O usuário master não pode ser arquivado' });
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: { active: false },
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao arquivar usuário' });
   }
 }

@@ -37,7 +37,7 @@ import {
   getExportarAuditoria,
   getExportarAuditoriaExcel,
 } from './closureAudit.controller';
-import { getRelatorioAnalista, getReplayAnalista } from './agentReport.controller';
+import { getRelatorioAnalista, getReplayAnalista, getResumoTodosAnalistas } from './agentReport.controller';
 import {
   getStages,
   getEtapaInicialSlug,
@@ -129,5 +129,6 @@ router.get('/closure-audit/:id', authorize('admin', 'gerente'), getAuditarEncerr
 // ── Auditoria individual por analista (relatório + replay de conversa) ──
 router.get('/audit/agent/:id', authorize('admin', 'gerente'), getRelatorioAnalista);
 router.get('/audit/agent/:id/ticket/:ticketId', authorize('admin', 'gerente'), getReplayAnalista);
+router.get('/audit/analistas/resumo', authorize('admin', 'gerente'), getResumoTodosAnalistas);
 
 export default router;
