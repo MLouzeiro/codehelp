@@ -471,6 +471,16 @@ export async function encerrarTicket(ticketId: string, params: EncerrarTicketPar
       .catch((e) => console.warn('[FLOW] Auditoria profissional em background falhou:', e?.message || e));
   }
 
+  // Detecção de encerramento em background (prematuro / resolução real / reabertura).
+  // Persiste no AIAgentClosureAudit e alimenta as métricas/ranking do monitor de agentes.
+  // Fire-and-forget: falha vira apenas log e nunca quebra o fluxo de encerramento.
+  if (params.finalizarCsat || params.etapa === 'concluido') {
+    import('../ai/aiAgentMonitor.service')
+      .then((m) => m.auditarEncerramentoTicket(ticketId))
+      .then(() => {})
+      .catch((e) => console.warn('[FLOW] Detecção de encerramento em background falhou:', e?.message || e));
+  }
+
   return { ok: true, ticket: updated };
 }
 

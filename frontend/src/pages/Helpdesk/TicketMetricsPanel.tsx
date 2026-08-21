@@ -64,12 +64,12 @@ interface MetricCardProps {
   color?: string;
 }
 
-function MetricCard({ icon, label, value, subtitle, color = 'text-gray-700' }: MetricCardProps) {
+function MetricCard({ icon, label, value, subtitle, color = 'text-gray-700 dark:text-slate-300' }: MetricCardProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
       <div className="flex items-center gap-2 mb-1">
         <span className="text-gray-400">{icon}</span>
-        <span className="text-xs text-gray-500 uppercase tracking-wide">{label}</span>
+        <span className="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wide">{label}</span>
       </div>
       <div className={`text-lg font-bold ${color}`}>{value}</div>
       {subtitle && <div className="text-xs text-gray-400 mt-0.5">{subtitle}</div>}
@@ -138,8 +138,8 @@ export default function TicketMetricsPanel({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-gray-500" />
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          <BarChart3 className="w-5 h-5 text-gray-500 dark:text-slate-400" />
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-gray-300">
             Métricas
           </h3>
         </div>
@@ -245,7 +245,7 @@ export default function TicketMetricsPanel({
           icon={<RefreshCw className="w-4 h-4" />}
           label="Reaberturas"
           value={metrics?.totalReaberturas || 0}
-          color={metrics?.totalReaberturas ? 'text-red-600' : 'text-gray-700'}
+          color={metrics?.totalReaberturas ? 'text-red-600' : 'text-gray-700 dark:text-slate-300'}
         />
 
         {/* IA */}
@@ -253,7 +253,7 @@ export default function TicketMetricsPanel({
           icon={<Bot className="w-4 h-4" />}
           label="Resolvido IA"
           value={metrics?.resolvidoPorIa ? 'Sim' : 'Não'}
-          color={metrics?.resolvidoPorIa ? 'text-indigo-600' : 'text-gray-500'}
+          color={metrics?.resolvidoPorIa ? 'text-indigo-600' : 'text-gray-500 dark:text-slate-400'}
         />
         <MetricCard
           icon={<Zap className="w-4 h-4" />}
@@ -275,7 +275,7 @@ export default function TicketMetricsPanel({
           label="CSAT"
           value={metrics?.csatNota ? `${metrics.csatNota}/5` : '—'}
           subtitle={metrics?.csatRespondido ? 'Respondido' : 'Não respondido'}
-          color={metrics?.csatNota ? (metrics.csatNota >= 4 ? 'text-green-600' : metrics.csatNota >= 3 ? 'text-yellow-600' : 'text-red-600') : 'text-gray-500'}
+          color={metrics?.csatNota ? (metrics.csatNota >= 4 ? 'text-green-600' : metrics.csatNota >= 3 ? 'text-yellow-600' : 'text-red-600') : 'text-gray-500 dark:text-slate-400'}
         />
       </div>
     </div>

@@ -22,6 +22,7 @@ import {
   gerarTomadaDecisao,
   getFilaAuditoria,
   auditarAmostra,
+  criarTarefaDeRecomendacao,
 } from './auditoriaDecisao.service';
 import {
   gerarRelatorioTicket,
@@ -194,6 +195,22 @@ export async function postAuditarAmostraHandler(req: AuthRequest, res: Response)
     res.json({ auditados });
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Erro ao auditar amostra' });
+  }
+}
+
+export async function postCriarTarefaDeRecomendacao(req: AuthRequest, res: Response) {
+  try {
+    const { recomendacaoId, boardId, responsavelId, prazoEntrega } = req.body || {};
+    if (!recomendacaoId || !boardId) {
+      return res.status(400).json({ error: 'recomendacaoId e boardId são obrigatórios' });
+    }
+    const task = await criarTarefaDeRecomendacao(recomendacaoId, boardId, {
+      responsavelId,
+      prazoEntrega: prazoEntrega ? new Date(prazoEntrega) : undefined,
+    });
+    res.status(201).json(task);
+  } catch (err: any) {
+    res.status(err.statusCode || 400).json({ error: err.message || 'Erro ao criar tarefa da recomendação' });
   }
 }
 

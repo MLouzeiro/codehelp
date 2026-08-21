@@ -10,7 +10,10 @@ import {
   createTag, deleteTag,
   createTaskFromTicket, transferTask, duplicateTask,
   autoCategorize,
+  archiveTask, restoreTask, reopenTask, deleteTaskDefinitive, listArchivedTasks,
 } from './kanban.controller';
+import { getTaskDashboardHandler, getTaskReportHandler, exportTaskReport } from './taskReport.controller';
+import { listAlerts, getUnreadCount, markAlertRead, runAlertCheck } from './taskAlert.controller';
 import uploadRouter from './upload.routes';
 
 const router = Router();
@@ -31,11 +34,18 @@ router.patch('/boards/:boardId/columns/reorder', authorize('admin', 'gerente'), 
 
 // Tasks
 router.post('/boards/:boardId/tasks', createTask);
+router.get('/tasks/archived', listArchivedTasks);
 router.get('/tasks/:taskId', getTask);
 router.patch('/tasks/:taskId', updateTask);
 router.delete('/tasks/:taskId', authorize('admin', 'gerente'), deleteTask);
 router.patch('/tasks/:taskId/move', moveTask);
 router.patch('/columns/:columnId/tasks/reorder', authorize('admin', 'gerente'), reorderTasks);
+
+// Archiving / Restore / Reopen / Definitive delete (spec §14/§15/§16)
+router.post('/tasks/:taskId/archive', archiveTask);
+router.post('/tasks/:taskId/restore', restoreTask);
+router.post('/tasks/:taskId/reopen', reopenTask);
+router.delete('/tasks/:taskId/definitive', authorize('admin', 'gerente'), deleteTaskDefinitive);
 
 // Subtasks
 router.post('/tasks/:taskId/subtasks', createSubtask);
@@ -64,6 +74,17 @@ router.post('/tasks/:taskId/duplicate', duplicateTask);
 
 // AI Categorize
 router.post('/tasks/:taskId/auto-categorize', autoCategorize);
+
+// Report / Dashboard (spec §37/§38)
+router.get('/report/dashboard', authorize('admin', 'gerente', 'supervisor'), getTaskDashboardHandler);
+router.get('/report/tasks', authorize('admin', 'gerente', 'supervisor'), getTaskReportHandler);
+router.get('/report/export', authorize('admin', 'gerente', 'supervisor'), exportTaskReport);
+
+// Alerts (spec §35/§36)
+router.get('/alerts', listAlerts);
+router.get('/alerts/unread-count', getUnreadCount);
+router.post('/alerts/check', authorize('admin', 'gerente'), runAlertCheck);
+router.post('/alerts/:alertaId/read', markAlertRead);
 
 // Attachments (upload routes handle their own multer middleware)
 router.use(uploadRouter);

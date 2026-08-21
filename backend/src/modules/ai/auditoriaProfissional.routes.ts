@@ -12,6 +12,7 @@ import {
   getTomadaDecisaoHandler,
   getFilaAuditoriaHandler,
   postAuditarAmostraHandler,
+  postCriarTarefaDeRecomendacao,
   getRelatorioTicketHandler,
   getRelatorioConsolidadoHandler,
   getExportarAuditoriaCsvHandler,
@@ -30,6 +31,7 @@ router.get('/panorama', authorize('admin', 'gerente'), getPanoramaHandler);
 router.get('/decisao', authorize('admin', 'gerente'), getTomadaDecisaoHandler);
 router.get('/fila', authorize('admin', 'gerente'), getFilaAuditoriaHandler);
 router.post('/amostra', authorize('admin', 'gerente'), postAuditarAmostraHandler);
+router.post('/decisao/recomendacao/tarefa', authorize('admin', 'gerente'), postCriarTarefaDeRecomendacao);
 router.get('/relatorio/consolidado', authorize('admin', 'gerente'), getRelatorioConsolidadoHandler);
 router.get('/relatorio/:id', authorize('admin', 'gerente'), getRelatorioTicketHandler);
 router.get('/exportar/csv', authorize('admin', 'gerente'), getExportarAuditoriaCsvHandler);

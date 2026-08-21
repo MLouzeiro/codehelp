@@ -55,9 +55,32 @@ import {
   postResolverTicket,
   getFilas,
   getSlaConfigs,
-  getCategorias,
 } from './sla.controller';
+import {
+  getCategoriasHandler,
+  postCategoria,
+  putCategoria,
+  patchCategoriaAtivo,
+  deleteCategoria,
+  getAssuntosHandler,
+  postAssunto,
+  putAssunto,
+  patchAssuntoAtivo,
+  getConfigClassificacao,
+  putConfigClassificacao,
+  postSugerirClassificacao,
+  patchTicketClassificacao,
+  getCategoriasOptions,
+} from './categorias.controller';
 import { getMetrics } from './metrics.controller';
+import {
+  getIndicadoresHandler,
+  getMetasHandler,
+  putMetasHandler,
+  getSlaTicketHandler,
+  getAlertasHandler,
+  getIndicadoresCsvHandler,
+} from './indicadores.controller';
 import {
   listAutoMessagesHandler,
   updateAutoMessageHandler,
@@ -99,8 +122,32 @@ router.post('/tickets/:id/resolver', requireTicketAccess('edit'), postResolverTi
 router.post('/sla/processar-alertas', authorize('admin', 'gerente', 'supervisor'), postProcessarAlertasSla);
 router.get('/filas', getFilas);
 router.get('/sla-configs', getSlaConfigs);
-router.get('/categorias', getCategorias);
+
+// ── Categorias e Assuntos (hierarquia CATEGORIA -> ASSUNTO) ───────────
+router.get('/categorias', getCategoriasHandler);
+router.get('/categorias/options', getCategoriasOptions);
+router.get('/categorias/config', getConfigClassificacao);
+router.put('/categorias/config', authorize('admin'), putConfigClassificacao);
+router.post('/categorias', authorize('admin', 'gerente'), postCategoria);
+router.put('/categorias/:id', authorize('admin', 'gerente'), putCategoria);
+router.patch('/categorias/:id/ativar', authorize('admin', 'gerente'), patchCategoriaAtivo);
+router.delete('/categorias/:id', authorize('admin', 'gerente'), deleteCategoria);
+router.get('/assuntos', getAssuntosHandler);
+router.post('/assuntos', authorize('admin', 'gerente'), postAssunto);
+router.put('/assuntos/:id', authorize('admin', 'gerente'), putAssunto);
+router.patch('/assuntos/:id/ativar', authorize('admin', 'gerente'), patchAssuntoAtivo);
+router.post('/tickets/:id/classificacao/sugerir', requireTicketAccess('view'), postSugerirClassificacao);
+router.patch('/tickets/:id/classificacao', requireTicketAccess('edit'), patchTicketClassificacao);
+
 router.get('/metrics', authorize('admin', 'gerente', 'supervisor'), getMetrics);
+
+// ── Indicadores de atendimento (TMR / TME / PR / SLA) ──────────────────
+router.get('/indicadores', authorize('admin', 'gerente', 'supervisor'), getIndicadoresHandler);
+router.get('/indicadores/metas', authorize('admin', 'gerente'), getMetasHandler);
+router.put('/indicadores/metas', authorize('admin'), putMetasHandler);
+router.get('/indicadores/sla/:id', requireTicketAccess('view'), getSlaTicketHandler);
+router.get('/indicadores/alertas', authorize('admin', 'gerente', 'supervisor'), getAlertasHandler);
+router.get('/indicadores/exportar-csv', authorize('admin', 'gerente', 'supervisor'), getIndicadoresCsvHandler);
 
 router.get('/auto-messages', authorize('admin', 'gerente'), listAutoMessagesHandler);
 router.put('/auto-messages/:slug', authorize('admin', 'gerente'), updateAutoMessageHandler);

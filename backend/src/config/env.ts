@@ -56,6 +56,11 @@ export const env = {
   alertHour: parseInt(process.env.ALERT_HOUR || '8', 10),
   timezone: process.env.TIMEZONE || 'America/Fortaleza',
   anthropicKey: process.env.ANTHROPIC_API_KEY || '',
+  // Chave para criptografar segredos de integrações externas (AES-256-GCM).
+  // Fallback determinístico derivado de JWT secrets — definir em produção.
+  integrationEncryptionKey: process.env.INTEGRATION_ENCRYPTION_KEY || '',
+  // API keys para a API pública de integração (HEADER `x-api-key`), separadas por vírgula.
+  integrationApiKeys: (process.env.INTEGRATION_API_KEYS || '').split(',').filter(Boolean),
   smtp: {
     host: process.env.SMTP_HOST || '',
     port: parseInt(process.env.SMTP_PORT || '587', 10),

@@ -53,6 +53,8 @@ async function runBackgroundInit() {
   startCsatScheduler();
   const { startBillingScheduler } = await import('./modules/billing/billing.scheduler');
   startBillingScheduler();
+  const { startTaskAlertScheduler } = await import('./modules/kanban/taskAlert.scheduler');
+  startTaskAlertScheduler();
   const { startRobotScheduler } = await import('./modules/ai/robot.scheduler');
   startRobotScheduler();
 

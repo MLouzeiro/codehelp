@@ -1,6 +1,10 @@
 import prisma from '../../config/database';
 import path from 'path';
 import fs from 'fs';
+import { registrarEvento, diferenciarCampos, CAMPOS_DIFF, getTaskTimeline } from './taskTimeline.service';
+import { classificarStatusPrazo, calcularPrazo, atualizarStatusPrazo } from './taskDeadline.service';
+import { logAudit } from '../audit/audit.service';
+import { getTaskTimeSummary, sincronizarHorasTarefa } from '../timetracking/timetracking.service';
 
 export interface BoardCreateInput {
   nome: string;
@@ -44,6 +48,10 @@ export interface TaskCreateInput {
   responsavelId?: string | null;
   clientId?: string | null;
   ticketId?: string | null;
+  orderId?: string | null;
+  departamentoId?: string | null;
+  equipeId?: string | null;
+  tipoTarefa?: string;
   prioridade?: string;
   categoria?: string | null;
   classificacao?: string | null;
@@ -59,6 +67,10 @@ export interface TaskUpdateInput {
   responsavelId?: string | null;
   clientId?: string | null;
   ticketId?: string | null;
+  orderId?: string | null;
+  departamentoId?: string | null;
+  equipeId?: string | null;
+  tipoTarefa?: string;
   prioridade?: string;
   categoria?: string | null;
   classificacao?: string | null;
@@ -388,7 +400,7 @@ export async function reorderColumns(boardId: string, columnIds: string[]) {
   }
 }
 
-export async function createTask(boardId: string, data: TaskCreateInput) {
+export async function createTask(boardId: string, data: TaskCreateInput, usuarioId?: string | null) {
   try {
     const board = await prisma.kanbanBoard.findUnique({
       where: { id: boardId },
@@ -398,7 +410,7 @@ export async function createTask(boardId: string, data: TaskCreateInput) {
 
     const column = await prisma.kanbanColumn.findUnique({
       where: { id: data.columnId },
-      select: { id: true, boardId: true },
+      select: { id: true, boardId: true, nome: true },
     });
     if (!column) throw new Error('Coluna nao encontrada');
     if (column.boardId !== boardId) throw new Error('Coluna nao pertence a este board');
@@ -425,6 +437,12 @@ export async function createTask(boardId: string, data: TaskCreateInput) {
       tag: { connect: { id: tagId } },
     })) ?? [];
 
+    const statusPrazo = classificarStatusPrazo({
+      prazoEntrega: data.prazoEntrega ?? null,
+      columnNome: column.nome,
+      dataReferencia: data.dataInicio ?? new Date(),
+    });
+
     const task = await prisma.kanbanTask.create({
       data: {
         boardId,
@@ -435,12 +453,17 @@ export async function createTask(boardId: string, data: TaskCreateInput) {
         responsavelId: data.responsavelId ?? null,
         clientId: data.clientId ?? null,
         ticketId: data.ticketId ?? null,
+        orderId: data.orderId ?? null,
+        departamentoId: data.departamentoId ?? null,
+        equipeId: data.equipeId ?? null,
+        tipoTarefa: data.tipoTarefa ?? 'outro',
         prioridade: data.prioridade ?? 'media',
         categoria: data.categoria ?? null,
         classificacao: data.classificacao ?? null,
         dataInicio: data.dataInicio ?? new Date(),
         prazoEntrega: data.prazoEntrega ?? null,
         estimativaHoras: data.estimativaHoras ?? null,
+        statusPrazo,
         horasTrabalhadas: 0,
         ordem: nextOrdem,
         tags: tagsConnect.length > 0 ? { create: tagsConnect } : undefined,
@@ -451,13 +474,35 @@ export async function createTask(boardId: string, data: TaskCreateInput) {
       },
     });
 
-    await prisma.kanbanActivity.create({
+    await prisma.kanbanStageTime.create({
       data: {
         taskId: task.id,
+        columnId: column.id,
+        columnNome: column.nome,
+        dataEntrada: new Date(),
         usuarioId: data.responsavelId ?? null,
-        tipo: 'criou',
-        descricao: `Tarefa #${task.numero} criada`,
       },
+    });
+
+    await registrarEvento({
+      taskId: task.id,
+      numero: task.numero,
+      usuarioId: usuarioId ?? data.responsavelId ?? null,
+      tipo: 'criou',
+      descricao: `Tarefa #${task.numero} criada`,
+      origem: 'manual',
+      metadata: { boardId, coluna: column.nome, prioridade: task.prioridade, prazoEntrega: task.prazoEntrega?.toISOString() ?? null },
+    });
+
+    await logAudit({
+      usuarioId: usuarioId ?? data.responsavelId ?? null,
+      modulo: 'Tarefas',
+      entidade: 'KanbanTask',
+      entidadeId: task.id,
+      acao: 'criar',
+      descricao: `Tarefa #${task.numero} "${task.titulo}" criada`,
+      origem: 'web',
+      metadata: { boardId, coluna: column.nome },
     });
 
     return task;
@@ -472,7 +517,11 @@ export async function getTask(taskId: string) {
       where: { id: taskId },
       include: {
         responsavel: { select: { id: true, name: true, email: true } },
+        departamento: { select: { id: true, nome: true, slug: true } },
+        equipe: { select: { id: true, nome: true } },
+        arquivadoPor: { select: { id: true, name: true } },
         tags: { include: { tag: true } },
+        order: { select: { id: true, numeroOs: true, status: true, tipoServico: true } },
         subtasks: {
           orderBy: { ordem: 'asc' },
           include: {
@@ -493,22 +542,76 @@ export async function getTask(taskId: string) {
         },
         column: true,
         client: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+        ticket: {
+          select: {
+            id: true,
+            protocolo: true,
+            assunto: true,
+            status: true,
+            etapa: true,
+            prioridade: true,
+            client: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+            departamento: { select: { id: true, nome: true } },
+          },
+        },
+        stageTimes: { orderBy: { dataEntrada: 'asc' } },
+        alerts: { orderBy: { createdAt: 'desc' }, take: 5 },
       },
     });
     if (!task) throw new Error('Tarefa nao encontrada');
-    return task;
+
+    const prazo = calcularPrazo({
+      prazoEntrega: task.prazoEntrega,
+      dataConclusao: task.dataConclusao,
+      columnNome: task.column?.nome ?? null,
+      estimativaHoras: task.estimativaHoras,
+      horasTrabalhadas: task.horasTrabalhadas,
+    });
+
+    const timeSummary = await getTaskTimeSummary(taskId);
+
+    return {
+      ...task,
+      prazo,
+      timeSummary,
+    };
   } catch (error: any) {
     throw new Error(`Erro ao buscar tarefa: ${error.message}`);
   }
 }
 
-export async function updateTask(taskId: string, data: TaskUpdateInput) {
+export async function updateTask(taskId: string, data: TaskUpdateInput, usuarioId?: string | null) {
   try {
     const existing = await prisma.kanbanTask.findUnique({
       where: { id: taskId },
-      select: { id: true, boardId: true, titulo: true, numero: true },
+      select: {
+        id: true, boardId: true, titulo: true, numero: true, descricao: true,
+        responsavelId: true, clientId: true, ticketId: true, orderId: true, departamentoId: true,
+        equipeId: true, tipoTarefa: true, prioridade: true, categoria: true,
+        classificacao: true, dataInicio: true, prazoEntrega: true, dataConclusao: true,
+        estimativaHoras: true, column: { select: { nome: true } },
+      },
     });
     if (!existing) throw new Error('Tarefa nao encontrada');
+
+    const antes: Record<string, any> = {
+      titulo: existing.titulo,
+      descricao: existing.descricao,
+      responsavelId: existing.responsavelId,
+      clientId: existing.clientId,
+      ticketId: existing.ticketId,
+      orderId: existing.orderId,
+      departamentoId: existing.departamentoId,
+      equipeId: existing.equipeId,
+      tipoTarefa: existing.tipoTarefa,
+      prioridade: existing.prioridade,
+      categoria: existing.categoria,
+      classificacao: existing.classificacao,
+      dataInicio: existing.dataInicio?.toISOString() ?? null,
+      prazoEntrega: existing.prazoEntrega?.toISOString() ?? null,
+      dataConclusao: existing.dataConclusao?.toISOString() ?? null,
+      estimativaHoras: existing.estimativaHoras,
+    };
 
     const updateData: any = {};
     if (data.titulo !== undefined) updateData.titulo = data.titulo.trim();
@@ -516,6 +619,10 @@ export async function updateTask(taskId: string, data: TaskUpdateInput) {
     if (data.responsavelId !== undefined) updateData.responsavelId = data.responsavelId;
     if (data.clientId !== undefined) updateData.clientId = data.clientId;
     if (data.ticketId !== undefined) updateData.ticketId = data.ticketId;
+    if (data.orderId !== undefined) updateData.orderId = data.orderId;
+    if (data.departamentoId !== undefined) updateData.departamentoId = data.departamentoId;
+    if (data.equipeId !== undefined) updateData.equipeId = data.equipeId;
+    if (data.tipoTarefa !== undefined) updateData.tipoTarefa = data.tipoTarefa;
     if (data.prioridade !== undefined) updateData.prioridade = data.prioridade;
     if (data.categoria !== undefined) updateData.categoria = data.categoria;
     if (data.classificacao !== undefined) updateData.classificacao = data.classificacao;
@@ -546,14 +653,58 @@ export async function updateTask(taskId: string, data: TaskUpdateInput) {
       },
     });
 
-    await prisma.kanbanActivity.create({
-      data: {
-        taskId,
-        usuarioId: data.responsavelId ?? null,
-        tipo: 'editou',
-        descricao: `Tarefa #${existing.numero} editada`,
-      },
+    // Eventos estruturados por campo alterado (spec §19)
+    const depois: Record<string, any> = {
+      titulo: task.titulo,
+      descricao: task.descricao,
+      responsavelId: task.responsavelId,
+      clientId: task.clientId,
+      ticketId: task.ticketId,
+      orderId: task.orderId,
+      departamentoId: task.departamentoId,
+      equipeId: task.equipeId,
+      tipoTarefa: task.tipoTarefa,
+      prioridade: task.prioridade,
+      categoria: task.categoria,
+      classificacao: task.classificacao,
+      dataInicio: task.dataInicio?.toISOString() ?? null,
+      prazoEntrega: task.prazoEntrega?.toISOString() ?? null,
+      dataConclusao: task.dataConclusao?.toISOString() ?? null,
+      estimativaHoras: task.estimativaHoras,
+    };
+
+    const diffs = diferenciarCampos(antes, depois, CAMPOS_DIFF, existing.numero, taskId, usuarioId);
+    for (const d of diffs) {
+      await registrarEvento({
+        ...d,
+        descricao: `Tarefa #${existing.numero} atualizada`,
+        gravarAuditoria: false,
+      });
+    }
+
+    await registrarEvento({
+      taskId,
+      numero: existing.numero,
+      usuarioId: usuarioId ?? null,
+      tipo: 'editou',
+      descricao: `Tarefa #${existing.numero} editada${diffs.length > 0 ? ` (${diffs.length} campo(s))` : ''}`,
+      origem: 'manual',
+      metadata: { campos: diffs.map((d) => d.metadata?.campo) },
     });
+
+    await logAudit({
+      usuarioId: usuarioId ?? null,
+      modulo: 'Tarefas',
+      entidade: 'KanbanTask',
+      entidadeId: taskId,
+      acao: 'atualizar',
+      descricao: `Tarefa #${existing.numero} editada (${diffs.length} campo(s))`,
+      origem: 'web',
+      metadata: { campos: diffs.map((d) => ({ campo: d.metadata?.campo, de: d.valorAnterior, para: d.valorNovo })) },
+    });
+
+    // Recalcula status do prazo
+    await atualizarStatusPrazo(taskId, existing.column?.nome ?? null);
 
     return task;
   } catch (error: any) {
@@ -561,17 +712,44 @@ export async function updateTask(taskId: string, data: TaskUpdateInput) {
   }
 }
 
-export async function deleteTask(taskId: string) {
+export async function deleteTask(taskId: string, usuarioId?: string | null, motivo?: string) {
   try {
     const existing = await prisma.kanbanTask.findUnique({
       where: { id: taskId },
-      select: { id: true },
+      select: { id: true, numero: true, titulo: true },
     });
     if (!existing) throw new Error('Tarefa nao encontrada');
 
+    // Soft delete (spec §14/§16): nunca apaga fisicamente por aqui
     await prisma.kanbanTask.update({
       where: { id: taskId },
-      data: { ativo: false },
+      data: {
+        ativo: false,
+        deletedAt: new Date(),
+        deletedBy: usuarioId ?? null,
+        deleteReason: motivo ?? 'Exclusão da tarefa',
+      },
+    });
+
+    await registrarEvento({
+      taskId,
+      numero: existing.numero,
+      usuarioId: usuarioId ?? null,
+      tipo: 'excluiu',
+      descricao: `Tarefa #${existing.numero} excluída`,
+      origem: 'manual',
+      motivo: motivo ?? null,
+    });
+
+    await logAudit({
+      usuarioId: usuarioId ?? null,
+      modulo: 'Tarefas',
+      entidade: 'KanbanTask',
+      entidadeId: taskId,
+      acao: 'excluir',
+      descricao: `Tarefa #${existing.numero} "${existing.titulo}" excluída (soft delete)`,
+      motivo: motivo ?? undefined,
+      origem: 'web',
     });
 
     return true;
@@ -580,7 +758,7 @@ export async function deleteTask(taskId: string) {
   }
 }
 
-export async function moveTask(taskId: string, targetColumnId: string, targetOrdem?: number) {
+export async function moveTask(taskId: string, targetColumnId: string, targetOrdem?: number, usuarioId?: string | null, motivo?: string) {
   try {
     const task = await prisma.kanbanTask.findUnique({
       where: { id: taskId },
@@ -651,6 +829,31 @@ export async function moveTask(taskId: string, targetColumnId: string, targetOrd
     const horasAtuais = task.horasTrabalhadas || 0;
     const novasHoras = Math.round((horasAtuais + horasAdicionais) * 100) / 100;
 
+    // Fecha tempo da etapa anterior (spec §9)
+    const etapaAberta = await prisma.kanbanStageTime.findFirst({
+      where: { taskId, dataSaida: null },
+      orderBy: { dataEntrada: 'desc' },
+    });
+    if (etapaAberta) {
+      const saida = new Date();
+      const duracaoMin = Math.max(0, Math.round((saida.getTime() - etapaAberta.dataEntrada.getTime()) / 60000));
+      await prisma.kanbanStageTime.update({
+        where: { id: etapaAberta.id },
+        data: { dataSaida: saida, duracaoMin },
+      });
+    }
+
+    // Abre tempo na nova etapa
+    await prisma.kanbanStageTime.create({
+      data: {
+        taskId,
+        columnId: targetColumnId,
+        columnNome: destColumn?.nome ?? 'Etapa',
+        dataEntrada: new Date(),
+        usuarioId: usuarioId ?? null,
+      },
+    });
+
     const updated = await prisma.kanbanTask.update({
       where: { id: taskId },
       data: {
@@ -660,14 +863,32 @@ export async function moveTask(taskId: string, targetColumnId: string, targetOrd
       },
     });
 
-    await prisma.kanbanActivity.create({
-      data: {
-        taskId,
-        tipo: 'moveu',
-        descricao: `Tarefa #${task.numero} movida${horasAdicionais > 0 ? ` (+${horasAdicionais}h registradas)` : ''}`,
-        deColuna: sourceColumn?.nome ?? null,
-        paraColuna: destColumn?.nome ?? null,
-      },
+    // Recalcula status do prazo pela nova coluna (ex: concluido → concluida)
+    await atualizarStatusPrazo(taskId, destColumn?.nome ?? null);
+
+    await registrarEvento({
+      taskId,
+      numero: task.numero,
+      usuarioId: usuarioId ?? null,
+      tipo: 'moveu',
+      descricao: `Tarefa #${task.numero} movida${horasAdicionais > 0 ? ` (+${horasAdicionais}h registradas)` : ''}`,
+      deColuna: sourceColumn?.nome ?? null,
+      paraColuna: destColumn?.nome ?? null,
+      origem: 'manual',
+      motivo: motivo ?? null,
+    });
+
+    await logAudit({
+      usuarioId: usuarioId ?? null,
+      modulo: 'Tarefas',
+      entidade: 'KanbanTask',
+      entidadeId: taskId,
+      acao: 'mover_tarefa',
+      descricao: `Tarefa #${task.numero} movida ${sourceColumn?.nome ?? '—'} → ${destColumn?.nome ?? '—'}`,
+      valorAnterior: sourceColumn?.nome ?? undefined,
+      novoValor: destColumn?.nome ?? undefined,
+      motivo: motivo ?? undefined,
+      origem: 'web',
     });
 
     return updated;
@@ -1313,4 +1534,230 @@ export async function getLastActivityAt(taskId: string): Promise<Date | null> {
   } catch {
     return null;
   }
+}
+
+// ── Arquivamento / Restauracao / Reabertura / Exclusao definitiva (spec §14/§15/§16) ──
+
+export interface ListArchivedFilters {
+  busca?: string;
+  responsavelId?: string;
+  clientId?: string;
+  departamentoId?: string;
+  statusPrazo?: string;
+  dataArquivadoDe?: string;
+  dataArquivadoAte?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function archiveTask(taskId: string, usuarioId?: string | null, motivo?: string) {
+  const task = await prisma.kanbanTask.findUnique({
+    where: { id: taskId },
+    select: { id: true, numero: true, titulo: true, arquivado: true },
+  });
+  if (!task) throw new Error('Tarefa nao encontrada');
+  if (task.arquivado) throw new Error('Tarefa ja esta arquivada');
+
+  const updated = await prisma.kanbanTask.update({
+    where: { id: taskId },
+    data: {
+      arquivado: true,
+      arquivadoEm: new Date(),
+      arquivadoPorId: usuarioId ?? null,
+      ativo: false,
+    },
+  });
+
+  await registrarEvento({
+    taskId,
+    numero: task.numero,
+    usuarioId: usuarioId ?? null,
+    tipo: 'arquivou',
+    descricao: `Tarefa #${task.numero} arquivada`,
+    origem: 'manual',
+    motivo: motivo ?? null,
+  });
+
+  await logAudit({
+    usuarioId: usuarioId ?? null,
+    modulo: 'Tarefas',
+    entidade: 'KanbanTask',
+    entidadeId: taskId,
+    acao: 'arquivar_tarefa',
+    descricao: `Tarefa #${task.numero} "${task.titulo}" arquivada`,
+    motivo: motivo ?? undefined,
+    origem: 'web',
+  });
+
+  return updated;
+}
+
+export async function restoreTask(taskId: string, usuarioId?: string | null) {
+  const task = await prisma.kanbanTask.findUnique({
+    where: { id: taskId },
+    select: { id: true, numero: true, titulo: true, arquivado: true },
+  });
+  if (!task) throw new Error('Tarefa nao encontrada');
+  if (!task.arquivado) throw new Error('Tarefa nao esta arquivada');
+
+  const updated = await prisma.kanbanTask.update({
+    where: { id: taskId },
+    data: {
+      arquivado: false,
+      arquivadoEm: null,
+      arquivadoPorId: null,
+      restauradoEm: new Date(),
+      ativo: true,
+    },
+  });
+
+  await registrarEvento({
+    taskId,
+    numero: task.numero,
+    usuarioId: usuarioId ?? null,
+    tipo: 'restaurou',
+    descricao: `Tarefa #${task.numero} restaurada`,
+    origem: 'manual',
+  });
+
+  await logAudit({
+    usuarioId: usuarioId ?? null,
+    modulo: 'Tarefas',
+    entidade: 'KanbanTask',
+    entidadeId: taskId,
+    acao: 'restaurar_tarefa',
+    descricao: `Tarefa #${task.numero} "${task.titulo}" restaurada`,
+    origem: 'web',
+  });
+
+  return updated;
+}
+
+export async function reopenTask(taskId: string, usuarioId?: string | null, motivo?: string) {
+  const task = await prisma.kanbanTask.findUnique({
+    where: { id: taskId },
+    select: { id: true, numero: true, titulo: true, boardId: true },
+  });
+  if (!task) throw new Error('Tarefa nao encontrada');
+  if (!motivo || !motivo.trim()) throw new Error('Motivo da reabertura é obrigatório');
+
+  const primeiraColuna = await prisma.kanbanColumn.findFirst({
+    where: { boardId: task.boardId },
+    orderBy: { ordem: 'asc' },
+    select: { id: true, nome: true },
+  });
+
+  const updated = await prisma.kanbanTask.update({
+    where: { id: taskId },
+    data: {
+      dataConclusao: null,
+      reabertoEm: new Date(),
+      reabertoMotivo: motivo.trim(),
+      arquivado: false,
+      ativo: true,
+      columnId: primeiraColuna?.id ?? undefined,
+    },
+  });
+
+  await registrarEvento({
+    taskId,
+    numero: task.numero,
+    usuarioId: usuarioId ?? null,
+    tipo: 'reabriu',
+    descricao: `Tarefa #${task.numero} reaberta`,
+    origem: 'manual',
+    motivo: motivo.trim(),
+    metadata: { coluna: primeiraColuna?.nome ?? null },
+  });
+
+  await logAudit({
+    usuarioId: usuarioId ?? null,
+    modulo: 'Tarefas',
+    entidade: 'KanbanTask',
+    entidadeId: taskId,
+    acao: 'reabrir_tarefa',
+    descricao: `Tarefa #${task.numero} "${task.titulo}" reaberta`,
+    motivo: motivo.trim(),
+    origem: 'web',
+  });
+
+  await atualizarStatusPrazo(taskId, primeiraColuna?.nome ?? null);
+  return updated;
+}
+
+export async function deleteTaskDefinitive(taskId: string, usuarioId?: string | null, motivo?: string) {
+  const task = await prisma.kanbanTask.findUnique({
+    where: { id: taskId },
+    select: { id: true, numero: true, titulo: true, arquivado: true },
+  });
+  if (!task) throw new Error('Tarefa nao encontrada');
+  if (!task.arquivado) throw new Error('Exclusão definitiva só é permitida para tarefas arquivadas');
+
+  await logAudit({
+    usuarioId: usuarioId ?? null,
+    modulo: 'Tarefas',
+    entidade: 'KanbanTask',
+    entidadeId: taskId,
+    acao: 'excluir_definitivo',
+    descricao: `Tarefa #${task.numero} "${task.titulo}" excluída definitivamente`,
+    motivo: motivo ?? undefined,
+    origem: 'web',
+  });
+
+  // Desvincula apontamentos de tempo e movimentacoes relacionadas (evita FK errors)
+  await prisma.timeEntry.updateMany({ where: { tarefaId: taskId }, data: { tarefaId: null } });
+  await prisma.kanbanActivity.deleteMany({ where: { taskId } });
+  await prisma.kanbanSubtask.deleteMany({ where: { taskId } });
+  await prisma.kanbanTaskTag.deleteMany({ where: { taskId } });
+  await prisma.kanbanStageTime.deleteMany({ where: { taskId } });
+  await prisma.taskAlert.deleteMany({ where: { taskId } });
+  await prisma.kanbanAttachment.deleteMany({ where: { taskId } });
+
+  await prisma.kanbanTask.delete({ where: { id: taskId } });
+  return true;
+}
+
+export async function listArchivedTasks(filters: ListArchivedFilters = {}) {
+  const where: any = { arquivado: true, deletedAt: null };
+
+  if (filters.busca && filters.busca.trim()) {
+    const num = Number(filters.busca.trim());
+    where.OR = [
+      { titulo: { contains: filters.busca.trim() } },
+      { descricao: { contains: filters.busca.trim() } },
+      ...(Number.isFinite(num) ? [{ numero: num }] : []),
+    ];
+  }
+  if (filters.responsavelId) where.responsavelId = filters.responsavelId;
+  if (filters.clientId) where.clientId = filters.clientId;
+  if (filters.departamentoId) where.departamentoId = filters.departamentoId;
+  if (filters.statusPrazo) where.statusPrazo = filters.statusPrazo;
+  if (filters.dataArquivadoDe || filters.dataArquivadoAte) {
+    where.arquivadoEm = {
+      ...(filters.dataArquivadoDe ? { gte: new Date(filters.dataArquivadoDe) } : {}),
+      ...(filters.dataArquivadoAte ? { lte: new Date(filters.dataArquivadoAte) } : {}),
+    };
+  }
+
+  const page = filters.page ?? 1;
+  const pageSize = filters.pageSize ?? 20;
+  const [total, items] = await Promise.all([
+    prisma.kanbanTask.count({ where }),
+    prisma.kanbanTask.findMany({
+      where,
+      orderBy: { arquivadoEm: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        responsavel: { select: { id: true, name: true } },
+        client: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+        arquivadoPor: { select: { id: true, name: true } },
+        column: { select: { id: true, nome: true } },
+        departamento: { select: { id: true, nome: true } },
+        _count: { select: { subtasks: true, activities: true } },
+      },
+    }),
+  ]);
+
+  return { total, page, pageSize, items };
 }

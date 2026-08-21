@@ -1,9 +1,23 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../shared/middleware/auth';
-import { generateOsNumber, generateToken, addDays } from '../../shared/utils/helpers';
-import { generatePdf } from './pdf.service';
-import { sendWhatsAppMessage } from '../integrations/whatsapp/whatsapp.service';
+import { generateOsNumber } from '../../shared/utils/helpers';
+import {
+  registrarStatusEvent,
+  listOrderTimeline,
+  createOrderFromTicket as createOrderFromTicketService,
+  getOrdersDashboard as getOrdersDashboardService,
+  listOrdersForReport,
+  exportOrdersCsv,
+} from './orders.service';
+import {
+  enviarLinkAssinatura,
+  reenviarLinkAssinatura,
+  cancelarSolicitacaoAssinatura,
+  obterDadosAssinatura,
+  registrarAssinatura,
+  recusarAssinatura,
+} from './orders-signature.service';
 
 export async function listOrders(req: AuthRequest, res: Response) {
   try {
@@ -43,8 +57,9 @@ export async function getOrder(req: AuthRequest, res: Response) {
         client: true,
         tecnicoResponsavel: { select: { id: true, name: true, email: true } },
         criadoPor: { select: { name: true } },
-        signature: true,
+        signature: { include: { signatureAttempts: { orderBy: { dataHora: 'desc' } } } },
         attachments: true,
+        ticket: { select: { id: true, protocolo: true, assunto: true } },
       },
     });
     if (!order) return res.status(404).json({ error: 'OS não encontrada' });
@@ -56,7 +71,7 @@ export async function getOrder(req: AuthRequest, res: Response) {
 
 export async function createOrder(req: AuthRequest, res: Response) {
   try {
-    const { clientId, tipoServico, descricaoServico, sistemasEnvolvidos, equipamentos, tecnicoResponsavelId, valorServico, dataPrevistaEntrega, ticketId, observacoes } = req.body;
+    const { clientId, tipoServico, descricaoServico, sistemasEnvolvidos, equipamentos, tecnicoResponsavelId, valorServico, dataPrevistaEntrega, ticketId, observacoes, tipoImplantacao, precoImplantacao, horasDev, horasSuporte } = req.body;
 
     if (!clientId || !tipoServico) {
       return res.status(400).json({ error: 'Cliente e tipo de serviço são obrigatórios' });
@@ -101,9 +116,23 @@ export async function createOrder(req: AuthRequest, res: Response) {
         observacoes,
         criadoPorId: req.user!.id,
         status: 'rascunho',
+        tipoImplantacao: tipoImplantacao || null,
+        precoImplantacao: precoImplantacao ? parseFloat(precoImplantacao) : 0,
+        horasDev: horasDev ? parseFloat(horasDev) : 0,
+        horasSuporte: horasSuporte ? parseFloat(horasSuporte) : 0,
       },
       include: { client: true, tecnicoResponsavel: { select: { name: true } } },
     });
+
+    await registrarStatusEvent({
+      orderId: order.id,
+      statusNovo: 'rascunho',
+      statusAnterior: null,
+      usuarioId: req.user!.id,
+      origem: 'manual',
+      observacao: 'OS criada',
+    });
+
     return res.status(201).json(order);
   } catch (error: any) {
     if (error?.code === 'P2003') {
@@ -130,7 +159,12 @@ export async function updateOrder(req: AuthRequest, res: Response) {
       updateData.sistemasEnvolvidos = JSON.stringify(updateData.sistemasEnvolvidos);
     }
     if (updateData.valorServico) updateData.valorServico = parseFloat(updateData.valorServico);
+    if (updateData.precoImplantacao) updateData.precoImplantacao = parseFloat(updateData.precoImplantacao);
+    if (updateData.horasDev) updateData.horasDev = parseFloat(updateData.horasDev);
+    if (updateData.horasSuporte) updateData.horasSuporte = parseFloat(updateData.horasSuporte);
     if (updateData.dataPrevistaEntrega) updateData.dataPrevistaEntrega = new Date(updateData.dataPrevistaEntrega);
+    if (updateData.dataInicioImplantacao) updateData.dataInicioImplantacao = new Date(updateData.dataInicioImplantacao);
+    if (updateData.dataFimImplantacao) updateData.dataFimImplantacao = new Date(updateData.dataFimImplantacao);
 
     const order = await prisma.serviceOrder.update({
       where: { id: req.params.id },
@@ -169,8 +203,21 @@ export async function updateOrderStatus(req: AuthRequest, res: Response) {
 
     const updated = await prisma.serviceOrder.update({
       where: { id: req.params.id },
-      data: { status },
+      data: {
+        status,
+        ...(status === 'concluida' ? { dataConclusao: new Date() } : {}),
+      },
     });
+
+    await registrarStatusEvent({
+      orderId: req.params.id,
+      statusNovo: status,
+      statusAnterior: order.status,
+      usuarioId: req.user!.id,
+      origem: 'manual',
+      observacao: req.body.observacao || null,
+    });
+
     return res.json(updated);
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao atualizar status da OS' });
@@ -179,80 +226,70 @@ export async function updateOrderStatus(req: AuthRequest, res: Response) {
 
 export async function sendForSignature(req: AuthRequest, res: Response) {
   try {
-    const order = await prisma.serviceOrder.findUnique({
-      where: { id: req.params.id },
-      include: { client: true, signature: true },
-    });
-    if (!order) return res.status(404).json({ error: 'OS não encontrada' });
-    if (order.signature) return res.status(400).json({ error: 'OS já possui assinatura' });
-    if (order.status !== 'rascunho') return res.status(400).json({ error: 'OS precisa estar em rascunho' });
-
-    const token = generateToken();
-    const tokenExpiresAt = addDays(new Date(), 7);
-
-    await prisma.signature.create({
-      data: {
-        orderId: order.id,
-        tokenAssinatura: token,
-        tokenExpiresAt,
-        assinanteNome: '',
-        assinanteCpf: '',
-        assinanteCargo: '',
-        assinaturaBase64: '',
-      },
-    });
-
-    await prisma.serviceOrder.update({
-      where: { id: order.id },
-      data: { status: 'aguardando_assinatura' },
-    });
-
-    const signLink = `${process.env.APP_URL || 'http://localhost:3000'}/assinar/${token}`;
-
-    const message = `Olá! 👋\n\nSegue o link para assinar a Ordem de Serviço nº ${order.numeroOs} da Codemed.\n\n🔗 ${signLink}\n\nO link expira em 7 dias.\n\nAtenciosamente,\nEquipe Codemed`;
-
-    try {
-      if (order.client.telefone) {
-        const { success } = await sendWhatsAppMessage(order.client.telefone, message);
-        if (!success) console.warn('WhatsApp send failed for OS signature link');
-      }
-    } catch (waError) {
-      console.error('WhatsApp send error:', waError);
+    const result = await enviarLinkAssinatura(req.params.id, req.user!.id);
+    if (!result.ok) {
+      const statusCode = result.statusCode || 400;
+      return res.status(statusCode).json({ error: result.error, code: result.code, ...(result.signLink ? { signLink: result.signLink, token: result.token } : {}) });
     }
-
-    return res.json({ message: 'Link de assinatura enviado', token, signLink });
+    return res.json({
+      success: true,
+      message: 'Link de assinatura enviado',
+      token: result.token,
+      signLink: result.signLink,
+      messageId: result.messageId,
+      provider: result.provider,
+      telefone: result.telefone,
+    });
   } catch (error) {
+    console.error('[OS SIGNATURE] Erro ao enviar para assinatura:', error);
     return res.status(500).json({ error: 'Erro ao enviar para assinatura' });
+  }
+}
+
+export async function resendSignature(req: AuthRequest, res: Response) {
+  try {
+    const result = await reenviarLinkAssinatura(req.params.id, req.user!.id);
+    if (!result.ok) {
+      const statusCode = result.statusCode || 400;
+      return res.status(statusCode).json({ error: result.error, code: result.code, ...(result.signLink ? { signLink: result.signLink, token: result.token } : {}) });
+    }
+    return res.json({
+      success: true,
+      message: 'Link de assinatura reenviado',
+      token: result.token,
+      signLink: result.signLink,
+      messageId: result.messageId,
+      provider: result.provider,
+      telefone: result.telefone,
+    });
+  } catch (error) {
+    console.error('[OS SIGNATURE] Erro ao reenviar para assinatura:', error);
+    return res.status(500).json({ error: 'Erro ao reenviar para assinatura' });
+  }
+}
+
+export async function cancelSignatureRequest(req: AuthRequest, res: Response) {
+  try {
+    const result = await cancelarSolicitacaoAssinatura(req.params.id, req.user!.id);
+    if (!result.ok) {
+      return res.status(result.statusCode || 400).json({ error: result.error, code: result.code });
+    }
+    return res.json({ success: true, message: 'Solicitação de assinatura cancelada' });
+  } catch (error) {
+    console.error('[OS SIGNATURE] Erro ao cancelar solicitação:', error);
+    return res.status(500).json({ error: 'Erro ao cancelar solicitação de assinatura' });
   }
 }
 
 export async function getSignatureByToken(req: Request, res: Response) {
   try {
-    const signature = await prisma.signature.findUnique({
-      where: { tokenAssinatura: req.params.token },
-      include: { order: { include: { client: true, tecnicoResponsavel: { select: { name: true } } } } },
-    });
-    if (!signature) return res.status(404).json({ error: 'Link de assinatura inválido' });
-    if (new Date() > signature.tokenExpiresAt) return res.status(410).json({ error: 'Link de assinatura expirado' });
-    if (signature.assinadoEm) return res.status(400).json({ error: 'OS já assinada anteriormente' });
-
-    return res.json({
-      token: signature.tokenAssinatura,
-      order: {
-        numeroOs: signature.order.numeroOs,
-        tipoServico: signature.order.tipoServico,
-        descricaoServico: signature.order.descricaoServico,
-        valorServico: signature.order.valorServico,
-        dataEmissao: signature.order.dataEmissao,
-      },
-      client: {
-        razaoSocial: signature.order.client.razaoSocial,
-        cnpjCpf: signature.order.client.cnpjCpf,
-        telefone: signature.order.client.telefone,
-      },
-      tecnico: signature.order.tecnicoResponsavel.name,
-    });
+    const result = await obterDadosAssinatura(req.params.token);
+    if (!result.ok) {
+      return res.status(result.statusCode || 500).json({ error: result.error });
+    }
+    return res.json(result.data);
   } catch (error) {
+    console.error('[OS SIGNATURE] Erro ao buscar dados da assinatura:', error);
     return res.status(500).json({ error: 'Erro ao buscar assinatura' });
   }
 }
@@ -260,46 +297,33 @@ export async function getSignatureByToken(req: Request, res: Response) {
 export async function signOrder(req: Request, res: Response) {
   try {
     const { assinanteNome, assinanteCpf, assinanteCargo, assinaturaBase64 } = req.body;
-    if (!assinanteNome || !assinanteCpf || !assinanteCargo || !assinaturaBase64) {
-      return res.status(400).json({ error: 'Todos os campos de assinatura são obrigatórios' });
+    const result = await registrarAssinatura(
+      req.params.token,
+      { assinanteNome, assinanteCpf, assinanteCargo, assinaturaBase64 },
+      req.ip,
+      req.headers['user-agent'] || '',
+    );
+    if (!result.ok) {
+      return res.status(result.statusCode || 500).json({ error: result.error });
     }
-
-    const signature = await prisma.signature.findUnique({
-      where: { tokenAssinatura: req.params.token },
-      include: { order: true },
-    });
-    if (!signature) return res.status(404).json({ error: 'Link de assinatura inválido' });
-    if (new Date() > signature.tokenExpiresAt) return res.status(410).json({ error: 'Link de assinatura expirado' });
-    if (signature.assinadoEm) return res.status(400).json({ error: 'OS já assinada anteriormente' });
-
-    await prisma.signature.update({
-      where: { id: signature.id },
-      data: {
-        assinanteNome,
-        assinanteCpf,
-        assinanteCargo,
-        assinaturaBase64,
-        ipAssinante: req.ip,
-        userAgent: req.headers['user-agent'] || '',
-        assinadoEm: new Date(),
-      },
-    });
-
-    await prisma.serviceOrder.update({
-      where: { id: signature.orderId },
-      data: { status: 'assinada' },
-    });
-
-    const pdfPath = await generatePdf(signature.orderId);
-
-    await prisma.signature.update({
-      where: { id: signature.id },
-      data: { pdfPath },
-    });
-
-    return res.json({ message: 'OS assinada com sucesso!', pdfPath });
+    return res.json({ message: result.message, pdfPath: (result as any).pdfPath ?? null });
   } catch (error) {
+    console.error('[OS SIGNATURE] Erro ao processar assinatura:', error);
     return res.status(500).json({ error: 'Erro ao processar assinatura' });
+  }
+}
+
+export async function refuseSignature(req: Request, res: Response) {
+  try {
+    const { motivo } = req.body;
+    const result = await recusarAssinatura(req.params.token, motivo, req.ip);
+    if (!result.ok) {
+      return res.status(result.statusCode || 500).json({ error: result.error });
+    }
+    return res.json({ message: result.message });
+  } catch (error) {
+    console.error('[OS SIGNATURE] Erro ao processar recusa:', error);
+    return res.status(500).json({ error: 'Erro ao processar recusa' });
   }
 }
 
@@ -319,5 +343,84 @@ export async function getPdfOrder(req: AuthRequest, res: Response) {
     return res.sendFile(fullPath);
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao buscar PDF' });
+  }
+}
+
+// ── OS no Helpdesk (timeline, ticket, dashboard, export) ───────────────
+
+export async function getOrderTimeline(req: AuthRequest, res: Response) {
+  try {
+    const order = await prisma.serviceOrder.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!order) return res.status(404).json({ error: 'OS não encontrada' });
+    const timeline = await listOrderTimeline(order.id);
+    return res.json({ timeline });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao buscar timeline da OS' });
+  }
+}
+
+export async function listOrdersByTicket(req: AuthRequest, res: Response) {
+  try {
+    const orders = await prisma.serviceOrder.findMany({
+      where: { ticketId: req.params.ticketId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        client: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+        tecnicoResponsavel: { select: { id: true, name: true } },
+        signature: { select: { assinadoEm: true, assinanteNome: true } },
+      },
+    });
+    return res.json({ orders: orders.map((o) => ({ ...o, sistemasEnvolvidos: JSON.parse(o.sistemasEnvolvidos || '[]') })) });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao listar OS do ticket' });
+  }
+}
+
+export async function createOrderFromTicket(req: AuthRequest, res: Response) {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: 'Não autenticado' });
+    const order = await createOrderFromTicketService(req.params.ticketId, req.user.id);
+    return res.status(201).json(order);
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message || 'Erro ao criar OS a partir do ticket' });
+  }
+}
+
+export async function getOrdersDashboard(req: AuthRequest, res: Response) {
+  try {
+    const { status, tipoServico, clientId, tecnicoResponsavelId, ticketId, dataDe, dataAte } = req.query;
+    const dashboard = await getOrdersDashboardService({
+      status: status as string | undefined,
+      tipoServico: tipoServico as string | undefined,
+      clientId: clientId as string | undefined,
+      tecnicoResponsavelId: tecnicoResponsavelId as string | undefined,
+      ticketId: ticketId as string | undefined,
+      dataDe: dataDe as string | undefined,
+      dataAte: dataAte as string | undefined,
+    });
+    return res.json(dashboard);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao gerar relatório de OS' });
+  }
+}
+
+export async function exportOrdersCsvHandler(req: AuthRequest, res: Response) {
+  try {
+    const { status, tipoServico, clientId, tecnicoResponsavelId, ticketId, dataDe, dataAte } = req.query;
+    const orders = await listOrdersForReport({
+      status: status as string | undefined,
+      tipoServico: tipoServico as string | undefined,
+      clientId: clientId as string | undefined,
+      tecnicoResponsavelId: tecnicoResponsavelId as string | undefined,
+      ticketId: ticketId as string | undefined,
+      dataDe: dataDe as string | undefined,
+      dataAte: dataAte as string | undefined,
+    });
+    const csv = exportOrdersCsv(orders);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="ordens-servico-${new Date().toISOString().slice(0, 10)}.csv"`);
+    return res.send(csv);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao exportar OS' });
   }
 }

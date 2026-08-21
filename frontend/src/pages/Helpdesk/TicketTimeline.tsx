@@ -150,24 +150,24 @@ export default function TicketTimeline({ ticketId, isExpanded = false, onToggle 
         }}
       >
         <div className="flex items-center gap-2">
-          <Clock className="w-5 h-5 text-gray-500" />
+          <Clock className="w-5 h-5 text-gray-500 dark:text-slate-400" />
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             Timeline
           </h3>
-          <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+          <span className="text-xs text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
             {events.length} eventos
           </span>
         </div>
         <div className="flex items-center gap-2">
           <label
-            className="flex items-center gap-1 text-xs text-gray-500"
+            className="flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400"
             onClick={(e) => e.stopPropagation()}
           >
             <input
               type="checkbox"
               checked={showSystemEvents}
               onChange={(e) => setShowSystemEvents(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-gray-300 dark:border-slate-600"
             />
             Sistema
           </label>
@@ -191,7 +191,7 @@ export default function TicketTimeline({ ticketId, isExpanded = false, onToggle 
               {/* Horizontal Timeline Bar */}
               {timeline.length > 0 && (
                 <div className="mb-6">
-                  <h4 className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">
+                  <h4 className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
                     Etapas
                   </h4>
                   <div className="flex items-center gap-1 overflow-x-auto pb-2">
@@ -216,7 +216,7 @@ export default function TicketTimeline({ ticketId, isExpanded = false, onToggle 
                                 }}
                               />
                             </div>
-                            <div className="text-[10px] text-gray-500 mt-1">
+                            <div className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
                               {entry.duracaoMinutos != null
                                 ? formatDuration(entry.duracaoMinutos)
                                 : 'Atual'}
@@ -264,7 +264,7 @@ export default function TicketTimeline({ ticketId, isExpanded = false, onToggle 
                               </span>
                             )}
                             {event.usuario && (
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-gray-500 dark:text-slate-400">
                                 por {event.usuario.name}
                               </span>
                             )}
@@ -272,7 +272,7 @@ export default function TicketTimeline({ ticketId, isExpanded = false, onToggle 
 
                           {/* Dados extras */}
                           {Object.keys(dados).length > 0 && (
-                            <div className="mt-1 text-xs text-gray-500">
+                            <div className="mt-1 text-xs text-gray-500 dark:text-slate-400">
                               {dados.de && dados.para && (
                                 <span>
                                   {dados.de} → {dados.para}
@@ -303,7 +303,7 @@ export default function TicketTimeline({ ticketId, isExpanded = false, onToggle 
                   })}
 
                   {filteredEvents.length === 0 && (
-                    <div className="text-center py-8 text-gray-500 text-sm">
+                    <div className="text-center py-8 text-gray-500 dark:text-slate-400 text-sm">
                       Nenhum evento registrado
                     </div>
                   )}

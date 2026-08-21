@@ -668,6 +668,314 @@ export function useKanban() {
     }
   }, [currentBoard]);
 
+  // ── Ciclo de vida da tarefa (arquivar/restaurar/reabrir/excluir) ──
+  const archiveTask = useCallback(async (taskId: string, motivo?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post(`/kanban/tasks/${taskId}/archive`, { motivo });
+      if (currentBoard) {
+        setCurrentBoard(prev => ({
+          ...prev!,
+          columns: prev!.columns.map(col => ({
+            ...col,
+            tasks: col.tasks.filter(t => t.id !== taskId),
+          })),
+        }));
+      }
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao arquivar tarefa');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [currentBoard]);
+
+  const restoreTask = useCallback(async (taskId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post(`/kanban/tasks/${taskId}/restore`);
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao restaurar tarefa');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const reopenTask = useCallback(async (taskId: string, motivo: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post(`/kanban/tasks/${taskId}/reopen`, { motivo });
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao reabrir tarefa');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteTaskDefinitive = useCallback(async (taskId: string, motivo?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.delete(`/kanban/tasks/${taskId}/definitive`, { data: { motivo } });
+      return true;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao excluir tarefa definitivamente');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const listArchivedTasks = useCallback(async (params?: Record<string, any>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/kanban/tasks/archived', { params });
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao listar tarefas arquivadas');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const getTaskDetail = useCallback(async (taskId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get(`/kanban/tasks/${taskId}`);
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao buscar tarefa');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Tempo da tarefa (pausar/retomar/ajustar) ──
+  const getTaskTimeSummary = useCallback(async (tarefaId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get(`/timetracking/task/${tarefaId}/summary`);
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao buscar tempo da tarefa');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const pauseTimer = useCallback(async (timeEntryId: string, motivo?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post(`/timetracking/${timeEntryId}/pause`, { motivo });
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao pausar tempo');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const resumeTimer = useCallback(async (timeEntryId: string, motivo?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post(`/timetracking/${timeEntryId}/resume`, { motivo });
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao retomar tempo');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const adjustTime = useCallback(async (timeEntryId: string, novoDuracaoMin: number, motivo: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post(`/timetracking/${timeEntryId}/adjust`, { novoDuracaoMin, motivo });
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao ajustar tempo');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Relatório / Dashboard ──
+  const getTaskDashboard = useCallback(async (params?: Record<string, any>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/kanban/report/dashboard', { params });
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao buscar dashboard de tarefas');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const getTaskReport = useCallback(async (params?: Record<string, any>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/kanban/report/tasks', { params });
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao gerar relatório');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Alertas ──
+  const listAlerts = useCallback(async (params?: Record<string, any>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/kanban/alerts', { params });
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao listar alertas');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const getUnreadAlertsCount = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/kanban/alerts/unread-count');
+      return response.data.total;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao contar alertas');
+      return 0;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const markAlertRead = useCallback(async (alertaId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post(`/kanban/alerts/${alertaId}/read`);
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao marcar alerta');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Equipes ──
+  const listTeams = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/teams');
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao listar equipes');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const createTeam = useCallback(async (data: { nome: string; descricao?: string; departamentoId?: string; liderId?: string; membros?: string[] }) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post('/teams', data);
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao criar equipe');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updateTeam = useCallback(async (teamId: string, data: Partial<{ nome: string; descricao?: string; departamentoId?: string; liderId?: string; ativo?: boolean }>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.patch(`/teams/${teamId}`, data);
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao atualizar equipe');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteTeam = useCallback(async (teamId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.delete(`/teams/${teamId}`);
+      return true;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao deletar equipe');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const addTeamMember = useCallback(async (teamId: string, userId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post(`/teams/${teamId}/membros`, { userId });
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao adicionar membro');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const removeTeamMember = useCallback(async (teamId: string, userId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.delete(`/teams/${teamId}/membros/${userId}`);
+      return true;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao remover membro');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     boards,
     currentBoard,
@@ -702,5 +1010,26 @@ export function useKanban() {
     transferTask,
     duplicateTask,
     setCurrentBoard,
+    archiveTask,
+    restoreTask,
+    reopenTask,
+    deleteTaskDefinitive,
+    listArchivedTasks,
+    getTaskDetail,
+    getTaskTimeSummary,
+    pauseTimer,
+    resumeTimer,
+    adjustTime,
+    getTaskDashboard,
+    getTaskReport,
+    listAlerts,
+    getUnreadAlertsCount,
+    markAlertRead,
+    listTeams,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+    addTeamMember,
+    removeTeamMember,
   };
 }

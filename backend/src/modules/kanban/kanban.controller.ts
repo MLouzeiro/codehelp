@@ -122,7 +122,7 @@ export async function createTask(req: AuthRequest, res: Response) {
     const task = await service.createTask(req.params.boardId, {
       ...req.body,
       responsavelId: req.body.responsavelId || req.user?.id,
-    });
+    }, req.user?.id ?? null);
     return res.status(201).json(task);
   } catch (error: any) {
     if (error.message?.includes('obrigatório')) {
@@ -148,7 +148,7 @@ export async function getTask(req: AuthRequest, res: Response) {
 
 export async function updateTask(req: AuthRequest, res: Response) {
   try {
-    const task = await service.updateTask(req.params.taskId, req.body);
+    const task = await service.updateTask(req.params.taskId, req.body, req.user?.id ?? null);
     return res.json(task);
   } catch (error: any) {
     if (error.message?.includes('não encontrada')) {
@@ -161,7 +161,7 @@ export async function updateTask(req: AuthRequest, res: Response) {
 
 export async function deleteTask(req: AuthRequest, res: Response) {
   try {
-    await service.deleteTask(req.params.taskId);
+    await service.deleteTask(req.params.taskId, req.user?.id ?? null, req.body.motivo);
     return res.status(204).send();
   } catch (error: any) {
     if (error.message?.includes('não encontrada')) {
@@ -174,7 +174,7 @@ export async function deleteTask(req: AuthRequest, res: Response) {
 
 export async function moveTask(req: AuthRequest, res: Response) {
   try {
-    const task = await service.moveTask(req.params.taskId, req.body.targetColumnId, req.body.targetOrdem);
+    const task = await service.moveTask(req.params.taskId, req.body.targetColumnId, req.body.targetOrdem, req.user?.id ?? null, req.body.motivo);
     return res.json(task);
   } catch (error: any) {
     if (error.message?.includes('obrigatório') || error.message?.includes('não encontrad')) {
@@ -182,6 +182,81 @@ export async function moveTask(req: AuthRequest, res: Response) {
     }
     console.error('Erro ao mover tarefa:', error);
     return res.status(500).json({ error: 'Erro ao mover tarefa' });
+  }
+}
+
+export async function archiveTask(req: AuthRequest, res: Response) {
+  try {
+    const task = await service.archiveTask(req.params.taskId, req.user?.id ?? null, req.body.motivo);
+    return res.json(task);
+  } catch (error: any) {
+    if (error.message?.includes('não encontrada') || error.message?.includes('já está arquivada')) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Erro ao arquivar tarefa:', error);
+    return res.status(500).json({ error: 'Erro ao arquivar tarefa' });
+  }
+}
+
+export async function restoreTask(req: AuthRequest, res: Response) {
+  try {
+    const task = await service.restoreTask(req.params.taskId, req.user?.id ?? null);
+    return res.json(task);
+  } catch (error: any) {
+    if (error.message?.includes('não encontrada') || error.message?.includes('não está arquivada')) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Erro ao restaurar tarefa:', error);
+    return res.status(500).json({ error: 'Erro ao restaurar tarefa' });
+  }
+}
+
+export async function reopenTask(req: AuthRequest, res: Response) {
+  try {
+    const task = await service.reopenTask(req.params.taskId, req.user?.id ?? null, req.body.motivo);
+    return res.json(task);
+  } catch (error: any) {
+    if (error.message?.includes('não encontrada')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message?.includes('obrigatório')) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Erro ao reabrir tarefa:', error);
+    return res.status(500).json({ error: 'Erro ao reabrir tarefa' });
+  }
+}
+
+export async function deleteTaskDefinitive(req: AuthRequest, res: Response) {
+  try {
+    await service.deleteTaskDefinitive(req.params.taskId, req.user?.id ?? null, req.body.motivo);
+    return res.status(204).send();
+  } catch (error: any) {
+    if (error.message?.includes('não encontrada') || error.message?.includes('arquivadas')) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Erro ao excluir tarefa definitivamente:', error);
+    return res.status(500).json({ error: 'Erro ao excluir tarefa definitivamente' });
+  }
+}
+
+export async function listArchivedTasks(req: AuthRequest, res: Response) {
+  try {
+    const result = await service.listArchivedTasks({
+      busca: req.query.busca as string | undefined,
+      responsavelId: req.query.responsavelId as string | undefined,
+      clientId: req.query.clientId as string | undefined,
+      departamentoId: req.query.departamentoId as string | undefined,
+      statusPrazo: req.query.statusPrazo as string | undefined,
+      dataArquivadoDe: req.query.dataArquivadoDe as string | undefined,
+      dataArquivadoAte: req.query.dataArquivadoAte as string | undefined,
+      page: req.query.page ? Number(req.query.page) : undefined,
+      pageSize: req.query.pageSize ? Number(req.query.pageSize) : undefined,
+    });
+    return res.json(result);
+  } catch (error) {
+    console.error('Erro ao listar tarefas arquivadas:', error);
+    return res.status(500).json({ error: 'Erro ao listar tarefas arquivadas' });
   }
 }
 

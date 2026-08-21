@@ -1,7 +1,6 @@
 import prisma from '../../config/database';
 import { callClaude, hasClaude } from '../../shared/aiClient';
 import { WHERE_TICKET_RESOLVIDO, MOTIVO_ENCERRADO_SEM_RESOLUCAO } from '../helpdesk/constants';
-import ExcelJS from 'exceljs';
 
 // ── Interfaces ─────────────────────────────────────────────────
 
@@ -545,6 +544,7 @@ export function exportarAuditoriaCsv(auditados: AuditoriaEncerramento[]): string
 // ── Exportação Excel (exceljs) ─────────────────────────────────
 
 export async function exportarAuditoriaExcel(auditados: AuditoriaEncerramento[], resumo: ResumoAuditoria): Promise<Buffer> {
+  const { default: ExcelJS } = await import('exceljs');
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Codemed Hub';
   wb.created = new Date();

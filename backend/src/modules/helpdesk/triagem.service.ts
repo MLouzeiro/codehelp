@@ -313,7 +313,7 @@ async function enviarFollowUp(ticketId: string) {
     }
 
     const phone = sanitizePhoneNumber(ticket.contactPhone).replace(/@c\.us$/i, '');
-    const result = await sendWhatsAppMessage(phone, mensagem, undefined, ticket.contactJid || undefined);
+    const result = await sendWhatsAppMessage(phone, mensagem, (ticket as any).whatsappConnectionId || undefined, ticket.contactJid || undefined);
     if (result.success) {
       await prisma.message.create({
         data: { ticketId, fromMe: true, content: mensagem, source: 'bot' },

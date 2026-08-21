@@ -3,6 +3,7 @@ import api from '../../services/api';
 import {
   Loader2, AlertTriangle, HeartHandshake, FileText, TrendingUp, Target,
   User, ClipboardList, Flag, ArrowRight, RefreshCw, ListChecks, Sparkles,
+  Plus, X, Calendar,
 } from 'lucide-react';
 import ReportKpiCard from '../../components/reports/ReportKpiCard';
 
@@ -61,21 +62,72 @@ export default function TomadaDecisaoPage() {
   const [dados, setDados] = useState<TomadaDecisao | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filtroDias, setFiltroDias] = useState('30');
+  const [agenteId, setAgenteId] = useState('');
+  const [classificacao, setClassificacao] = useState('');
+  const [agentes, setAgentes] = useState<any[]>([]);
+  const [boards, setBoards] = useState<any[]>([]);
+  const [modalTarefa, setModalTarefa] = useState<Recomendacao | null>(null);
+  const [boardId, setBoardId] = useState('');
+  const [responsavelId, setResponsavelId] = useState('');
+  const [criando, setCriando] = useState(false);
+  const [feedback, setFeedback] = useState('');
 
   const carregar = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const { data } = await api.get('/auditoria/decisao');
+      const params: any = {};
+      if (filtroDias) {
+        const fim = new Date();
+        const inicio = new Date(fim);
+        inicio.setDate(fim.getDate() - (Number(filtroDias) - 1));
+        inicio.setHours(0, 0, 0, 0);
+        params.dataInicio = inicio.toISOString();
+        params.dataFim = fim.toISOString();
+      }
+      if (agenteId) params.agenteId = agenteId;
+      if (classificacao) params.classificacao = classificacao;
+      const { data } = await api.get('/auditoria/decisao', { params });
       setDados(data);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao carregar tomada de decisão');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filtroDias, agenteId, classificacao]);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  useEffect(() => {
+    api.get('/users').then((r) => setAgentes(Array.isArray(r.data) ? r.data : r.data?.users || [])).catch(() => {});
+    api.get('/kanban/boards').then((r) => setBoards(Array.isArray(r.data) ? r.data : r.data?.boards || [])).catch(() => {});
+  }, []);
+
+  const criarTarefa = async () => {
+    if (!modalTarefa) return;
+    if (!boardId) {
+      setFeedback('Selecione um board para criar a tarefa.');
+      return;
+    }
+    setCriando(true);
+    setFeedback('');
+    try {
+      await api.post('/auditoria/decisao/recomendacao/tarefa', {
+        recomendacaoId: modalTarefa.id,
+        boardId,
+        responsavelId: responsavelId || undefined,
+      });
+      setModalTarefa(null);
+      setBoardId('');
+      setResponsavelId('');
+      setFeedback('Tarefa criada no Kanban com sucesso.');
+    } catch (err: any) {
+      setFeedback(err.response?.data?.error || 'Erro ao criar a tarefa.');
+    } finally {
+      setCriando(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -112,14 +164,57 @@ export default function TomadaDecisaoPage() {
             Saúde do atendimento, recomendações automáticas e plano de ação para o gestor
           </p>
         </div>
-        <button
-          onClick={carregar}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl"
-          style={{ fontFamily: 'Lexend, sans-serif' }}
-        >
-          <RefreshCw size={16} /> Atualizar
-        </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
+            <Calendar size={13} /> Período
+            <select
+              value={filtroDias}
+              onChange={(e) => setFiltroDias(e.target.value)}
+              className="input w-auto text-sm"
+            >
+              <option value="7">Últimos 7 dias</option>
+              <option value="30">Últimos 30 dias</option>
+              <option value="90">Últimos 90 dias</option>
+            </select>
+          </label>
+          <select
+            value={agenteId}
+            onChange={(e) => setAgenteId(e.target.value)}
+            className="input w-auto text-sm"
+          >
+            <option value="">Todos os analistas</option>
+            {agentes.filter((a: any) => a.active !== false).map((a: any) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+          <select
+            value={classificacao}
+            onChange={(e) => setClassificacao(e.target.value)}
+            className="input w-auto text-sm"
+          >
+            <option value="">Todas as classificações</option>
+            <option value="EXCELENTE">Excelente</option>
+            <option value="MUITO_BOM">Muito Bom</option>
+            <option value="BOM">Bom</option>
+            <option value="ATENCAO">Atenção</option>
+            <option value="ABAIXO_DA_MEDIA">Abaixo da média</option>
+            <option value="CRITICO">Crítico</option>
+          </select>
+          <button
+            onClick={carregar}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl"
+            style={{ fontFamily: 'Lexend, sans-serif' }}
+          >
+            <RefreshCw size={16} /> Atualizar
+          </button>
+        </div>
       </div>
+
+      {feedback && (
+        <div className="text-sm px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/40" style={{ fontFamily: 'Lexend, sans-serif' }}>
+          {feedback}
+        </div>
+      )}
 
       {/* Card de saúde */}
       <div className={`rounded-2xl border p-6 bg-gradient-to-r ${saude.card}`}>
@@ -194,6 +289,13 @@ export default function TomadaDecisaoPage() {
                   <div className="flex gap-2"><ClipboardList size={15} className="text-blue-500 mt-0.5 shrink-0" /><span><b>Ação:</b> {r.acao}</span></div>
                   <div className="flex gap-2"><RefreshCw size={15} className="text-violet-500 mt-0.5 shrink-0" /><span><b>Acompanhamento:</b> {r.acompanhamento}</span></div>
                 </div>
+                <button
+                  onClick={() => { setModalTarefa(r); setBoardId(''); setResponsavelId(''); setFeedback(''); }}
+                  className="mt-3 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
+                  style={{ fontFamily: 'Lexend, sans-serif' }}
+                >
+                  <Plus size={13} /> Criar tarefa no Kanban
+                </button>
               </div>
             );
           })}
@@ -314,6 +416,75 @@ export default function TomadaDecisaoPage() {
         <HeartHandshake size={14} />
         <span>As decisões pertencem ao gestor. A IA apenas sugere com base em evidências reais do atendimento.</span>
       </div>
+
+      {/* Modal: criar tarefa */}
+      {modalTarefa && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>
+                Criar tarefa no Kanban
+              </h2>
+              <button onClick={() => setModalTarefa(null)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 p-3">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                  {modalTarefa.descricao}
+                </p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                  Prioridade {modalTarefa.prioridade} · Prazo sugerido: {modalTarefa.prazo}
+                </p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 block" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                  Board
+                </label>
+                <select value={boardId} onChange={(e) => setBoardId(e.target.value)} className="input w-full text-sm">
+                  <option value="">Selecione um board...</option>
+                  {boards.map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.nome || b.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 block" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                  Responsável (opcional)
+                </label>
+                <select value={responsavelId} onChange={(e) => setResponsavelId(e.target.value)} className="input w-full text-sm">
+                  <option value="">Sem responsável</option>
+                  {agentes.filter((a: any) => a.active !== false).map((a: any) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+              {feedback && (
+                <p className="text-xs text-amber-600 dark:text-amber-400" style={{ fontFamily: 'Lexend, sans-serif' }}>{feedback}</p>
+              )}
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setModalTarefa(null)}
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  style={{ fontFamily: 'Lexend, sans-serif' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={criarTarefa}
+                  disabled={criando}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60"
+                  style={{ fontFamily: 'Lexend, sans-serif' }}
+                >
+                  {criando ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+                  {criando ? 'Criando...' : 'Criar tarefa'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -375,7 +375,7 @@ export default function AuditoriaEncerramentoPage() {
                   <div key={t.tipo}>
                     <div className="flex items-center justify-between text-sm mb-1">
                       <span className="font-medium text-slate-700 dark:text-slate-300" style={{ fontFamily: 'Lexend, sans-serif' }}>{TIPO_NOME[t.tipo] || t.tipo}</span>
-                      <span className={`text-sm font-semibold ${cfg?.cor || 'text-slate-500'}`} style={{ fontFamily: 'Khand, sans-serif' }}>{t.total} · {pct}%</span>
+                      <span className={`text-sm font-semibold ${cfg?.cor || 'text-slate-500 dark:text-slate-400'}`} style={{ fontFamily: 'Khand, sans-serif' }}>{t.total} · {pct}%</span>
                     </div>
                     <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
                       <div className={`h-full rounded-full ${cfg ? cfg.bg.split(' ')[0] : 'bg-slate-400'} transition-all`} style={{ width: `${pct}%`, backgroundColor: cfg ? undefined : undefined }} />
@@ -531,7 +531,7 @@ export default function AuditoriaEncerramentoPage() {
                 </div>
                 <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/40">
                   <div className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Risco de Reabertura</div>
-                  <div className={`font-medium ${RISCO_CONFIG[ticketAberto.riscoReabertura]?.cor || 'text-slate-500'}`} style={{ fontFamily: 'Lexend, sans-serif' }}>
+                  <div className={`font-medium ${RISCO_CONFIG[ticketAberto.riscoReabertura]?.cor || 'text-slate-500 dark:text-slate-400'}`} style={{ fontFamily: 'Lexend, sans-serif' }}>
                     {RISCO_CONFIG[ticketAberto.riscoReabertura]?.label || ticketAberto.riscoReabertura || '—'}
                   </div>
                 </div>

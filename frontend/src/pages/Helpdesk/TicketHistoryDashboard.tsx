@@ -200,11 +200,11 @@ export default function TicketHistoryDashboard({ ticketId }: TicketHistoryDashbo
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-gray-500" />
+          <BarChart3 className="w-5 h-5 text-gray-500 dark:text-slate-400" />
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             Histórico Completo
           </h3>
-          <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+          <span className="text-xs text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
             {stats.totalEvents} eventos
           </span>
         </div>
@@ -232,21 +232,21 @@ export default function TicketHistoryDashboard({ ticketId }: TicketHistoryDashbo
       <div className="grid grid-cols-4 gap-4 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
         <div className="text-center">
           <div className="text-lg font-bold text-gray-900 dark:text-white">{stats.totalEvents}</div>
-          <div className="text-[10px] text-gray-500 uppercase">Eventos</div>
+          <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase">Eventos</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-bold text-blue-600">{stats.totalMessages}</div>
-          <div className="text-[10px] text-gray-500 uppercase">Mensagens</div>
+          <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase">Mensagens</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-bold text-indigo-600">{stats.totalAiInteractions}</div>
-          <div className="text-[10px] text-gray-500 uppercase">Interações IA</div>
+          <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase">Interações IA</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-bold text-green-600">
             {stats.tempoTotalMin ? formatMinutes(stats.tempoTotalMin) : '—'}
           </div>
-          <div className="text-[10px] text-gray-500 uppercase">Tempo Total</div>
+          <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase">Tempo Total</div>
         </div>
       </div>
 
@@ -274,7 +274,7 @@ export default function TicketHistoryDashboard({ ticketId }: TicketHistoryDashbo
       {/* Data List */}
       <div className="max-h-96 overflow-y-auto">
         {filteredData.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 text-sm">
+          <div className="text-center py-8 text-gray-500 dark:text-slate-400 text-sm">
             Nenhum dado nesta categoria
           </div>
         ) : (
@@ -287,7 +287,7 @@ export default function TicketHistoryDashboard({ ticketId }: TicketHistoryDashbo
                       {item.tipo || item.etapa || '—'}
                     </span>
                     {item.usuario && (
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-500 dark:text-slate-400">
                         por {item.usuario.name}
                       </span>
                     )}
@@ -297,7 +297,7 @@ export default function TicketHistoryDashboard({ ticketId }: TicketHistoryDashbo
                   </span>
                 </div>
                 {item.descricao && (
-                  <p className="text-xs text-gray-500 mt-1">{item.descricao}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">{item.descricao}</p>
                 )}
                 {item.duracaoMin != null && (
                   <span className="text-xs text-gray-400">

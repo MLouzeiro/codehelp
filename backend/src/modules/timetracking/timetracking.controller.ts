@@ -18,7 +18,7 @@ export async function startTimer(req: AuthRequest, res: Response) {
 
 export async function stopTimer(req: AuthRequest, res: Response) {
   try {
-    const entry = await svc.stopTimer(req.params.id);
+    const entry = await svc.stopTimer(req.params.id, req.user!.id, req.body.motivo);
 
     // Auto-sync order hours if linked
     if (entry.orderId) {
@@ -28,6 +28,42 @@ export async function stopTimer(req: AuthRequest, res: Response) {
     return res.json(entry);
   } catch (err: any) {
     return res.status(400).json({ error: err.message || 'Erro ao parar timer' });
+  }
+}
+
+export async function pauseTimer(req: AuthRequest, res: Response) {
+  try {
+    const entry = await svc.pauseTimer(req.params.id, req.user!.id, req.body.motivo);
+    return res.json(entry);
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message || 'Erro ao pausar timer' });
+  }
+}
+
+export async function resumeTimer(req: AuthRequest, res: Response) {
+  try {
+    const entry = await svc.resumeTimer(req.params.id, req.user!.id, req.body.motivo);
+    return res.json(entry);
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message || 'Erro ao retomar timer' });
+  }
+}
+
+export async function getTaskTimeSummary(req: AuthRequest, res: Response) {
+  try {
+    const summary = await svc.getTaskTimeSummary(req.params.tarefaId);
+    return res.json(summary);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao gerar resumo de tempo da tarefa' });
+  }
+}
+
+export async function adjustTime(req: AuthRequest, res: Response) {
+  try {
+    const entry = await svc.ajustarTempo(req.params.id, req.body.novoDuracaoMin, req.body.motivo, req.user?.id ?? null);
+    return res.json(entry);
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message || 'Erro ao ajustar tempo' });
   }
 }
 

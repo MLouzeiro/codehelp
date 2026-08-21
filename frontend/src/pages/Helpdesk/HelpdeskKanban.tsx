@@ -674,6 +674,7 @@ export default function HelpdeskKanban() {
         to: ticketDetail.ticket.contactPhone,
         message: messageText.trim(),
         ticketId: ticketDetail.ticket.id,
+        whatsappConnectionId: ticketDetail.ticket.whatsappConnectionId || undefined,
       });
       setMessageText('');
       loadTicketDetail(ticketDetail.ticket.id);

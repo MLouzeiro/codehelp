@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { callClaude, hasClaude } from '../../shared/aiClient';
+import { auditarEncerramento } from '../helpdesk/closureAudit.service';
 
 // ── Interfaces ─────────────────────────────────────────────────
 
@@ -29,6 +30,37 @@ export interface MetricasAgente {
   totalAlertas: number;
   totalSugestoes: number;
   periodo: { inicio: Date; fim: Date };
+  encerramentos: MetricasEncerramento | null;
+}
+
+export interface MetricasEncerramento {
+  total: number;
+  prematuros: number;
+  resolucoesReais: number;
+  reaberturas: number;
+  taxaEncerramentoCorreto: number;
+  notaMediaEncerramento: number;
+  riscoAlto: number;
+  riscoCritico: number;
+  recomendaReabertura: number;
+}
+
+export interface EncerramentoAgente {
+  ticketId: string;
+  protocolo: string | null;
+  contactName: string | null;
+  tipo: string;
+  riscoReabertura: string;
+  nota: number;
+  diagnostico: string | null;
+  recomendaReabertura: boolean;
+  semConfirmacao: boolean;
+  clienteVoltou: boolean;
+  mensagensAposEncerramento: number;
+  csatNota: number | null;
+  analiseIa: boolean;
+  dataFechamento: Date | null;
+  processadoEm: Date;
 }
 
 export interface RelatorioAuditoria {
@@ -59,6 +91,24 @@ export interface RelatorioAuditoria {
     empatiaMedia: number;
     totalAlertas: number;
   };
+  encerramento: {
+    tipo: string;
+    riscoReabertura: string;
+    nota: number;
+    diagnostico: string | null;
+    detalhes: string[];
+    recomendaReabertura: boolean;
+    semConfirmacao: boolean;
+    motivoStatus: string | null;
+    clienteVoltou: boolean;
+    mensagensAposEncerramento: number;
+    csatNota: number | null;
+    csatRespondido: boolean;
+    analiseIa: boolean;
+    ticketReaberturaId: string | null;
+    dataFechamento: Date | null;
+    processadoEm: Date | null;
+  } | null;
 }
 
 // ── Prompt Builder ─────────────────────────────────────────────
@@ -289,6 +339,12 @@ export async function getMetricasAgente(
 
     const dataInicio = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
 
+    let encerramentos: MetricasEncerramento | null = null;
+    try {
+      const enc = await getEncerramentosAgente(agentId, dias);
+      encerramentos = enc.metricas.total > 0 ? enc.metricas : null;
+    } catch { /* sem dados de encerramento não quebra as métricas */ }
+
     const audits = await prisma.aIAgentAudit.findMany({
       where: {
         agentId,
@@ -320,6 +376,7 @@ export async function getMetricasAgente(
         totalAlertas: 0,
         totalSugestoes: 0,
         periodo: { inicio: dataInicio, fim: new Date() },
+        encerramentos,
       };
     }
 
@@ -365,6 +422,7 @@ export async function getMetricasAgente(
       totalAlertas,
       totalSugestoes,
       periodo: { inicio: dataInicio, fim: new Date() },
+      encerramentos,
     };
   } catch (err: any) {
     console.error('[AI Agent Monitor] Erro ao calcular métricas:', err?.message);
@@ -382,6 +440,7 @@ export async function getRelatorioAuditoria(
         id: true,
         protocolo: true,
         contactName: true,
+        dataFechamento: true,
         assignee: { select: { id: true, name: true } },
       },
     });
@@ -406,7 +465,47 @@ export async function getRelatorioAuditoria(
       },
     });
 
-    if (audits.length === 0) return null;
+    // Detecção de encerramento (prematuro / resolução real / reabertura).
+    // Busca a auditoria persistida; se o ticket já foi fechado e ainda não há
+    // registro, gera on-demand (upsert) — nunca lança erro para não quebrar a tela.
+    let encerramento: RelatorioAuditoria['encerramento'] = null;
+    try {
+      let closure = await prisma.aIAgentClosureAudit.findUnique({
+        where: { ticketId },
+      });
+      if (!closure && ticket.dataFechamento) {
+        const gerada = await auditarEncerramentoTicket(ticketId);
+        if (gerada) {
+          closure = await prisma.aIAgentClosureAudit.findUnique({ where: { ticketId } });
+        }
+      }
+      if (closure) {
+        let detalhes: string[] = [];
+        try { detalhes = JSON.parse(closure.detalhes || '[]'); } catch { detalhes = []; }
+        encerramento = {
+          tipo: closure.tipo,
+          riscoReabertura: closure.riscoReabertura,
+          nota: closure.nota,
+          diagnostico: closure.diagnostico,
+          detalhes: Array.isArray(detalhes) ? detalhes : [],
+          recomendaReabertura: closure.recomendaReabertura,
+          semConfirmacao: closure.semConfirmacao,
+          motivoStatus: closure.motivoStatus,
+          clienteVoltou: closure.clienteVoltou,
+          mensagensAposEncerramento: closure.mensagensAposEncerramento,
+          csatNota: closure.csatNota,
+          csatRespondido: closure.csatRespondido,
+          analiseIa: closure.analiseIa,
+          ticketReaberturaId: closure.ticketReaberturaId,
+          dataFechamento: closure.dataFechamento,
+          processadoEm: closure.processadoEm,
+        };
+      }
+    } catch (err) {
+      console.warn('[AI Agent Monitor] Falha ao carregar encerramento do ticket:', (err as Error).message);
+    }
+
+    if (audits.length === 0 && !encerramento) return null;
 
     const total = audits.length;
     const soma = audits.reduce(
@@ -442,6 +541,7 @@ export async function getRelatorioAuditoria(
         empatiaMedia: Math.round((soma.em / total) * 10) / 10,
         totalAlertas,
       },
+      encerramento,
     };
   } catch (err: any) {
     console.error('[AI Agent Monitor] Erro ao gerar relatório:', err?.message);
@@ -473,6 +573,143 @@ export async function getRankingAgentes(
     console.error('[AI Agent Monitor] Erro ao gerar ranking:', err?.message);
     return [];
   }
+}
+
+// ── Detecção de Encerramento (prematuro / resolução real / reabertura) ──
+
+function agregarMetricasEncerramento(records: Array<{
+  tipo: string;
+  riscoReabertura: string;
+  nota: number;
+  recomendaReabertura: boolean;
+}>): MetricasEncerramento {
+  const total = records.length;
+  const prematuros = records.filter((r) => r.tipo === 'encerramento_prematuro').length;
+  const resolucoesReais = records.filter((r) => r.tipo === 'resolucao_real').length;
+  const reaberturas = records.filter((r) => r.tipo === 'reabertura').length;
+  return {
+    total,
+    prematuros,
+    resolucoesReais,
+    reaberturas,
+    taxaEncerramentoCorreto: total > 0 ? Math.round((resolucoesReais / total) * 100) : 0,
+    notaMediaEncerramento: total > 0 ? Math.round((records.reduce((s, r) => s + r.nota, 0) / total) * 10) / 10 : 0,
+    riscoAlto: records.filter((r) => r.riscoReabertura === 'ALTO').length,
+    riscoCritico: records.filter((r) => r.riscoReabertura === 'CRÍTICO').length,
+    recomendaReabertura: records.filter((r) => r.recomendaReabertura).length,
+  };
+}
+
+export async function auditarEncerramentoTicket(ticketId: string): Promise<EncerramentoAgente | null> {
+  try {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { id: true, assigneeId: true },
+    });
+    if (!ticket) return null;
+
+    const auditoria = await auditarEncerramento(ticketId, true);
+
+    const saved = await prisma.aIAgentClosureAudit.upsert({
+      where: { ticketId },
+      update: {
+        protocolo: auditoria.protocolo,
+        agentId: ticket.assigneeId ?? null,
+        tipo: auditoria.tipo,
+        riscoReabertura: auditoria.riscoReabertura,
+        nota: auditoria.nota,
+        diagnostico: auditoria.diagnostico,
+        detalhes: JSON.stringify(auditoria.detalhes),
+        recomendaReabertura: auditoria.recomendaReabertura,
+        semConfirmacao: auditoria.semConfirmacao,
+        motivoStatus: auditoria.motivoStatus,
+        clienteVoltou: auditoria.clienteVoltou,
+        mensagensAposEncerramento: auditoria.mensagensAposEncerramento,
+        csatNota: auditoria.csatNota,
+        csatRespondido: auditoria.csatRespondido,
+        analiseIa: auditoria.analiseIa,
+        ticketReaberturaId: auditoria.ticketReaberturaId,
+        dataFechamento: auditoria.dataFechamento,
+        processadoEm: new Date(),
+      },
+      create: {
+        ticketId,
+        protocolo: auditoria.protocolo,
+        agentId: ticket.assigneeId ?? null,
+        tipo: auditoria.tipo,
+        riscoReabertura: auditoria.riscoReabertura,
+        nota: auditoria.nota,
+        diagnostico: auditoria.diagnostico,
+        detalhes: JSON.stringify(auditoria.detalhes),
+        recomendaReabertura: auditoria.recomendaReabertura,
+        semConfirmacao: auditoria.semConfirmacao,
+        motivoStatus: auditoria.motivoStatus,
+        clienteVoltou: auditoria.clienteVoltou,
+        mensagensAposEncerramento: auditoria.mensagensAposEncerramento,
+        csatNota: auditoria.csatNota,
+        csatRespondido: auditoria.csatRespondido,
+        analiseIa: auditoria.analiseIa,
+        ticketReaberturaId: auditoria.ticketReaberturaId,
+        dataFechamento: auditoria.dataFechamento,
+      },
+    });
+
+    return {
+      ticketId: saved.ticketId,
+      protocolo: saved.protocolo,
+      contactName: auditoria.contactName,
+      tipo: saved.tipo,
+      riscoReabertura: saved.riscoReabertura,
+      nota: saved.nota,
+      diagnostico: saved.diagnostico,
+      recomendaReabertura: saved.recomendaReabertura,
+      semConfirmacao: saved.semConfirmacao,
+      clienteVoltou: saved.clienteVoltou,
+      mensagensAposEncerramento: saved.mensagensAposEncerramento,
+      csatNota: saved.csatNota,
+      analiseIa: saved.analiseIa,
+      dataFechamento: saved.dataFechamento,
+      processadoEm: saved.processadoEm,
+    };
+  } catch (err: any) {
+    console.error('[AI Agent Monitor] Erro ao auditar encerramento do ticket:', err?.message);
+    return null;
+  }
+}
+
+export async function getEncerramentosAgente(
+  agentId: string,
+  dias: number = 30
+): Promise<{ metricas: MetricasEncerramento; lista: EncerramentoAgente[] }> {
+  const dataInicio = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+
+  const records = await prisma.aIAgentClosureAudit.findMany({
+    where: {
+      agentId,
+      processadoEm: { gte: dataInicio },
+    },
+    orderBy: { processadoEm: 'desc' },
+  });
+
+  const lista: EncerramentoAgente[] = records.map((r) => ({
+    ticketId: r.ticketId,
+    protocolo: r.protocolo,
+    contactName: null,
+    tipo: r.tipo,
+    riscoReabertura: r.riscoReabertura,
+    nota: r.nota,
+    diagnostico: r.diagnostico,
+    recomendaReabertura: r.recomendaReabertura,
+    semConfirmacao: r.semConfirmacao,
+    clienteVoltou: r.clienteVoltou,
+    mensagensAposEncerramento: r.mensagensAposEncerramento,
+    csatNota: r.csatNota,
+    analiseIa: r.analiseIa,
+    dataFechamento: r.dataFechamento,
+    processadoEm: r.processadoEm,
+  }));
+
+  return { metricas: agregarMetricasEncerramento(records), lista };
 }
 
 // ── Fallback Local ─────────────────────────────────────────────

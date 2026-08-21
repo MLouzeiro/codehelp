@@ -188,6 +188,43 @@ class EvolutionAPIService {
     }
   }
 
+  async sendListMessage(
+    to: string,
+    buttonText: string,
+    bodyText: string,
+    sections: Array<{ title: string; rows: Array<{ id: string; title: string; description?: string }> }>,
+    instanceName?: string,
+  ): Promise<{ success: boolean; error?: string; messageId?: string }> {
+    const instance = instanceName || this.config.instanceName;
+    const phone = normalizePhone(to);
+
+    try {
+      const response = await fetch(`${this.config.baseUrl}/message/sendList/${instance}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': this.config.apiKey,
+        },
+        body: JSON.stringify({
+          number: phone,
+          buttonText,
+          description: bodyText,
+          sections,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        return { success: false, error };
+      }
+
+      const data: any = await response.json();
+      return { success: true, messageId: data.key?.id || data.messageId };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
   async sendMedia(
     to: string,
     mediaUrl: string,

@@ -4,9 +4,52 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, Clock, FileText, MessageSquare, Users, AlertTriangle, Lightbulb, Target, BarChart3, Activity, Zap, Building2, Star, Bot } from 'lucide-react';
+import { TrendingUp, Clock, FileText, MessageSquare, Users, AlertTriangle, Lightbulb, Target, BarChart3, Activity, Zap, Building2, Star, Bot, BellRing, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 const COLORS = ['#3B82F6', '#60A5FA', '#2563EB', '#93C5FD', '#1D4ED8', '#BFDBFE'];
+
+const NIVEL_ALERTA: Record<string, { label: string; bg: string; border: string; text: string }> = {
+  critico: { label: 'Crítico', bg: 'bg-red-50 dark:bg-red-950/40', border: 'border-red-200 dark:border-red-900/50', text: 'text-red-700 dark:text-red-400' },
+  atencao: { label: 'Atenção', bg: 'bg-amber-50 dark:bg-amber-950/40', border: 'border-amber-200 dark:border-amber-900/50', text: 'text-amber-700 dark:text-amber-400' },
+  info: { label: 'Informação', bg: 'bg-blue-50 dark:bg-blue-950/40', border: 'border-blue-200 dark:border-blue-900/50', text: 'text-blue-700 dark:text-blue-400' },
+};
+
+interface IndicadorInterpretado {
+  label: string;
+  valor: string;
+  meta: string;
+  status: 'ok' | 'atencao' | 'ruim';
+  icone: string;
+  recomendacao: string;
+}
+
+function interpretarIndicadores(resumo: any): IndicadorInterpretado[] {
+  const out: IndicadorInterpretado[] = [];
+  const push = (label: string, valor: string, meta: string, status: 'ok' | 'atencao' | 'ruim', icone: string, recomendacao: string) =>
+    out.push({ label, valor, meta, status, icone, recomendacao });
+  if (!resumo) return out;
+
+  const taxaSla = resumo.taxaSla ?? resumo.slaCumprido / Math.max(1, resumo.slaTotal);
+  push('Cumprimento de SLA', `${(taxaSla * 100).toFixed(0)}%`, 'Meta ≥ 95%', taxaSla >= 0.95 ? 'ok' : taxaSla >= 0.8 ? 'atencao' : 'ruim', 'ShieldCheck',
+    taxaSla >= 0.95 ? 'SLA em dia. Continue monitorando a fila diariamente.' : taxaSla >= 0.8 ? 'SLAs próximos do limite — priorize chamados em risco de estourar.' : 'Muitos chamados estourando SLA — revise a distribuição da fila.');
+
+  push('Taxa de Resolução', `${(resumo.taxaResolucao ?? 0).toFixed(0)}%`, 'Meta ≥ 80%', (resumo.taxaResolucao ?? 0) >= 80 ? 'ok' : (resumo.taxaResolucao ?? 0) >= 60 ? 'atencao' : 'ruim', 'TrendingUp',
+    (resumo.taxaResolucao ?? 0) >= 80 ? 'Resolução saudável no período.' : (resumo.taxaResolucao ?? 0) >= 60 ? 'Taxa de resolução em atenção — confirme que encerramentos estão corretos.' : 'Resolução baixa — verifique filas paradas e reaberturas.');
+
+  const tmr = resumo.tempoMedioRespostaMin ?? 0;
+  push('Tempo Médio de Resposta', `${tmr}min`, 'Meta ≤ 360min', tmr <= 360 ? 'ok' : tmr <= 480 ? 'atencao' : 'ruim', 'Clock',
+    tmr <= 360 ? 'Resposta dentro da meta.' : tmr <= 480 ? 'Resposta acima da meta — reforce o acompanhamento da fila.' : 'Resposta muito lenta — reveja a escala de atendentes.');
+
+  const csat = resumo.csatMedio ?? 0;
+  push('CSAT', csat ? csat.toFixed(1) : '—', 'Meta ≥ 4.0', csat >= 4 ? 'ok' : csat >= 3.5 ? 'atencao' : 'ruim', 'Star',
+    csat >= 4 ? 'Satisfação dos clientes está boa.' : csat >= 3.5 ? 'Satisfação em atenção — acompanhe avaliações baixas.' : 'Satisfação baixa — investigue as avaliações recentes.');
+
+  const fcr = resumo.fcr ?? 0;
+  push('Resolução no 1º Contato', `${(fcr * 100).toFixed(0)}%`, 'Meta ≥ 60%', fcr >= 0.6 ? 'ok' : fcr >= 0.4 ? 'atencao' : 'ruim', 'Zap',
+    fcr >= 0.6 ? 'Boa resolução no primeiro contato.' : fcr >= 0.4 ? 'FCR em atenção — capacite os atendentes nos assuntos mais repetidos.' : 'FCR baixo — muitos chamados precisam de mais de um contato.');
+
+  return out;
+}
 
 export default function Dashboard() {
   const [kpis, setKpis] = useState<any>(null);
@@ -14,30 +57,33 @@ export default function Dashboard() {
   const [insights, setInsights] = useState<any>(null);
   const [deptData, setDeptData] = useState<any[]>([]);
   const [csatTrend, setCsatTrend] = useState<any[]>([]);
+  const [executivo, setExecutivo] = useState<any>(null);
   const [period, setPeriod] = useState('30');
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [kpiRes, dashRes, insightRes, deptRes, csatRes] = await Promise.all([
+      const [kpiRes, dashRes, insightRes, deptRes, csatRes, execRes] = await Promise.all([
         api.get('/analytics/kpis'),
         api.get('/analytics/dashboard'),
         api.get('/analytics/insights'),
         api.get('/analytics/tickets-by-department'),
         api.get('/analytics/csat-trending'),
+        api.get(`/analytics/executivo?dias=${period}`),
       ]);
       setKpis(kpiRes.data);
       setDashboard(dashRes.data);
       setInsights(insightRes.data);
       setDeptData(deptRes.data);
       setCsatTrend(csatRes.data);
+      setExecutivo(execRes.data);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [period]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -112,6 +158,88 @@ export default function Dashboard() {
         </select>
       </div>
 
+      {/* ── SAÚDE DO ATENDIMENTO (indicadores interpretados) ────────── */}
+      {executivo && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {interpretarIndicadores(executivo.resumo).map((ind, idx) => (
+            <div
+              key={ind.label}
+              className={`card p-4 animate-fade-in ${
+                ind.status === 'ruim' ? 'border-red-200 dark:border-red-900/50' : ind.status === 'atencao' ? 'border-amber-200 dark:border-amber-900/50' : 'border-emerald-200 dark:border-emerald-900/50'
+              }`}
+              style={{ animationDelay: `${idx * 60}ms` }}
+              title={ind.recomendacao}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                {ind.status === 'ruim' ? (
+                  <AlertTriangle size={14} className="text-red-500" />
+                ) : ind.status === 'atencao' ? (
+                  <Activity size={14} className="text-amber-500" />
+                ) : (
+                  <ShieldCheck size={14} className="text-emerald-500" />
+                )}
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>{ind.label}</span>
+              </div>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className={`text-xl font-bold ${ind.status === 'ruim' ? 'text-red-600 dark:text-red-400' : ind.status === 'atencao' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-100'}`} style={{ fontFamily: 'Khand, sans-serif' }}>
+                  {ind.valor}
+                </span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">{ind.meta}</span>
+              </div>
+              <p className="text-[11px] leading-tight mt-1.5 text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                {ind.recomendacao}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── ALERTAS E ATENÇÃO ─────────────────────────────────────── */}
+      {executivo?.alertas?.length > 0 && (
+        <div className="card">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-950/40 flex items-center justify-center">
+              <BellRing size={17} className="text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="font-semibold text-slate-800 dark:text-slate-200" style={{ fontFamily: 'Khand, sans-serif' }}>
+              Alertas e Atenção
+            </h3>
+            <span className="ml-auto text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300">
+              {executivo.alertas.length} {executivo.alertas.length === 1 ? 'alerta' : 'alertas'} no período
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {executivo.alertas.map((alerta: any, idx: number) => {
+              const nivel = NIVEL_ALERTA[alerta.nivel] || NIVEL_ALERTA.info;
+              const Icone = alerta.nivel === 'critico' ? ShieldAlert : alerta.nivel === 'atencao' ? AlertTriangle : BellRing;
+              return (
+                <a
+                  key={`${alerta.tipo}-${idx}`}
+                  href={alerta.link || '#'}
+                  onClick={alerta.link ? undefined : (e) => e.preventDefault()}
+                  className={`${nivel.bg} border ${nivel.border} rounded-xl p-3.5 hover:shadow-premium transition-all duration-200 block`}
+                >
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Icone size={15} className={nivel.text} />
+                    <span className={`text-[10px] font-bold uppercase tracking-wide ${nivel.text}`}>{nivel.label}</span>
+                    {alerta.contagem != null && (
+                      <span className={`ml-auto text-xs font-bold ${nivel.text}`}>{alerta.contagem}</span>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Lexend, sans-serif' }}>{alerta.titulo}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 leading-snug" style={{ fontFamily: 'Lexend, sans-serif' }}>{alerta.mensagem}</p>
+                  {alerta.acao && (
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 italic" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                      Sugestão: {alerta.acao}
+                    </p>
+                  )}
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Insights */}
       {insights?.insights && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-5 animate-fade-in">
@@ -119,11 +247,11 @@ export default function Dashboard() {
             <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
               <Lightbulb size={18} className="text-blue-600 dark:text-blue-400" />
             </div>
-            <h3 className="font-semibold text-slate-800" style={{ fontFamily: 'Khand, sans-serif' }}>Insights da Semana</h3>
+            <h3 className="font-semibold text-slate-800 dark:text-slate-200" style={{ fontFamily: 'Khand, sans-serif' }}>Insights da Semana</h3>
           </div>
           <ul className="space-y-2.5">
             {insights.insights.map((text: string, i: number) => (
-              <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600" style={{ fontFamily: 'Lexend, sans-serif' }}>
+              <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
                 <span className="text-blue-500 mt-0.5 font-bold">•</span>
                 {text}
               </li>
@@ -159,7 +287,7 @@ export default function Dashboard() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
               <TrendingUp size={14} className="text-blue-600 dark:text-blue-400" />
             </div>
@@ -184,7 +312,7 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
               <Target size={14} className="text-blue-600 dark:text-blue-400" />
             </div>
@@ -210,7 +338,7 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
               <BarChart3 size={14} className="text-blue-600 dark:text-blue-400" />
             </div>
@@ -235,7 +363,7 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
               <FileText size={14} className="text-blue-600 dark:text-blue-400" />
             </div>
@@ -245,7 +373,7 @@ export default function Dashboard() {
             {dashboard?.pipeline && (
               <>
                 <div className="flex justify-between items-center p-3.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                  <span className="text-sm text-slate-600" style={{ fontFamily: 'Lexend, sans-serif' }}>Total em pipeline</span>
+                  <span className="text-sm text-slate-600 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Total em pipeline</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>R$ {dashboard.pipeline.total?.toFixed(2) || '0,00'}</span>
                 </div>
                 <div className="flex justify-between items-center p-3.5 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-100">
@@ -262,7 +390,7 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
               <Activity size={14} className="text-emerald-600 dark:text-emerald-400" />
             </div>
@@ -296,7 +424,7 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-7 h-7 rounded-lg bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
               <Zap size={14} className="text-orange-600 dark:text-orange-400" />
             </div>
@@ -325,7 +453,7 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-7 h-7 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
               <MessageSquare size={14} className="text-green-600 dark:text-green-400" />
             </div>
@@ -359,7 +487,7 @@ export default function Dashboard() {
 
         {/* ── GRÁFICO DE IA: RESOLVIDOS POR IA ─────────────────── */}
         <div className="card lg:col-span-2">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-7 h-7 rounded-lg bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
               <Bot size={14} className="text-violet-600 dark:text-violet-400" />
             </div>
@@ -395,33 +523,33 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
             <div className="space-y-4">
-              <div className="p-4 bg-violet-50 rounded-xl border border-violet-100">
+              <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-100 dark:border-violet-900/30">
                 <div className="flex items-center gap-2 mb-2">
                   <Bot className="w-5 h-5 text-violet-600" />
-                  <span className="font-semibold text-sm text-slate-800">Resolvido 100% pela IA</span>
+                  <span className="font-semibold text-sm text-slate-800 dark:text-slate-200">Resolvido 100% pela IA</span>
                 </div>
                 <p className="text-3xl font-bold text-violet-700">{kpis?.cards?.ticketsResolvidosSoloIa || 0}</p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   {kpis?.cards?.totalResolvidos > 0
                     ? `${Math.round((kpis?.cards?.ticketsResolvidosSoloIa || 0) / kpis?.cards?.totalResolvidos * 100)}% dos chamados resolvidos no período`
                     : 'Nenhum chamado resolvido no período'}
                 </p>
               </div>
-              <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
+              <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-900/30">
                 <div className="flex items-center gap-2 mb-2">
                   <Bot className="w-5 h-5 text-purple-600" />
-                  <span className="font-semibold text-sm text-slate-800">Resolvido com IA + Humano</span>
+                  <span className="font-semibold text-sm text-slate-800 dark:text-slate-200">Resolvido com IA + Humano</span>
                 </div>
                 <p className="text-3xl font-bold text-purple-700">
                   {Math.max(0, (kpis?.cards?.ticketsResolvidosIa || 0) - (kpis?.cards?.ticketsResolvidosSoloIa || 0))}
                 </p>
               </div>
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-5 h-5 text-slate-600" />
-                  <span className="font-semibold text-sm text-slate-800">Humano sem IA</span>
+                  <Users className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                  <span className="font-semibold text-sm text-slate-800 dark:text-slate-200">Humano sem IA</span>
                 </div>
-                <p className="text-3xl font-bold text-slate-600">
+                <p className="text-3xl font-bold text-slate-600 dark:text-slate-400">
                   {Math.max(0, (kpis?.cards?.totalResolvidos || 0) - (kpis?.cards?.ticketsResolvidosIa || 0))}
                 </p>
               </div>
@@ -430,7 +558,7 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-7 h-7 rounded-lg bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
               <Clock size={14} className="text-violet-600 dark:text-violet-400" />
             </div>
@@ -457,7 +585,7 @@ export default function Dashboard() {
         {/* ── NOVOS GRÁFICOS DE BI ──────────────────────────────────── */}
 
         <div className="card">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-7 h-7 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center">
               <Building2 size={14} className="text-cyan-600 dark:text-cyan-400" />
             </div>
@@ -482,7 +610,7 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
             <div className="w-7 h-7 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center">
               <Star size={14} className="text-yellow-600 dark:text-yellow-400" />
             </div>

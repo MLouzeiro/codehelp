@@ -1,15 +1,17 @@
 import { Router } from 'express';
-import { authenticate } from '../../shared/middleware/auth';
+import { authenticate, authorize } from '../../shared/middleware/auth';
 import {
   getDashboard, getInsights, getKpis,
   getTicketsByDepartment, getAvgTimeByQueue, getCsatTrending, getStatusByDay,
-  getHelpdeskMetrics, getDashboardExecutivo,
+  getHelpdeskMetrics, getDashboardExecutivo, getDashboardIaHandler, getVisaoGeral,
 } from './analytics.controller';
 
 const router = Router();
 router.use(authenticate);
 
+router.get('/visao-geral', getVisaoGeral);
 router.get('/executivo', getDashboardExecutivo);
+router.get('/dashboard-ia', authorize('admin', 'gerente'), getDashboardIaHandler);
 router.get('/dashboard', getDashboard);
 router.get('/insights', getInsights);
 router.get('/kpis', getKpis);

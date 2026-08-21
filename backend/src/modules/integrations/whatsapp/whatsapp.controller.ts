@@ -198,23 +198,34 @@ export async function listTickets(req: AuthRequest, res: Response) {
     let tickets = await prisma.ticket.findMany(findArgs);
 
     if (orderBy === 'lastMessage_desc' || orderBy === 'lastMessageCliente_desc') {
+      // Ordenação por última mensagem sem N+1: UMA query traz a última mensagem
+      // de todos os tickets da página e o agrupamento é feito em memória.
       const isCliente = orderBy === 'lastMessageCliente_desc';
-      const enriched = await Promise.all(
-        tickets.map(async (t) => {
-          const msg = await prisma.message.findFirst({
-            where: { ticketId: t.id, ...(isCliente ? { fromMe: false } : {}) },
-            orderBy: { sentAt: 'desc' },
-            select: { sentAt: true },
-          });
-          return { t, lastAt: msg?.sentAt?.getTime() || 0 };
-        })
-      );
-      enriched.sort((a, b) => b.lastAt - a.lastAt);
-      tickets = enriched.map((e) => e.t);
+      const msgs = await prisma.message.findMany({
+        where: {
+          ticketId: { in: tickets.map((t) => t.id) },
+          ...(isCliente ? { fromMe: false } : {}),
+        },
+        orderBy: { sentAt: 'desc' },
+        select: { ticketId: true, sentAt: true },
+      });
+      const lastByTicket = new Map<string, number>();
+      for (const m of msgs) {
+        if (!lastByTicket.has(m.ticketId)) {
+          lastByTicket.set(m.ticketId, m.sentAt?.getTime() || 0);
+        }
+      }
+      tickets = tickets
+        .map((t) => ({ t, lastAt: lastByTicket.get(t.id) || 0 }))
+        .sort((a, b) => b.lastAt - a.lastAt)
+        .map((e) => e.t);
     }
 
     const total = await prisma.ticket.count({ where });
-    return res.json({ tickets, total, page: parseInt(page as string), totalPages: Math.ceil(total / parseInt(limit as string)) });
+    const { mapearTelefonesIgnorados } = await import('./contatosIgnorados.service');
+    const ignorados = await mapearTelefonesIgnorados(tickets.map((t: any) => t.contactPhone || ''));
+    const ticketsComFlag = tickets.map((t: any) => ({ ...t, ignorado: !!ignorados.get(t.contactPhone || '') }));
+    return res.json({ tickets: ticketsComFlag, total, page: parseInt(page as string), totalPages: Math.ceil(total / parseInt(limit as string)) });
   } catch (error) {
     console.error('[WhatsApp] Erro ao listar tickets:', error);
     return res.status(500).json({ error: 'Erro ao listar tickets' });
@@ -238,7 +249,10 @@ export async function getTicket(req: AuthRequest, res: Response) {
       select: { id: true, numeroOs: true, status: true },
     });
 
-    return res.json({ ...ticket, serviceOrders });
+    const { mapearTelefonesIgnorados } = await import('./contatosIgnorados.service');
+    const ignorados = await mapearTelefonesIgnorados([ticket.contactPhone || '']);
+
+    return res.json({ ...ticket, serviceOrders, ignorado: !!ignorados.get(ticket.contactPhone || '') });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao buscar ticket' });
   }
@@ -276,7 +290,7 @@ export async function createTicketFromChat(req: AuthRequest, res: Response) {
       },
     });
 
-    sendProtocolReply(ticket.contactPhone || '', protocolo, 'abertura').catch(console.error);
+    sendProtocolReply(ticket.contactPhone || '', protocolo, 'abertura', ticket.whatsappConnectionId || undefined).catch(console.error);
 
     return res.status(201).json(ticket);
   } catch (error) {
@@ -342,7 +356,7 @@ export async function closeTicket(req: AuthRequest, res: Response) {
     if (!result.ok) return res.status(404).json({ error: result.error });
 
     if (ticket.contactPhone && ticket.protocolo) {
-      sendProtocolReply(ticket.contactPhone, ticket.protocolo, 'fechamento').catch(console.error);
+      sendProtocolReply(ticket.contactPhone, ticket.protocolo, 'fechamento', ticket.whatsappConnectionId || undefined).catch(console.error);
     }
 
     return res.json({ message: 'Ticket fechado com sucesso' });
@@ -485,138 +499,50 @@ export async function sendMessage(req: AuthRequest, res: Response) {
       }
     }
 
-    // Resolve phone from ticket if not provided
+    // Resolve phone / jid / channel a partir do TICKET (fonte de verdade).
+    // REGRA ABSOLUTA: o ticket define o canal de resposta. Se o ticket possui
+    // whatsappConnectionId, ele SEMPRE vence sobre qualquer outro valor.
     let phone = to;
     let contactJid: string | null = null;
-    if (!phone && ticketId) {
-      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { contactPhone: true, contactJid: true } });
-      if (ticket?.contactPhone) {
+    let resolvedConnectionId: string | undefined = whatsappConnectionId || undefined;
+
+    if (ticketId) {
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: { contactPhone: true, contactJid: true, whatsappConnectionId: true },
+      });
+      if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
+      if (!phone && ticket.contactPhone) {
         phone = normalizePhone(ticket.contactPhone);
       }
-      contactJid = ticket?.contactJid || null;
-    } else if (ticketId) {
-      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { contactJid: true } });
-      contactJid = ticket?.contactJid || null;
+      contactJid = ticket.contactJid || null;
+      if (ticket.whatsappConnectionId) {
+        resolvedConnectionId = ticket.whatsappConnectionId;
+      }
+      if (!ticket.whatsappConnectionId) {
+        // Canal não determinado → NÃO enviar automaticamente. Registrar diagnóstico.
+        console.warn(`[WhatsApp] Ticket ${ticketId} sem canal vinculado — envio bloqueado (to=${phone})`);
+        return res.status(409).json({
+          error: 'Este ticket nao possui canal WhatsApp vinculado. Associe o canal antes de responder.',
+          diagnostic: { ticketId, motivo: 'ticket_sem_canal' },
+        });
+      }
     }
     if (!phone) return res.status(400).json({ error: 'Destinatário é obrigatório (to ou ticketId com telefone)' });
 
-    // Try Baileys first (WebSocket, no Chrome needed)
-    if (whatsappConnectionId) {
-      const baileysState = baileysProviderService.getMultiState(whatsappConnectionId);
-      if (baileysState?.connected && baileysState.socket) {
-        const result = await baileysProviderService.sendTextMulti(whatsappConnectionId, phone, message, contactJid || undefined);
-        if (!result.success) return res.status(500).json({ error: result.error || 'Falha ao enviar via Baileys' });
-
-        if (ticketId) {
-          const msgDb = await prisma.message.create({
-            data: {
-              ticketId,
-              fromMe: true,
-              content: rawMessage,
-              source: 'agent',
-              usuarioId: req.user?.id,
-            },
-          });
-          if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
-          if (req.user?.id && ticketId) triggerAgentAIAudit(ticketId, req.user.id, msgDb.id, rawMessage);
-        }
-        return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });
-      }
-
-      // Fallback to Baileys multi-connection
-      const rt = whatsappConnectionManager.getConnectionRuntime(whatsappConnectionId);
-      if (!rt?.connected) {
-        return res.status(503).json({ error: 'A conexao WhatsApp selecionada nao esta conectada.' });
-      }
-    } else {
-      // No specific connection — try Baileys legacy first
-      if (baileysProviderService.isLegacyConnected()) {
-        const result = await baileysProviderService.sendTextLegacy(phone, message, contactJid || undefined);
-        if (!result.success) return res.status(500).json({ error: result.error || 'Falha ao enviar via Baileys' });
-
-        if (ticketId) {
-          const msgDb = await prisma.message.create({
-            data: {
-              ticketId,
-              fromMe: true,
-              content: rawMessage,
-              source: 'agent',
-              usuarioId: req.user?.id,
-            },
-          });
-          if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
-          if (req.user?.id && ticketId) triggerAgentAIAudit(ticketId, req.user.id, msgDb.id, rawMessage);
-        }
-        return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });
-      }
-
-      // Try any connected Baileys multi-connection
-      const allBaileysStates = baileysProviderService.getAllMultiStates();
-      for (const [connId, state] of allBaileysStates) {
-        if (state.connected && state.socket) {
-          const result = await baileysProviderService.sendTextMulti(connId, phone, message, contactJid || undefined);
-          if (!result.success) continue;
-
-          if (ticketId) {
-            const msgDb = await prisma.message.create({
-              data: {
-                ticketId,
-                fromMe: true,
-                content: rawMessage,
-                source: 'agent',
-                usuarioId: req.user?.id,
-              },
-            });
-            if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
-            if (req.user?.id && ticketId) triggerAgentAIAudit(ticketId, req.user.id, msgDb.id, rawMessage);
-          }
-          return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys', connectionId: connId });
-        }
-      }
-
-      // Try any connected WhatsAppWebJS multi-connection
-      const allWebJSStates = whatsappWebJSProviderService.getAllMultiStates();
-      for (const [connId, state] of allWebJSStates) {
-        if (state.connected && state.client) {
-          const result = await whatsappWebJSProviderService.sendTextMulti(connId, phone, message);
-          if (!result.success) continue;
-
-          if (ticketId) {
-            const msgDb = await prisma.message.create({
-              data: {
-                ticketId,
-                fromMe: true,
-                content: rawMessage,
-                source: 'agent',
-                usuarioId: req.user?.id,
-              },
-            });
-            if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
-            if (req.user?.id && ticketId) triggerAgentAIAudit(ticketId, req.user.id, msgDb.id, rawMessage);
-          }
-          return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'whatsapp-webjs', connectionId: connId });
-        }
-      }
-
-      // Fallback to Baileys legacy
-      if (!isClientConnected()) {
-        const allStatus = whatsappConnectionManager.getAllConnectionsStatus();
-        const connected = allStatus.find(c => c.connected);
-        if (!connected) {
-          return res.status(503).json({ error: 'WhatsApp não está conectado. Conecte-se antes de enviar mensagens.' });
-        }
-      }
+    // Envia SEMPRE pelo canal resolvido (estrito — nunca por outro número).
+    const result = await sendWhatsAppMessage(phone, message, resolvedConnectionId, contactJid || undefined);
+    if (!result.success) {
+      console.warn(`[WhatsApp] Falha no envio canal=${resolvedConnectionId} to=${phone}: ${result.error}`);
+      return res.status(502).json({ error: result.error || 'Falha ao enviar mensagem WhatsApp' });
     }
-
-    const result = await sendWhatsAppMessage(phone, message, whatsappConnectionId);
-    if (!result.success) return res.status(500).json({ error: result.error || 'Falha ao enviar mensagem WhatsApp' });
 
     if (ticketId) {
       const msgDb = await prisma.message.create({
         data: {
           ticketId,
           fromMe: true,
-          content: message,
+          content: rawMessage,
           source: 'agent',
           usuarioId: req.user?.id,
         },
@@ -625,8 +551,9 @@ export async function sendMessage(req: AuthRequest, res: Response) {
       if (req.user?.id && ticketId) triggerAgentAIAudit(ticketId, req.user.id, msgDb.id, rawMessage);
     }
 
-    return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'baileys' });
+    return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'whatsapp', connectionId: resolvedConnectionId });
   } catch (error) {
+    console.error('[WhatsApp] Erro ao enviar mensagem:', error);
     return res.status(500).json({ error: 'Erro ao enviar mensagem' });
   }
 }

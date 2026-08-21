@@ -34,6 +34,36 @@ interface MetricasAgente {
   totalAlertas: number;
   totalSugestoes: number;
   periodo: { inicio: string; fim: string };
+  encerramentos: {
+    total: number;
+    prematuros: number;
+    resolucoesReais: number;
+    reaberturas: number;
+    taxaEncerramentoCorreto: number;
+    notaMediaEncerramento: number;
+    riscoAlto: number;
+    riscoCritico: number;
+    recomendaReabertura: number;
+  } | null;
+}
+
+interface Encerramento {
+  tipo: string;
+  riscoReabertura: string;
+  nota: number;
+  diagnostico: string | null;
+  detalhes: string[];
+  recomendaReabertura: boolean;
+  semConfirmacao: boolean;
+  motivoStatus: string | null;
+  clienteVoltou: boolean;
+  mensagensAposEncerramento: number;
+  csatNota: number | null;
+  csatRespondido: boolean;
+  analiseIa: boolean;
+  ticketReaberturaId: string | null;
+  dataFechamento: string | null;
+  processadoEm: string | null;
 }
 
 interface AgentCoachProps {
@@ -63,6 +93,33 @@ function classificacaoLabel(classificacao: string): string {
   }
 }
 
+function encerramentoTipoLabel(tipo: string): string {
+  switch (tipo) {
+    case 'encerramento_prematuro': return 'Encerramento prematuro';
+    case 'resolucao_real': return 'Resolução real';
+    case 'reabertura': return 'Reabertura';
+    default: return 'Sem dados';
+  }
+}
+
+function encerramentoTipoCor(tipo: string): string {
+  switch (tipo) {
+    case 'encerramento_prematuro': return 'text-red-400 bg-red-500/10 border-red-500/20';
+    case 'reabertura': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+    case 'resolucao_real': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+    default: return 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20';
+  }
+}
+
+function riscoCor(risco: string): string {
+  switch (risco) {
+    case 'CRÍTICO': return 'text-red-400 bg-red-500/10 border-red-500/20';
+    case 'ALTO': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+    case 'MÉDIO': return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+    default: return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+  }
+}
+
 function ScoreBar({ label, score, maxScore = 10 }: { label: string; score: number; maxScore?: number }) {
   const pct = Math.min((score / maxScore) * 100, 100);
   let color = 'bg-emerald-500';
@@ -84,6 +141,7 @@ function ScoreBar({ label, score, maxScore = 10 }: { label: string; score: numbe
 export default function AgentCoach({ ticketId, agentId, onClose, compact = false }: AgentCoachProps) {
   const [avaliacao, setAvaliacao] = useState<AvaliacaoMensagem | null>(null);
   const [metricas, setMetricas] = useState<MetricasAgente | null>(null);
+  const [encerramento, setEncerramento] = useState<Encerramento | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -95,6 +153,9 @@ export default function AgentCoach({ ticketId, agentId, onClose, compact = false
       const avaliacoes = data.avaliacoes || [];
       if (avaliacoes.length > 0) {
         setAvaliacao(avaliacoes[avaliacoes.length - 1]);
+      }
+      if (data.encerramento) {
+        setEncerramento(data.encerramento);
       }
       setError(null);
     } catch (err: any) {
@@ -134,7 +195,7 @@ export default function AgentCoach({ ticketId, agentId, onClose, compact = false
     );
   }
 
-  if (!avaliacao && !metricas) {
+  if (!avaliacao && !metricas && !encerramento) {
     return (
       <div className="flex flex-col items-center justify-center p-6 text-center">
         <Brain className="w-8 h-8 text-zinc-600 mb-2" />
@@ -181,6 +242,16 @@ export default function AgentCoach({ ticketId, agentId, onClose, compact = false
               </div>
             )}
           </>
+        )}
+        {encerramento && (
+          <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-2.5 py-2">
+            <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${encerramentoTipoCor(encerramento.tipo)}`}>
+              {encerramentoTipoLabel(encerramento.tipo)}
+            </span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${riscoCor(encerramento.riscoReabertura)}`}>
+              Risco {encerramento.riscoReabertura}
+            </span>
+          </div>
         )}
       </div>
     );
@@ -271,6 +342,65 @@ export default function AgentCoach({ ticketId, agentId, onClose, compact = false
         </>
       )}
 
+      {encerramento && (
+        <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/40 p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium text-zinc-400">Encerramento detectado</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${encerramentoTipoCor(encerramento.tipo)}`}>
+                {encerramentoTipoLabel(encerramento.tipo)}
+              </span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${riscoCor(encerramento.riscoReabertura)}`}>
+                Risco {encerramento.riscoReabertura}
+              </span>
+            </div>
+            <span className="text-[11px] text-zinc-500">
+              Nota: <span className={`font-mono ${encerramento.nota < 5 ? 'text-red-400' : encerramento.nota < 8 ? 'text-amber-400' : 'text-emerald-400'}`}>{encerramento.nota.toFixed(1)}</span>/10
+            </span>
+          </div>
+
+          {encerramento.diagnostico && (
+            <p className="text-[11px] text-zinc-400 leading-relaxed">{encerramento.diagnostico}</p>
+          )}
+
+          {encerramento.detalhes.length > 0 && (
+            <ul className="space-y-1">
+              {encerramento.detalhes.slice(0, 4).map((d, i) => (
+                <li key={i} className="text-[11px] text-zinc-500 pl-4 list-disc list-inside">{d}</li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            {encerramento.recomendaReabertura && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+                Recomenda reabertura
+              </span>
+            )}
+            {encerramento.semConfirmacao && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                Sem confirmação do cliente
+              </span>
+            )}
+            {encerramento.clienteVoltou && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                Cliente voltou ({encerramento.mensagensAposEncerramento} msg)
+              </span>
+            )}
+            {encerramento.csatRespondido && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-zinc-700/50 text-zinc-300 border border-zinc-600/50">
+                CSAT {encerramento.csatNota ?? '—'}/5
+              </span>
+            )}
+            {encerramento.analiseIa && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                IA
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {metricas && (
         <div className="border-t border-zinc-800 pt-3 space-y-2">
           <span className="text-[11px] font-medium text-zinc-400">Métricas 30 dias</span>
@@ -292,6 +422,34 @@ export default function AgentCoach({ ticketId, agentId, onClose, compact = false
               <p className="text-[10px] text-zinc-500">Sugestões</p>
             </div>
           </div>
+          {metricas.encerramentos && metricas.encerramentos.total > 0 && (
+            <div className="border-t border-zinc-800 pt-2.5 mt-2.5 space-y-2">
+              <span className="text-[11px] font-medium text-zinc-400">Encerramentos auditados ({metricas.encerramentos.total})</span>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
+                  <p className="text-lg font-bold text-emerald-400">{metricas.encerramentos.resolucoesReais}</p>
+                  <p className="text-[10px] text-zinc-500">Resoluções</p>
+                </div>
+                <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
+                  <p className="text-lg font-bold text-red-400">{metricas.encerramentos.prematuros}</p>
+                  <p className="text-[10px] text-zinc-500">Prematuros</p>
+                </div>
+                <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
+                  <p className="text-lg font-bold text-amber-400">{metricas.encerramentos.reaberturas}</p>
+                  <p className="text-[10px] text-zinc-500">Reabertos</p>
+                </div>
+                <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
+                  <p className={`text-lg font-bold ${(metricas.encerramentos.riscoAlto + metricas.encerramentos.riscoCritico) > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    {metricas.encerramentos.riscoAlto + metricas.encerramentos.riscoCritico}
+                  </p>
+                  <p className="text-[10px] text-zinc-500">Alto/crítico</p>
+                </div>
+              </div>
+              <p className="text-[10px] text-zinc-500">
+                Taxa de encerramento correto: <span className="text-zinc-300 font-medium">{metricas.encerramentos.taxaEncerramentoCorreto}%</span> · Nota média: <span className="text-zinc-300 font-medium">{metricas.encerramentos.notaMediaEncerramento.toFixed(1)}</span>/10
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

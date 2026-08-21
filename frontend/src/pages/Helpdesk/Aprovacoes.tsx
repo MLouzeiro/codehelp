@@ -187,7 +187,7 @@ export default function Aprovacoes() {
         <div className="flex items-center justify-center min-h-[200px]">
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-            <span className="text-sm text-slate-500" style={{ fontFamily: 'Lexend, sans-serif' }}>Carregando...</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>Carregando...</span>
           </div>
         </div>
       ) : itensFiltrados.length === 0 ? (

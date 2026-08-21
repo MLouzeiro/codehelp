@@ -74,8 +74,8 @@ const ALERT_CONFIG: Record<AlertType, { icon: React.ReactNode; color: string; bg
   },
   stopped_progress: {
     icon: <RefreshCw className="w-4 h-4" />,
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-50 border-gray-200',
+    color: 'text-gray-600 dark:text-slate-400',
+    bgColor: 'bg-gray-50 border-gray-200 dark:bg-slate-800/60 dark:border-slate-700',
   },
   resolution_suggested: {
     icon: <CheckCircle className="w-4 h-4" />,
@@ -257,7 +257,7 @@ export default function SmartTimeline({ ticketId, slaTotalMinutos, metrics }: Sm
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-gray-500" />
+          <Bell className="w-5 h-5 text-gray-500 dark:text-slate-400" />
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             Smart Timeline
           </h3>
@@ -327,7 +327,7 @@ export default function SmartTimeline({ ticketId, slaTotalMinutos, metrics }: Sm
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500" />
           </div>
         ) : filteredAlerts.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 text-sm">
+          <div className="text-center py-8 text-gray-500 dark:text-slate-400 text-sm">
             <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
             Nenhum alerta no momento
           </div>
@@ -355,7 +355,7 @@ export default function SmartTimeline({ ticketId, slaTotalMinutos, metrics }: Sm
                           <span className="w-2 h-2 bg-blue-500 rounded-full" />
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">{alert.descricao}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{alert.descricao}</p>
                       <span className="text-[10px] text-gray-400">
                         {new Date(alert.timestamp).toLocaleString('pt-BR')}
                       </span>

@@ -47,7 +47,7 @@ export default function TicketTopo({ ticket, slaLabel, slaStatus }: TicketTopoPr
       {/* Linha 1 — identificação + badges */}
       <div className="flex items-center gap-2 flex-wrap">
         {ticket?.protocolo && (
-          <span className="font-mono text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-900 rounded-md px-2 py-0.5">
+          <span className="font-mono text-xs text-slate-400 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 rounded-md px-2 py-0.5">
             #{ticket.protocolo}
           </span>
         )}
@@ -94,7 +94,7 @@ export default function TicketTopo({ ticket, slaLabel, slaStatus }: TicketTopoPr
       {/* Linha 2 — assunto */}
       {ticket?.assunto && (
         <div className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300 min-w-0">
-          <MessageSquare size={13} className="text-slate-400 dark:text-slate-500 flex-shrink-0" />
+          <MessageSquare size={13} className="text-slate-400 dark:text-slate-400 flex-shrink-0" />
           <span className="truncate">{ticket.assunto}</span>
         </div>
       )}

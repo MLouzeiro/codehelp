@@ -157,10 +157,10 @@ export default function PermissionsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2">
             <Shield className="text-emerald-600" size={24} /> Matriz de Permissoes
           </h1>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 dark:text-slate-400 text-sm">
             Defina o que cada role pode fazer. Alteracoes sao aplicadas imediatamente apos salvar.
           </p>
         </div>

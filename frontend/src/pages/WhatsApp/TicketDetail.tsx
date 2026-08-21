@@ -41,12 +41,12 @@ export default function TicketDetail() {
   };
 
   if (loading) return <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" /></div>;
-  if (!ticket) return <div className="text-center py-12 text-gray-500">Ticket não encontrado</div>;
+  if (!ticket) return <div className="text-center py-12 text-gray-500 dark:text-slate-400">Ticket não encontrado</div>;
 
   return (
     <div className="max-w-4xl mx-auto h-full flex flex-col px-4 lg:px-6 pt-3 lg:pt-4 pb-3 lg:pb-4">
       <div className="flex items-center justify-between mb-4">
-        <button onClick={() => navigate('/app/whatsapp')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
+        <button onClick={() => navigate('/app/whatsapp')} className="flex items-center gap-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">
           <ArrowLeft size={18} /> Voltar
         </button>
         <button onClick={createOS} className="btn-primary text-sm flex items-center gap-1">
@@ -60,8 +60,8 @@ export default function TicketDetail() {
             <User size={18} className="text-green-600" />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-900">{ticket.contactName || ticket.client?.razaoSocial || 'Desconhecido'}</h2>
-            <div className="flex items-center gap-3 text-xs text-gray-500">
+            <h2 className="font-semibold text-gray-900 dark:text-slate-100">{ticket.contactName || ticket.client?.razaoSocial || 'Desconhecido'}</h2>
+            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-slate-400">
               <span className="flex items-center gap-1"><Phone size={12} />{ticket.contactPhone}</span>
               {ticket.client?.razaoSocial && <span>• {ticket.client.razaoSocial}</span>}
             </div>
@@ -76,7 +76,7 @@ export default function TicketDetail() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-2 mb-4 bg-gray-50 rounded-xl p-4">
+      <div className="flex-1 overflow-y-auto space-y-2 mb-4 bg-gray-50 dark:bg-slate-800/60 rounded-xl p-4">
         {ticket.messages?.map((msg: any) => {
           const isSystem = msg.tipo === 'system' || msg.source === 'bot';
           if (isSystem) {

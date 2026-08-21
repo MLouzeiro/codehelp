@@ -122,7 +122,7 @@ export default function HelpdeskConfigPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/app/settings')} className="w-9 h-9 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-          <ArrowLeft size={18} className="text-slate-600" />
+          <ArrowLeft size={18} className="text-slate-600 dark:text-slate-400" />
         </button>
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>
@@ -158,7 +158,7 @@ export default function HelpdeskConfigPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de início (Seg-Sex)</label>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de início (Seg-Sex)</label>
             <input
               type="time"
               value={config.horarioInicio}
@@ -167,7 +167,7 @@ export default function HelpdeskConfigPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de fim (Seg-Sex)</label>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de fim (Seg-Sex)</label>
             <input
               type="time"
               value={config.horarioFim}
@@ -179,7 +179,7 @@ export default function HelpdeskConfigPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de início (Sábado)</label>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de início (Sábado)</label>
             <input
               type="time"
               value={config.horarioSabadoInicio}
@@ -188,7 +188,7 @@ export default function HelpdeskConfigPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de fim (Sábado)</label>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>Horário de fim (Sábado)</label>
             <input
               type="time"
               value={config.horarioSabadoFim}
@@ -199,7 +199,7 @@ export default function HelpdeskConfigPage() {
         </div>
 
         <div>
-          <label className="text-xs font-medium text-slate-600 block mb-2" style={{ fontFamily: 'Lexend, sans-serif' }}>Dias de atendimento</label>
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2" style={{ fontFamily: 'Lexend, sans-serif' }}>Dias de atendimento</label>
           <div className="flex flex-wrap gap-2">
             {DIAS_SEMANA.map((d) => (
               <button
@@ -218,7 +218,7 @@ export default function HelpdeskConfigPage() {
         </div>
 
         <div className="mt-4">
-          <label className="text-xs font-medium text-slate-600 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-1.5" style={{ fontFamily: 'Lexend, sans-serif' }}>
             Tempo de inatividade para follow-up (minutos)
           </label>
           <input

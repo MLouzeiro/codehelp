@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { logAudit } from '../audit/audit.service';
 
 export interface TimeEntryInput {
   usuarioId: string;
@@ -14,6 +15,31 @@ export interface TimeEntryInput {
   duracaoMin?: number;
   billable?: boolean;
   tags?: string[];
+}
+
+async function registrarBloco(timeEntryId: string, tipo: string, usuarioId?: string | null, observacao?: string | null) {
+  return prisma.timeEntryBlock.create({
+    data: {
+      timeEntryId,
+      tipo,
+      usuarioId: usuarioId || null,
+      observacao: observacao || null,
+    },
+  });
+}
+
+/** Soma as horas das TimeEntries da tarefa e grava em KanbanTask.horasTrabalhadas. */
+export async function sincronizarHorasTarefa(tarefaId: string) {
+  const agg = await prisma.timeEntry.aggregate({
+    where: { tarefaId, dataFim: { not: null } },
+    _sum: { duracaoMin: true },
+  });
+  const horas = Math.round(((agg._sum.duracaoMin || 0) / 60) * 100) / 100;
+  await prisma.kanbanTask.update({
+    where: { id: tarefaId },
+    data: { horasTrabalhadas: horas },
+  });
+  return horas;
 }
 
 // Categorias canonicas do relatorio de consumo (spec FASE 4)
@@ -58,10 +84,23 @@ export async function startTimer(input: TimeEntryInput) {
     where: { usuarioId: input.usuarioId, dataFim: null },
   });
   if (running) {
-    await stopTimer(running.id);
+    await stopTimer(running.id, input.usuarioId);
   }
 
-  return prisma.timeEntry.create({
+  // Infere o tipo a partir da tarefa, quando vinculada e sem tipo explicito
+  let tipo = input.tipo || 'suporte';
+  if (input.tarefaId && !input.tipo) {
+    const task = await prisma.kanbanTask.findUnique({
+      where: { id: input.tarefaId },
+      select: { tipoTarefa: true, departamento: { select: { slug: true, nome: true } } },
+    });
+    tipo = inferirTipoDeDepartamento(task?.departamento?.slug || task?.departamento?.nome);
+    if (task?.tipoTarefa && ['dev', 'implantacao', 'atendimento'].includes(task.tipoTarefa)) {
+      tipo = task.tipoTarefa === 'dev' ? 'dev' : task.tipoTarefa === 'implantacao' ? 'implantacao' : 'suporte';
+    }
+  }
+
+  const entry = await prisma.timeEntry.create({
     data: {
       usuarioId: input.usuarioId,
       ticketId: input.ticketId || null,
@@ -70,7 +109,7 @@ export async function startTimer(input: TimeEntryInput) {
       clienteId: input.clienteId || null,
       tarefaId: input.tarefaId || null,
       setorId: input.setorId || null,
-      tipo: input.tipo || 'suporte',
+      tipo,
       descricao: input.descricao || null,
       dataInicio: input.dataInicio ? new Date(input.dataInicio) : new Date(),
       billable: input.billable ?? true,
@@ -82,32 +121,128 @@ export async function startTimer(input: TimeEntryInput) {
       tarefa: { select: { id: true, titulo: true, numero: true } },
     },
   });
+
+  await registrarBloco(entry.id, 'inicio', input.usuarioId);
+  await logAudit({
+    usuarioId: input.usuarioId,
+    modulo: 'Tarefas',
+    entidade: 'TimeEntry',
+    entidadeId: entry.id,
+    acao: 'iniciar_tempo',
+    descricao: input.tarefaId ? 'Início de tempo em tarefa' : 'Início de tempo',
+    origem: 'web',
+    metadata: { tarefaId: input.tarefaId ?? null, tipo },
+  });
+
+  return entry;
+}
+
+// ── Pause timer ──────────────────────────────────────────────────────
+
+export async function pauseTimer(id: string, usuarioId?: string, motivo?: string) {
+  const entry = await prisma.timeEntry.findUnique({ where: { id } });
+  if (!entry) throw new Error('TimeEntry nao encontrado');
+  if (entry.dataFim) throw new Error('Timer ja foi finalizado');
+  if (entry.pausado) throw new Error('Timer ja esta pausado');
+
+  await prisma.timeEntry.update({
+    where: { id },
+    data: { pausado: true, pausadoEm: new Date() },
+  });
+  await registrarBloco(entry.id, 'pausa', usuarioId ?? null, motivo || null);
+  await logAudit({
+    usuarioId: usuarioId ?? entry.usuarioId,
+    modulo: 'Tarefas',
+    entidade: 'TimeEntry',
+    entidadeId: entry.id,
+    acao: 'pausar_tempo',
+    descricao: 'Tempo pausado',
+    motivo: motivo ?? undefined,
+    origem: 'web',
+  });
+  return prisma.timeEntry.findUnique({ where: { id } });
+}
+
+// ── Resume timer ─────────────────────────────────────────────────────
+
+export async function resumeTimer(id: string, usuarioId?: string, motivo?: string) {
+  const entry = await prisma.timeEntry.findUnique({ where: { id } });
+  if (!entry) throw new Error('TimeEntry nao encontrado');
+  if (entry.dataFim) throw new Error('Timer ja foi finalizado');
+  if (!entry.pausado) throw new Error('Timer nao esta pausado');
+
+  let pausadoTotalMin = entry.pausadoTotalMin || 0;
+  if (entry.pausadoEm) {
+    pausadoTotalMin += Math.max(0, Math.round((Date.now() - new Date(entry.pausadoEm).getTime()) / 60000));
+  }
+
+  await prisma.timeEntry.update({
+    where: { id },
+    data: { pausado: false, pausadoEm: null, pausadoTotalMin },
+  });
+  await registrarBloco(entry.id, 'retomada', usuarioId ?? null, motivo || null);
+  await logAudit({
+    usuarioId: usuarioId ?? entry.usuarioId,
+    modulo: 'Tarefas',
+    entidade: 'TimeEntry',
+    entidadeId: entry.id,
+    acao: 'retomar_tempo',
+    descricao: 'Tempo retomado',
+    motivo: motivo ?? undefined,
+    origem: 'web',
+  });
+  return prisma.timeEntry.findUnique({ where: { id } });
 }
 
 // ── Stop timer ───────────────────────────────────────────────────────
 
-export async function stopTimer(id: string) {
+export async function stopTimer(id: string, usuarioId?: string, motivo?: string) {
   const entry = await prisma.timeEntry.findUnique({ where: { id } });
   if (!entry) throw new Error('TimeEntry nao encontrado');
   if (entry.dataFim) throw new Error('Timer ja foi finalizado');
 
   const now = new Date();
-  const duracaoMin = Math.round((now.getTime() - entry.dataInicio.getTime()) / 60000);
+  let pausadoTotalMin = entry.pausadoTotalMin || 0;
+  if (entry.pausado && entry.pausadoEm) {
+    pausadoTotalMin += Math.max(0, Math.round((now.getTime() - new Date(entry.pausadoEm).getTime()) / 60000));
+  }
 
-  return prisma.timeEntry.update({
+  const bruto = Math.round((now.getTime() - entry.dataInicio.getTime()) / 60000);
+  const duracaoMin = Math.max(0, bruto - pausadoTotalMin);
+
+  const updated = await prisma.timeEntry.update({
     where: { id },
-    data: { dataFim: now, duracaoMin },
+    data: { dataFim: now, duracaoMin, pausado: false, pausadoEm: null, pausadoTotalMin },
     include: {
       ticket: { select: { id: true, assunto: true, protocolo: true } },
       order: { select: { id: true, numeroOs: true, tipoServico: true } },
+      tarefa: { select: { id: true, titulo: true, numero: true } },
     },
   });
+
+  await registrarBloco(entry.id, 'fim', usuarioId ?? entry.usuarioId, motivo || null);
+  await logAudit({
+    usuarioId: usuarioId ?? entry.usuarioId,
+    modulo: 'Tarefas',
+    entidade: 'TimeEntry',
+    entidadeId: entry.id,
+    acao: 'encerrar_tempo',
+    descricao: `Tempo encerrado (${duracaoMin}min, pausas ${pausadoTotalMin}min)`,
+    motivo: motivo ?? undefined,
+    origem: 'web',
+  });
+
+  if (entry.tarefaId) {
+    await sincronizarHorasTarefa(entry.tarefaId);
+  }
+
+  return updated;
 }
 
 // ── Create manual entry ──────────────────────────────────────────────
 
 export async function createManualEntry(input: TimeEntryInput & { duracaoMin: number }) {
-  return prisma.timeEntry.create({
+  const entry = await prisma.timeEntry.create({
     data: {
       usuarioId: input.usuarioId,
       ticketId: input.ticketId || null,
@@ -130,6 +265,15 @@ export async function createManualEntry(input: TimeEntryInput & { duracaoMin: nu
       tarefa: { select: { id: true, titulo: true, numero: true } },
     },
   });
+
+  await registrarBloco(entry.id, 'inicio', input.usuarioId, 'apontamento manual');
+  await registrarBloco(entry.id, 'fim', input.usuarioId, 'apontamento manual');
+
+  if (entry.tarefaId) {
+    await sincronizarHorasTarefa(entry.tarefaId);
+  }
+
+  return entry;
 }
 
 // ── Update entry ─────────────────────────────────────────────────────
@@ -407,4 +551,131 @@ export async function getTicketTimeBlocks(ticketId: string) {
     dataFim: e.dataFim,
     duracaoMin: e.duracaoMin,
   }));
+}
+
+// ── Resumo de tempo da tarefa (spec §5/§6/§9/§10) ────────────────────
+
+export async function getTaskTimeSummary(tarefaId: string) {
+  const [entries, stageTimes] = await Promise.all([
+    prisma.timeEntry.findMany({
+      where: { tarefaId, dataFim: { not: null } },
+      orderBy: { dataInicio: 'desc' },
+      include: { usuario: { select: { id: true, name: true } } },
+    }),
+    prisma.kanbanStageTime.findMany({
+      where: { taskId: tarefaId },
+      orderBy: { dataEntrada: 'asc' },
+    }),
+  ]);
+
+  const porTipo: Record<string, number> = {};
+  let totalMin = 0;
+  let pausasMin = 0;
+  for (const e of entries) {
+    const min = e.duracaoMin || 0;
+    totalMin += min;
+    pausasMin += e.pausadoTotalMin || 0;
+    const cat = categorizarTipo(e.tipo);
+    porTipo[cat] = (porTipo[cat] || 0) + min;
+  }
+
+  const porEtapa = stageTimes.map((s) => ({
+    id: s.id,
+    etapa: s.columnNome,
+    columnId: s.columnId,
+    dataEntrada: s.dataEntrada,
+    dataSaida: s.dataSaida,
+    duracaoMin: s.duracaoMin ?? (s.dataSaida ? Math.round((s.dataSaida.getTime() - s.dataEntrada.getTime()) / 60000) : Math.round((Date.now() - s.dataEntrada.getTime()) / 60000)),
+    emAndamento: !s.dataSaida,
+  }));
+
+  return {
+    totalMin,
+    pausasMin,
+    totalHoras: +(totalMin / 60).toFixed(2),
+    porTipo,
+    porEtapa,
+    blocos: entries,
+    desenvolvimentoMin: porTipo[CATEGORIA_DESENVOLVIMENTO] || 0,
+    implantacaoMin: porTipo[CATEGORIA_IMPLANTACAO] || 0,
+    atendimentoMin: porTipo[CATEGORIA_ATENDIMENTO] || 0,
+    outroMin: porTipo[CATEGORIA_OUTRO] || 0,
+  };
+}
+
+// ── Deteccao de sobreposicao de tempo (spec §12) ─────────────────────
+
+export async function detectarSobreposicao(usuarioId: string, dataInicio: Date, dataFim: Date) {
+  const entradas = await prisma.timeEntry.findMany({
+    where: {
+      usuarioId,
+      dataFim: { not: null },
+      NOT: { tarefaId: null },
+    },
+    select: { id: true, tarefaId: true, dataInicio: true, dataFim: true, duracaoMin: true },
+  });
+
+  const sobreposicoes = entradas.filter((e) => {
+    if (!e.dataFim) return false;
+    const a = e.dataInicio.getTime();
+    const b = e.dataFim.getTime();
+    const x = dataInicio.getTime();
+    const y = dataFim.getTime();
+    return a < y && x < b;
+  });
+
+  if (sobreposicoes.length > 0) {
+    await logAudit({
+      usuarioId,
+      modulo: 'Tarefas',
+      entidade: 'TimeEntry',
+      entidadeId: null,
+      acao: 'sobreposicao_tempo',
+      descricao: `Sobreposição de tempo detectada: ${sobreposicoes.length} registro(s) concorrente(s)`,
+      resultado: 'alerta',
+      metadata: {
+        novoIntervalo: { dataInicio, dataFim },
+        concorrentes: sobreposicoes.map((s) => ({ id: s.id, tarefaId: s.tarefaId, dataInicio: s.dataInicio, dataFim: s.dataFim })),
+      },
+    });
+  }
+
+  return sobreposicoes;
+}
+
+// ── Ajuste manual de tempo auditado (spec §41/§42) ───────────────────
+
+export async function ajustarTempo(entryId: string, novoDuracaoMin: number, motivo: string, usuarioId?: string | null) {
+  const entry = await prisma.timeEntry.findUnique({ where: { id: entryId } });
+  if (!entry) throw new Error('TimeEntry nao encontrado');
+  if (!motivo || !motivo.trim()) throw new Error('Motivo do ajuste é obrigatório');
+  if (!Number.isFinite(novoDuracaoMin) || novoDuracaoMin < 0) throw new Error('Duração inválida');
+
+  const antigo = entry.duracaoMin ?? 0;
+
+  await prisma.timeEntry.update({
+    where: { id: entryId },
+    data: { duracaoMin: novoDuracaoMin },
+  });
+
+  await registrarBloco(entry.id, 'fim', usuarioId ?? entry.usuarioId, `AJUSTE MANUAL: ${antigo}min -> ${novoDuracaoMin}min (${motivo})`);
+  await logAudit({
+    usuarioId: usuarioId ?? entry.usuarioId,
+    modulo: 'Tarefas',
+    entidade: 'TimeEntry',
+    entidadeId: entryId,
+    acao: 'ajuste_manual_tempo',
+    descricao: 'Ajuste manual de tempo',
+    valorAnterior: `${antigo}min`,
+    novoValor: `${novoDuracaoMin}min`,
+    motivo,
+    origem: 'web',
+    resultado: 'correcao',
+  });
+
+  if (entry.tarefaId) {
+    await sincronizarHorasTarefa(entry.tarefaId);
+  }
+
+  return prisma.timeEntry.findUnique({ where: { id: entryId } });
 }

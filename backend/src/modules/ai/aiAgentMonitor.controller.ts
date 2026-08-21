@@ -6,6 +6,8 @@ import {
   getMetricasAgente,
   getRelatorioAuditoria,
   getRankingAgentes,
+  getEncerramentosAgente,
+  auditarEncerramentoTicket,
 } from './aiAgentMonitor.service';
 
 export async function avaliarMensagemHandler(req: AuthRequest, res: Response) {
@@ -84,5 +86,33 @@ export async function rankingAgentesHandler(req: AuthRequest, res: Response) {
   } catch (error: any) {
     console.error('Erro ao gerar ranking:', error?.message);
     return res.status(500).json({ error: 'Erro ao gerar ranking' });
+  }
+}
+
+export async function encerramentosAgenteHandler(req: AuthRequest, res: Response) {
+  try {
+    const { agentId } = req.params;
+    const dias = parseInt(req.query.dias as string) || 30;
+
+    const resultado = await getEncerramentosAgente(agentId, dias);
+    return res.json(resultado);
+  } catch (error: any) {
+    console.error('Erro ao buscar encerramentos do agente:', error?.message);
+    return res.status(500).json({ error: 'Erro ao buscar encerramentos do agente' });
+  }
+}
+
+export async function encerramentoTicketHandler(req: AuthRequest, res: Response) {
+  try {
+    const { ticketId } = req.params;
+
+    const resultado = await auditarEncerramentoTicket(ticketId);
+    if (!resultado) {
+      return res.status(404).json({ error: 'Ticket não encontrado' });
+    }
+    return res.json(resultado);
+  } catch (error: any) {
+    console.error('Erro ao auditar encerramento do ticket:', error?.message);
+    return res.status(500).json({ error: 'Erro ao auditar encerramento do ticket' });
   }
 }

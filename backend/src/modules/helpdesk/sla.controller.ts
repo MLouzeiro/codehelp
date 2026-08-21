@@ -10,6 +10,7 @@ import {
 } from './sla.service';
 import { escalarTicket, marcarResolvido } from './status.service';
 import { getIpFromRequest } from '../audit/audit.service';
+import { validarClassificacaoObrigatoria } from './categorias.service';
 
 export async function getTicketSla(req: AuthRequest, res: Response) {
   try {
@@ -67,6 +68,19 @@ export async function postResolverTicket(req: AuthRequest, res: Response) {
     const { resumoFinal } = req.body;
     if (!resumoFinal || resumoFinal.trim().length < 5) {
       return res.status(400).json({ error: 'resumoFinal e obrigatorio (min 5 caracteres)' });
+    }
+    if (req.user?.role !== 'admin') {
+      const ticket = await prisma.ticket.findUnique({ where: { id } });
+      if (ticket) {
+        try {
+          await validarClassificacaoObrigatoria(ticket);
+        } catch (e: any) {
+          if (e?.message?.includes('CLASSIFICACAO_OBRIGATORIA')) {
+            return res.status(400).json({ error: e.message.replace('CLASSIFICACAO_OBRIGATORIA: ', '') });
+          }
+          throw e;
+        }
+      }
     }
     const updated = await marcarResolvido(id, resumoFinal, req.user?.id, getIpFromRequest(req));
     return res.json(updated);

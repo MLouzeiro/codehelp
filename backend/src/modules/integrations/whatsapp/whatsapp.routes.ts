@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorizeMaster } from '../../../shared/middleware/auth';
 import * as whatsappController from './whatsapp.controller';
 import baileysRoutes from './baileys.routes';
+import contatosIgnoradosRoutes from './contatosIgnorados.routes';
 import { validate, sendWhatsAppMessageSchema } from '../../../shared/validation/schemas';
 
 const router = Router();
@@ -9,6 +10,9 @@ router.use(authenticate);
 
 // ── Baileys Provider (WebSocket, sem Chrome/Puppeteer) ───────────────
 router.use('/baileys', baileysRoutes);
+
+// ── Contatos/grupos ignorados do Helpdesk (admin/gerente) ───────────
+router.use('/ignorados', contatosIgnoradosRoutes);
 
 // ── Legacy single-connection status/ops ───────────────────────────────
 router.get('/status', whatsappController.getStatus);

@@ -145,7 +145,7 @@ export async function processarAguardandoExpediente(): Promise<number> {
 
           if (hasDept) {
             const msg = `Olá ${ticket.contactName || 'cliente'}! 🌅\n\nO expediente iniciou! Estamos prontos para te atender.\n\nEm breve um de nossos analistas irá te atender.\n\nAtenciosamente,\nEquipe Codemed`;
-            const result = await sendWhatsAppMessage(ticket.contactPhone, msg, undefined, (ticket as any).contactJid || undefined);
+            const result = await sendWhatsAppMessage(ticket.contactPhone, msg, (ticket as any).whatsappConnectionId || undefined, (ticket as any).contactJid || undefined);
             if (result.success) {
               await prisma.message.create({
                 data: {

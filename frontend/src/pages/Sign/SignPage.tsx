@@ -14,6 +14,9 @@ export default function SignPage() {
   const [submitting, setSubmitting] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
   const [form, setForm] = useState({ assinanteNome: '', assinanteCpf: '', assinanteCargo: '' });
+  const [refusing, setRefusing] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [refused, setRefused] = useState(false);
 
   useEffect(() => {
     loadSignature();
@@ -62,6 +65,23 @@ export default function SignPage() {
     }
   };
 
+  const refuseSignature = async () => {
+    if (!rejectionReason.trim()) {
+      setError('Informe o motivo da recusa');
+      return;
+    }
+    setError('');
+    setSubmitting(true);
+    try {
+      await axios.post(`/api/orders/sign/${token}/recusar`, { motivo: rejectionReason });
+      setRefused(true);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao processar recusa');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading && !data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 dark:from-slate-900 dark:to-slate-800 safe-area">
@@ -80,6 +100,20 @@ export default function SignPage() {
           <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2" style={{ fontFamily: 'Khand, sans-serif' }}>Link Inválido</h2>
           <p className="text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (refused) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 dark:from-slate-900 dark:to-slate-800 p-4 safe-area">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 p-8 max-w-md text-center">
+          <AlertCircle size={48} className="text-orange-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2" style={{ fontFamily: 'Khand, sans-serif' }}>Assinatura Recusada</h2>
+          <p className="text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
+            A OS <strong>{data?.order?.numeroOs}</strong> teve a assinatura recusada. Nossa equipe foi notificada.
+          </p>
         </div>
       </div>
     );
@@ -234,6 +268,49 @@ export default function SignPage() {
         <p className="text-center text-xs text-slate-400 dark:text-slate-500 pb-4" style={{ fontFamily: 'Lexend, sans-serif' }}>
           Ao assinar, você concorda com os termos do serviço. Esta assinatura tem validade jurídica.
         </p>
+
+        {!refusing ? (
+          <button
+            onClick={() => { setError(''); setRefusing(true); }}
+            disabled={submitting}
+            className="w-full py-3 bg-transparent hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-2xl transition-colors text-sm font-medium min-h-[48px]"
+            style={{ fontFamily: 'Lexend, sans-serif' }}
+          >
+            Não desejo assinar — Recusar
+          </button>
+        ) : (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-red-200 dark:border-red-800 p-4 space-y-3">
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Lexend, sans-serif' }}>
+              Informe o motivo da recusa
+            </p>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Ex: valor divergente, serviço não executado..."
+              rows={3}
+              className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[48px]"
+              style={{ fontFamily: 'Lexend, sans-serif' }}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={refuseSignature}
+                disabled={submitting}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors text-sm min-h-[44px]"
+                style={{ fontFamily: 'Lexend, sans-serif' }}
+              >
+                {submitting ? 'Processando...' : 'Confirmar Recusa'}
+              </button>
+              <button
+                onClick={() => { setRefusing(false); setRejectionReason(''); setError(''); }}
+                disabled={submitting}
+                className="flex-1 py-2.5 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium rounded-xl transition-colors text-sm min-h-[44px]"
+                style={{ fontFamily: 'Lexend, sans-serif' }}
+              >
+                Voltar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

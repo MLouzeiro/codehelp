@@ -100,18 +100,18 @@ export default function WhatsAppPage() {
   ];
 
   const statusStyles: Record<string, string> = {
-    aberto: 'bg-blue-100 text-blue-700',
-    em_atendimento: 'bg-amber-100 text-amber-700',
-    fechado: 'bg-green-100 text-green-700',
-    pendente: 'bg-gray-100 text-gray-700',
+    aberto: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    em_atendimento: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    fechado: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    pendente: 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-300',
   };
 
   const clientStatusStyles: Record<string, string> = {
-    ativo: 'bg-green-100 text-green-700',
-    suspenso: 'bg-amber-100 text-amber-700',
-    cancelado: 'bg-red-100 text-red-700',
-    prospecto: 'bg-blue-100 text-blue-700',
-    inativo: 'bg-gray-100 text-gray-700',
+    ativo: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    suspenso: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    cancelado: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    prospecto: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    inativo: 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-300',
   };
 
   const formatCurrency = (v?: number) => {
@@ -745,13 +745,13 @@ export default function WhatsAppPage() {
             <h1 className="text-xl font-bold text-codemed-700">WhatsApp</h1>
           </div>
           {/* Tab toggle */}
-          <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+          <div className="flex items-center bg-gray-100 dark:bg-slate-700 rounded-lg p-0.5">
             <button
               onClick={() => setActiveTab('chat')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 activeTab === 'chat'
-                  ? 'bg-white text-green-700 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-green-700 shadow-sm dark:bg-slate-900 dark:text-green-400'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
               <MessageSquare size={12} /> Chat
@@ -760,8 +760,8 @@ export default function WhatsAppPage() {
               onClick={() => setActiveTab('connections')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 activeTab === 'connections'
-                  ? 'bg-white text-green-700 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-green-700 shadow-sm dark:bg-slate-900 dark:text-green-400'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
               <Settings size={12} /> Conexoes
@@ -776,7 +776,7 @@ export default function WhatsAppPage() {
                   ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
                   : selectedConnStatus?.scanning
                   ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
-                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700'
               }`}
             >
               {selectedConnStatus?.connected ? <Bluetooth size={12} /> : selectedConnStatus?.scanning ? <Loader2 size={12} className="animate-spin" /> : <BluetoothOff size={12} />}
@@ -800,7 +800,7 @@ export default function WhatsAppPage() {
                         <div
                           key={conn.id}
                           className={`px-3 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${
-                            isSelected ? 'bg-green-50' : 'hover:bg-gray-50'
+                            isSelected ? 'bg-green-50 dark:bg-green-900/30' : 'hover:bg-gray-50 dark:hover:bg-slate-700/60'
                           }`}
                           onClick={() => { setSelectedConnId(conn.id); setShowConnDropdown(false); }}
                         >
@@ -808,8 +808,8 @@ export default function WhatsAppPage() {
                             <div className="flex items-center gap-2 min-w-0">
                               <div className={`w-2 h-2 rounded-full flex-shrink-0 ${status?.connected ? 'bg-green-500' : status?.scanning ? 'bg-amber-500 animate-pulse' : 'bg-gray-300'}`} />
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{conn.nome}</p>
-                                <p className="text-[10px] text-gray-500 truncate">{conn.numero}</p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{conn.nome}</p>
+                                <p className="text-[10px] text-gray-500 dark:text-slate-400 truncate">{conn.numero}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0">
@@ -865,7 +865,7 @@ export default function WhatsAppPage() {
             {anyConnected ? <><Bluetooth size={12} /> {connStatuses.filter((s) => s.connected).length} conectada(s)</> : <><BluetoothOff size={12} /> Nenhuma conectada</>}
           </div>
           {/* Provider status */}
-          <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-slate-400">
             {status?.providers && (
               <>
                 {status.providers['evolution']?.connected && (
@@ -932,10 +932,10 @@ export default function WhatsAppPage() {
       {(connecting || (qrDataUrl && !connected)) && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => { if (!connecting) { setQrCode(null); setQrDataUrl(null); } }}>
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl text-center max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-semibold text-lg text-gray-900 mb-1">Conectar WhatsApp</h3>
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-slate-100 mb-1">Conectar WhatsApp</h3>
             {qrDataUrl ? (
               <>
-                <p className="text-sm text-gray-500 mb-4">Abra o WhatsApp no celular<br />Menu &rarr; Dispositivos conectados &rarr; Conectar dispositivo</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Abra o WhatsApp no celular<br />Menu &rarr; Dispositivos conectados &rarr; Conectar dispositivo</p>
                 <img src={qrDataUrl} alt="QR Code" className="mx-auto w-56 h-56" />
                 <p className="text-xs text-gray-400 mt-3">Escaneie o QR Code acima com o WhatsApp</p>
               </>
@@ -944,7 +944,7 @@ export default function WhatsAppPage() {
                 <div className="flex justify-center mb-3">
                   <RefreshCw size={32} className="animate-spin text-green-500" />
                 </div>
-                <p className="text-sm text-gray-500">Gerando QR Code...</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">Gerando QR Code...</p>
                 <p className="text-xs text-gray-400 mt-1">Aguarde alguns segundos</p>
               </div>
             )}
@@ -953,7 +953,7 @@ export default function WhatsAppPage() {
                 <p className="text-xs text-red-600">{connectionError}</p>
               </div>
             )}
-            <button onClick={() => { if (!connecting) { setQrCode(null); setQrDataUrl(null); } }} className="mt-4 text-sm text-gray-500 hover:text-gray-700">Fechar</button>
+            <button onClick={() => { if (!connecting) { setQrCode(null); setQrDataUrl(null); } }} className="mt-4 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">Fechar</button>
           </div>
         </div>
       )}
@@ -962,10 +962,10 @@ export default function WhatsAppPage() {
       {connQrModal && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => { stopConnQrPolling(); setConnQrModal(null); setConnQrStatus('idle'); }}>
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl text-center max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-semibold text-lg text-gray-900 mb-1">QR Code — {connQrModal.conn.nome}</h3>
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-slate-100 mb-1">QR Code — {connQrModal.conn.nome}</h3>
             {connQrModal.qrDataUrl ? (
               <>
-                <p className="text-sm text-gray-500 mb-4">Abra o WhatsApp no celular<br />Menu &rarr; Dispositivos conectados &rarr; Conectar dispositivo</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Abra o WhatsApp no celular<br />Menu &rarr; Dispositivos conectados &rarr; Conectar dispositivo</p>
                 <img src={connQrModal.qrDataUrl} alt="QR Code" className="mx-auto w-56 h-56" />
                 <p className="text-xs text-green-600 mt-3 font-medium">Escaneie o QR Code com o celular</p>
               </>
@@ -985,13 +985,13 @@ export default function WhatsAppPage() {
                 <div className="flex justify-center mb-3">
                   <RefreshCw size={32} className="animate-spin text-green-500" />
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-slate-400">
                   {connQrStatus === 'initializing' ? 'Inicializando WhatsApp...' : 'Gerando QR Code...'}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">Aguarde alguns segundos</p>
               </div>
             )}
-            <button onClick={() => { stopConnQrPolling(); setConnQrModal(null); setConnQrStatus('idle'); }} className="mt-4 text-sm text-gray-500 hover:text-gray-700">Fechar</button>
+            <button onClick={() => { stopConnQrPolling(); setConnQrModal(null); setConnQrStatus('idle'); }} className="mt-4 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">Fechar</button>
           </div>
         </div>
       )}
@@ -1002,7 +1002,7 @@ export default function WhatsAppPage() {
         </div>
       ) : (
       <div className="flex-1 flex min-h-0 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 overflow-hidden">
-        <div className={`${selectedTicket ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-gray-200 flex flex-col bg-gray-50/50`}>
+        <div className={`${selectedTicket ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-gray-200 dark:border-slate-700 flex flex-col bg-gray-50/50 dark:bg-slate-800/60`}>
           <div className="p-3 border-b border-gray-200 bg-white dark:bg-slate-800 space-y-2">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -1045,13 +1045,13 @@ export default function WhatsAppPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-sm text-gray-900 truncate">
+                        <span className="font-medium text-sm text-gray-900 dark:text-slate-100 truncate">
                           {ticket.contactName || ticket.contactPhone || 'Desconhecido'}
                         </span>
                         <span className="text-xs text-gray-400 flex-shrink-0">{lastMsg ? formatTime(lastMsg.sentAt || ticket.updatedAt) : formatTime(ticket.updatedAt)}</span>
                       </div>
                       {ticket.client && (
-                        <p className="text-[11px] text-gray-500 truncate flex items-center gap-1 mt-0.5">
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400 truncate flex items-center gap-1 mt-0.5">
                           <Building2 size={9} /> {ticket.client.razaoSocial || ticket.client.nomeFantasia}
                         </p>
                       )}
@@ -1059,7 +1059,7 @@ export default function WhatsAppPage() {
                         <span className={`text-xs px-1.5 py-0.5 rounded ${statusStyles[ticket.status] || ''}`}>{ticket.status?.replace('_', ' ')}</span>
                         {ticket.protocolo && <span className="text-[10px] text-neutral-400 font-mono">{ticket.protocolo}</span>}
                       </div>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">
+                      <p className="text-xs text-gray-500 dark:text-slate-400 truncate mt-0.5">
                         {lastMsg ? `${lastMsg.fromMe ? 'Você: ' : ''}${lastMsg.content || '(mídia)'}` : ticket.assunto || 'Sem mensagens'}
                       </p>
                     </div>
@@ -1084,10 +1084,10 @@ export default function WhatsAppPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-sm text-gray-900 truncate">{selectedTicket.contactName || selectedTicket.client?.razaoSocial || 'Desconhecido'}</h3>
+                        <h3 className="font-medium text-sm text-gray-900 dark:text-slate-100 truncate">{selectedTicket.contactName || selectedTicket.client?.razaoSocial || 'Desconhecido'}</h3>
                         {selectedTicket.protocolo && <span className="text-[10px] font-mono text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded flex-shrink-0">{selectedTicket.protocolo}</span>}
                       </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
                       <span className="flex items-center gap-1"><Phone size={10} />{selectedTicket.contactPhone}</span>
                       {selectedTicket.client?.razaoSocial && <span className="hidden sm:inline">• {selectedTicket.client.razaoSocial}</span>}
                     </div>
@@ -1124,15 +1124,15 @@ export default function WhatsAppPage() {
                     <Building2 size={14} className="text-blue-600 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-gray-900">{selectedTicket.client.razaoSocial}</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">{selectedTicket.client.razaoSocial}</span>
                         {selectedTicket.client.nomeFantasia && selectedTicket.client.nomeFantasia !== selectedTicket.client.razaoSocial && (
-                          <span className="text-xs text-gray-500">({selectedTicket.client.nomeFantasia})</span>
+                          <span className="text-xs text-gray-500 dark:text-slate-400">({selectedTicket.client.nomeFantasia})</span>
                         )}
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${clientStatusStyles[selectedTicket.client.status] || 'bg-gray-100 text-gray-700'}`}>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${clientStatusStyles[selectedTicket.client.status] || 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-300'}`}>
                           {selectedTicket.client.status || 'sem status'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-600 flex-wrap">
+                      <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-600 dark:text-slate-400 flex-wrap">
                         {selectedTicket.client.cnpjCpf && <span>CNPJ/CPF: {selectedTicket.client.cnpjCpf}</span>}
                         {selectedTicket.client.segmento && (
                           <span className="flex items-center gap-1"><Tag size={10} /> {selectedTicket.client.segmento}</span>
@@ -1152,7 +1152,7 @@ export default function WhatsAppPage() {
                 </div>
               )}
 
-              <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-2 bg-gray-50/30">
+              <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-2 bg-gray-50/30 dark:bg-slate-900/40">
                 {messages.map((msg: any) => {
                   const isAudio = msg.mimeType?.startsWith('audio/');
                   const isImage = msg.mimeType?.startsWith('image/');
@@ -1262,7 +1262,7 @@ export default function WhatsAppPage() {
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setShowNewTicket(false)}>
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-gray-900">Nova Conversa</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-slate-100">Nova Conversa</h3>
               <button onClick={() => setShowNewTicket(false)} className="text-neutral-400 hover:text-neutral-600 p-1"><X size={20} /></button>
             </div>
             <input type="text" placeholder="Nome do contato" value={newTicket.contactName} onChange={(e) => setNewTicket({ ...newTicket, contactName: e.target.value })} className="input w-full" />
@@ -1278,10 +1278,10 @@ export default function WhatsAppPage() {
           <div className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-xl sm:max-w-lg w-full max-h-[92vh] sm:max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white dark:bg-slate-800 z-10 px-4 sm:px-5 pt-4 sm:pt-5 pb-3 border-b border-neutral-100">
               <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-gray-900 text-base">Abrir Chamado</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-slate-100 text-base">Abrir Chamado</h3>
                 <button onClick={() => setShowAbrirChamado(false)} disabled={abrirSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                 {selectedTicket.protocolo
                   ? 'Editando informacoes do chamado.'
                   : 'Defina os dados do chamado. Sera gerado protocolo e o ticket ira para "Em Atendimento" atribuido a voce.'}
@@ -1290,7 +1290,7 @@ export default function WhatsAppPage() {
 
             <div className="px-4 sm:px-5 py-4 space-y-4">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1.5 block">Cliente vinculado</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5 block">Cliente vinculado</label>
                 {selectedClientId ? (
                   <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 rounded-lg px-3 py-2">
                     <Building2 size={14} className="text-emerald-600 flex-shrink-0" />
@@ -1319,7 +1319,7 @@ export default function WhatsAppPage() {
                           >
                             <Building2 size={14} className="text-neutral-400 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{c.razaoSocial}</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{c.razaoSocial}</p>
                               {c.telefone && <p className="text-[11px] text-neutral-500">{c.telefone}</p>}
                             </div>
                           </button>
@@ -1339,7 +1339,7 @@ export default function WhatsAppPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1.5 block">Assunto *</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5 block">Assunto *</label>
                 <input
                   type="text"
                   placeholder="Ex: Erro no modulo LIS, Duvida sobre boleto..."
@@ -1352,14 +1352,14 @@ export default function WhatsAppPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1.5 block">Departamento *</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5 block">Departamento *</label>
                   <select value={abrirChamado.departamentoId} onChange={(e) => setAbrirChamado({ ...abrirChamado, departamentoId: e.target.value })} className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg" required>
                     <option value="">Selecione o setor</option>
                     {departamentos.map((d: any) => (<option key={d.id} value={d.id}>{d.nome}</option>))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1.5 block">Categoria</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5 block">Categoria</label>
                   <select value={abrirChamado.categoria} onChange={(e) => setAbrirChamado({ ...abrirChamado, categoria: e.target.value })} className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg">
                     <option value="">Selecione...</option>
                     {CATEGORIAS.map((c) => (<option key={c.value} value={c.value}>{c.label}</option>))}
@@ -1369,7 +1369,7 @@ export default function WhatsAppPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1.5 block">Prioridade</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5 block">Prioridade</label>
                   <select value={abrirChamado.prioridade} onChange={(e) => setAbrirChamado({ ...abrirChamado, prioridade: e.target.value })} className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg">
                     {PRIORIDADES.map((p) => (<option key={p.value} value={p.value}>{p.label}</option>))}
                   </select>
@@ -1377,7 +1377,7 @@ export default function WhatsAppPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1.5 block">Tipo de solicitacao</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5 block">Tipo de solicitacao</label>
                 <select value={abrirChamado.tipo} onChange={(e) => setAbrirChamado({ ...abrirChamado, tipo: e.target.value })} className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg">
                   <option value="">Selecione...</option>
                   {TIPOS.map((t) => (<option key={t.value} value={t.value}>{t.label}</option>))}
@@ -1385,7 +1385,7 @@ export default function WhatsAppPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1.5 block">Observacoes internas (auditoria)</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5 block">Observacoes internas (auditoria)</label>
                 <textarea
                   rows={3}
                   placeholder="Anotacoes visiveis apenas para a equipe (nao enviadas ao cliente)..."
@@ -1411,26 +1411,26 @@ export default function WhatsAppPage() {
           <div className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-xl sm:max-w-md w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 sm:px-5 pt-4 sm:pt-5 pb-3 border-b border-neutral-100">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2 text-base"><Building2 size={18} className="text-green-600" /> Novo Cliente</h3>
+                <h3 className="font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2 text-base"><Building2 size={18} className="text-green-600" /> Novo Cliente</h3>
                 <button onClick={() => setShowCreateClient(false)} disabled={creatingClient} className="text-neutral-400 hover:text-neutral-600 p-1"><X size={20} /></button>
               </div>
             </div>
             <div className="px-4 sm:px-5 py-4 space-y-3">
               <div>
-                <label className="text-xs font-medium text-gray-700 block mb-1.5">Razao Social *</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-slate-300 block mb-1.5">Razao Social *</label>
                 <input type="text" value={newClient.razaoSocial} onChange={(e) => setNewClient({ ...newClient, razaoSocial: e.target.value })} className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 min-h-[44px] focus:ring-1 focus:ring-green-500 outline-none" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 block mb-1.5">Telefone</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-slate-300 block mb-1.5">Telefone</label>
                 <input type="text" value={newClient.telefone} onChange={(e) => setNewClient({ ...newClient, telefone: e.target.value })} placeholder="5511999999999" className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 min-h-[44px] focus:ring-1 focus:ring-green-500 outline-none" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1.5">CNPJ</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-slate-300 block mb-1.5">CNPJ</label>
                   <input type="text" value={newClient.cnpj} onChange={(e) => setNewClient({ ...newClient, cnpj: e.target.value })} className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 min-h-[44px] focus:ring-1 focus:ring-green-500 outline-none" />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1.5">Email</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-slate-300 block mb-1.5">Email</label>
                   <input type="email" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 min-h-[44px] focus:ring-1 focus:ring-green-500 outline-none" />
                 </div>
               </div>
@@ -1449,11 +1449,11 @@ export default function WhatsAppPage() {
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => !transferirSaving && setShowTransferir(false)}>
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-gray-900">Transferir Atendimento</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-slate-100">Transferir Atendimento</h3>
               <button onClick={() => setShowTransferir(false)} disabled={transferirSaving} className="text-neutral-400 hover:text-neutral-600 p-1 disabled:opacity-50"><X size={20} /></button>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Transferir para</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-slate-300 mb-1 block">Transferir para</label>
               <select
                 value={transferirPara}
                 onChange={(e) => setTransferirPara(e.target.value)}
@@ -1466,7 +1466,7 @@ export default function WhatsAppPage() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Motivo (opcional)</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-slate-300 mb-1 block">Motivo (opcional)</label>
               <textarea
                 rows={2}
                 placeholder="Ex: Especialista em modulo financeiro..."

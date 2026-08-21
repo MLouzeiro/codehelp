@@ -21,6 +21,10 @@ export default function OrderForm() {
     dataPrevistaEntrega: '',
     ticketId: searchParams.get('ticketId') || '',
     observacoes: '',
+    tipoImplantacao: '',
+    precoImplantacao: '',
+    horasDev: '',
+    horasSuporte: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -54,6 +58,10 @@ export default function OrderForm() {
         dataPrevistaEntrega: data.dataPrevistaEntrega?.split('T')[0] || '',
         ticketId: data.ticketId || '',
         observacoes: data.observacoes || '',
+        tipoImplantacao: data.tipoImplantacao || '',
+        precoImplantacao: data.precoImplantacao?.toString() || '',
+        horasDev: data.horasDev?.toString() || '',
+        horasSuporte: data.horasSuporte?.toString() || '',
       });
     } catch (err) { console.error(err); }
   };
@@ -66,6 +74,9 @@ export default function OrderForm() {
         ...form,
         sistemasEnvolvidos: form.sistemasEnvolvidos.split(',').map((s) => s.trim()).filter(Boolean),
         valorServico: form.valorServico ? parseFloat(form.valorServico) : null,
+        precoImplantacao: form.precoImplantacao ? parseFloat(form.precoImplantacao) : 0,
+        horasDev: form.horasDev ? parseFloat(form.horasDev) : 0,
+        horasSuporte: form.horasSuporte ? parseFloat(form.horasSuporte) : 0,
       };
 
       if (isEdit) {
@@ -147,6 +158,35 @@ export default function OrderForm() {
             <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} className="input" rows={2} />
           </div>
         </div>
+
+        {form.tipoServico === 'implantacao' && (
+          <div className="border-t border-gray-200 dark:border-slate-700 pt-4 mt-4">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3">Dados de Implantação</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Tipo de Implantação</label>
+                <select value={form.tipoImplantacao} onChange={(e) => setForm({ ...form, tipoImplantacao: e.target.value })} className="input">
+                  <option value="">Selecione</option>
+                  <option value="padrao">Padrão</option>
+                  <option value="customizada">Customizada</option>
+                  <option value="rapida">Rápida</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Preço da Implantação (R$)</label>
+                <input type="number" step="0.01" value={form.precoImplantacao} onChange={(e) => setForm({ ...form, precoImplantacao: e.target.value })} className="input" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Horas de Desenvolvimento</label>
+                <input type="number" step="0.5" value={form.horasDev} onChange={(e) => setForm({ ...form, horasDev: e.target.value })} className="input" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Horas de Suporte</label>
+                <input type="number" step="0.5" value={form.horasSuporte} onChange={(e) => setForm({ ...form, horasSuporte: e.target.value })} className="input" />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-3 pt-4 border-t">
           <button type="submit" disabled={loading} className="btn-primary">

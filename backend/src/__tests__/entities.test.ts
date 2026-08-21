@@ -101,8 +101,12 @@ describe('Helpdesk Entities (Bloco 1)', () => {
     it('SLA_PADRAO contem 4 prioridades', () => {
       expect(SLA_PADRAO.length).toBe(4);
     });
-    it('CATEGORIAS_PADRAO contem 5 categorias', () => {
-      expect(CATEGORIAS_PADRAO.length).toBe(5);
+    it('CATEGORIAS_PADRAO contem 11 categorias (inclui impressoras/banco/integracoes)', () => {
+      expect(CATEGORIAS_PADRAO.length).toBe(11);
+      const slugs = CATEGORIAS_PADRAO.map((c) => c.slug);
+      expect(slugs).toContain('impressoras');
+      expect(slugs).toContain('banco_de_dados');
+      expect(slugs).toContain('integracoes');
     });
   });
 

@@ -29,6 +29,14 @@ interface DashboardExecutivo {
   tempoMedioPorFila: { fila: string; tempoMedioMin: number; total: number }[];
   csatTrending: { date: string; media: number; total: number }[];
   comparativo: { deltaTickets: number; deltaFechados: number; deltaTempoResposta: number; deltaCsat: number };
+  alertas: Array<{
+    nivel: 'info' | 'atencao' | 'critico';
+    tipo: string;
+    titulo: string;
+    mensagem: string;
+    contagem?: number;
+    link?: string;
+  }>;
 }
 
 const CANAL_CORES = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#ec4899'];
@@ -171,6 +179,51 @@ export default function DashboardExecutivo() {
         })}
       </div>
 
+      {/* ── ALERTAS E ATENÇÃO ──────────────────────────────────────── */}
+      {d.alertas && d.alertas.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
+            <AlertTriangle size={16} className="text-amber-500" /> Alertas e Atenção
+            <span className="text-xs font-normal text-slate-400 dark:text-slate-500" style={{ fontFamily: 'Lexend, sans-serif' }}>
+              baseado em dados reais do período
+            </span>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {d.alertas.map((a, i) => {
+              const styleNivel =
+                a.nivel === 'critico'
+                  ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20'
+                  : a.nivel === 'atencao'
+                    ? 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'
+                    : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20';
+              const corIcone =
+                a.nivel === 'critico'
+                  ? 'text-red-600 dark:text-red-400'
+                  : a.nivel === 'atencao'
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-blue-600 dark:text-blue-400';
+              const rotulo =
+                a.nivel === 'critico' ? 'CRÍTICO' : a.nivel === 'atencao' ? 'ATENÇÃO' : 'INFO';
+              return (
+                <div key={i} className={`flex items-start gap-3 rounded-xl border p-3 ${styleNivel}`}>
+                  <AlertTriangle size={18} className={`shrink-0 mt-0.5 ${corIcone}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Lexend, sans-serif' }}>{a.titulo}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${a.nivel === 'critico' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : a.nivel === 'atencao' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'}`}>{rotulo}</span>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5" style={{ fontFamily: 'Lexend, sans-serif' }}>{a.mensagem}</p>
+                    {a.link && (
+                      <a href={a.link} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block" style={{ fontFamily: 'Lexend, sans-serif' }}>Ver detalhes →</a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
@@ -219,7 +272,7 @@ export default function DashboardExecutivo() {
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
-            <Activity size={16} className="text-slate-600" /> Tickets por Etapa
+            <Activity size={16} className="text-slate-600 dark:text-slate-400" /> Tickets por Etapa
           </h2>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>

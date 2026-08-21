@@ -8,62 +8,70 @@ datasource db {
 }
 
 model User {
-  id                    String              @id @default(uuid())
-  name                  String
-  email                 String              @unique
-  password              String
-  role                  String              @default("tecnico")
-  isMaster              Boolean             @default(false)
-  phone                 String?
-  avatar                String?
-  active                Boolean             @default(true)
-  online                Boolean             @default(false)
-  lastSeenAt            DateTime?
-  sessionToken          String?             @unique
-  signature             String?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @default(now())
-  aiCorrections         AICorrection[]
-  aiAgentAudits         AIAgentAudit[]
-  auditoriasAgente      AuditoriaProfissional[]  @relation("AuditoriaAgente")
-  auditoriasRevisadas   AuditoriaProfissional[]  @relation("AuditoriaRevisor")
-  aprovacoesDecididas   Aprovacao[]         @relation("AprovacaoAprovador")
-  aprovacoesSolicitadas Aprovacao[]         @relation("AprovacaoSolicitante")
-  auditLogs             AuditLog[]
-  billingHistory        BillingHistory[]
-  clientTechnician      Client[]            @relation("ClientTechnician")
-  contacts              Contact[]
-  kbArticlesAutor       KBArticle[]         @relation("KBArticleAutor")
-  kbVersionsAutor       KBArticleVersion[]  @relation("KBArticleVersionAutor")
-  kanbanActivities      KanbanActivity[]    @relation("KanbanActivityUsuario")
-  kanbanAttachments     KanbanAttachment[]  @relation("KanbanAttachmentUsuario")
-  kanbanBoardsCreated   KanbanBoard[]       @relation("KanbanBoardCriador")
-  kanbanSubtasks        KanbanSubtask[]     @relation("KanbanSubtaskResponsavel")
-  kanbanTasks           KanbanTask[]        @relation("KanbanTaskResponsavel")
-  kanbanTemplates       KanbanTemplate[]    @relation("KanbanTemplateCriador")
-  messages              Message[]
-  notificacoes          Notificacao[]
-  opportunities         Opportunity[]
-  orderCreator          ServiceOrder[]      @relation("OrderCreator")
-  orderTechnician       ServiceOrder[]      @relation("OrderTechnician")
-  tasks                 Task[]
-  ticketsAtendidos      Ticket[]            @relation("TicketAssignee")
-  ticketsPrimeiroAgente Ticket[]            @relation("TicketPrimeiroAgente")
-  tickets               Ticket[]
-  ticketActivities      TicketActivity[]
-  ticketEvents          TicketEvent[]
-  ticketPerformance     TicketPerformance[]
-  ticketSlaLogs         TicketSlaLog[]
-  stageMovements        TicketStageEvent[]
-  timelineAnterior      TicketTimeline[]    @relation("TimelineResponsavelAnterior")
-  timelineNovo          TicketTimeline[]    @relation("TimelineResponsavelNovo")
-  ticketWaitTimes       TicketWaitTime[]
-  timeEntries           TimeEntry[]
-  departamentos         UserDepartamento[]
-  ticketChecklists      TicketChecklist[]
-  checklistTemplates    ChecklistTemplate[]
-  agentInteractions     TicketAgentInteraction[]
-  departmentTimes       TicketDepartmentTime[]
+  id                          String                    @id @default(uuid())
+  name                        String
+  email                       String                    @unique
+  password                    String
+  role                        String                    @default("tecnico")
+  isMaster                    Boolean                   @default(false)
+  phone                       String?
+  avatar                      String?
+  active                      Boolean                   @default(true)
+  online                      Boolean                   @default(false)
+  lastSeenAt                  DateTime?
+  sessionToken                String?                   @unique
+  signature                   String?
+  createdAt                   DateTime                  @default(now())
+  updatedAt                   DateTime                  @default(now())
+  aiCorrections               AICorrection[]
+  aiAgentAudits               AIAgentAudit[]
+  auditoriasAgente            AuditoriaProfissional[]   @relation("AuditoriaAgente")
+  auditoriasRevisadas         AuditoriaProfissional[]   @relation("AuditoriaRevisor")
+  aprovacoesDecididas         Aprovacao[]               @relation("AprovacaoAprovador")
+  aprovacoesSolicitadas       Aprovacao[]               @relation("AprovacaoSolicitante")
+  auditLogs                   AuditLog[]
+  billingHistory              BillingHistory[]
+  clientTechnician            Client[]                  @relation("ClientTechnician")
+  contacts                    Contact[]
+  kbArticlesAutor             KBArticle[]               @relation("KBArticleAutor")
+  kbVersionsAutor             KBArticleVersion[]        @relation("KBArticleVersionAutor")
+  kanbanActivities            KanbanActivity[]          @relation("KanbanActivityUsuario")
+  kanbanAttachments           KanbanAttachment[]        @relation("KanbanAttachmentUsuario")
+  kanbanBoardsCreated         KanbanBoard[]             @relation("KanbanBoardCriador")
+  kanbanSubtasks              KanbanSubtask[]           @relation("KanbanSubtaskResponsavel")
+  kanbanTasks                 KanbanTask[]              @relation("KanbanTaskResponsavel")
+  kanbanTemplates             KanbanTemplate[]          @relation("KanbanTemplateCriador")
+  messages                    Message[]
+  notificacoes                Notificacao[]
+  opportunities               Opportunity[]
+  orderCreator                ServiceOrder[]            @relation("OrderCreator")
+  orderTechnician             ServiceOrder[]            @relation("OrderTechnician")
+  serviceOrderStatusEvents    ServiceOrderStatusEvent[]
+  tasks                       Task[]
+  ticketsAtendidos            Ticket[]                  @relation("TicketAssignee")
+  ticketsPrimeiroAgente       Ticket[]                  @relation("TicketPrimeiroAgente")
+  tickets                     Ticket[]
+  ticketActivities            TicketActivity[]
+  ticketEvents                TicketEvent[]
+  ticketPerformance           TicketPerformance[]
+  ticketSlaLogs               TicketSlaLog[]
+  stageMovements              TicketStageEvent[]
+  timelineAnterior            TicketTimeline[]          @relation("TimelineResponsavelAnterior")
+  timelineNovo                TicketTimeline[]          @relation("TimelineResponsavelNovo")
+  ticketWaitTimes             TicketWaitTime[]
+  timeEntries                 TimeEntry[]
+  departamentos               UserDepartamento[]
+  ticketChecklists            TicketChecklist[]
+  checklistTemplates          ChecklistTemplate[]
+  agentInteractions           TicketAgentInteraction[]
+  departmentTimes             TicketDepartmentTime[]
+  contatosIgnoradosCriados    ContatoIgnorado[]         @relation("ContatoIgnoradoCriadoPor")
+  contatosIgnoradosReativados ContatoIgnorado[]         @relation("ContatoIgnoradoReativadoPor")
+  teamsLider                  Team[]                    @relation("TeamLider")
+  teamMemberships             TeamMember[]
+  kanbanTasksArquivadas       KanbanTask[]              @relation("KanbanTaskArquivador")
+  timeEntryBlocks             TimeEntryBlock[]
+  stageTimes                  KanbanStageTime[]
 }
 
 model Client {
@@ -100,6 +108,7 @@ model Client {
   serviceOrders        ServiceOrder[]
   tickets              Ticket[]
   timeEntries          TimeEntry[]
+  auditLogs            AuditLog[]
 }
 
 /// Colaborador de um cliente (pessoa que trabalha na empresa cliente)
@@ -155,42 +164,62 @@ model Opportunity {
 }
 
 model ServiceOrder {
-  id                    String       @id @default(uuid())
-  numeroOs              String       @unique
+  id                    String                    @id @default(uuid())
+  numeroOs              String                    @unique
   clientId              String
   tipoServico           String
   descricaoServico      String?
-  sistemasEnvolvidos    String       @default("[]")
+  sistemasEnvolvidos    String                    @default("[]")
   equipamentos          String?
   tecnicoResponsavelId  String
   valorServico          Float?
-  dataEmissao           DateTime     @default(now())
+  dataEmissao           DateTime                  @default(now())
   dataPrevistaEntrega   DateTime?
-  status                String       @default("rascunho")
+  status                String                    @default("rascunho")
   ticketId              String?
   observacoes           String?
   criadoPorId           String
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @default(now())
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @default(now())
   dataFimImplantacao    DateTime?
   dataInicioImplantacao DateTime?
-  horasDev              Float?       @default(0)
-  horasSuporte          Float?       @default(0)
-  implantacaoConcluida  Boolean      @default(false)
-  precoImplantacao      Float?       @default(0)
+  horasDev              Float?                    @default(0)
+  horasSuporte          Float?                    @default(0)
+  implantacaoConcluida  Boolean                   @default(false)
+  precoImplantacao      Float?                    @default(0)
   tipoImplantacao       String?
+  dataConclusao         DateTime?
   attachments           Attachment[]
-  client                Client       @relation(fields: [clientId], references: [id])
-  criadoPor             User         @relation("OrderCreator", fields: [criadoPorId], references: [id])
-  tecnicoResponsavel    User         @relation("OrderTechnician", fields: [tecnicoResponsavelId], references: [id])
-  ticket                Ticket?      @relation("OrderTicket", fields: [ticketId], references: [id])
+  client                Client                    @relation(fields: [clientId], references: [id])
+  criadoPor             User                      @relation("OrderCreator", fields: [criadoPorId], references: [id])
+  tecnicoResponsavel    User                      @relation("OrderTechnician", fields: [tecnicoResponsavelId], references: [id])
+  ticket                Ticket?                   @relation("OrderTicket", fields: [ticketId], references: [id])
   signature             Signature?
   timeEntries           TimeEntry[]
+  statusEvents          ServiceOrderStatusEvent[]
+  kanbanTasks           KanbanTask[]
 
   @@index([status])
   @@index([createdAt])
   @@index([tipoImplantacao])
   @@index([implantacaoConcluida])
+}
+
+/// Timeline de status da Ordem de Servico (tempo por status, auditoria).
+model ServiceOrderStatusEvent {
+  id             String       @id @default(uuid())
+  orderId        String
+  statusAnterior String?
+  statusNovo     String
+  observacao     String?
+  usuarioId      String?
+  origem         String       @default("manual") // manual | sistema | whatsapp | publico
+  createdAt      DateTime     @default(now())
+  order          ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  usuario        User?        @relation(fields: [usuarioId], references: [id])
+
+  @@index([orderId])
+  @@index([createdAt])
 }
 
 model Signature {
@@ -208,6 +237,43 @@ model Signature {
   pdfPath          String?
   createdAt        DateTime     @default(now())
   order            ServiceOrder @relation(fields: [orderId], references: [id])
+
+  // ── Correcao critica: assinatura de OS (envio/rastreio) ─────────────
+  // Status da solicitacao: pendente | enviada | entregue | visualizada |
+  // assinada | recusada | expirada | cancelada | erro_envio
+  status            String             @default("pendente")
+  messageId         String?
+  provider          String?
+  telefone          String?
+  sentAt            DateTime?
+  sentBy            String?
+  attempts          Int                @default(0)
+  lastError         String?
+  viewedAt          DateTime?
+  rejectedAt        DateTime?
+  rejectionReason   String?
+  signatureAttempts SignatureAttempt[]
+
+  @@index([status])
+  @@index([tokenExpiresAt])
+}
+
+/// Log de tentativas de envio do link de assinatura (resend/tracking).
+model SignatureAttempt {
+  id           String    @id @default(uuid())
+  signatureId  String
+  dataHora     DateTime  @default(now())
+  usuarioId    String?
+  telefone     String?
+  provider     String?
+  connectionId String?
+  messageId    String?
+  resultado    String // enviada | erro
+  erro         String?
+  signature    Signature @relation(fields: [signatureId], references: [id], onDelete: Cascade)
+
+  @@index([signatureId])
+  @@index([dataHora])
 }
 
 model Attachment {
@@ -225,108 +291,111 @@ model Attachment {
 }
 
 model Ticket {
-  id                    String                @id @default(uuid())
-  protocolo             String?               @unique
-  externalId            String?               @unique
-  clientId              String?
-  contactName           String?
-  contactPhone          String?
-  contactJid            String?
-  assunto               String?
-  categoria             String?
-  categoriaId           String?
-  status                String                @default("aberto")
-  canal                 String                @default("whatsapp")
-  etapa                 String                @default("fila")
-  prioridade            String                @default("media")
-  assigneeId            String?
-  usuarioId             String?
-  idFila                String?
-  ativoId               String?
-  departamentoId        String?
-  nivelSuporteId        String?
-  whatsappConnectionId  String?
-  dataAbertura          DateTime              @default(now())
-  dataFechamento        DateTime?
-  dataPrimeiraResposta  DateTime?
-  dataInicioAtendimento DateTime?
-  dataConclusao         DateTime?
-  dataResolucao         DateTime?
-  dataCSAT              DateTime?
-  evaluationStatus      String?
-  assumedAt             DateTime?
-  slaTotalMinutos       Int?
-  slaPausadoEm          DateTime?
-  slaPausadoTotalMin    Int                   @default(0)
-  motivoStatus          String?
-  satisfacao            Int?
-  resumoFinal           String?
-  botFluxo              String?
-  tipo                  String?
-  observacoes           String?
-  lastAgentMessageAt    DateTime?
-  filaOrder             Int?
-  resolvidoPorIa        Boolean               @default(false)
-  iaClassificacao       String?
-  iaResumoProblema      String?
-  iaSugestaoResposta    String?
-  iaNotaEncerramento    String?
-  iaAvaliacaoQualidade  String?
-  iaCorrecaoOperador    String?
-  iaMensagensEnviadas   Int                   @default(0)
-  iaPrimeiraRespostaEm  DateTime?
-  iaUltimaRespostaEm    DateTime?
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @default(now())
-  tags                  String?
-  channelId             String?
-  prazoEntrega          DateTime?
-  semPrazo              Boolean             @default(false)
-  horasDesenvolvimento  Float?
-  dataInicioImplantacao DateTime?
-  dataFimImplantacao    DateTime?
-  resolvidoSemAjuda     Boolean?              @default(true)
-  agentesEnvolvidos     String?               @default("[]")
-  primeiroAgenteId      String?
-  tempoPrimeiroAgenteMin Int?
-  kanbanTaskId          String?
-  kanbanTaskBoardId     String?
-  aiClassifications     AIClassification[]
-  aiCorrections         AICorrection[]
-  aiEvaluations         AIEvaluation[]
-  aiAgentAudits         AIAgentAudit[]
+  id                      String                   @id @default(uuid())
+  protocolo               String?                  @unique
+  externalId              String?                  @unique
+  clientId                String?
+  contactName             String?
+  contactPhone            String?
+  contactJid              String?
+  assunto                 String?
+  categoria               String?
+  categoriaId             String?
+  assuntoId               String?
+  status                  String                   @default("aberto")
+  canal                   String                   @default("whatsapp")
+  etapa                   String                   @default("fila")
+  prioridade              String                   @default("media")
+  assigneeId              String?
+  usuarioId               String?
+  idFila                  String?
+  ativoId                 String?
+  departamentoId          String?
+  nivelSuporteId          String?
+  whatsappConnectionId    String?
+  dataAbertura            DateTime                 @default(now())
+  dataFechamento          DateTime?
+  dataPrimeiraResposta    DateTime?
+  dataInicioAtendimento   DateTime?
+  dataConclusao           DateTime?
+  dataResolucao           DateTime?
+  dataCSAT                DateTime?
+  evaluationStatus        String?
+  assumedAt               DateTime?
+  slaTotalMinutos         Int?
+  slaPausadoEm            DateTime?
+  slaPausadoTotalMin      Int                      @default(0)
+  motivoStatus            String?
+  satisfacao              Int?
+  resumoFinal             String?
+  botFluxo                String?
+  tipo                    String?
+  observacoes             String?
+  lastAgentMessageAt      DateTime?
+  filaOrder               Int?
+  resolvidoPorIa          Boolean                  @default(false)
+  iaClassificacao         String?
+  iaResumoProblema        String?
+  iaSugestaoResposta      String?
+  iaNotaEncerramento      String?
+  iaAvaliacaoQualidade    String?
+  iaCorrecaoOperador      String?
+  iaMensagensEnviadas     Int                      @default(0)
+  iaPrimeiraRespostaEm    DateTime?
+  iaUltimaRespostaEm      DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @default(now())
+  tags                    String?
+  channelId               String?
+  prazoEntrega            DateTime?
+  semPrazo                Boolean                  @default(false)
+  horasDesenvolvimento    Float?
+  dataInicioImplantacao   DateTime?
+  dataFimImplantacao      DateTime?
+  resolvidoSemAjuda       Boolean?                 @default(true)
+  agentesEnvolvidos       String?                  @default("[]")
+  primeiroAgenteId        String?
+  tempoPrimeiroAgenteMin  Int?
+  kanbanTaskId            String?
+  kanbanTaskBoardId       String?
+  aiClassifications       AIClassification[]
+  aiCorrections           AICorrection[]
+  aiEvaluations           AIEvaluation[]
+  aiAgentAudits           AIAgentAudit[]
   auditoriasProfissionais AuditoriaProfissional[]
-  aiValidacoes          AIRespostaValidacao[]
-  aprovacoes            Aprovacao[]
-  csatResposta          CSATResposta?
-  channelMessages       ChannelMessage[]
-  messages              Message[]
-  notificacoes          Notificacao[]
-  orders                ServiceOrder[]        @relation("OrderTicket")
-  assignee              User?                 @relation("TicketAssignee", fields: [assigneeId], references: [id])
-  ativo                 Ativo?                @relation(fields: [ativoId], references: [id])
-  categoriaRef          Categoria?            @relation(fields: [categoriaId], references: [id])
-  channel               Channel?              @relation(fields: [channelId], references: [id])
-  client                Client?               @relation(fields: [clientId], references: [id])
-  departamento          Departamento?         @relation(fields: [departamentoId], references: [id])
-  fila                  Fila?                 @relation(fields: [idFila], references: [id])
-  nivelSuporte          NivelSuporte?         @relation(fields: [nivelSuporteId], references: [id])
-  usuario               User?                 @relation(fields: [usuarioId], references: [id])
-  primeiroAgente        User?                 @relation("TicketPrimeiroAgente", fields: [primeiroAgenteId], references: [id])
-  whatsappConnection    WhatsAppConnection?   @relation(fields: [whatsappConnectionId], references: [id])
-  activities            TicketActivity[]
-  aiLogs                TicketAiLog[]
-  events                TicketEvent[]
-  snapshots             TicketHistory[]
-  metrics               TicketMetrics?
-  slaLogs               TicketSlaLog[]
-  stageHistory          TicketStageEvent[]
-  timeline              TicketTimeline[]
-  waitTimes             TicketWaitTime[]
-  timeEntries           TimeEntry[]
-  checklists            TicketChecklist[]
-  departmentTimes       TicketDepartmentTime[]
-  agentInteractions     TicketAgentInteraction[]
+  aiValidacoes            AIRespostaValidacao[]
+  aprovacoes              Aprovacao[]
+  csatResposta            CSATResposta?
+  channelMessages         ChannelMessage[]
+  messages                Message[]
+  notificacoes            Notificacao[]
+  orders                  ServiceOrder[]           @relation("OrderTicket")
+  assignee                User?                    @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  ativo                   Ativo?                   @relation(fields: [ativoId], references: [id])
+  categoriaRef            Categoria?               @relation(fields: [categoriaId], references: [id])
+  assuntoRef              Assunto?                 @relation(fields: [assuntoId], references: [id])
+  channel                 Channel?                 @relation(fields: [channelId], references: [id])
+  client                  Client?                  @relation(fields: [clientId], references: [id])
+  departamento            Departamento?            @relation(fields: [departamentoId], references: [id])
+  fila                    Fila?                    @relation(fields: [idFila], references: [id])
+  nivelSuporte            NivelSuporte?            @relation(fields: [nivelSuporteId], references: [id])
+  usuario                 User?                    @relation(fields: [usuarioId], references: [id])
+  primeiroAgente          User?                    @relation("TicketPrimeiroAgente", fields: [primeiroAgenteId], references: [id])
+  whatsappConnection      WhatsAppConnection?      @relation(fields: [whatsappConnectionId], references: [id])
+  activities              TicketActivity[]
+  aiLogs                  TicketAiLog[]
+  events                  TicketEvent[]
+  snapshots               TicketHistory[]
+  metrics                 TicketMetrics?
+  slaLogs                 TicketSlaLog[]
+  stageHistory            TicketStageEvent[]
+  timeline                TicketTimeline[]
+  waitTimes               TicketWaitTime[]
+  timeEntries             TimeEntry[]
+  checklists              TicketChecklist[]
+  departmentTimes         TicketDepartmentTime[]
+  agentInteractions       TicketAgentInteraction[]
+  kanbanTasksKanban       KanbanTask[]             @relation("KanbanTicketTasks")
 
   @@index([status])
   @@index([etapa])
@@ -335,6 +404,7 @@ model Ticket {
   @@index([dataFechamento])
   @@index([assigneeId])
   @@index([categoria])
+  @@index([assuntoId])
   @@index([prioridade])
   @@index([usuarioId])
   @@index([departamentoId])
@@ -343,6 +413,19 @@ model Ticket {
   @@index([channelId])
   @@index([contactPhone])
   @@index([contactJid])
+  // Índices de roteamento de canal e auditoria (aditivos, sem impacto em fluxo).
+  // canal → dashboards/auditoria "tickets por canal"
+  @@index([canal])
+  // whatsappConnectionId → filtro por instância/canal de origem do ticket (roteamento)
+  @@index([whatsappConnectionId])
+  // motivoStatus → auditoria de encerramento/retrabalho por motivo
+  @@index([motivoStatus])
+  // evaluationStatus → fluxo CSAT/confirmação de resolução (busca por pendências)
+  @@index([evaluationStatus])
+  // dataResolucao → indicadores TMR/tempo de resolução
+  @@index([dataResolucao])
+  // [departamentoId, dataAbertura] → fila/posição e dashboards por departamento+período
+  @@index([departamentoId, dataAbertura])
 }
 
 /// Classificacao de IA atribuida a um ticket (historico)
@@ -416,27 +499,27 @@ model AIMetricas {
 
 /// Auditoria em tempo real do atendimento do agente
 model AIAgentAudit {
-  id                    String   @id @default(uuid())
-  ticketId              String
-  agentId               String
-  mensagemId            String?
-  conteudoMensagem      String
-  notProfissionalismo   Int      @default(0)
-  notCordialidade       Int      @default(0)
-  notClareza            Int      @default(0)
-  notEmpatia            Int      @default(0)
-  notaGeral             Float    @default(0)
-  classificacao         String   @default("neutro")
-  sugestaoResposta      String?
-  alertas               String?
-  pontosFortes          String?
-  pontosMelhoria        String?
-  contextoConversa      String?
-  modeloUsado           String?
-  custoTokens           Float?
-  processadoEm          DateTime @default(now())
-  ticket                Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  agent                 User     @relation(fields: [agentId], references: [id])
+  id                  String   @id @default(uuid())
+  ticketId            String
+  agentId             String
+  mensagemId          String?
+  conteudoMensagem    String
+  notProfissionalismo Int      @default(0)
+  notCordialidade     Int      @default(0)
+  notClareza          Int      @default(0)
+  notEmpatia          Int      @default(0)
+  notaGeral           Float    @default(0)
+  classificacao       String   @default("neutro")
+  sugestaoResposta    String?
+  alertas             String?
+  pontosFortes        String?
+  pontosMelhoria      String?
+  contextoConversa    String?
+  modeloUsado         String?
+  custoTokens         Float?
+  processadoEm        DateTime @default(now())
+  ticket              Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  agent               User     @relation(fields: [agentId], references: [id])
 
   @@index([ticketId])
   @@index([agentId])
@@ -444,76 +527,106 @@ model AIAgentAudit {
   @@index([processadoEm])
 }
 
+/// Detecção de encerramento (prematuro / resolução real / reabertura) por ticket,
+/// persistida automaticamente no fechamento e agregada por agente no monitor.
+model AIAgentClosureAudit {
+  id                         String   @id @default(uuid())
+  ticketId                   String   @unique
+  protocolo                  String?
+  agentId                    String?
+  tipo                       String // encerramento_prematuro | resolucao_real | reabertura | sem_dados
+  riscoReabertura            String  @default("BAIXO") // BAIXO | MÉDIO | ALTO | CRÍTICO
+  nota                       Float   @default(0) // 0-10 (10 = encerramento perfeito)
+  diagnostico                String?
+  detalhes                   String? // JSON array
+  recomendaReabertura        Boolean @default(false)
+  semConfirmacao             Boolean @default(false)
+  motivoStatus               String?
+  clienteVoltou              Boolean @default(false)
+  mensagensAposEncerramento  Int     @default(0)
+  csatNota                   Float?
+  csatRespondido             Boolean @default(false)
+  analiseIa                  Boolean @default(false)
+  ticketReaberturaId         String?
+  dataFechamento             DateTime?
+  processadoEm               DateTime @default(now())
+
+  @@index([agentId])
+  @@index([tipo])
+  @@index([riscoReabertura])
+  @@index([processadoEm])
+}
+
 /// Auditoria profissional inteligente de atendimento por ticket
 /// 14 categorias 0-100, evidencias estruturadas, tomada de decisão e revisão humana.
 model AuditoriaProfissional {
-  id                        String   @id @default(uuid())
-  ticketId                  String
-  protocolo                 String?
-  contactName               String?
-  agenteId                  String?
-  clienteId                 String?
-  departamentoId            String?
-  categoria                 String?
-  status                    String   @default("PENDENTE") // PENDENTE | ANALISANDO | ANALISADO | REVISAR | ERRO
-  versao                    Int      @default(1)
+  id             String  @id @default(uuid())
+  ticketId       String
+  protocolo      String?
+  contactName    String?
+  agenteId       String?
+  clienteId      String?
+  departamentoId String?
+  categoria      String?
+  status         String  @default("PENDENTE") // PENDENTE | ANALISANDO | ANALISADO | REVISAR | ERRO
+  versao         Int     @default(1)
 
   // Notas 0-100 por categoria
-  notaComunicacao           Float    @default(0)
-  notaProfissionalismo      Float    @default(0)
-  notaEmpatia               Float    @default(0)
-  notaClareza               Float    @default(0)
-  notaFormalidade           Float    @default(0)
-  notaConhecimentoTecnico   Float    @default(0)
-  notaDiagnostico           Float    @default(0)
-  notaResolucao             Float    @default(0)
-  notaGestaoTempo           Float    @default(0)
-  notaProcesso              Float    @default(0)
-  notaEncerramento          Float    @default(0)
-  notaSeguranca             Float    @default(0)
-  notaResponsabilidade      Float    @default(0)
-  notaSatisfacaoCliente     Float    @default(0)
-  notaGeral                 Float    @default(0)
+  notaComunicacao         Float @default(0)
+  notaProfissionalismo    Float @default(0)
+  notaEmpatia             Float @default(0)
+  notaClareza             Float @default(0)
+  notaFormalidade         Float @default(0)
+  notaConhecimentoTecnico Float @default(0)
+  notaDiagnostico         Float @default(0)
+  notaResolucao           Float @default(0)
+  notaGestaoTempo         Float @default(0)
+  notaProcesso            Float @default(0)
+  notaEncerramento        Float @default(0)
+  notaSeguranca           Float @default(0)
+  notaResponsabilidade    Float @default(0)
+  notaSatisfacaoCliente   Float @default(0)
+  notaGeral               Float @default(0)
 
-  classificacao             String   @default("ATENCAO") // EXCELENTE | MUITO_BOM | BOM | ATENCAO | ABAIXO_DA_MEDIA | CRITICO
-  classificacaoResolucao    String   @default("SEM_CONFIRMACAO") // RESOLVIDO | PROVAVELMENTE_RESOLVIDO | PARCIALMENTE_RESOLVIDO | NAO_RESOLVIDO | SEM_CONFIRMACAO | REABERTO | TRANSFERIDO | PRECISOU_DE_DESENVOLVIMENTO | IMPLANTACAO | OUTRO_SETOR
-  classificacaoEncerramento String   @default("SEM_ENCERRAMENTO") // ADEQUADO | PARCIAL | INADEQUADO | SEM_ENCERRAMENTO
-  padrao                    String   @default("EVENTO_ISOLADO") // EVENTO_ISOLADO | PADRAO_RECORRENTE | PROBLEMA_FREQUENTE | PROBLEMA_CRITICO | PROBLEMA_SISTEMICO
-  confiancaMedia            Float    @default(0) // 0-100
-  analiseInconclusiva       Boolean  @default(false)
+  classificacao             String  @default("ATENCAO") // EXCELENTE | MUITO_BOM | BOM | ATENCAO | ABAIXO_DA_MEDIA | CRITICO
+  classificacaoResolucao    String  @default("SEM_CONFIRMACAO") // RESOLVIDO | PROVAVELMENTE_RESOLVIDO | PARCIALMENTE_RESOLVIDO | NAO_RESOLVIDO | SEM_CONFIRMACAO | REABERTO | TRANSFERIDO | PRECISOU_DE_DESENVOLVIMENTO | IMPLANTACAO | OUTRO_SETOR
+  classificacaoEncerramento String  @default("SEM_ENCERRAMENTO") // ADEQUADO | PARCIAL | INADEQUADO | SEM_ENCERRAMENTO
+  padrao                    String  @default("EVENTO_ISOLADO") // EVENTO_ISOLADO | PADRAO_RECORRENTE | PROBLEMA_FREQUENTE | PROBLEMA_CRITICO | PROBLEMA_SISTEMICO
+  confiancaMedia            Float   @default(0) // 0-100
+  analiseInconclusiva       Boolean @default(false)
 
   // Análises qualitativas
-  resumoExecutivo           String?
-  analiseQualitativa        String?
-  explicacaoLeiga           String?
-  evidenciaProblemas        String?  // JSON: [{descricao, trecho, autor, data, gravidade, impacto, confianca, categoria}]
-  pontosFortes              String?  // JSON: [{descricao, trecho, confianca}]
-  riscos                    String?  // JSON: [{tipo, descricao, gravidade, confianca}]
-  recomendacoes             String?  // JSON: [{descricao, prioridade, meta, acao}]
-  planoMelhoria             String?  // JSON: [{descricao, prazo, acompanhamento}]
-  alertas                   String?  // JSON: [{tipo, mensagem, gravidade}]
-  riscoInsatisfacao         String   @default("BAIXO") // BAIXO | MEDIO | ALTO | CRITICO
-  retrabalho                Boolean  @default(false)
-  custoOperacionalMin       Float?   // minutos estimados de retrabalho/custo
-  reaberto                  Boolean  @default(false)
-  numeroReaberturas         Int      @default(0)
+  resumoExecutivo     String?
+  analiseQualitativa  String?
+  explicacaoLeiga     String?
+  evidenciaProblemas  String? // JSON: [{descricao, trecho, autor, data, gravidade, impacto, confianca, categoria}]
+  pontosFortes        String? // JSON: [{descricao, trecho, confianca}]
+  riscos              String? // JSON: [{tipo, descricao, gravidade, confianca}]
+  recomendacoes       String? // JSON: [{descricao, prioridade, meta, acao}]
+  planoMelhoria       String? // JSON: [{descricao, prazo, acompanhamento}]
+  alertas             String? // JSON: [{tipo, mensagem, gravidade}]
+  riscoInsatisfacao   String  @default("BAIXO") // BAIXO | MEDIO | ALTO | CRITICO
+  retrabalho          Boolean @default(false)
+  custoOperacionalMin Float? // minutos estimados de retrabalho/custo
+  reaberto            Boolean @default(false)
+  numeroReaberturas   Int     @default(0)
 
   // Revisão humana
-  revisaoStatus             String?  // CONFIRMADO | DISCORDO | REVISAR | NAO_SE_APLICA
-  revisaoJustificativa      String?
-  revisadoPorId             String?
-  revisadoEm                DateTime?
+  revisaoStatus        String? // CONFIRMADO | DISCORDO | REVISAR | NAO_SE_APLICA
+  revisaoJustificativa String?
+  revisadoPorId        String?
+  revisadoEm           DateTime?
 
-  modeloUsado               String?
-  custoTokens               Float?
-  auditadoEm                DateTime @default(now())
-  analisadoEm               DateTime?
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @default(now())
+  modeloUsado String?
+  custoTokens Float?
+  auditadoEm  DateTime  @default(now())
+  analisadoEm DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
 
-  ticket                    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  agente                    User?    @relation("AuditoriaAgente", fields: [agenteId], references: [id])
-  revisadoPor               User?    @relation("AuditoriaRevisor", fields: [revisadoPorId], references: [id])
+  ticket      Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  agente      User?  @relation("AuditoriaAgente", fields: [agenteId], references: [id])
+  revisadoPor User?  @relation("AuditoriaRevisor", fields: [revisadoPorId], references: [id])
 
   @@index([ticketId])
   @@index([agenteId])
@@ -588,18 +701,19 @@ model KanbanBoard {
 }
 
 model KanbanColumn {
-  id        String       @id @default(uuid())
-  boardId   String
-  nome      String
-  cor       String?      @default("#6b7280")
-  icone     String?
-  ordem     Int          @default(0)
-  wipLimit  Int?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @default(now())
-  hidden    Boolean      @default(false)
-  board     KanbanBoard  @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  tasks     KanbanTask[]
+  id         String            @id @default(uuid())
+  boardId    String
+  nome       String
+  cor        String?           @default("#6b7280")
+  icone      String?
+  ordem      Int               @default(0)
+  wipLimit   Int?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @default(now())
+  hidden     Boolean           @default(false)
+  board      KanbanBoard       @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks      KanbanTask[]
+  stageTimes KanbanStageTime[]
 
   @@index([boardId])
 }
@@ -614,9 +728,14 @@ model KanbanTask {
   responsavelId    String?
   clientId         String?
   ticketId         String?
+  orderId          String?
+  departamentoId   String?
+  equipeId         String?
   prioridade       String             @default("media")
   categoria        String?
   classificacao    String?
+  tipoTarefa       String             @default("outro") // dev | implantacao | atendimento | outro
+  statusPrazo      String? // no_prazo | proxima | atencao | atrasada | concluida
   dataInicio       DateTime?
   prazoEntrega     DateTime?
   dataConclusao    DateTime?
@@ -624,6 +743,15 @@ model KanbanTask {
   horasTrabalhadas Float?             @default(0)
   ordem            Int                @default(0)
   ativo            Boolean            @default(true)
+  arquivado        Boolean            @default(false)
+  arquivadoEm      DateTime?
+  arquivadoPorId   String?
+  restauradoEm     DateTime?
+  reabertoEm       DateTime?
+  reabertoMotivo   String?
+  deletedAt        DateTime?
+  deletedBy        String?
+  deleteReason     String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @default(now())
   activities       KanbanActivity[]
@@ -632,14 +760,26 @@ model KanbanTask {
   board            KanbanBoard        @relation(fields: [boardId], references: [id], onDelete: Cascade)
   client           Client?            @relation(fields: [clientId], references: [id])
   column           KanbanColumn       @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  departamento     Departamento?      @relation(fields: [departamentoId], references: [id])
+  equipe           Team?              @relation(fields: [equipeId], references: [id])
+  ticket           Ticket?            @relation("KanbanTicketTasks", fields: [ticketId], references: [id])
+  order            ServiceOrder?      @relation(fields: [orderId], references: [id], onDelete: SetNull)
   responsavel      User?              @relation("KanbanTaskResponsavel", fields: [responsavelId], references: [id])
+  arquivadoPor     User?              @relation("KanbanTaskArquivador", fields: [arquivadoPorId], references: [id])
   tags             KanbanTaskTag[]
   timeEntries      TimeEntry[]
+  stageTimes       KanbanStageTime[]
+  alerts           TaskAlert[]
 
   @@index([boardId])
   @@index([columnId])
   @@index([responsavelId])
   @@index([prioridade])
+  @@index([ticketId])
+  @@index([orderId])
+  @@index([departamentoId])
+  @@index([arquivado])
+  @@index([statusPrazo])
 }
 
 model KanbanSubtask {
@@ -686,6 +826,11 @@ model KanbanActivity {
   deColuna       String?
   paraColuna     String?
   dados          String?
+  valorAnterior  String?
+  valorNovo      String?
+  origem         String? // manual | sistema | whatsapp | ia | mobile
+  motivo         String?
+  metadata       String?
   visivelCliente Boolean    @default(false)
   createdAt      DateTime   @default(now())
   task           KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
@@ -693,6 +838,7 @@ model KanbanActivity {
 
   @@index([taskId])
   @@index([usuarioId])
+  @@index([tipo])
 }
 
 model KanbanAttachment {
@@ -784,19 +930,68 @@ model RobotRule {
 }
 
 model AuditLog {
-  id         String   @id @default(uuid())
-  usuarioId  String?
-  acao       String
-  entidade   String
-  entidadeId String?
-  detalhes   String?
-  ip         String?
-  createdAt  DateTime @default(now())
-  usuario    User?    @relation(fields: [usuarioId], references: [id])
+  id            String   @id @default(uuid())
+  usuarioId     String?
+  acao          String
+  entidade      String
+  entidadeId    String?
+  detalhes      String?
+  modulo        String?
+  valorAnterior String?
+  novoValor     String?
+  userAgent     String?
+  origem        String?
+  resultado     String?
+  metadata      String?
+  ip            String?
+  severity      String?  @default("baixa")
+  clienteId     String?
+  success       Boolean?
+  errorMessage  String?
+  requestId     String?
+  fonte         String?  @default("manual")
+  entidadeRelacionada   String?
+  entidadeRelacionadaId String?
+  createdAt     DateTime @default(now())
+  usuario       User?    @relation(fields: [usuarioId], references: [id])
+  cliente       Client?  @relation(fields: [clienteId], references: [id])
 
   @@index([usuarioId])
   @@index([entidade])
   @@index([createdAt])
+  @@index([modulo])
+  @@index([entidadeId])
+  @@index([severity])
+  @@index([clienteId])
+  @@index([success])
+  @@index([acao, createdAt])
+  @@index([modulo, createdAt])
+}
+
+model AuditAlert {
+  id            String   @id @default(uuid())
+  tipo          String
+  titulo        String
+  descricao     String
+  severidade    String   @default("media")
+  modulo        String?
+  usuarioId     String?
+  clienteId     String?
+  entidade      String?
+  entidadeId    String?
+  metadata      String?
+  status        String   @default("pendente")
+  analisadoPor  String?
+  analisadoEm   DateTime?
+  justificativa String?
+  arquivadoEm   DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([tipo])
+  @@index([severidade])
+  @@index([status])
+  @@index([createdAt])
+  @@index([usuarioId])
 }
 
 model SyncLog {
@@ -860,17 +1055,17 @@ model HelpdeskConfig {
 }
 
 model Enquete {
-  id            String   @id @default(uuid())
-  nome          String
-  descricao     String?
-  tipo          String   @default("lista") // "lista" ou "enquete"
-  mensagem      String?  // Mensagem de apresentação
-  opcoes        Json     // Array de opções [{id, titulo, descricao}]
-  enviarComo    String   @default("texto") // "lista" ou "texto"
-  ativo         Boolean  @default(true)
-  usoCount      Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now())
+  id         String   @id @default(uuid())
+  nome       String
+  descricao  String?
+  tipo       String   @default("lista") // "lista" ou "enquete"
+  mensagem   String? // Mensagem de apresentação
+  opcoes     Json // Array de opções [{id, titulo, descricao}]
+  enviarComo String   @default("texto") // "lista" ou "texto"
+  ativo      Boolean  @default(true)
+  usoCount   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
 
   @@index([ativo])
 }
@@ -942,21 +1137,22 @@ model Fila {
   proximaFila     Fila?         @relation("EscalacaoFila", fields: [proximaFilaId], references: [id])
   filasAnteriores Fila[]        @relation("EscalacaoFila")
   tickets         Ticket[]
+  assuntos        Assunto[]     @relation("AssuntoFila")
 }
 
 /// Departamento / Setor da empresa
 model Departamento {
-  id                  String               @id @default(uuid())
-  slug                String               @unique
+  id                  String                 @id @default(uuid())
+  slug                String                 @unique
   nome                String
   descricao           String?
-  cor                 String               @default("#3b82f6")
-  icone               String               @default("building")
-  ordem               Int                  @default(0)
-  slaMinutos          Int                  @default(240)
-  ativo               Boolean              @default(true)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @default(now())
+  cor                 String                 @default("#3b82f6")
+  icone               String                 @default("building")
+  ordem               Int                    @default(0)
+  slaMinutos          Int                    @default(240)
+  ativo               Boolean                @default(true)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @default(now())
   channels            Channel[]
   filas               Fila[]
   tickets             Ticket[]
@@ -964,6 +1160,10 @@ model Departamento {
   whatsappConnections WhatsAppConnection[]
   departmentTimes     TicketDepartmentTime[]
   timeEntries         TimeEntry[]
+  teams               Team[]
+  kanbanTasks         KanbanTask[]
+  categorias          Categoria[]            @relation("CategoriaDepartamento")
+  assuntos            Assunto[]              @relation("AssuntoDepartamento")
 }
 
 /// Nivel de suporte (customizavel: N1, N2, N3, N4, Supervisor, etc.)
@@ -1060,6 +1260,50 @@ model ChannelRiskLog {
   @@index([tipo])
 }
 
+/// Integracao externa (ex: CRM) — configuracao da camada de integracao.
+/// Campos sensiveis (apiKey/token) sao criptografados em repouso (AES-256-GCM)
+/// e nunca retornados por completo nas respostas da API.
+model ExternalIntegration {
+  id              String    @id @default(uuid())
+  nome            String
+  slug            String    @unique
+  tipo            String    @default("crm")
+  baseUrl         String
+  authType        String    @default("api_key") // api_key | bearer_token | oauth2
+  apiKeyEnc       String?
+  tokenEnc        String?
+  headersJson     String    @default("{}")
+  timeoutMs       Int       @default(15000)
+  ativo           Boolean   @default(true)
+  webhookPath     String?
+  webhookSecret   String?
+  lastTestAt      DateTime?
+  lastTestStatus  String?
+  lastTestError   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  logs            ExternalIntegrationLog[]
+}
+
+/// Log de auditoria das chamadas de integracao (inbound/outbound)
+model ExternalIntegrationLog {
+  id            String    @id @default(uuid())
+  integrationId String?
+  direction     String    @default("outbound") // outbound | inbound
+  endpoint      String?
+  method        String?
+  status        Int?
+  requestBody   String?
+  responseBody  String?
+  error         String?
+  durationMs    Int?
+  createdAt     DateTime  @default(now())
+  integration   ExternalIntegration? @relation(fields: [integrationId], references: [id])
+
+  @@index([integrationId])
+  @@index([createdAt])
+}
+
 /// Configuracao de SLA por prioridade
 model SLAConfig {
   id                         String   @id @default(uuid())
@@ -1075,18 +1319,49 @@ model SLAConfig {
 
 /// Categoria de ticket (formalizacao das categorias existentes)
 model Categoria {
-  id        String      @id @default(uuid())
-  slug      String      @unique
-  nome      String
-  descricao String?
-  cor       String      @default("#3b82f6")
-  icone     String      @default("tag")
-  ordem     Int         @default(0)
-  ativo     Boolean     @default(true)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @default(now())
-  articles  KBArticle[]
-  tickets   Ticket[]
+  id             String        @id @default(uuid())
+  slug           String        @unique
+  nome           String
+  descricao      String?
+  cor            String        @default("#3b82f6")
+  icone          String        @default("tag")
+  ordem          Int           @default(0)
+  ativo          Boolean       @default(true)
+  departamentoId String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
+  departamento   Departamento? @relation("CategoriaDepartamento", fields: [departamentoId], references: [id])
+  articles       KBArticle[]
+  tickets        Ticket[]
+  assuntos       Assunto[]
+}
+
+/// Assunto de ticket (hierarquia Categoria -> Assunto)
+model Assunto {
+  id               String        @id @default(uuid())
+  slug             String        @unique
+  nome             String
+  descricao        String?
+  categoriaId      String
+  icone            String        @default("tag")
+  cor              String        @default("#3b82f6")
+  prioridadePadrao String        @default("media")
+  slaPadraoMin     Int?
+  departamentoId   String?
+  idFila           String?
+  ordem            Int           @default(0)
+  ativo            Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @default(now())
+  categoria        Categoria     @relation(fields: [categoriaId], references: [id])
+  departamento     Departamento? @relation("AssuntoDepartamento", fields: [departamentoId], references: [id])
+  fila             Fila?         @relation("AssuntoFila", fields: [idFila], references: [id])
+  tickets          Ticket[]
+
+  @@index([categoriaId])
+  @@index([departamentoId])
+  @@index([idFila])
+  @@index([ativo])
 }
 
 /// Ativo (asset) - software/hardware/servico/sistema vinculado a um cliente
@@ -1189,26 +1464,26 @@ model Notificacao {
 
 /// Fluxo de autorização formal para ações que exigem aprovação
 model Aprovacao {
-  id              String    @id @default(uuid())
-  ticketId        String
-  solicitadoPorId String
-  aprovadoPorId   String?
-  tipo            String    @default("geral")
-  motivo          String
-  observacao      String?
-  status          String    @default("pendente")
-  valorAprovado   Float?
-  canal           String    @default("interno")
+  id                String    @id @default(uuid())
+  ticketId          String
+  solicitadoPorId   String
+  aprovadoPorId     String?
+  tipo              String    @default("geral")
+  motivo            String
+  observacao        String?
+  status            String    @default("pendente")
+  valorAprovado     Float?
+  canal             String    @default("interno")
   telefoneAprovador String?
-  token           String?   @unique
-  expiraEm        DateTime?
-  dataSolicitacao DateTime  @default(now())
-  dataDecisao     DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @default(now())
-  aprovadoPor     User?     @relation("AprovacaoAprovador", fields: [aprovadoPorId], references: [id])
-  solicitadoPor   User      @relation("AprovacaoSolicitante", fields: [solicitadoPorId], references: [id])
-  ticket          Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  token             String?   @unique
+  expiraEm          DateTime?
+  dataSolicitacao   DateTime  @default(now())
+  dataDecisao       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @default(now())
+  aprovadoPor       User?     @relation("AprovacaoAprovador", fields: [aprovadoPorId], references: [id])
+  solicitadoPor     User      @relation("AprovacaoSolicitante", fields: [solicitadoPorId], references: [id])
+  ticket            Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 }
 
 /// Regra de automacao WHEN/IF/THEN
@@ -1579,30 +1854,34 @@ model AIRespostaValidacao {
 
 /// ── Time Tracking: registro de horas por atividade ───────────────────
 model TimeEntry {
-  id         String        @id @default(uuid())
-  usuarioId  String
-  ticketId   String?
-  orderId    String?
-  projectId  String?
-  clienteId  String?
-  tarefaId   String?
-  setorId    String?
-  tipo       String        @default("suporte")
-  descricao  String?
-  dataInicio DateTime      @default(now())
-  dataFim    DateTime?
-  duracaoMin Int?
-  billable   Boolean       @default(true)
-  faturado   Boolean       @default(false)
-  tags       String[]
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  order      ServiceOrder? @relation(fields: [orderId], references: [id])
-  ticket     Ticket?       @relation(fields: [ticketId], references: [id])
-  cliente    Client?       @relation(fields: [clienteId], references: [id])
-  tarefa     KanbanTask?   @relation(fields: [tarefaId], references: [id])
-  setor      Departamento? @relation(fields: [setorId], references: [id])
-  usuario    User          @relation(fields: [usuarioId], references: [id])
+  id              String           @id @default(uuid())
+  usuarioId       String
+  ticketId        String?
+  orderId         String?
+  projectId       String?
+  clienteId       String?
+  tarefaId        String?
+  setorId         String?
+  tipo            String           @default("suporte")
+  descricao       String?
+  dataInicio      DateTime         @default(now())
+  dataFim         DateTime?
+  duracaoMin      Int?
+  billable        Boolean          @default(true)
+  faturado        Boolean          @default(false)
+  tags            String[]
+  pausado         Boolean          @default(false)
+  pausadoEm       DateTime?
+  pausadoTotalMin Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  order           ServiceOrder?    @relation(fields: [orderId], references: [id])
+  ticket          Ticket?          @relation(fields: [ticketId], references: [id])
+  cliente         Client?          @relation(fields: [clienteId], references: [id])
+  tarefa          KanbanTask?      @relation(fields: [tarefaId], references: [id])
+  setor           Departamento?    @relation(fields: [setorId], references: [id])
+  usuario         User             @relation(fields: [usuarioId], references: [id])
+  blocos          TimeEntryBlock[]
 
   @@index([usuarioId])
   @@index([ticketId])
@@ -1615,18 +1894,102 @@ model TimeEntry {
   @@index([billable])
 }
 
+/// Blocos de uma sessao de tempo (inicio/pausa/retomada/fim) para auditoria de horario.
+model TimeEntryBlock {
+  id          String    @id @default(uuid())
+  timeEntryId String
+  tipo        String // inicio | pausa | retomada | fim
+  data        DateTime  @default(now())
+  usuarioId   String?
+  observacao  String?
+  createdAt   DateTime  @default(now())
+  timeEntry   TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+  usuario     User?     @relation(fields: [usuarioId], references: [id])
+
+  @@index([timeEntryId])
+  @@index([tipo])
+  @@index([data])
+}
+
+/// Tempo que a tarefa permaneceu em cada coluna/etapa (para analises posteriores).
+model KanbanStageTime {
+  id          String        @id @default(uuid())
+  taskId      String
+  columnId    String?
+  columnNome  String
+  dataEntrada DateTime      @default(now())
+  dataSaida   DateTime?
+  duracaoMin  Int?
+  usuarioId   String?
+  createdAt   DateTime      @default(now())
+  task        KanbanTask    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  column      KanbanColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
+  usuario     User?         @relation(fields: [usuarioId], references: [id])
+
+  @@index([taskId])
+  @@index([columnId])
+  @@index([dataEntrada])
+}
+
+/// Equipe de trabalho (agrupamento opcional alem do departamento).
+model Team {
+  id             String        @id @default(uuid())
+  nome           String        @unique
+  descricao      String?
+  departamentoId String?
+  liderId        String?
+  ativo          Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+  lider          User?         @relation("TeamLider", fields: [liderId], references: [id])
+  membros        TeamMember[]
+  kanbanTasks    KanbanTask[]
+
+  @@index([departamentoId])
+  @@index([ativo])
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  teamId    String
+  userId    String
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+/// Alertas automaticos sobre tarefas (prazo proximo/atrasado, sem movimentacao, etc).
+model TaskAlert {
+  id        String     @id @default(uuid())
+  taskId    String
+  tipo      String // proxima_prazo | atrasada | sem_movimentacao | reaberta | excesso_tarefas | prazo_alterado | divergencia_prazo
+  mensagem  String
+  lida      Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  task      KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([tipo])
+  @@index([lida])
+  @@index([createdAt])
+}
+
 /// Checklist dentro de um ticket (tarefas a serem cumpridas)
 model TicketChecklist {
-  id          String   @id @default(uuid())
-  ticketId    String
-  titulo      String
-  concluida   Boolean  @default(false)
-  ordem       Int      @default(0)
+  id            String   @id @default(uuid())
+  ticketId      String
+  titulo        String
+  concluida     Boolean  @default(false)
+  ordem         Int      @default(0)
   responsavelId String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now())
-  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  responsavel User?    @relation(fields: [responsavelId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+  ticket        Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  responsavel   User?    @relation(fields: [responsavelId], references: [id])
 
   @@index([ticketId])
   @@index([concluida])
@@ -1634,16 +1997,16 @@ model TicketChecklist {
 
 /// Template de checklist reutilizável (pode ser usado em tickets e kanban)
 model ChecklistTemplate {
-  id          String   @id @default(uuid())
-  nome        String
-  descricao   String?
-  categoria   String?  @default("geral")
-  items       String   @default("[]") // JSON array of { titulo: string, ordem: number }
-  publico     Boolean  @default(false)
-  criadorId   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now())
-  criador     User?    @relation(fields: [criadorId], references: [id])
+  id        String   @id @default(uuid())
+  nome      String
+  descricao String?
+  categoria String?  @default("geral")
+  items     String   @default("[]") // JSON array of { titulo: string, ordem: number }
+  publico   Boolean  @default(false)
+  criadorId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  criador   User?    @relation(fields: [criadorId], references: [id])
 
   @@index([criadorId])
   @@index([categoria])
@@ -1671,16 +2034,39 @@ model TicketDepartmentTime {
 
 /// Registro de interação de agentes no ticket (para FCR)
 model TicketAgentInteraction {
-  id         String   @id @default(uuid())
-  ticketId   String
-  usuarioId  String
-  tipo       String   @default("mensagem")
-  conteudo   String?
-  createdAt  DateTime @default(now())
-  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  usuario    User     @relation(fields: [usuarioId], references: [id])
+  id        String   @id @default(uuid())
+  ticketId  String
+  usuarioId String
+  tipo      String   @default("mensagem")
+  conteudo  String?
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuario   User     @relation(fields: [usuarioId], references: [id])
 
   @@index([ticketId])
   @@index([usuarioId])
   @@index([ticketId, usuarioId])
+}
+
+/// Contato ou grupo excluído do fluxo automático do Helpdesk.
+/// A mensagem continua chegando no WhatsApp, mas NÃO inicia atendimento.
+model ContatoIgnorado {
+  id             String    @id @default(uuid())
+  tipo           String    @default("contato") // contato | grupo
+  chave          String    @unique // telefone normalizado (contato) ou jid (grupo)
+  nome           String
+  motivo         String?
+  regra          String    @default("ignorar_helpdesk") // ignorar_helpdesk | bloquear
+  ignorado       Boolean   @default(true) // true = ignorado (regra ativa); false = reativado
+  criadoPorId    String?
+  reativadoPorId String?
+  criadoEm       DateTime  @default(now())
+  reativadoEm    DateTime?
+  historico      String? // JSON: [{data, usuario, acao, motivo}]
+  criadoPor      User?     @relation("ContatoIgnoradoCriadoPor", fields: [criadoPorId], references: [id])
+  reativadoPor   User?     @relation("ContatoIgnoradoReativadoPor", fields: [reativadoPorId], references: [id])
+
+  @@index([tipo])
+  @@index([ignorado])
+  @@index([criadoEm])
 }

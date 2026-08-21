@@ -73,7 +73,7 @@ export default function HelpdeskBusinessMetrics() {
       <div className="flex items-center justify-center h-64">
         <div className="flex flex-col items-center gap-3">
           <Loader2 size={40} className="animate-spin text-codemed-500" />
-          <span className="text-sm text-gray-500">Carregando metricas...</span>
+          <span className="text-sm text-gray-500 dark:text-slate-400">Carregando metricas...</span>
         </div>
       </div>
     );
@@ -113,7 +113,7 @@ export default function HelpdeskBusinessMetrics() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Metricas de Helpdesk & Implantacao
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
             Periodo: {metrics.periodo.label}
           </p>
         </div>
@@ -139,7 +139,7 @@ export default function HelpdeskBusinessMetrics() {
               <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
                 <Headphones size={20} className="text-blue-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500 uppercase">Chamados no Mes</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase">Chamados no Mes</span>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {metrics.helpdesk.totalChamadosMes}
@@ -155,7 +155,7 @@ export default function HelpdeskBusinessMetrics() {
               <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
                 <Clock size={20} className="text-amber-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500 uppercase">Tempo Medio</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase">Tempo Medio</span>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {formatHoras(metrics.helpdesk.tempoMedioAtendimentoMin)}
@@ -169,7 +169,7 @@ export default function HelpdeskBusinessMetrics() {
               <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
                 <Users size={20} className="text-red-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500 uppercase">Mais Aciona</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase">Mais Aciona</span>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {metrics.helpdesk.topClienteChamados?.totalChamados || 0}
@@ -185,7 +185,7 @@ export default function HelpdeskBusinessMetrics() {
               <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
                 <Code size={20} className="text-purple-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500 uppercase">Horas Dev (Mes)</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase">Horas Dev (Mes)</span>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {metrics.horasDev.totalMes.toFixed(1)}h
@@ -229,7 +229,7 @@ export default function HelpdeskBusinessMetrics() {
               <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
                 <Code size={20} className="text-green-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500 uppercase">Horas Dev / Implantacao</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase">Horas Dev / Implantacao</span>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {metrics.horasDev.implantacoes.mediaHorasDevPorImplantacao}h
@@ -245,7 +245,7 @@ export default function HelpdeskBusinessMetrics() {
               <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
                 <Headphones size={20} className="text-amber-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500 uppercase">Horas Suporte (Mes)</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase">Horas Suporte (Mes)</span>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {metrics.horasSuporte.totalMes.toFixed(1)}h
@@ -261,7 +261,7 @@ export default function HelpdeskBusinessMetrics() {
               <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
                 <DollarSign size={20} className="text-emerald-600" />
               </div>
-              <span className="text-xs font-medium text-gray-500 uppercase">Preco Implantacao</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase">Preco Implantacao</span>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {metrics.implantacao.precoMedio > 0 ? formatCurrency(metrics.implantacao.precoMedio) : 'R$ 0,00'}
@@ -310,11 +310,11 @@ export default function HelpdeskBusinessMetrics() {
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {tipoLabels[cat.tipo] || cat.tipo}
                       </p>
-                      <p className="text-xs text-gray-500">{cat.totalOs} OS realizadas</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">{cat.totalOs} OS realizadas</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-gray-900 dark:text-white">{cat.horasSuporte}h</p>
-                      <p className="text-xs text-gray-500">Media: {cat.mediaPorOs}h/OS</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">Media: {cat.mediaPorOs}h/OS</p>
                     </div>
                   </div>
                 ))}

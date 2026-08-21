@@ -209,7 +209,7 @@ export async function sendStageAutoMessage(ticketId: string, etapaSlug: string) 
       tecnicoNome: ticket.assignee?.name,
     });
     const message = interpolate(config.autoMessage, vars);
-    const result = await sendWhatsAppMessage(ticket.contactPhone, message, undefined, (ticket as any).contactJid || undefined);
+    const result = await sendWhatsAppMessage(ticket.contactPhone, message, (ticket as any).whatsappConnectionId || undefined, (ticket as any).contactJid || undefined);
     if (result.success) {
       await prisma.message.create({
         data: {

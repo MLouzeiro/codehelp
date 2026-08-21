@@ -17,14 +17,20 @@ const OpportunityPipeline = lazy(() => import('./pages/CRM/OpportunityPipeline')
 const OrderList = lazy(() => import('./pages/Orders/OrderList'));
 const OrderForm = lazy(() => import('./pages/Orders/OrderForm'));
 const OrderDetail = lazy(() => import('./pages/Orders/OrderDetail'));
+const OrderReports = lazy(() => import('./pages/Orders/OrderReportsPage'));
 const SignPage = lazy(() => import('./pages/Sign/SignPage'));
 const AprovacaoPublica = lazy(() => import('./pages/Aprovacoes/AprovacaoPublica'));
 const RelatorioGerencial = lazy(() => import('./pages/Analytics/RelatorioGerencial'));
 const DashboardExecutivo = lazy(() => import('./pages/Analytics/DashboardExecutivo'));
+const DashboardIA = lazy(() => import('./pages/Analytics/DashboardIA'));
 const RelatorioAnalitico = lazy(() => import('./pages/Analytics/RelatorioAnalitico'));
 const WhatsAppPage = lazy(() => import('./pages/WhatsApp/WhatsAppPage'));
+const ContatosIgnoradosPage = lazy(() => import('./pages/WhatsApp/ContatosIgnoradosPage'));
 const TicketDetail = lazy(() => import('./pages/WhatsApp/TicketDetail'));
 const KanbanPage = lazy(() => import('./pages/Kanban/KanbanPage'));
+const TaskDashboardPage = lazy(() => import('./pages/Kanban/TaskDashboardPage'));
+const TarefasArquivadasPage = lazy(() => import('./pages/Kanban/TarefasArquivadasPage'));
+const AuditoriaSistemaPage = lazy(() => import('./pages/Kanban/AuditoriaSistemaPage'));
 const SettingsPage = lazy(() => import('./pages/Settings/SettingsPage'));
 const UsersPage = lazy(() => import('./pages/Settings/UsersPage'));
 const AlertsPage = lazy(() => import('./pages/Settings/AlertsPage'));
@@ -32,6 +38,7 @@ const HelpdeskStagesPage = lazy(() => import('./pages/Settings/HelpdeskStagesPag
 const HelpdeskConfigPage = lazy(() => import('./pages/Settings/HelpdeskConfigPage'));
 const HelpdeskDepartamentosPage = lazy(() => import('./pages/Settings/HelpdeskDepartamentosPage'));
 const HelpdeskFilasPage = lazy(() => import('./pages/Settings/HelpdeskFilasPage'));
+const CategoriasAssuntosPage = lazy(() => import('./pages/Settings/CategoriasAssuntosPage'));
 const HelpdeskNiveisPage = lazy(() => import('./pages/Settings/HelpdeskNiveisPage'));
 const PermissionsPage = lazy(() => import('./pages/Settings/PermissionsPage'));
 const FeriadosPage = lazy(() => import('./pages/Settings/FeriadosPage'));
@@ -54,11 +61,14 @@ const AuditoriaAtendimento = lazy(() => import('./pages/Helpdesk/AuditoriaAtendi
 const AuditoriaEncerramentoPage = lazy(() => import('./pages/Helpdesk/AuditoriaEncerramentoPage'));
 const AuditoriaAnalistaPage = lazy(() => import('./pages/Helpdesk/AuditoriaAnalistaPage'));
 const AuditoriaProfissionalPage = lazy(() => import('./pages/Helpdesk/AuditoriaProfissionalPage'));
+const AuditoriaGeralPage = lazy(() => import('./pages/Helpdesk/AuditoriaGeralPage'));
+const IndicadoresAtendimentoPage = lazy(() => import('./pages/Helpdesk/IndicadoresAtendimentoPage'));
 const TomadaDecisaoPage = lazy(() => import('./pages/Helpdesk/TomadaDecisaoPage'));
 const Aprovacoes = lazy(() => import('./pages/Helpdesk/Aprovacoes'));
 const KBList = lazy(() => import('./pages/KB/KBList'));
 const AutomationsPage = lazy(() => import('./pages/Automations/AutomationsPage'));
 const ChannelsPage = lazy(() => import('./pages/Settings/ChannelsPage'));
+const IntegracoesExternasPage = lazy(() => import('./pages/Settings/IntegracoesExternasPage'));
 const TimeTrackingPage = lazy(() => import('./pages/TimeTracking/TimeTrackingPage'));
 
 function PageLoader() {
@@ -100,11 +110,16 @@ export default function App() {
             <Route path="crm/temas" element={<CRMThemes />} />
             <Route path="orders" element={<OrderList />} />
             <Route path="orders/new" element={<OrderForm />} />
+            <Route path="orders/relatorio" element={<OrderReports />} />
             <Route path="orders/:id" element={<OrderDetail />} />
             <Route path="orders/:id/edit" element={<OrderForm />} />
             <Route path="whatsapp" element={<WhatsAppPage />} />
+            <Route path="whatsapp/ignorados" element={<ContatosIgnoradosPage />} />
             <Route path="whatsapp/tickets/:id" element={<TicketDetail />} />
             <Route path="kanban" element={<KanbanPage />} />
+            <Route path="kanban/dashboard" element={<TaskDashboardPage />} />
+            <Route path="kanban/arquivadas" element={<TarefasArquivadasPage />} />
+            <Route path="auditoria/sistema" element={<AuditoriaSistemaPage />} />
             <Route path="helpdesk" element={<HelpdeskKanban />} />
             <Route path="helpdesk/painel" element={<HelpdeskDashboard />} />
             <Route path="helpdesk/painel-ia" element={<DashboardHelpdeskV2 />} />
@@ -119,10 +134,13 @@ export default function App() {
             <Route path="helpdesk/auditoria-encerramento" element={<AuditoriaEncerramentoPage />} />
             <Route path="helpdesk/auditoria-analista" element={<AuditoriaAnalistaPage />} />
             <Route path="helpdesk/auditoria-profissional" element={<AuditoriaProfissionalPage />} />
+            <Route path="helpdesk/auditoria-geral" element={<AuditoriaGeralPage />} />
+            <Route path="helpdesk/indicadores" element={<IndicadoresAtendimentoPage />} />
             <Route path="helpdesk/tomada-decisao" element={<TomadaDecisaoPage />} />
             <Route path="helpdesk/aprovacoes" element={<Aprovacoes />} />
             <Route path="relatorios/gerencial" element={<RelatorioGerencial />} />
             <Route path="relatorios/executivo" element={<DashboardExecutivo />} />
+            <Route path="relatorios/ia" element={<DashboardIA />} />
             <Route path="relatorios/analitico" element={<RelatorioAnalitico />} />
             <Route path="kb" element={<KBList />} />
             <Route path="automations" element={<AutomationsPage />} />
@@ -134,11 +152,13 @@ export default function App() {
             <Route path="settings/helpdesk-config" element={<HelpdeskConfigPage />} />
             <Route path="settings/helpdesk-departamentos" element={<HelpdeskDepartamentosPage />} />
             <Route path="settings/helpdesk-filas" element={<HelpdeskFilasPage />} />
+            <Route path="settings/categorias-assuntos" element={<CategoriasAssuntosPage />} />
             <Route path="settings/helpdesk-niveis" element={<HelpdeskNiveisPage />} />
             <Route path="settings/permissions" element={<PermissionsPage />} />
             <Route path="settings/feriados" element={<FeriadosPage />} />
             <Route path="settings/alert-settings" element={<AlertSettings />} />
             <Route path="settings/channels" element={<ChannelsPage />} />
+            <Route path="integracoes" element={<IntegracoesExternasPage />} />
             <Route path="settings/auto-messages" element={<AutoMessagesPage />} />
             <Route path="settings/enquetes" element={<EnquetesPage />} />
             <Route path="settings/ai-auto-atendimento" element={<AIAutoAtendimentoPage />} />

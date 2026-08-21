@@ -568,7 +568,7 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
         {/* Feedback */}
         {feedback && (
           <div className={`mb-4 px-4 py-2 rounded-lg text-sm font-medium ${
-            feedback.type === 'ok' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            feedback.type === 'ok' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
           }`}>
             {feedback.msg}
           </div>
@@ -580,8 +580,8 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
         {viewMode === 'grid' && (
           <>
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Adicionar conexao</h2>
-              <p className="text-sm text-gray-500 mt-1">Selecione um tipo de conexao para configurar</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Adicionar conexao</h2>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Selecione um tipo de conexao para configurar</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -600,15 +600,15 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                     disabled={!isAvailable}
                     className={`relative text-left p-5 rounded-xl border-2 transition-all group ${
                       isAvailable
-                        ? 'border-gray-200 hover:border-codemed-300 bg-white hover:shadow-md cursor-pointer'
-                        : 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
+                        ? 'border-gray-200 hover:border-codemed-300 bg-white dark:bg-slate-800 dark:border-slate-700 dark:hover:border-codemed-500 hover:shadow-md cursor-pointer'
+                        : 'border-gray-100 bg-gray-50 dark:bg-slate-800/40 dark:border-slate-700 opacity-60 cursor-not-allowed'
                     }`}
                   >
                     {/* Status badge */}
                     {type.badge && (
                       <div className="absolute top-3 right-3">
                         {type.status === 'unavailable' ? (
-                          <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">{type.badge}</span>
+                          <span className="text-[10px] bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full font-medium">{type.badge}</span>
                         ) : (
                           <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">{type.badge}</span>
                         )}
@@ -624,8 +624,8 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                     </div>
 
                     {/* Text */}
-                    <h3 className="font-semibold text-gray-900 text-sm">{type.name}</h3>
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">{type.description}</p>
+<h3 className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{type.name}</h3>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 leading-relaxed">{type.description}</p>
 
                     {/* Connection count */}
                     {count > 0 && (
@@ -650,8 +650,8 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
           <>
             {/* Back button + title */}
             <div className="flex items-center gap-3 mb-6">
-              <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <ArrowLeft size={20} className="text-gray-600" />
+              <button onClick={handleBack} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                <ArrowLeft size={20} className="text-gray-600 dark:text-slate-400" />
               </button>
               <div className="flex items-center gap-3">
                 <div
@@ -661,8 +661,8 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                   <selectedTypeData.icon size={20} style={{ color: selectedTypeData.color }} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">{selectedTypeData.name}</h2>
-                  <p className="text-sm text-gray-500">{selectedTypeData.description}</p>
+<h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">{selectedTypeData.name}</h2>
+                <p className="text-sm text-gray-500 dark:text-slate-400">{selectedTypeData.description}</p>
                 </div>
               </div>
             </div>
@@ -671,8 +671,8 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
             {selectedType === 'whatsapp' && (
               <div className="space-y-6">
                 {/* Provider Selection */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-800 mb-3">Provider Ativo</h3>
+                <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-5 shadow-sm">
+                  <h3 className="font-semibold text-gray-800 dark:text-slate-200 mb-3">Provider Ativo</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {(['baileys', 'evolution', 'cloud'] as WhatsAppProvider[]).map((provider) => {
                       const labels = { 'baileys': 'Baileys (WebSocket)', 'evolution': 'Evolution API (Docker)', 'cloud': 'WhatsApp Cloud API (Meta)' };
@@ -688,8 +688,8 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                           disabled={!isMaster}
                           className={`relative p-4 rounded-xl border-2 transition-all text-left ${
                             isActive ? 'border-codemed-500 bg-codemed-50'
-                              : isConfigured ? 'border-gray-200 hover:border-gray-300 bg-white'
-                              : 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
+: isConfigured ? 'border-gray-200 hover:border-gray-300 bg-white dark:bg-slate-800 dark:border-slate-700 dark:hover:border-slate-600'
+                : 'border-gray-100 bg-gray-50 dark:bg-slate-800/40 dark:border-slate-700 opacity-60 cursor-not-allowed'
                           }`}
                         >
                           {isActive && (
@@ -697,7 +697,7 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                           )}
                           <div className="flex items-center gap-2 mb-1">
                             <Icon size={16} className={isActive ? 'text-codemed-600' : 'text-gray-400'} />
-                            <span className={`text-sm font-medium ${isActive ? 'text-codemed-700' : 'text-gray-700'}`}>{labels[provider]}</span>
+                            <span className={`text-sm font-medium ${isActive ? 'text-codemed-700 dark:text-codemed-400' : 'text-gray-700 dark:text-slate-300'}`}>{labels[provider]}</span>
                           </div>
                           <div className="flex items-center gap-1 text-xs">
                             {ps?.connected ? (
@@ -705,7 +705,7 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                             ) : isConfigured ? (
                               <><XCircle size={12} className="text-amber-500" /><span className="text-amber-600">{ps?.error || 'Configurado'}</span></>
                             ) : (
-                              <><XCircle size={12} className="text-gray-400" /><span className="text-gray-500">Nao configurado</span></>
+                              <><XCircle size={12} className="text-gray-400 dark:text-slate-500" /><span className="text-gray-500 dark:text-slate-400">Nao configurado</span></>
                             )}
                           </div>
                         </button>
@@ -716,9 +716,9 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
 
                 {/* Baileys connections */}
                 {activeProvider === 'baileys' && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                  <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-5 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-semibold text-gray-800">Conexoes Baileys</h3>
+                      <h3 className="font-semibold text-gray-800 dark:text-slate-200">Conexoes Baileys</h3>
                       {isMaster && !creating && (
                         <button onClick={() => setCreating(true)} className="btn-primary text-sm flex items-center gap-1">
                           <Plus size={14} /> Nova Conexao
@@ -727,18 +727,18 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                     </div>
 
                     {creating && (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                      <div className="bg-gray-50 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-700 rounded-lg p-4 mb-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           <div>
-                            <label className="text-xs font-medium text-gray-500 mb-1 block">Nome</label>
+                            <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Nome</label>
                             <input type="text" placeholder="Ex: Suporte" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="input w-full" />
                           </div>
                           <div>
-                            <label className="text-xs font-medium text-gray-500 mb-1 block">Numero</label>
+                            <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Numero</label>
                             <input type="text" placeholder="Ex: 5511999999999" value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} className="input w-full" />
                           </div>
                           <div>
-                            <label className="text-xs font-medium text-gray-500 mb-1 block">Departamento</label>
+                            <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Departamento</label>
                             <select value={form.departamentoId} onChange={(e) => setForm({ ...form, departamentoId: e.target.value })} className="input w-full">
                               <option value="">Nenhum</option>
                               {departamentos.map((d) => (<option key={d.id} value={d.id}>{d.nome}</option>))}
@@ -756,18 +756,18 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
 
                     {editing && (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                        <h4 className="text-sm font-semibold text-gray-800 mb-3">Editar Conexao</h4>
+                        <h4 className="text-sm font-semibold text-gray-800 dark:text-slate-200 mb-3">Editar Conexao</h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           <div>
-                            <label className="text-xs font-medium text-gray-500 mb-1 block">Nome</label>
+                            <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Nome</label>
                             <input type="text" placeholder="Ex: Suporte" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="input w-full" />
                           </div>
                           <div>
-                            <label className="text-xs font-medium text-gray-500 mb-1 block">Numero</label>
+                            <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Numero</label>
                             <input type="text" placeholder="Ex: 5511999999999" value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} className="input w-full" />
                           </div>
                           <div>
-                            <label className="text-xs font-medium text-gray-500 mb-1 block">Departamento</label>
+                            <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Departamento</label>
                             <select value={form.departamentoId} onChange={(e) => setForm({ ...form, departamentoId: e.target.value })} className="input w-full">
                               <option value="">Nenhum</option>
                               {departamentos.map((d) => (<option key={d.id} value={d.id}>{d.nome}</option>))}
@@ -796,19 +796,19 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                           const connected = st?.connected ?? false;
                           const scanning = st?.scanning ?? false;
                           return (
-                            <div key={conn.id} className={`border rounded-xl p-4 transition-all ${connected ? 'border-green-200 bg-green-50/50' : conn.ativo ? 'border-amber-200' : 'border-gray-200 opacity-60'}`}>
+                            <div key={conn.id} className={`border rounded-xl p-4 transition-all ${connected ? 'border-green-200 dark:border-green-900/50 bg-green-50/50 dark:bg-green-900/20' : conn.ativo ? 'border-amber-200 dark:border-amber-900/50' : 'border-gray-200 dark:border-slate-700 opacity-60'}`}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${connected ? 'bg-green-100' : 'bg-gray-100'}`}>
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${connected ? 'bg-green-100 dark:bg-green-900/40' : 'bg-gray-100 dark:bg-slate-700'}`}>
                                     {connected ? <Wifi size={20} className="text-green-600" /> : <WifiOff size={20} className="text-gray-400" />}
                                   </div>
                                   <div>
                                     <div className="flex items-center gap-2">
-                                      <h4 className="font-semibold text-gray-800">{conn.nome}</h4>
-                                      {conn.departamento && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{conn.departamento.nome}</span>}
-                                      {!conn.ativo && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Inativo</span>}
+                                      <h4 className="font-semibold text-gray-800 dark:text-slate-200">{conn.nome}</h4>
+                                      {conn.departamento && <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-0.5 rounded-full">{conn.departamento.nome}</span>}
+                                      {!conn.ativo && <span className="text-xs bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full">Inativo</span>}
                                     </div>
-                                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                                       <span className="flex items-center gap-1"><Phone size={11} /> {conn.numero}</span>
                                       {st && (
                                         <span className={`flex items-center gap-1 ${connected ? 'text-green-600' : 'text-gray-400'}`}>
@@ -822,11 +822,11 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                                 <div className="flex items-center gap-2">
                                   {connected ? (
                                     <>
-                                      <button onClick={() => handleForceReconnect(conn)} className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1" title="Limpar sessao e reconectar"><RefreshCw size={12} /> Forcar Reconexao</button>
-                                      <button onClick={() => handleDisconnect(conn)} className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1"><PowerOff size={12} /> Desconectar</button>
+                                      <button onClick={() => handleForceReconnect(conn)} className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 dark:text-blue-300 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1" title="Limpar sessao e reconectar"><RefreshCw size={12} /> Forcar Reconexao</button>
+                                      <button onClick={() => handleDisconnect(conn)} className="text-xs bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:hover:bg-red-900/60 dark:text-red-300 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1"><PowerOff size={12} /> Desconectar</button>
                                     </>
                                   ) : (
-                                    <button onClick={() => handleConnect(conn)} disabled={!conn.ativo} className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 disabled:opacity-50"><Power size={12} /> Conectar</button>
+                                    <button onClick={() => handleConnect(conn)} disabled={!conn.ativo} className="text-xs bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/40 dark:hover:bg-green-900/60 dark:text-green-300 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 disabled:opacity-50"><Power size={12} /> Conectar</button>
                                   )}
                                   {isMaster && (
                                     <>
@@ -836,7 +836,7 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                                       <button onClick={() => handleDelete(conn)} className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1" title="Excluir conexao">
                                         <Trash2 size={12} /> Excluir
                                       </button>
-                                      <button onClick={() => handleToggle(conn)} className={`text-xs px-3 py-1.5 rounded-lg font-medium ${conn.ativo ? 'bg-gray-100 hover:bg-gray-200 text-gray-600' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}>
+                                      <button onClick={() => handleToggle(conn)} className={`text-xs px-3 py-1.5 rounded-lg font-medium ${conn.ativo ? 'bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300' : 'bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/40 dark:hover:bg-green-900/60 dark:text-green-400'}`}>
                                         {conn.ativo ? 'Desativar' : 'Ativar'}
                                       </button>
                                     </>
@@ -853,9 +853,9 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
 
                 {/* Evolution API */}
                 {activeProvider === 'evolution' && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                  <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-5 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-semibold text-gray-800 flex items-center gap-2"><Server size={16} /> Instancias Evolution API</h3>
+                      <h3 className="font-semibold text-gray-800 dark:text-slate-200 flex items-center gap-2"><Server size={16} /> Instancias Evolution API</h3>
                       {isMaster && (
                         <div className="flex items-center gap-2">
                           <input type="text" placeholder="Nome (opcional — auto-gerado se vazio)" value={evolutionInstanceName} onChange={(e) => setEvolutionInstanceName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleCreateEvolutionInstance(); }} className="input text-sm" />
@@ -868,7 +868,7 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                     {evolutionLoading ? (
                       <div className="flex items-center justify-center py-8"><Loader2 className="animate-spin text-codemed-600" size={24} /></div>
                     ) : evolutionInstances.length === 0 ? (
-                      <div className="text-center py-8 text-gray-400">
+                      <div className="text-center py-8 text-gray-400 dark:text-slate-500">
                         <Server size={40} className="mx-auto mb-2 opacity-30" />
                         <p className="font-medium">Nenhuma instancia criada</p>
                         <p className="text-sm mt-1">Crie uma instancia para conectar ao WhatsApp</p>
@@ -878,24 +878,24 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                         {evolutionInstances.map((inst) => {
                           const isConnected = inst.status === 'open';
                           return (
-                            <div key={inst.instanceName} className={`border rounded-xl p-4 flex items-center justify-between ${isConnected ? 'border-green-200 bg-green-50/50' : 'border-gray-200'}`}>
+                            <div key={inst.instanceName} className={`border rounded-xl p-4 flex items-center justify-between ${isConnected ? 'border-green-200 dark:border-green-900/50 bg-green-50/50 dark:bg-green-900/20' : 'border-gray-200 dark:border-slate-700'}`}>
                               <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isConnected ? 'bg-green-100' : 'bg-gray-100'}`}>
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isConnected ? 'bg-green-100 dark:bg-green-900/40' : 'bg-gray-100 dark:bg-slate-700'}`}>
                                   {isConnected ? <Wifi size={20} className="text-green-600" /> : <WifiOff size={20} className="text-gray-400" />}
                                 </div>
                                 <div>
-                                  <p className="font-medium text-gray-800">{inst.instanceName}</p>
-                                  <p className="text-xs text-gray-500">{isConnected ? 'Conectado' : inst.status || 'Desconectado'}</p>
+<p className="font-medium text-gray-800 dark:text-slate-200">{inst.instanceName}</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">{isConnected ? 'Conectado' : inst.status || 'Desconectado'}</p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
                                 {isConnected ? (
-                                  <button onClick={() => handleDisconnectEvolution(inst.instanceName)} className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-lg font-medium">Desconectar</button>
+                                  <button onClick={() => handleDisconnectEvolution(inst.instanceName)} className="text-xs bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:hover:bg-red-900/60 dark:text-red-300 px-3 py-1.5 rounded-lg font-medium">Desconectar</button>
                                 ) : (
-                                  <button onClick={() => handleConnectEvolution(inst.instanceName)} className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1.5 rounded-lg font-medium">Conectar</button>
+                                  <button onClick={() => handleConnectEvolution(inst.instanceName)} className="text-xs bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/40 dark:hover:bg-green-900/60 dark:text-green-300 px-3 py-1.5 rounded-lg font-medium">Conectar</button>
                                 )}
                                 {isMaster && (
-                                  <button onClick={() => handleDeleteEvolution(inst.instanceName)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg font-medium"><Trash2 size={12} /></button>
+                                  <button onClick={() => handleDeleteEvolution(inst.instanceName)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg font-medium"><Trash2 size={12} /></button>
                                 )}
                               </div>
                             </div>
@@ -908,17 +908,17 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
 
                 {/* Cloud API */}
                 {activeProvider === 'cloud' && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                    <h3 className="font-semibold text-gray-800 flex items-center gap-2 mb-3"><Cloud size={16} /> WhatsApp Cloud API (Meta)</h3>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-sm text-blue-800 mb-2"><strong>Configuracao via variaveis de ambiente:</strong></p>
-                      <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+                  <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-5 shadow-sm">
+                    <h3 className="font-semibold text-gray-800 dark:text-slate-200 flex items-center gap-2 mb-3"><Cloud size={16} /> WhatsApp Cloud API (Meta)</h3>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/40 rounded-lg p-4">
+                      <p className="text-sm text-blue-800 dark:text-blue-300 mb-2"><strong>Configuracao via variaveis de ambiente:</strong></p>
+                      <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
                         <li><code>WHATSAPP_CLOUD_PHONE_NUMBER_ID</code> — ID do numero de telefone</li>
                         <li><code>WHATSAPP_CLOUD_ACCESS_TOKEN</code> — Token de acesso da API</li>
                         <li><code>WHATSAPP_CLOUD_API_VERSION</code> — Versao da API (default: v19.0)</li>
                         <li><code>WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN</code> — Token de verificacao do webhook</li>
                       </ul>
-                      <p className="text-xs text-blue-600 mt-3">Webhook URL: <code>{window.location.origin}/api/whatsapp/cloud/webhook</code></p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-3">Webhook URL: <code>{window.location.origin}/api/whatsapp/cloud/webhook</code></p>
                     </div>
                   </div>
                 )}
@@ -927,9 +927,9 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
 
             {/* ── Email / Instagram / Facebook / Telegram Detail ── */}
             {selectedType && selectedType !== 'whatsapp' && (
-              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-800">Canais {selectedTypeData?.name}</h3>
+                  <h3 className="font-semibold text-gray-800 dark:text-slate-200">Canais {selectedTypeData?.name}</h3>
                   {isMaster && !channelCreating && !channelEditing && (
                     <button onClick={() => { setChannelCreating(true); setChannelEditing(null); setChannelForm({ nome: '', tipo: selectedType, provider: '', slug: '', config: '{}' }); }} className="btn-primary text-sm flex items-center gap-1">
                       <Plus size={14} /> Novo Canal
@@ -939,15 +939,15 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
 
                 {/* Create/Edit form */}
                 {(channelCreating || channelEditing) && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                    <h4 className="font-medium text-gray-800 mb-3">{channelEditing ? 'Editar Canal' : `Novo Canal ${selectedTypeData?.name}`}</h4>
+                  <div className="bg-gray-50 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-700 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium text-gray-800 dark:text-slate-200 mb-3">{channelEditing ? 'Editar Canal' : `Novo Canal ${selectedTypeData?.name}`}</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">Nome *</label>
+                        <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Nome *</label>
                         <input type="text" placeholder={`Ex: ${selectedTypeData?.name} Comercial`} value={channelForm.nome} onChange={(e) => setChannelForm({ ...channelForm, nome: e.target.value })} className="input w-full" />
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">Slug</label>
+                        <label className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 block">Slug</label>
                         <input type="text" placeholder="auto-gerado se vazio" value={channelForm.slug} onChange={(e) => setChannelForm({ ...channelForm, slug: e.target.value })} className="input w-full" />
                       </div>
                     </div>
@@ -973,7 +973,7 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                 ) : (
                   <div className="space-y-3">
                     {getChannelsByType(selectedType).map((ch) => (
-                      <div key={ch.id} className={`border rounded-xl p-4 transition-all ${ch.ativo ? 'border-green-200 bg-green-50/50' : 'border-gray-200 opacity-60'}`}>
+                      <div key={ch.id} className={`border rounded-xl p-4 transition-all ${ch.ativo ? 'border-green-200 dark:border-green-900/50 bg-green-50/50 dark:bg-green-900/20' : 'border-gray-200 dark:border-slate-700 opacity-60'}`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${selectedTypeData?.color || '#6b7280'}15` }}>
@@ -981,18 +981,18 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <h4 className="font-semibold text-gray-800">{ch.nome}</h4>
-                                {ch.provider && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{ch.provider}</span>}
-                                {!ch.ativo && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Inativo</span>}
+                                <h4 className="font-semibold text-gray-800 dark:text-slate-200">{ch.nome}</h4>
+                                {ch.provider && <span className="text-xs bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full">{ch.provider}</span>}
+                                {!ch.ativo && <span className="text-xs bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full">Inativo</span>}
                               </div>
-                              <p className="text-xs text-gray-500 mt-0.5">{ch.slug}</p>
+                              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{ch.slug}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             {isMaster && (
                               <>
-                                <button onClick={() => { setChannelEditing(ch); setChannelCreating(false); setChannelForm({ nome: ch.nome, tipo: ch.tipo, provider: ch.provider || '', slug: ch.slug, config: ch.config ? JSON.parse(ch.config) : {} }); }} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg font-medium">Editar</button>
-                                <button onClick={() => handleChannelDelete(ch)} className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg font-medium"><Trash2 size={12} /></button>
+                                <button onClick={() => { setChannelEditing(ch); setChannelCreating(false); setChannelForm({ nome: ch.nome, tipo: ch.tipo, provider: ch.provider || '', slug: ch.slug, config: ch.config ? JSON.parse(ch.config) : {} }); }} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg font-medium">Editar</button>
+                                <button onClick={() => handleChannelDelete(ch)} className="text-xs bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-300 px-3 py-1.5 rounded-lg font-medium"><Trash2 size={12} /></button>
                               </>
                             )}
                           </div>
@@ -1008,16 +1008,16 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
       </div>
 
       {/* ── Sidebar: Quick Tips ────────────────────────────────── */}
-      <div className="w-72 border-l border-gray-200 bg-gray-50 p-6 overflow-y-auto hidden lg:block">
+      <div className="w-72 border-l border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/60 p-6 overflow-y-auto hidden lg:block">
         <div className="flex items-center gap-2 mb-4">
           <Lightbulb size={18} className="text-amber-500" />
-          <h3 className="font-semibold text-gray-800 text-sm">Aprendizado relampago</h3>
+          <h3 className="font-semibold text-gray-800 dark:text-slate-200 text-sm">Aprendizado relampago</h3>
         </div>
 
-        <div className="space-y-4 text-sm text-gray-600">
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-800 mb-2">Como conectar</h4>
-            <ol className="text-xs space-y-1.5 list-decimal list-inside text-gray-500">
+        <div className="space-y-4 text-sm text-gray-600 dark:text-slate-400">
+          <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4">
+            <h4 className="font-medium text-gray-800 dark:text-slate-200 mb-2">Como conectar</h4>
+            <ol className="text-xs space-y-1.5 list-decimal list-inside text-gray-500 dark:text-slate-400">
               <li>Selecione o tipo de conexao</li>
               <li>Configure as credenciais</li>
               <li>Escaneie o QR Code (WhatsApp)</li>
@@ -1025,18 +1025,18 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
             </ol>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-800 mb-2">Providers WhatsApp</h4>
-            <ul className="text-xs space-y-1.5 text-gray-500">
+          <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4">
+            <h4 className="font-medium text-gray-800 dark:text-slate-200 mb-2">Providers WhatsApp</h4>
+            <ul className="text-xs space-y-1.5 text-gray-500 dark:text-slate-400">
               <li className="flex items-center gap-1.5"><Smartphone size={12} className="text-green-600" /> Baileys — WebSocket (gratis)</li>
               <li className="flex items-center gap-1.5"><Server size={12} className="text-blue-600" /> Evolution — Docker (gratis)</li>
               <li className="flex items-center gap-1.5"><Cloud size={12} className="text-purple-600" /> Cloud API — Meta (1000/mes)</li>
             </ul>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-800 mb-2">Dicas</h4>
-            <ul className="text-xs space-y-1.5 text-gray-500">
+          <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4">
+            <h4 className="font-medium text-gray-800 dark:text-slate-200 mb-2">Dicas</h4>
+            <ul className="text-xs space-y-1.5 text-gray-500 dark:text-slate-400">
               <li>Use "Forcar Reconexao" se a conexao travar</li>
               <li>Cada conexao pode ter seu proprio departamento</li>
               <li>Canais podem ser testados individualmente</li>
@@ -1051,10 +1051,10 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
       {/* ═══════════════════════════════════════════════════════════ */}
       {qrModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-800">QR Code — {qrModal.conn.nome}</h3>
-              <button onClick={() => { stopQrPolling(); setQrModal(null); setQrStatus('idle'); }} className="text-gray-400 hover:text-gray-600"><XCircle size={20} /></button>
+              <h3 className="font-semibold text-gray-800 dark:text-slate-200">QR Code — {qrModal.conn.nome}</h3>
+              <button onClick={() => { stopQrPolling(); setQrModal(null); setQrStatus('idle'); }} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"><XCircle size={20} /></button>
             </div>
             <div className="flex flex-col items-center">
               {qrModal.qrDataUrl ? (
@@ -1066,25 +1066,25 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
                 <>
                   <div className="w-60 h-60 flex flex-col items-center justify-center bg-red-50 rounded-lg">
                     <AlertTriangle className="text-red-400 mb-2" size={40} />
-                    <p className="text-sm text-red-600 text-center px-4">{qrError || 'Erro ao gerar QR Code'}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400 text-center px-4">{qrError || 'Erro ao gerar QR Code'}</p>
                   </div>
                   <button onClick={() => { stopQrPolling(); handleForceReconnect(qrModal.conn); }} className="mt-4 px-4 py-2 bg-codemed-600 hover:bg-codemed-700 text-white rounded-lg text-sm font-medium flex items-center gap-2">
                     <RefreshCw size={14} /> Limpar sessao e tentar novamente
                   </button>
                 </>
               ) : (
-                <div className="w-60 h-60 flex flex-col items-center justify-center bg-gray-50 rounded-lg">
+                <div className="w-60 h-60 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-700/40 rounded-lg">
                   <Loader2 className="animate-spin text-codemed-500 mb-2" size={32} />
-                  <p className="text-sm text-gray-500 text-center px-4">
+                  <p className="text-sm text-gray-500 dark:text-slate-400 text-center px-4">
                     {qrStatus === 'initializing' && 'Inicializando WhatsApp...'}
                     {qrStatus === 'generating' && 'Gerando QR Code...'}
                     {qrStatus === 'scanning' && 'Aguardando escaneamento...'}
                     {qrStatus === 'idle' && 'Preparando...'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-2">Tempo: {Math.round((Date.now() - qrPollStartRef.current) / 1000)}s</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">Tempo: {Math.round((Date.now() - qrPollStartRef.current) / 1000)}s</p>
                 </div>
               )}
-              <p className="text-xs text-gray-500 mt-4 text-center">Abra o WhatsApp no celular<br />Menu &rarr; Dispositivos conectados &rarr; Conectar dispositivo</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-4 text-center">Abra o WhatsApp no celular<br />Menu &rarr; Dispositivos conectados &rarr; Conectar dispositivo</p>
             </div>
           </div>
         </div>
@@ -1103,14 +1103,14 @@ function ChannelConfigForm({ tipo, config, onChange }: { tipo: string; config: a
   if (tipo === 'email') {
     return (
       <div className="mt-4 space-y-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase">Configuracao Email (IMAP + SMTP)</p>
+        <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">Configuracao Email (IMAP + SMTP)</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><label className="text-xs text-gray-500 mb-1 block">Servidor IMAP</label><input type="text" placeholder="imap.gmail.com" value={config.imapHost || ''} onChange={(e) => set('imapHost', e.target.value)} className="input w-full" /></div>
-          <div><label className="text-xs text-gray-500 mb-1 block">Porta IMAP</label><input type="text" placeholder="993" value={config.imapPort || '993'} onChange={(e) => set('imapPort', e.target.value)} className="input w-full" /></div>
-          <div><label className="text-xs text-gray-500 mb-1 block">Servidor SMTP</label><input type="text" placeholder="smtp.gmail.com" value={config.smtpHost || ''} onChange={(e) => set('smtpHost', e.target.value)} className="input w-full" /></div>
-          <div><label className="text-xs text-gray-500 mb-1 block">Porta SMTP</label><input type="text" placeholder="587" value={config.smtpPort || '587'} onChange={(e) => set('smtpPort', e.target.value)} className="input w-full" /></div>
-          <div><label className="text-xs text-gray-500 mb-1 block">Usuario / Email</label><input type="text" value={config.user || ''} onChange={(e) => set('user', e.target.value)} className="input w-full" /></div>
-          <div><label className="text-xs text-gray-500 mb-1 block">Senha</label><input type="password" value={config.password || ''} onChange={(e) => set('password', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Servidor IMAP</label><input type="text" placeholder="imap.gmail.com" value={config.imapHost || ''} onChange={(e) => set('imapHost', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Porta IMAP</label><input type="text" placeholder="993" value={config.imapPort || '993'} onChange={(e) => set('imapPort', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Servidor SMTP</label><input type="text" placeholder="smtp.gmail.com" value={config.smtpHost || ''} onChange={(e) => set('smtpHost', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Porta SMTP</label><input type="text" placeholder="587" value={config.smtpPort || '587'} onChange={(e) => set('smtpPort', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Usuario / Email</label><input type="text" value={config.user || ''} onChange={(e) => set('user', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Senha</label><input type="password" value={config.password || ''} onChange={(e) => set('password', e.target.value)} className="input w-full" /></div>
         </div>
       </div>
     );
@@ -1119,11 +1119,11 @@ function ChannelConfigForm({ tipo, config, onChange }: { tipo: string; config: a
   if (tipo === 'instagram') {
     return (
       <div className="mt-4 space-y-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase">Configuracao Instagram (Graph API)</p>
+        <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">Configuracao Instagram (Graph API)</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><label className="text-xs text-gray-500 mb-1 block">Access Token</label><input type="password" value={config.accessToken || ''} onChange={(e) => set('accessToken', e.target.value)} className="input w-full" /></div>
-          <div><label className="text-xs text-gray-500 mb-1 block">Instagram Account ID</label><input type="text" placeholder="17841400..." value={config.instagramAccountId || ''} onChange={(e) => set('instagramAccountId', e.target.value)} className="input w-full" /></div>
-          <div><label className="text-xs text-gray-500 mb-1 block">Webhook Verify Token</label><input type="text" value={config.webhookVerifyToken || ''} onChange={(e) => set('webhookVerifyToken', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Access Token</label><input type="password" value={config.accessToken || ''} onChange={(e) => set('accessToken', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Instagram Account ID</label><input type="text" placeholder="17841400..." value={config.instagramAccountId || ''} onChange={(e) => set('instagramAccountId', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Webhook Verify Token</label><input type="text" value={config.webhookVerifyToken || ''} onChange={(e) => set('webhookVerifyToken', e.target.value)} className="input w-full" /></div>
         </div>
       </div>
     );
@@ -1132,12 +1132,12 @@ function ChannelConfigForm({ tipo, config, onChange }: { tipo: string; config: a
   if (tipo === 'facebook') {
     return (
       <div className="mt-4 space-y-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase">Configuracao Facebook Messenger (Graph API)</p>
+        <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">Configuracao Facebook Messenger (Graph API)</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><label className="text-xs text-gray-500 mb-1 block">Page Access Token</label><input type="password" value={config.pageAccessToken || ''} onChange={(e) => set('pageAccessToken', e.target.value)} className="input w-full" /></div>
-          <div><label className="text-xs text-gray-500 mb-1 block">Page ID</label><input type="text" value={config.pageId || ''} onChange={(e) => set('pageId', e.target.value)} className="input w-full" /></div>
-          <div><label className="text-xs text-gray-500 mb-1 block">App Secret</label><input type="password" value={config.appSecret || ''} onChange={(e) => set('appSecret', e.target.value)} className="input w-full" /></div>
-          <div><label className="text-xs text-gray-500 mb-1 block">Verify Token</label><input type="text" value={config.verifyToken || ''} onChange={(e) => set('verifyToken', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Page Access Token</label><input type="password" value={config.pageAccessToken || ''} onChange={(e) => set('pageAccessToken', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Page ID</label><input type="text" value={config.pageId || ''} onChange={(e) => set('pageId', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">App Secret</label><input type="password" value={config.appSecret || ''} onChange={(e) => set('appSecret', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Verify Token</label><input type="text" value={config.verifyToken || ''} onChange={(e) => set('verifyToken', e.target.value)} className="input w-full" /></div>
         </div>
       </div>
     );
@@ -1146,10 +1146,10 @@ function ChannelConfigForm({ tipo, config, onChange }: { tipo: string; config: a
   if (tipo === 'telegram') {
     return (
       <div className="mt-4 space-y-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase">Configuracao Telegram (Bot API)</p>
+        <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">Configuracao Telegram (Bot API)</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><label className="text-xs text-gray-500 mb-1 block">Bot Token (do @BotFather)</label><input type="password" value={config.botToken || ''} onChange={(e) => set('botToken', e.target.value)} className="input w-full" /></div>
-          <div><label className="text-xs text-gray-500 mb-1 block">Chat IDs permitidos (opcional)</label><input type="text" placeholder="Todos se vazio" value={config.allowedChatIds || ''} onChange={(e) => set('allowedChatIds', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Bot Token (do @BotFather)</label><input type="password" value={config.botToken || ''} onChange={(e) => set('botToken', e.target.value)} className="input w-full" /></div>
+          <div><label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Chat IDs permitidos (opcional)</label><input type="text" placeholder="Todos se vazio" value={config.allowedChatIds || ''} onChange={(e) => set('allowedChatIds', e.target.value)} className="input w-full" /></div>
         </div>
       </div>
     );

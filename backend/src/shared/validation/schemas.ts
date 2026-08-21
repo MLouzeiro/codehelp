@@ -51,12 +51,14 @@ export const updateClientSchema = createClientSchema.partial();
 
 // ── WhatsApp Schemas ─────────────────────────────────────────────────
 
-export const sendWhatsAppMessageSchema = z.object({
-  to: z.string().min(10, 'Telefone invalido').max(15),
-  message: z.string().min(1, 'Mensagem obrigatoria').max(4096),
-  ticketId: z.string().uuid().optional(),
-  whatsappConnectionId: z.string().uuid().optional(),
-});
+export const sendWhatsAppMessageSchema = z
+  .object({
+    to: z.string().min(10, 'Telefone invalido').max(15).optional(),
+    message: z.string().min(1, 'Mensagem obrigatoria').max(4096),
+    ticketId: z.string().uuid().optional(),
+    whatsappConnectionId: z.string().uuid().optional(),
+  })
+  .refine((v) => !!v.to || !!v.ticketId, { message: 'Informe "to" ou "ticketId"' });
 
 export const createWhatsAppConnectionSchema = z.object({
   nome: z.string().min(1, 'Nome obrigatorio').max(100),

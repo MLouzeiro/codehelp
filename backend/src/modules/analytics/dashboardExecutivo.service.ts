@@ -3,6 +3,7 @@ import {
   WHERE_TICKET_RESOLVIDO,
   STATUS_ABERTO,
 } from '../helpdesk/constants';
+import { getAlertasOperacionais, AlertOperacional } from './alertasOperacionais.service';
 
 export interface DashboardExecutivoData {
   atualizadoEm: string;
@@ -37,6 +38,7 @@ export interface DashboardExecutivoData {
     deltaTempoResposta: number;
     deltaCsat: number;
   };
+  alertas: AlertOperacional[];
 }
 
 function range(dias: number): { inicio: Date; fim: Date } {
@@ -342,5 +344,15 @@ export async function gerarDashboardExecutivo(dias = 30): Promise<DashboardExecu
       deltaTempoResposta: tempoMedioRespostaMin - tempoRespPrev,
       deltaCsat: Math.round((csatMedio - csatAnterior) * 100) / 100,
     },
+    alertas: await getAlertasOperacionais(dias, {
+      totalTickets,
+      taxaResolucao,
+      tempoMedioRespostaMin,
+      csatMedio,
+      ticketsAbertos,
+      slaCumprido: slaData._count.id,
+      slaTotal: slaData._count.id,
+      taxaSla,
+    }),
   };
 }

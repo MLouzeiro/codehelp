@@ -1,5 +1,7 @@
 import prisma from '../../config/database';
 import { FiltroAuditoria, auditarTicket } from './auditoriaProfissional.service';
+import { createTask } from '../kanban/kanban.service';
+import { AppError } from '../../shared/errors/AppError';
 import {
   calcularIndicadores,
   calcularRankingAnalistas,
@@ -340,4 +342,46 @@ export async function auditarAmostra(percentual = 20, limit = 50, usarIa = true)
     }
   }
   return auditados;
+}
+
+// ── Criar tarefa a partir de uma recomendação ───────────────────────
+
+export async function criarTarefaDeRecomendacao(
+  recomendacaoId: string,
+  boardId: string,
+  dados: { responsavelId?: string; prazoEntrega?: Date } = {},
+): Promise<{ id: string; titulo: string }> {
+  const tomada = await gerarTomadaDecisao();
+  const recomendacao = tomada.recomendacoes.find((r) => r.id === recomendacaoId);
+  if (!recomendacao) {
+    throw new AppError('Recomendação não encontrada. Atualize a Tomada de Decisão e tente novamente.', 404);
+  }
+
+  const board = await prisma.kanbanBoard.findUnique({ where: { id: boardId } });
+  if (!board) throw new AppError('Board não encontrado', 404);
+  const primeiraColuna = await prisma.kanbanColumn.findFirst({
+    where: { boardId },
+    orderBy: { ordem: 'asc' },
+    select: { id: true },
+  });
+  if (!primeiraColuna) throw new AppError('Board sem colunas. Crie uma coluna antes.', 400);
+
+  const prioridadeMap: Record<string, 'alta' | 'media' | 'baixa'> = {
+    urgente: 'alta',
+    alta: 'alta',
+    media: 'media',
+    baixa: 'baixa',
+  };
+
+  const task = await createTask(boardId, {
+    titulo: recomendacao.descricao,
+    descricao: `Origem: recomendação "${recomendacao.id}" da Tomada de Decisão.\nMeta: ${recomendacao.meta}\nAção: ${recomendacao.acao}`,
+    columnId: primeiraColuna.id,
+    responsavelId: dados.responsavelId || null,
+    prioridade: prioridadeMap[recomendacao.prioridade] || 'media',
+    prazoEntrega: dados.prazoEntrega || null,
+    tipoTarefa: 'atendimento',
+  });
+
+  return { id: task.id, titulo: task.titulo };
 }

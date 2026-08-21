@@ -91,7 +91,7 @@ export default function TemporalBarChart({ ticketId, compact = false }: Temporal
   if (total === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-        <div className="text-center py-8 text-gray-500 text-sm">
+        <div className="text-center py-8 text-gray-500 dark:text-slate-400 text-sm">
           Sem dados temporais disponíveis
         </div>
       </div>
@@ -112,7 +112,7 @@ export default function TemporalBarChart({ ticketId, compact = false }: Temporal
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
       {!compact && (
         <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <BarChart3 className="w-5 h-5 text-gray-500" />
+          <BarChart3 className="w-5 h-5 text-gray-500 dark:text-slate-400" />
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             Distribuição Temporal
           </h3>
@@ -163,7 +163,7 @@ export default function TemporalBarChart({ ticketId, compact = false }: Temporal
 
         {/* Tooltip */}
         {hoveredBar && (
-          <div className="mt-2 text-center text-xs text-gray-500">
+          <div className="mt-2 text-center text-xs text-gray-500 dark:text-slate-400">
             {LABELS[hoveredBar as keyof typeof LABELS]}:{' '}
             <span className="font-medium">
               {formatMinutes(data[hoveredBar as keyof typeof data])}

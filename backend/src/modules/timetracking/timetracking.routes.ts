@@ -2,9 +2,11 @@ import { Router } from 'express';
 import { authenticate, authorizeMaster } from '../../shared/middleware/auth';
 import {
   startTimer, stopTimer, getRunningTimer,
+  pauseTimer, resumeTimer,
   createEntry, updateEntry, deleteEntry,
   listEntries, getSummary, syncOrderHours,
   getConsumptionByClient, getTicketTimeBlocks,
+  getTaskTimeSummary, adjustTime,
 } from './timetracking.controller';
 
 const router = Router();
@@ -13,7 +15,13 @@ router.use(authenticate);
 // ── Timer ────────────────────────────────────────────────────────────
 router.post('/start', startTimer);
 router.post('/:id/stop', stopTimer);
+router.post('/:id/pause', pauseTimer);
+router.post('/:id/resume', resumeTimer);
 router.get('/running', getRunningTimer);
+
+// ── Task time ────────────────────────────────────────────────────────
+router.get('/task/:tarefaId/summary', getTaskTimeSummary);
+router.post('/:id/adjust', authorizeMaster, adjustTime);
 
 // ── CRUD ─────────────────────────────────────────────────────────────
 router.get('/', listEntries);

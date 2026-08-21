@@ -10,6 +10,38 @@ export interface Departamento {
   _count?: { tickets: number; usuarios: number; filas: number };
 }
 
+export interface Categoria {
+  id: string;
+  slug: string;
+  nome: string;
+  descricao?: string;
+  cor: string;
+  icone: string;
+  ordem: number;
+  ativo: boolean;
+  departamentoId?: string;
+  departamento?: Departamento;
+  _count?: { tickets: number; assuntos: number };
+}
+
+export interface Assunto {
+  id: string;
+  slug: string;
+  nome: string;
+  descricao?: string;
+  categoriaId: string;
+  categoria?: Categoria;
+  icone?: string;
+  cor?: string;
+  prioridadePadrao?: string;
+  slaPadraoMin?: number;
+  departamentoId?: string;
+  idFila?: string;
+  ordem: number;
+  ativo: boolean;
+  _count?: { tickets: number };
+}
+
 export interface NivelSuporte {
   id: string;
   slug: string;
@@ -799,4 +831,111 @@ export interface TicketReplayData {
   activities: TicketActivity[];
   waitTimes: TicketWaitTime[];
   aiLogs: TicketAiLog[];
+}
+
+// ── Indicadores de Atendimento (FASE B) ────────────────────────────────
+
+export type EstadoIndicador = 'dentro' | 'atencao' | 'fora';
+
+export interface ClassificacaoIndicador {
+  estado: EstadoIndicador;
+  icone: string;
+  texto: string;
+}
+
+export interface MetasIndicadores {
+  tmrMetaMin: number;
+  tmeMetaMin: number;
+  primeiraRespostaMetaMin: number;
+  slaMetaPct: number;
+  slaRiscoPct: number;
+}
+
+export interface CardIndicador {
+  label: string;
+  valor: number;
+  unidade: string;
+  meta: number;
+  classificacao: ClassificacaoIndicador;
+  delta: number | null;
+  deltaLabel: string;
+  evolucao: 'melhorou' | 'piorou' | 'estavel';
+}
+
+export interface AnalistaIndicador {
+  agenteId: string;
+  agenteNome: string;
+  tickets: number;
+  resolvidos: number;
+  tmrMin: number;
+  tmeMin: number;
+  primeiraRespostaMin: number;
+  slaCumprido: number;
+  slaTotal: number;
+  taxaSla: number;
+  csatMedia: number;
+  fcr: number;
+  reaberturas: number;
+  retrabalho: number;
+}
+
+export interface IndicadoresAtendimento {
+  atualizadoEm: string;
+  periodo: { inicio: string; fim: string; label: string; dias: number };
+  metas: MetasIndicadores;
+  cards: {
+    totalTickets: CardIndicador;
+    tmr: CardIndicador;
+    tme: CardIndicador;
+    primeiraResposta: CardIndicador;
+    sla: CardIndicador;
+    slaEmRisco: CardIndicador;
+    slaViolado: CardIndicador;
+    tempoTotal: CardIndicador;
+  };
+  sla: {
+    total: number;
+    cumprido: number;
+    emRisco: number;
+    violado: number;
+    percentualCumprimento: number;
+    percentualEmRisco: number;
+    percentualViolado: number;
+  };
+  primeiraResposta: {
+    total: number;
+    dentroMeta: number;
+    percentualDentro: number;
+  };
+  tempoTotalMin: number;
+  porAnalista: AnalistaIndicador[];
+  comparacaoPeriodoAnterior: {
+    tmr: { anterior: number; atual: number; deltaPct: number };
+    tme: { anterior: number; atual: number; deltaPct: number };
+    primeiraResposta: { anterior: number; atual: number; deltaPct: number };
+    sla: { anterior: number; atual: number; deltaPct: number };
+    totalTickets: { anterior: number; atual: number; deltaPct: number };
+  };
+}
+
+export interface AlertaIndicador {
+  tipo: 'sla_em_risco' | 'sla_violado' | 'aguardando_resposta' | 'parado' | 'acima_da_meta';
+  titulo: string;
+  mensagem: string;
+  gravidade: 'info' | 'atencao' | 'critico';
+  ticketId: string;
+  protocolo: string;
+  detalhe?: string;
+}
+
+export interface SlaTicketIndicador {
+  totalMinutos: number;
+  restantesMinutos: number;
+  percentualConsumido: number;
+  pausado: boolean;
+  fonte: string;
+  finalizado: boolean;
+  classificacao: ClassificacaoIndicador;
+  slaRiscoPct: number;
+  statusSla: string;
 }

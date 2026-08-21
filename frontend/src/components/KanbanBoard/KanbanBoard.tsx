@@ -10,7 +10,7 @@ import {
   Plus, Trash2, Edit3, Calendar, CheckCircle2, Circle, X, Upload,
   Image as ImageIcon, Paperclip, Settings, Tag, GripVertical, Eye, EyeOff,
   LayoutGrid, Search, Copy, ArrowRightLeft, AlertTriangle, Clock, Download,
-  Loader2, Sparkles,
+  Loader2, Sparkles, Play, Pause, Square, Archive, RotateCcw, FolderOpen,
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { useKanban } from '../../hooks/useKanban';
@@ -20,6 +20,7 @@ import ImportChecklistModal from '../ImportChecklistModal';
 import TaskTimeline from './TaskTimeline';
 import { matchSearch } from '../../utils/text';
 import type { KanbanBoard, KanbanColumn, KanbanTask, KanbanAttachment, KanbanTaskTag } from '../../types/kanban';
+import { STATUS_PRAZO_LABEL, TIPOS_TAREFA } from '../../types/kanban';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor').then(m => ({ default: m.RichTextEditor })));
 
@@ -184,9 +185,18 @@ function TaskCard({ task, onClick }: { task: KanbanTask; onClick?: () => void })
           )}
         </div>
         {task.prazoEntrega && (
-          <span className={`flex items-center gap-1 ${new Date(task.prazoEntrega) < new Date() ? 'text-red-500' : 'text-gray-400 dark:text-slate-500'}`}>
-            <Calendar size={10} />
-            {new Date(task.prazoEntrega).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+          <span
+            className="flex items-center gap-1 font-medium"
+            style={{ color: STATUS_PRAZO_LABEL[task.statusPrazo || 'no_prazo']?.cor || '#6b7280' }}
+            title={`Prazo: ${new Date(task.prazoEntrega).toLocaleString('pt-BR')} · Status: ${STATUS_PRAZO_LABEL[task.statusPrazo || 'no_prazo']?.label || 'No prazo'}`}
+          >
+            {STATUS_PRAZO_LABEL[task.statusPrazo || 'no_prazo']?.emoji || '🟢'}
+            <span>{new Date(task.prazoEntrega).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+          </span>
+        )}
+        {task.tipoTarefa && task.tipoTarefa !== 'outro' && (
+          <span className="text-[10px] text-gray-400 dark:text-slate-500" title={TIPOS_TAREFA.find(t => t.value === task.tipoTarefa)?.label}>
+            {TIPOS_TAREFA.find(t => t.value === task.tipoTarefa)?.icon || '📋'}
           </span>
         )}
       </div>
@@ -479,12 +489,19 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
 function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClose: () => void; onRefresh?: () => void }) {
   const { user } = useAuth();
   const kanbanCtx = useKanban();
-  const { updateTask, createSubtask, toggleSubtask, deleteSubtask, addComment, getActivityLog, uploadAttachments, deleteAttachment, createTag, deleteTag, transferTask, duplicateTask, boards, fetchBoards } = kanbanCtx;
+  const { updateTask, createSubtask, toggleSubtask, deleteSubtask, addComment, getActivityLog, uploadAttachments, deleteAttachment, createTag, deleteTag, transferTask, duplicateTask, boards, fetchBoards, archiveTask, reopenTask, getTaskTimeSummary, pauseTimer, resumeTimer } = kanbanCtx;
   const isAdmin = user?.role === 'admin' || user?.role === 'gerente';
   const [activity, setActivity] = useState<any[]>([]);
   const [comment, setComment] = useState('');
   const [newSubtask, setNewSubtask] = useState('');
   const [editing, setEditing] = useState(false);
+  const [timeSummary, setTimeSummary] = useState<any>(null);
+  const [runningTimer, setRunningTimer] = useState<any>(null);
+  const [timerBusy, setTimerBusy] = useState(false);
+  const [showReopen, setShowReopen] = useState(false);
+  const [reopenMotivo, setReopenMotivo] = useState('');
+  const [showArchive, setShowArchive] = useState(false);
+  const [archiveMotivo, setArchiveMotivo] = useState('');
   const [form, setForm] = useState({
     titulo: task?.titulo || '',
     descricao: task?.descricao || '',
@@ -495,6 +512,7 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
     dataInicio: task?.dataInicio ? task.dataInicio.split('T')[0] : '',
     estimativaHoras: task?.estimativaHoras?.toString() || '',
     responsavelId: task?.responsavelId || '',
+    tipoTarefa: task?.tipoTarefa || 'outro',
   });
   const [attachments, setAttachments] = useState<KanbanAttachment[]>((task as any)?.attachments || []);
   const [activeTab, setActiveTab] = useState<'info' | 'checklist' | 'activity' | 'attachments'>('info');
@@ -524,12 +542,87 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
     setLocalSubtasks(task?.subtasks || []);
     setTaskTags(task?.tags || []);
     api.get('/users', { params: { active: 'true' } }).then(({ data }) => setUsers(data?.users || [])).catch(() => {});
+    getTaskTimeSummary(task.id).then(setTimeSummary).catch(() => {});
+    api.get('/timetracking/running').then(({ data }) => setRunningTimer(data || null)).catch(() => {});
   }, [task?.id, task?.subtasks]);
 
   if (!task) return null;
 
   const timeOpen = task.createdAt ? Math.floor((Date.now() - new Date(task.createdAt).getTime()) / 3600000) : 0;
   const timeOpenStr = timeOpen > 24 ? `${Math.floor(timeOpen / 24)}d ${timeOpen % 24}h` : `${timeOpen}h`;
+
+  const isTaskTimerRunning = runningTimer?.tarefaId === task.id && !runningTimer.dataFim;
+
+  const handleStartTimer = async () => {
+    if (!user?.id) return;
+    setTimerBusy(true);
+    try {
+      const { data } = await api.post('/timetracking/start', { tarefaId: task.id, ticketId: task.ticketId, clienteId: task.clientId, tipo: task.tipoTarefa || 'suporte', descricao: `Tarefa #${task.numero} - ${task.titulo}` });
+      setRunningTimer(data);
+      onRefresh?.();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao iniciar tempo');
+    } finally {
+      setTimerBusy(false);
+    }
+  };
+
+  const handlePauseTimer = async () => {
+    if (!runningTimer) return;
+    setTimerBusy(true);
+    try {
+      const data = await pauseTimer(runningTimer.id);
+      setRunningTimer(data);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao pausar tempo');
+    } finally {
+      setTimerBusy(false);
+    }
+  };
+
+  const handleResumeTimer = async () => {
+    if (!runningTimer) return;
+    setTimerBusy(true);
+    try {
+      const data = await resumeTimer(runningTimer.id);
+      setRunningTimer(data);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao retomar tempo');
+    } finally {
+      setTimerBusy(false);
+    }
+  };
+
+  const handleStopTimer = async () => {
+    if (!runningTimer) return;
+    setTimerBusy(true);
+    try {
+      const { data } = await api.post(`/timetracking/${runningTimer.id}/stop`);
+      setRunningTimer(null);
+      const summary = await getTaskTimeSummary(task.id);
+      setTimeSummary(summary);
+      onRefresh?.();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao parar tempo');
+    } finally {
+      setTimerBusy(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!confirm('Arquivar esta tarefa?')) return;
+    await archiveTask(task.id, archiveMotivo || undefined);
+    onClose();
+    onRefresh?.();
+  };
+
+  const handleReopen = async () => {
+    if (!reopenMotivo.trim()) { alert('Informe o motivo da reabertura'); return; }
+    await reopenTask(task.id, reopenMotivo);
+    setShowReopen(false);
+    setReopenMotivo('');
+    onRefresh?.();
+  };
 
   const handleSave = async () => {
     await updateTask(task.id, {
@@ -542,6 +635,7 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
       dataInicio: form.dataInicio ? new Date(form.dataInicio).toISOString() : null,
       estimativaHoras: form.estimativaHoras ? parseFloat(form.estimativaHoras) : undefined,
       responsavelId: form.responsavelId || undefined,
+      tipoTarefa: form.tipoTarefa || undefined,
     });
     setEditing(false);
     onRefresh?.();
@@ -681,18 +775,52 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
           <div className="flex items-center gap-2">
             {isAdmin && (
               <>
-                <button onClick={handleDuplicate} disabled={duplicating} className="text-xs text-gray-500 hover:text-codemed-600 flex items-center gap-1" title="Duplicar tarefa">
+                <button onClick={handleDuplicate} disabled={duplicating} className="text-xs text-gray-500 dark:text-slate-400 hover:text-codemed-600 flex items-center gap-1" title="Duplicar tarefa">
                   <Copy size={14} /> {duplicating ? 'Duplicando...' : 'Duplicar'}
                 </button>
-                <button onClick={() => { setShowTransfer(true); fetchBoards(); }} className="text-xs text-gray-500 hover:text-codemed-600 flex items-center gap-1" title="Transferir para outro quadro">
+                <button onClick={() => { setShowTransfer(true); fetchBoards(); }} className="text-xs text-gray-500 dark:text-slate-400 hover:text-codemed-600 flex items-center gap-1" title="Transferir para outro quadro">
                   <ArrowRightLeft size={14} /> Transferir
                 </button>
               </>
+            )}
+            {task.dataConclusao && (
+              <button onClick={() => setShowReopen(true)} className="text-xs text-orange-600 hover:underline flex items-center gap-1" title="Reabrir tarefa">
+                <RotateCcw size={14} /> Reabrir
+              </button>
+            )}
+            {isAdmin && !task.arquivado && (
+              <button onClick={() => setShowArchive(true)} className="text-xs text-gray-500 dark:text-slate-400 hover:text-red-600 flex items-center gap-1" title="Arquivar tarefa">
+                <Archive size={14} /> Arquivar
+              </button>
             )}
             {isAdmin && <button onClick={() => editing ? handleSave() : setEditing(true)} className="text-xs text-codemed-600 hover:underline">{editing ? 'Salvar' : 'Editar'}</button>}
             <button onClick={onClose}><X size={20} className="text-gray-400" /></button>
           </div>
         </div>
+
+        {/* Reopen Modal */}
+        {showReopen && (
+          <div className="px-5 py-3 bg-orange-50 dark:bg-slate-900/60 border-b border-orange-200 dark:border-slate-700">
+            <label className="text-xs text-orange-700 dark:text-orange-400 font-medium block mb-1">Motivo da reabertura (obrigatório)</label>
+            <div className="flex gap-2">
+              <input autoFocus value={reopenMotivo} onChange={e => setReopenMotivo(e.target.value)} className="input text-sm flex-1" placeholder="Ex: cliente retornou com o problema" onKeyDown={e => e.key === 'Enter' && handleReopen()} />
+              <button onClick={handleReopen} disabled={!reopenMotivo.trim()} className="btn-primary text-xs px-3">Reabrir</button>
+              <button onClick={() => setShowReopen(false)} className="text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">Cancelar</button>
+            </div>
+          </div>
+        )}
+
+        {/* Archive Modal */}
+        {showArchive && (
+          <div className="px-5 py-3 bg-gray-50 dark:bg-slate-900/60 border-b border-gray-200 dark:border-slate-700">
+            <label className="text-xs text-gray-600 dark:text-slate-300 font-medium block mb-1">Motivo do arquivamento (opcional)</label>
+            <div className="flex gap-2">
+              <input autoFocus value={archiveMotivo} onChange={e => setArchiveMotivo(e.target.value)} className="input text-sm flex-1" placeholder="Ex: concluído e sem acompanhamento" onKeyDown={e => e.key === 'Enter' && handleArchive()} />
+              <button onClick={handleArchive} className="btn-primary text-xs px-3">Arquivar</button>
+              <button onClick={() => setShowArchive(false)} className="text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">Cancelar</button>
+            </div>
+          </div>
+        )}
 
         {/* Transfer Modal */}
         {showTransfer && (
@@ -708,7 +836,7 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
               <button onClick={handleTransfer} disabled={!transferBoardId || transferring} className="btn-primary text-xs px-3">
                 {transferring ? 'Transferindo...' : 'Transferir'}
               </button>
-              <button onClick={() => setShowTransfer(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancelar</button>
+              <button onClick={() => setShowTransfer(false)} className="text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">Cancelar</button>
             </div>
           </div>
         )}
@@ -735,6 +863,11 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
                     <select value={form.prioridade} onChange={e => setForm({ ...form, prioridade: e.target.value })} className="input">
                       <option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option><option value="urgente">Urgente</option>
                     </select>
+                    <select value={form.tipoTarefa} onChange={e => setForm({ ...form, tipoTarefa: e.target.value })} className="input">
+                      {TIPOS_TAREFA.map(t => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })} className="input">
                       <option value="">Categoria</option>
                       {['Outros', 'Suporte', 'Desenvolvimento', 'Marketing', 'Financeiro', 'Comercial'].map(c => <option key={c} value={c}>{c}</option>)}
@@ -798,6 +931,11 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
                     <div className="flex items-center gap-2 text-gray-600 dark:text-slate-300 mb-2">
                       <Clock size={14} />
                       <span className="font-medium">Tempo aberto: <strong>{timeOpenStr}</strong></span>
+                      {task.statusPrazo && STATUS_PRAZO_LABEL[task.statusPrazo] && (
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium" style={{ backgroundColor: STATUS_PRAZO_LABEL[task.statusPrazo].cor + '22', color: STATUS_PRAZO_LABEL[task.statusPrazo].cor }}>
+                          {STATUS_PRAZO_LABEL[task.statusPrazo].emoji} {STATUS_PRAZO_LABEL[task.statusPrazo].label}
+                        </span>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-slate-400">
                       <div>Criado: {task.createdAt ? new Date(task.createdAt).toLocaleDateString('pt-BR') : '—'}</div>
@@ -806,7 +944,56 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
                       {task.dataConclusao && <div>Concluído: {new Date(task.dataConclusao).toLocaleDateString('pt-BR')}</div>}
                       {task.estimativaHoras && <div>Estimativa: {task.estimativaHoras}h</div>}
                       {task.horasTrabalhadas && <div>Trabalhadas: {task.horasTrabalhadas}h</div>}
+                      {timeSummary && <div>Trabalhado (apontado): {(timeSummary.totalHoras ?? 0).toFixed(2)}h</div>}
+                      {timeSummary && <div>Pausas: {(timeSummary.pausasMin ?? 0)}min</div>}
                     </div>
+                    {timeSummary && timeSummary.porEtapa && timeSummary.porEtapa.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-slate-700">
+                        <span className="text-xs font-medium text-gray-500 dark:text-slate-400 block mb-1">Tempo por etapa</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {timeSummary.porEtapa.map((e: any) => (
+                            <span key={e.id} className="text-[11px] px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300">
+                              {e.etapa}: {(e.duracaoMin / 60).toFixed(2)}h{e.emAndamento ? ' (atual)' : ''}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Controle de tempo */}
+                  <div className="bg-gray-50 dark:bg-slate-900/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600 dark:text-slate-300">Controle de tempo</span>
+                      {!runningTimer && (
+                        <button onClick={handleStartTimer} disabled={timerBusy} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1">
+                          <Play size={12} /> Iniciar
+                        </button>
+                      )}
+                      {isTaskTimerRunning && !runningTimer?.pausado && (
+                        <button onClick={handlePauseTimer} disabled={timerBusy} className="btn-warning text-xs px-3 py-1.5 flex items-center gap-1">
+                          <Pause size={12} /> Pausar
+                        </button>
+                      )}
+                      {isTaskTimerRunning && runningTimer?.pausado && (
+                        <button onClick={handleResumeTimer} disabled={timerBusy} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1">
+                          <Play size={12} /> Retomar
+                        </button>
+                      )}
+                      {runningTimer && (
+                        <button onClick={handleStopTimer} disabled={timerBusy} className="text-xs px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center gap-1 hover:bg-red-200 dark:hover:bg-red-900/50">
+                          <Square size={12} /> Parar
+                        </button>
+                      )}
+                    </div>
+                    {runningTimer && runningTimer.tarefaId !== task.id && (
+                      <p className="text-[11px] text-gray-400 mt-1.5">Há um timer ativo em outra tarefa. Pare-o antes de iniciar nesta.</p>
+                    )}
+                    {isTaskTimerRunning && (
+                      <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-1.5">
+                        {runningTimer?.pausado ? '⏸ Tempo pausado' : '▶ Cronometrando...'} · iniciado em {runningTimer?.dataInicio ? new Date(runningTimer.dataInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -838,6 +1025,12 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
                     <div>
                       <label className="text-xs text-gray-400 dark:text-slate-500 mb-1 block">Prazo de Entrega</label>
                       <input type="date" value={task.prazoEntrega ? task.prazoEntrega.split('T')[0] : ''} onChange={async e => { await updateTask(task.id, { prazoEntrega: e.target.value ? new Date(e.target.value).toISOString() : null }); onRefresh?.(); }} className="input w-full text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 dark:text-slate-500 mb-1 block">Tipo de tarefa</label>
+                      <select value={task.tipoTarefa || 'outro'} onChange={async e => { await updateTask(task.id, { tipoTarefa: e.target.value }); onRefresh?.(); }} className="input w-full text-sm">
+                        {TIPOS_TAREFA.map(t => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
+                      </select>
                     </div>
                     {task.ticketId && (
                       <div className="col-span-2"><span className="text-gray-400 dark:text-slate-500 text-xs">Ticket</span><span className="ml-2 text-purple-600 dark:text-purple-400 text-xs font-mono">#{task.ticketId.slice(0, 8)}</span></div>

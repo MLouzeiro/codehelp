@@ -7,15 +7,28 @@ import {
 import api from '../../services/api';
 
 interface RankingAgente {
-  agente: { id: string; name: string; email: string };
-  totalAvaliacoes: number;
-  mediaGeral: number;
-  mediaProfissionalismo: number;
-  mediaCordialidade: number;
-  mediaClareza: number;
-  mediaEmpatia: number;
-  classificacoes: Record<string, number>;
+  agentId: string;
+  agentName: string;
+  totalMensagens: number;
+  notaGeralMedia: number;
+  profissionalismoMedio: number;
+  cordialidadeMedia: number;
+  clarezaMedia: number;
+  empatiaMedia: number;
+  classificacaoGeral: string;
   totalAlertas: number;
+  totalSugestoes: number;
+  encerramentos: {
+    total: number;
+    prematuros: number;
+    resolucoesReais: number;
+    reaberturas: number;
+    taxaEncerramentoCorreto: number;
+    notaMediaEncerramento: number;
+    riscoAlto: number;
+    riscoCritico: number;
+    recomendaReabertura: number;
+  } | null;
 }
 
 interface AvaliacaoDetalhada {
@@ -43,6 +56,9 @@ function classificacaoCor(c: string): string {
     case 'excelente': return 'text-emerald-400 bg-emerald-500/10';
     case 'bom': return 'text-blue-400 bg-blue-500/10';
     case 'regular': return 'text-amber-400 bg-amber-500/10';
+    case 'neutro': return 'text-zinc-400 bg-zinc-500/10';
+    case 'atencao': return 'text-amber-400 bg-amber-500/10';
+    case 'critico': return 'text-red-400 bg-red-500/10';
     case 'ruim': return 'text-red-400 bg-red-500/10';
     default: return 'text-zinc-400 bg-zinc-500/10';
   }
@@ -53,6 +69,9 @@ function classificacaoLabel(c: string): string {
     case 'excelente': return 'Excelente';
     case 'bom': return 'Bom';
     case 'regular': return 'Regular';
+    case 'neutro': return 'Neutro';
+    case 'atencao': return 'Atenção';
+    case 'critico': return 'Crítico';
     case 'ruim': return 'Ruim';
     default: return c;
   }
@@ -63,6 +82,24 @@ function medalha(rank: number): string {
   if (rank === 1) return '🥈';
   if (rank === 2) return '🥉';
   return `${rank + 1}º`;
+}
+
+function encerramentoTipoLabel(tipo: string): string {
+  switch (tipo) {
+    case 'encerramento_prematuro': return 'Encerramento prematuro';
+    case 'resolucao_real': return 'Resolução real';
+    case 'reabertura': return 'Reabertura';
+    default: return 'Sem dados';
+  }
+}
+
+function encerramentoTipoCor(tipo: string): string {
+  switch (tipo) {
+    case 'encerramento_prematuro': return 'text-red-400 bg-red-500/10';
+    case 'reabertura': return 'text-amber-400 bg-amber-500/10';
+    case 'resolucao_real': return 'text-emerald-400 bg-emerald-500/10';
+    default: return 'text-zinc-400 bg-zinc-500/10';
+  }
 }
 
 export default function AuditoriaAtendimento() {
@@ -105,7 +142,7 @@ export default function AuditoriaAtendimento() {
   const rankingFiltrado = filtroClassificacao === 'todos'
     ? ranking
     : ranking.filter((r) => {
-        const classif = r.mediaGeral >= 8 ? 'excelente' : r.mediaGeral >= 6 ? 'bom' : r.mediaGeral >= 4 ? 'regular' : 'ruim';
+        const classif = r.notaGeralMedia >= 8 ? 'excelente' : r.notaGeralMedia >= 6 ? 'bom' : r.notaGeralMedia >= 4 ? 'regular' : 'ruim';
         return classif === filtroClassificacao;
       });
 
@@ -139,7 +176,7 @@ export default function AuditoriaAtendimento() {
               <span className="text-xs text-zinc-500">Total avaliações</span>
             </div>
             <p className="text-2xl font-bold text-zinc-100">
-              {ranking.reduce((sum, r) => sum + r.totalAvaliacoes, 0)}
+              {ranking.reduce((sum, r) => sum + r.totalMensagens, 0)}
             </p>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
@@ -149,7 +186,7 @@ export default function AuditoriaAtendimento() {
             </div>
             <p className="text-2xl font-bold text-zinc-100">
               {ranking.length > 0
-                ? (ranking.reduce((sum, r) => sum + r.mediaGeral, 0) / ranking.length).toFixed(1)
+                ? (ranking.reduce((sum, r) => sum + r.notaGeralMedia, 0) / ranking.length).toFixed(1)
                 : '—'}
             </p>
           </div>
@@ -191,8 +228,9 @@ export default function AuditoriaAtendimento() {
             <option value="todos">Todos</option>
             <option value="excelente">Excelente</option>
             <option value="bom">Bom</option>
-            <option value="regular">Regular</option>
-            <option value="ruim">Ruim</option>
+            <option value="neutro">Neutro</option>
+            <option value="atencao">Atenção</option>
+            <option value="critico">Crítico</option>
           </select>
         </div>
 
@@ -206,22 +244,44 @@ export default function AuditoriaAtendimento() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="text-center">
-                <p className="text-xs text-zinc-500">Avaliações</p>
-                <p className="text-lg font-bold text-zinc-200">{relatorioTicket.totalAvaliacoes}</p>
+                <p className="text-xs text-zinc-500">Mensagens do agente</p>
+                <p className="text-lg font-bold text-zinc-200">{relatorioTicket.totalMensagensAgente ?? 0}</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-zinc-500">Média geral</p>
-                <p className="text-lg font-bold text-zinc-200">{relatorioTicket.mediaGeral?.toFixed(1)}</p>
+                <p className="text-lg font-bold text-zinc-200">{relatorioTicket.metricas?.notaGeralMedia?.toFixed(1) ?? '—'}</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-zinc-500">Alertas</p>
-                <p className="text-lg font-bold text-red-400">{relatorioTicket.totalAlertas}</p>
+                <p className="text-lg font-bold text-red-400">{relatorioTicket.metricas?.totalAlertas ?? 0}</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-zinc-500">Sugestões</p>
-                <p className="text-lg font-bold text-violet-400">{relatorioTicket.totalSugestoes}</p>
+                <p className="text-lg font-bold text-violet-400">{relatorioTicket.metricas?.totalSugestoes ?? 0}</p>
               </div>
             </div>
+            {relatorioTicket.encerramento && (
+              <div className="rounded-lg border border-zinc-700/60 bg-zinc-800/40 p-3 space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-medium text-zinc-400">Encerramento:</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${encerramentoTipoCor(relatorioTicket.encerramento.tipo)}`}>
+                    {encerramentoTipoLabel(relatorioTicket.encerramento.tipo)}
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-700/50 text-zinc-300">
+                    Risco {relatorioTicket.encerramento.riscoReabertura}
+                  </span>
+                  <span className="text-[10px] text-zinc-500">
+                    Nota <span className="font-mono text-zinc-300">{relatorioTicket.encerramento.nota.toFixed(1)}</span>/10
+                  </span>
+                </div>
+                {relatorioTicket.encerramento.diagnostico && (
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">{relatorioTicket.encerramento.diagnostico}</p>
+                )}
+                {relatorioTicket.encerramento.recomendaReabertura && (
+                  <p className="text-[10px] font-medium text-red-400">⚠️ Recomenda reabertura do ticket</p>
+                )}
+              </div>
+            )}
             {relatorioTicket.avaliacoes?.length > 0 && (
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {relatorioTicket.avaliacoes.map((av: AvaliacaoDetalhada) => (
@@ -266,23 +326,23 @@ export default function AuditoriaAtendimento() {
           ) : (
             <div className="divide-y divide-zinc-800">
               {rankingFiltrado.map((r, idx) => {
-                const isExpanded = expandedAgent === r.agente.id;
-                const classif = r.mediaGeral >= 8 ? 'excelente' : r.mediaGeral >= 6 ? 'bom' : r.mediaGeral >= 4 ? 'regular' : 'ruim';
+                const isExpanded = expandedAgent === r.agentId;
+                const classif = r.notaGeralMedia >= 8 ? 'excelente' : r.notaGeralMedia >= 6 ? 'bom' : r.notaGeralMedia >= 4 ? 'regular' : 'ruim';
                 return (
-                  <div key={r.agente.id}>
+                  <div key={r.agentId}>
                     <div
                       className="flex items-center gap-4 px-5 py-3 hover:bg-zinc-800/30 cursor-pointer transition"
-                      onClick={() => setExpandedAgent(isExpanded ? null : r.agente.id)}
+                      onClick={() => setExpandedAgent(isExpanded ? null : r.agentId)}
                     >
                       <span className="text-sm w-8 text-center">{medalha(idx)}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-200 truncate">{r.agente.name || r.agente.email}</p>
-                        <p className="text-[11px] text-zinc-500">{r.totalAvaliacoes} avaliações</p>
+                        <p className="text-sm font-medium text-zinc-200 truncate">{r.agentName}</p>
+                        <p className="text-[11px] text-zinc-500">{r.totalMensagens} avaliações</p>
                       </div>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full ${classificacaoCor(classif)}`}>
                         {classificacaoLabel(classif)}
                       </span>
-                      <span className="text-sm font-mono text-zinc-300 w-12 text-right">{r.mediaGeral.toFixed(1)}</span>
+                      <span className="text-sm font-mono text-zinc-300 w-12 text-right">{r.notaGeralMedia.toFixed(1)}</span>
                       <span className="text-[10px] text-red-400 w-16 text-right">{r.totalAlertas} alertas</span>
                       {isExpanded ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
                     </div>
@@ -292,39 +352,75 @@ export default function AuditoriaAtendimento() {
                           <div>
                             <p className="text-[10px] text-zinc-500 mb-0.5">Profissionalismo</p>
                             <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-violet-500 rounded-full" style={{ width: `${(r.mediaProfissionalismo / 10) * 100}%` }} />
+                              <div className="h-full bg-violet-500 rounded-full" style={{ width: `${(r.profissionalismoMedio / 10) * 100}%` }} />
                             </div>
-                            <p className="text-[10px] text-zinc-400 mt-0.5">{r.mediaProfissionalismo.toFixed(1)}</p>
+                            <p className="text-[10px] text-zinc-400 mt-0.5">{r.profissionalismoMedio.toFixed(1)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-zinc-500 mb-0.5">Cordialidade</p>
                             <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(r.mediaCordialidade / 10) * 100}%` }} />
+                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(r.cordialidadeMedia / 10) * 100}%` }} />
                             </div>
-                            <p className="text-[10px] text-zinc-400 mt-0.5">{r.mediaCordialidade.toFixed(1)}</p>
+                            <p className="text-[10px] text-zinc-400 mt-0.5">{r.cordialidadeMedia.toFixed(1)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-zinc-500 mb-0.5">Clareza</p>
                             <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(r.mediaClareza / 10) * 100}%` }} />
+                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(r.clarezaMedia / 10) * 100}%` }} />
                             </div>
-                            <p className="text-[10px] text-zinc-400 mt-0.5">{r.mediaClareza.toFixed(1)}</p>
+                            <p className="text-[10px] text-zinc-400 mt-0.5">{r.clarezaMedia.toFixed(1)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-zinc-500 mb-0.5">Empatia</p>
                             <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-amber-500 rounded-full" style={{ width: `${(r.mediaEmpatia / 10) * 100}%` }} />
+                              <div className="h-full bg-amber-500 rounded-full" style={{ width: `${(r.empatiaMedia / 10) * 100}%` }} />
                             </div>
-                            <p className="text-[10px] text-zinc-400 mt-0.5">{r.mediaEmpatia.toFixed(1)}</p>
+                            <p className="text-[10px] text-zinc-400 mt-0.5">{r.empatiaMedia.toFixed(1)}</p>
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {Object.entries(r.classificacoes).map(([cls, count]) => (
-                            <span key={cls} className={`text-[10px] px-2 py-0.5 rounded-full ${classificacaoCor(cls)}`}>
-                              {classificacaoLabel(cls)}: {count}
-                            </span>
-                          ))}
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${classificacaoCor(classif)}`}>
+                            Classificação geral: {classificacaoLabel(classif)}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400">
+                            {r.totalSugestoes} sugestões
+                          </span>
                         </div>
+                        {r.encerramentos && r.encerramentos.total > 0 && (
+                          <div className="rounded-lg border border-zinc-700/60 bg-zinc-800/40 p-3 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[11px] font-medium text-zinc-400">
+                                Encerramentos auditados ({r.encerramentos.total})
+                              </span>
+                              <span className="text-[10px] text-zinc-500">
+                                Taxa correta: <span className="text-emerald-400 font-medium">{r.encerramentos.taxaEncerramentoCorreto}%</span>
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2 text-center">
+                              <div className="bg-zinc-800/50 rounded-lg p-2">
+                                <p className="text-base font-bold text-emerald-400">{r.encerramentos.resolucoesReais}</p>
+                                <p className="text-[9px] text-zinc-500">Resoluções</p>
+                              </div>
+                              <div className="bg-zinc-800/50 rounded-lg p-2">
+                                <p className="text-base font-bold text-red-400">{r.encerramentos.prematuros}</p>
+                                <p className="text-[9px] text-zinc-500">Prematuros</p>
+                              </div>
+                              <div className="bg-zinc-800/50 rounded-lg p-2">
+                                <p className="text-base font-bold text-amber-400">{r.encerramentos.reaberturas}</p>
+                                <p className="text-[9px] text-zinc-500">Reabertos</p>
+                              </div>
+                              <div className="bg-zinc-800/50 rounded-lg p-2">
+                                <p className={`text-base font-bold ${(r.encerramentos.riscoAlto + r.encerramentos.riscoCritico) > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                  {r.encerramentos.riscoAlto + r.encerramentos.riscoCritico}
+                                </p>
+                                <p className="text-[9px] text-zinc-500">Alto/crítico</p>
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-zinc-500">
+                              Nota média: <span className="text-zinc-300">{r.encerramentos.notaMediaEncerramento.toFixed(1)}</span>/10 · Recomendam reabertura: <span className="text-zinc-300">{r.encerramentos.recomendaReabertura}</span>
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

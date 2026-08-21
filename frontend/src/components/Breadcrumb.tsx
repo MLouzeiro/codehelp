@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
-import { NAV_GROUPS } from '../config/navigation';
+import { findActiveItem } from '../config/navigation';
 
 interface Crumb {
   label: string;
@@ -10,17 +10,17 @@ interface Crumb {
 
 function buildCrumbs(pathname: string): Crumb[] {
   const crumbs: Crumb[] = [{ label: 'Dashboard', path: '/app/dashboard' }];
+  const active = findActiveItem(pathname);
 
-  for (const group of NAV_GROUPS) {
-    for (const item of group.items) {
-      if (pathname === item.path || pathname.startsWith(item.path + '/')) {
-        if (group.label !== 'Dashboard') {
-          crumbs.push({ label: group.label, path: null });
-        }
-        crumbs.push({ label: item.label, path: item.path });
-        return crumbs;
-      }
+  if (active) {
+    if (active.group.label !== 'Dashboard') {
+      crumbs.push({ label: active.group.label, path: null });
     }
+    if (active.parent && active.parent.path !== active.item.path) {
+      crumbs.push({ label: active.parent.label, path: active.parent.path });
+    }
+    crumbs.push({ label: active.item.label, path: active.item.path });
+    return crumbs;
   }
 
   // Fallback: rota de detalhe sem match exato (ex: /app/crm/123, /app/orders/abc)
@@ -29,13 +29,7 @@ function buildCrumbs(pathname: string): Crumb[] {
     const appIdx = segments.indexOf('app');
     const rest = appIdx >= 0 ? segments.slice(appIdx + 1) : [];
     if (rest.length > 1) {
-      const base = `/${rest.slice(0, 2).join('/')}`;
-      const groupMatch = NAV_GROUPS.find((g) =>
-        g.items.some((i) => base.startsWith(i.path.replace(/\/+$/, '')))
-      );
-      if (groupMatch) {
-        crumbs.push({ label: groupMatch.label, path: null });
-      }
+      crumbs.push({ label: rest.join(' / '), path: null });
     }
   }
 

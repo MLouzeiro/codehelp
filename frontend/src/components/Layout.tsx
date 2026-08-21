@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import type { Notificacao } from '../types';
-import { filterGroupsByRole, itemVisible, type NavItem } from '../config/navigation';
+import { filterGroupsByRole, itemVisible, findActiveItem, type NavItem } from '../config/navigation';
 import Breadcrumb from './Breadcrumb';
 
 const ThemeSettings = lazy(() => import('./ThemeSettings'));
@@ -24,7 +24,9 @@ export default function Layout() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notificacao[]>([]);
   const [naoLidas, setNaoLidas] = useState(0);
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  // Apenas UM grupo pode estar expandido por vez (accordion).
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  // Sub-menus internos expandidos (itens que possuem filhos), independentes do grupo.
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
   const notifRef = useRef<HTMLDivElement>(null);
   const sidebarHoverTimeout = useRef<ReturnType<typeof setTimeout>>();
@@ -40,34 +42,30 @@ export default function Layout() {
 
   const groups = filterGroupsByRole(user?.role);
 
-  // Determina grupos e submenus que devem abrir automaticamente (contêm a rota ativa)
+  // Item ativo derivado da rota atual (única fonte de verdade).
+  const activeMatch = findActiveItem(location.pathname, user?.role);
+  const activePath = activeMatch?.item.path ?? null;
+  const activeGroupKey = activeMatch?.group.key ?? null;
+
+  // Ao navegar (ou recarregar), abre automaticamente o grupo que contém a rota
+  // ativa e expande o sub-menu interno correspondente.
   useEffect(() => {
-    setOpenGroups((prev) => {
-      const next = new Set(prev);
-      for (const g of groups) {
-        if (anyItemActive(g.items)) next.add(g.key);
-      }
-      return next;
-    });
-    setOpenItems((prev) => {
-      const next = new Set(prev);
-      for (const g of groups) {
-        for (const it of g.items) {
-          if (it.children && anyItemActive(it.children)) next.add(it.path);
-        }
-      }
-      return next;
-    });
+    if (activeGroupKey) {
+      setOpenMenu(activeGroupKey);
+    }
+    if (activeMatch?.parent) {
+      setOpenItems((prev) => {
+        const next = new Set(prev);
+        next.add(activeMatch.parent!.path);
+        return next;
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   const toggleGroup = (key: string) => {
-    setOpenGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    // Accordion: abre o grupo clicado e fecha qualquer outro.
+    setOpenMenu((prev) => (prev === key ? null : key));
   };
 
   const toggleItem = (key: string) => {
@@ -134,12 +132,7 @@ export default function Layout() {
     sidebarHoverTimeout.current = setTimeout(() => setSidebarHovered(false), 200);
   };
 
-  const isItemActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
-
-  const anyItemActive = (items: NavItem[]): boolean =>
-    items.some((it) => isItemActive(it.path) || anyItemActive(it.children || []));
-
-  const isGroupActive = (groupItems: NavItem[]) => anyItemActive(groupItems);
+  const isItemActive = (path: string) => activePath === path;
 
   const renderGroupItems = (groupItems: NavItem[], collapsed?: boolean) =>
     groupItems
@@ -148,7 +141,7 @@ export default function Layout() {
         const children = item.children || [];
         const hasSubmenu = children.length > 1;
         const linkPath = children.length === 1 ? children[0].path : item.path;
-        const active = anyItemActive(children.length > 0 ? children : [item]);
+        const active = isItemActive(item.path) || children.some((c) => isItemActive(c.path));
 
         if (hasSubmenu) {
           const itemOpen = openItems.has(item.path);
@@ -158,27 +151,30 @@ export default function Layout() {
                 type="button"
                 onClick={() => { if (!collapsed) toggleItem(item.path); }}
                 title={collapsed ? item.label : undefined}
-                className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 ${
+                aria-expanded={itemOpen}
+                aria-controls={`submenu-${item.path.replace(/\//g, '-')}`}
+                className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
                   active
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+                    ? 'text-white bg-blue-600/20'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
                 style={{ fontFamily: 'Lexend, sans-serif', fontSize: collapsed ? '0.75rem' : '0.82rem', letterSpacing: '0.01em' }}>
-                <item.icon size={collapsed ? 18 : 17} className={active ? 'text-blue-200' : ''} />
+                <item.icon size={collapsed ? 18 : 17} className={active ? 'text-blue-300' : ''} />
                 {!collapsed && (
                   <>
                     <span className="flex-1 text-left">{item.label}</span>
-                    <ChevronDown size={15} className={`transition-transform duration-200 ${itemOpen ? 'rotate-180' : ''} ${active ? 'text-blue-200' : 'text-slate-500'}`} />
+                    <ChevronDown size={15} className={`transition-transform duration-200 ${itemOpen ? 'rotate-180' : ''} ${active ? 'text-blue-300' : 'text-slate-500'}`} />
                   </>
                 )}
               </button>
               {!collapsed && itemOpen && (
-                <div className="ml-3 mt-0.5 pl-3 border-l border-white/10 space-y-0.5 animate-slide-down">
+                <div id={`submenu-${item.path.replace(/\//g, '-')}`} className="ml-3 mt-0.5 pl-3 border-l border-white/10 space-y-0.5 animate-slide-down">
                   {children.filter((c) => itemVisible(user?.role, c)).map((child) => {
                     const childActive = isItemActive(child.path);
                     return (
                       <Link key={child.path} to={child.path}
-                        className={`flex items-center gap-3 px-3 py-2 min-h-[36px] rounded-xl text-[13px] font-medium transition-all duration-200 ${
+                        aria-current={childActive ? 'page' : undefined}
+                        className={`flex items-center gap-3 px-3 py-2 min-h-[36px] rounded-xl text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
                           childActive
                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -199,7 +195,8 @@ export default function Layout() {
         return (
           <Link key={item.path} to={linkPath}
             title={collapsed ? item.label : undefined}
-            className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 ${
+            aria-current={active ? 'page' : undefined}
+            className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
               active
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -219,11 +216,12 @@ export default function Layout() {
         const children = item.children || [];
         const hasSubmenu = children.length > 1;
         const linkPath = children.length === 1 ? children[0].path : item.path;
-        const active = anyItemActive(children.length > 0 ? children : [item]);
+        const active = isItemActive(item.path) || children.some((c) => isItemActive(c.path));
         return (
           <div key={item.path} className="relative group">
             <Link to={hasSubmenu ? '#!' : linkPath}
               onClick={(e) => { if (hasSubmenu) e.preventDefault(); }}
+              aria-current={active ? 'page' : undefined}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                 active
                   ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
@@ -260,10 +258,31 @@ export default function Layout() {
 
       <nav className={`relative p-3 space-y-0.5 overflow-y-auto h-[calc(100%-4rem-3rem)] ${collapsed ? 'px-2' : ''}`}>
         {groups.map((group) => {
-          const groupActive = isGroupActive(group.items);
-          const open = openGroups.has(group.key);
+          const open = openMenu === group.key;
+          const groupActive = activeGroupKey === group.key;
           const visibleItems = group.items.filter((item) => itemVisible(user?.role, item));
           if (visibleItems.length === 0) return null;
+
+          // Grupo com apenas um item: link direto (sem submenu/accordion).
+          if (visibleItems.length === 1 && !(visibleItems[0].children && visibleItems[0].children.length > 0)) {
+            const single = visibleItems[0];
+            const singleActive = isItemActive(single.path);
+            return (
+              <Link key={group.key} to={single.path}
+                title={collapsed ? group.label : undefined}
+                aria-current={singleActive ? 'page' : undefined}
+                className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  singleActive
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+                onClick={() => setSidebarOpen(false)}
+                style={{ fontFamily: 'Lexend, sans-serif', fontSize: collapsed ? '0.75rem' : '0.82rem', letterSpacing: '0.01em' }}>
+                <group.icon size={collapsed ? 18 : 17} className={singleActive ? 'text-blue-200' : ''} />
+                {!collapsed && <span className="flex-1 text-left">{group.label}</span>}
+              </Link>
+            );
+          }
 
           return (
             <div key={group.key}>
@@ -271,22 +290,24 @@ export default function Layout() {
                 type="button"
                 onClick={() => { if (!collapsed) toggleGroup(group.key); }}
                 title={collapsed ? group.label : undefined}
-                className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 ${
-                  groupActive
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+                aria-expanded={open}
+                aria-controls={`grupo-${group.key}`}
+                className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  open
+                    ? 'bg-white/5 text-white'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
                 style={{ fontFamily: 'Lexend, sans-serif', fontSize: collapsed ? '0.75rem' : '0.82rem', letterSpacing: '0.01em' }}>
-                <group.icon size={collapsed ? 18 : 17} className={groupActive ? 'text-blue-200' : ''} />
+                <group.icon size={collapsed ? 18 : 17} className={open ? 'text-blue-300' : ''} />
                 {!collapsed && (
                   <>
                     <span className="flex-1 text-left">{group.label}</span>
-                    <ChevronDown size={15} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''} ${groupActive ? 'text-blue-200' : 'text-slate-500'}`} />
+                    <ChevronDown size={15} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''} ${open ? 'text-blue-300' : 'text-slate-500'}`} />
                   </>
                 )}
               </button>
               {!collapsed && open && (
-                <div className="ml-4 mt-0.5 pl-3 border-l border-white/10 space-y-0.5 animate-slide-down">
+                <div id={`grupo-${group.key}`} className="ml-4 mt-0.5 pl-3 border-l border-white/10 space-y-0.5 animate-slide-down">
                   {renderGroupItems(visibleItems, collapsed)}
                 </div>
               )}
@@ -319,19 +340,23 @@ export default function Layout() {
       {isHorizontal && (
         <nav className="flex items-center gap-1 overflow-x-auto">
           {groups.map((group) => {
-            const groupActive = isGroupActive(group.items);
+            const groupActive = activeGroupKey === group.key;
             const visibleItems = group.items.filter((item) => itemVisible(user?.role, item));
             if (visibleItems.length === 0) return null;
+            const firstItem = visibleItems[0];
+            const firstHasChildren = (firstItem.children?.filter((c) => itemVisible(user?.role, c))?.length ?? 0) > 0;
+            const hasDropdown = visibleItems.length > 1 || firstHasChildren;
             return (
               <div key={group.key} className="relative group">
-                <Link to={visibleItems[0].path}
+                <Link to={firstItem.path}
+                  aria-current={groupActive ? 'page' : undefined}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${groupActive ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700'}`}
                   style={{ fontFamily: 'Lexend, sans-serif' }}>
                   <group.icon size={15} />
                   <span className="hidden xl:inline">{group.label}</span>
-                  {visibleItems.length > 1 && <ChevronDown size={13} />}
+                  {hasDropdown && <ChevronDown size={13} />}
                 </Link>
-                {visibleItems.length > 1 && (
+                {hasDropdown && (
                   <div className="absolute left-0 top-full pt-2 hidden group-hover:block z-50">
                     <div className="w-56 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 py-1.5">
                       {renderHorizontalItems(visibleItems)}
@@ -456,14 +481,15 @@ export default function Layout() {
             </div>
             <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
               {groups.map((group) => {
-                const groupActive = isGroupActive(group.items);
+                const groupActive = activeGroupKey === group.key;
                 const visibleItems = group.items.filter((item) => itemVisible(user?.role, item));
                 if (visibleItems.length === 0) return null;
                 const first = visibleItems[0];
                 return (
                   <Link key={group.key} to={first.path}
                     title={group.label}
-                    className={`flex items-center justify-center w-11 h-11 mx-auto rounded-xl text-sm font-medium transition-all duration-200 ${
+                    aria-current={groupActive ? 'page' : undefined}
+                    className={`flex items-center justify-center w-11 h-11 mx-auto rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
                       groupActive
                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
                         : 'text-slate-400 hover:text-white hover:bg-white/5'

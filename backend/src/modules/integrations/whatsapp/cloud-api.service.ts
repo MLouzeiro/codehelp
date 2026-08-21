@@ -78,6 +78,56 @@ class WhatsAppCloudAPIService {
     }
   }
 
+  async sendListMessage(
+    to: string,
+    buttonText: string,
+    bodyText: string,
+    sections: Array<{ title: string; rows: Array<{ id: string; title: string; description?: string }> }>,
+  ): Promise<{ success: boolean; error?: string; messageId?: string }> {
+    if (!this.config.phoneNumberId || !this.config.accessToken) {
+      return { success: false, error: 'WhatsApp Cloud API not configured' };
+    }
+
+    const phone = normalizePhone(to);
+
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/${this.config.phoneNumberId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.config.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            to: phone,
+            type: 'interactive',
+            interactive: {
+              type: 'list',
+              header: { type: 'text', text: buttonText },
+              body: { text: bodyText },
+              action: {
+                button: buttonText,
+                sections,
+              },
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error: any = await response.json();
+        return { success: false, error: error.error?.message || 'Failed to send list' };
+      }
+
+      const data = (await response.json()) as CloudAPIResponse;
+      return { success: true, messageId: data.messages?.[0]?.id };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
   async sendImageMessage(
     to: string,
     imageUrl: string,

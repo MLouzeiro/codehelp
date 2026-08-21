@@ -102,8 +102,8 @@ export default function OpportunityPipeline() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pipeline de Oportunidades</h1>
-          <p className="text-gray-500">Arraste os cards para mover entre etapas ou use o menu de ações</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Pipeline de Oportunidades</h1>
+          <p className="text-gray-500 dark:text-slate-400">Arraste os cards para mover entre etapas ou use o menu de ações</p>
         </div>
         {(user?.role === 'admin' || user?.role === 'gerente' || user?.role === 'comercial') && (
           <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2"><Plus size={18} /> Nova Oportunidade</button>
@@ -151,12 +151,12 @@ export default function OpportunityPipeline() {
                   className={`bg-white dark:bg-slate-800 rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow relative ${draggedId === opp.id ? 'opacity-50' : ''} ${canMove(opp.id) ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-900 flex-1">{opp.titulo}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100 flex-1">{opp.titulo}</p>
                     {canMove(opp.id) && (
                       <div className="relative">
                         <button
                           onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === opp.id ? null : opp.id); }}
-                          className="text-gray-400 hover:text-gray-600 p-0.5"
+                          className="text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 p-0.5"
                           title="Mover para etapa"
                         >
                           <Target size={14} />
@@ -169,7 +169,7 @@ export default function OpportunityPipeline() {
                                 <button
                                   key={s.etapa}
                                   onClick={() => { updateStage(opp.id, s.etapa); setOpenMenuId(null); }}
-                                  className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+                                  className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700"
                                 >
                                   → {stageLabels[s.etapa] || s.etapa}
                                 </button>
@@ -179,7 +179,7 @@ export default function OpportunityPipeline() {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">{opp.client?.razaoSocial}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{opp.client?.razaoSocial}</p>
                   {opp.valorEstimado && <p className="text-sm font-semibold text-green-600 mt-1">R$ {opp.valorEstimado}</p>}
                   {opp.probabilidade && <p className="text-xs text-gray-400">{opp.probabilidade}%</p>}
                   <p className="text-xs text-gray-400 mt-1">{opp.responsavel?.name}</p>

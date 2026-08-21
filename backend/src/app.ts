@@ -25,6 +25,7 @@ import helpdeskRoutes from './modules/helpdesk/helpdesk.routes';
 import departamentosRoutes from './modules/helpdesk/departamentos.routes';
 import filasRoutes from './modules/helpdesk/filas.routes';
 import auditRoutes from './modules/audit/audit.routes';
+import teamsRoutes from './modules/teams/teams.routes';
 import kbRoutes from './modules/kb/kb.routes';
 import csatRoutes from './modules/csat/csat.routes';
 import automationsRoutes from './modules/automations/automations.routes';
@@ -45,6 +46,8 @@ import emailRoutes from './modules/integrations/email/email.routes';
 import instagramRoutes from './modules/integrations/instagram/instagram.routes';
 import facebookRoutes from './modules/integrations/facebook/facebook.routes';
 import telegramRoutes from './modules/integrations/telegram/telegram.routes';
+import externalIntegrationRoutes from './modules/integrations/external/externalIntegration.routes';
+import publicApiRoutes from './modules/integrations/public/publicApi.routes';
 
 const isVercel = !!process.env.VERCEL;
 
@@ -118,6 +121,9 @@ const csrfExcludedPaths = [
   '/api/channels/webhook',
   '/api/health',
   '/api/csrf-token',
+  '/api/orders/sign',
+  '/api/integrations/external/webhook',
+  '/api/integration',
 ];
 
 // ── CSRF: so aplicar em rotas que NAO tem autenticacao JWT ───────────
@@ -178,6 +184,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/analytics', weeklyReportRoutes);
 app.use('/api/analytics', relatoriosRoutes);
 app.use('/api/kanban', kanbanRoutes);
+app.use('/api/teams', teamsRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/ai/agent-monitor', aiAgentMonitorRoutes);
@@ -207,6 +214,8 @@ app.use('/api/email', emailRoutes);
 app.use('/api/instagram', instagramRoutes);
 app.use('/api/facebook', facebookRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/integrations/external', externalIntegrationRoutes);
+app.use('/api/integration', publicApiRoutes);
 app.use('/api', billingRoutes);
 app.use('/api', searchRoutes);
 

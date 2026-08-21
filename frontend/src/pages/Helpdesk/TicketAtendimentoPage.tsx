@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Maximize2, Send, Loader2, ArrowLeft, Calendar, Clock, AlertTriangle, ToggleLeft, ToggleRight, Building2, Timer, MessageSquare, Star, Paperclip, ShieldCheck, ShieldAlert, User, X, Info, BarChart3, ExternalLink, Hash, UserCheck } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Maximize2, Send, Loader2, ArrowLeft, Calendar, Clock, AlertTriangle, ToggleLeft, ToggleRight, Building2, Timer, MessageSquare, Star, Paperclip, ShieldCheck, ShieldAlert, User, X, Info, BarChart3, ExternalLink, Hash, UserCheck, ClipboardList, Plus, FileText } from 'lucide-react';
 import api from '../../services/api';
 import TicketTopo from '../../components/TicketTopo';
 import TicketSidebar from '../../components/TicketSidebar';
 import TicketRodape from '../../components/TicketRodape';
 import TicketChecklist from '../../components/TicketChecklist';
+import ClassificationPanel from '../../components/ClassificationPanel';
+import type { SlaTicketIndicador } from '../../types';
 
 const STATUS_LABELS: Record<string, string> = {
   aberto: 'Aberto', em_andamento: 'Em andamento', pendente: 'Pendente',
@@ -29,9 +31,12 @@ export default function TicketAtendimentoPage() {
   const [cliente, setCliente] = useState<any>(null);
   const [historicoContato, setHistoricoContato] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aba, setAba] = useState<'chat' | 'timeline' | 'checklist'>('chat');
+  const [aba, setAba] = useState<'chat' | 'timeline' | 'checklist' | 'os' | 'indicadores'>('chat');
   const [mensagens, setMensagens] = useState<any[]>([]);
   const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
+  const [ordens, setOrdens] = useState<any[]>([]);
+  const [criandoOs, setCriandoOs] = useState(false);
+  const [osError, setOsError] = useState('');
   const [novaMsg, setNovaMsg] = useState('');
   const [enviando, setEnviando] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -43,6 +48,24 @@ export default function TicketAtendimentoPage() {
   const [deptTempos, setDeptTempos] = useState<any[]>([]);
   const [timeBlocks, setTimeBlocks] = useState<any[]>([]);
   const [sidebarAberta, setSidebarAberta] = useState(false);
+
+  const OS_STATUS_LABEL: Record<string, string> = {
+    rascunho: 'Rascunho',
+    aguardando_assinatura: 'Aguardando Assinatura',
+    assinada: 'Assinada',
+    em_execucao: 'Em Execução',
+    concluida: 'Concluída',
+    cancelada: 'Cancelada',
+  };
+
+  const OS_STATUS_COLOR: Record<string, string> = {
+    rascunho: 'bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300',
+    aguardando_assinatura: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    assinada: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+    em_execucao: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    concluida: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+    cancelada: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  };
 
   const formatMin = (min: number | null | undefined) => {
     if (min == null) return '—';
@@ -85,6 +108,49 @@ export default function TicketAtendimentoPage() {
 
   const csatNota = ticket?.csatResposta?.nota ?? null;
 
+  const [slaIndicador, setSlaIndicador] = useState<SlaTicketIndicador | null>(null);
+
+  const carregarSlaIndicador = useCallback(async () => {
+    if (!ticketId) return;
+    try {
+      const { data } = await api.get(`/helpdesk/indicadores/sla/${ticketId}`);
+      setSlaIndicador(data);
+    } catch { /* SLA indisponível não quebra a tela */ }
+  }, [ticketId]);
+
+  useEffect(() => {
+    if (!ticket) return;
+    carregarSlaIndicador();
+    const id = setInterval(carregarSlaIndicador, 30000);
+    return () => clearInterval(id);
+  }, [ticket, carregarSlaIndicador]);
+
+  // TME (espera do cliente) calculado localmente a partir das mensagens do ticket
+  const tmeTicketMin = useMemo(() => {
+    const msgs = (mensagens || [])
+      .map((m: any) => ({ fromMe: !!m.fromMe, at: new Date(m.createdAt || m.sentAt).getTime() }))
+      .filter((m: any) => !isNaN(m.at))
+      .sort((a: any, b: any) => a.at - b.at);
+    if (msgs.length === 0) return null;
+    let soma = 0;
+    let cont = 0;
+    let ultimaClienteAt: number | null = null;
+    for (const m of msgs) {
+      if (!m.fromMe) {
+        ultimaClienteAt = m.at;
+      } else if (ultimaClienteAt != null) {
+        soma += Math.max(0, (m.at - ultimaClienteAt) / 60000);
+        cont++;
+        ultimaClienteAt = null;
+      }
+    }
+    if (ultimaClienteAt != null) {
+      soma += Math.max(0, (Date.now() - ultimaClienteAt) / 60000);
+      cont++;
+    }
+    return cont > 0 ? Math.round(soma / cont) : null;
+  }, [mensagens]);
+
   const slaInfo = useMemo<{ limite: number; consumido: number; status: 'no_prazo' | 'violado' } | null>(() => {
     const limite = ticket?.slaTotalMinutos ?? null;
     if (limite == null) return null;
@@ -103,6 +169,31 @@ export default function TicketAtendimentoPage() {
     const h = Math.floor(min / 60);
     if (h < 24) return `${h}h atrás`;
     return `${Math.floor(h / 24)}d atrás`;
+  };
+
+  const loadOrdens = useCallback(async () => {
+    if (!ticketId) return;
+    try {
+      const { data } = await api.get(`/orders/ticket/${ticketId}`);
+      setOrdens(Array.isArray(data.orders) ? data.orders : []);
+    } catch (err) {
+      console.error('Erro ao carregar OS do ticket:', err);
+      setOrdens([]);
+    }
+  }, [ticketId]);
+
+  const criarOs = async () => {
+    if (!ticketId || criandoOs) return;
+    setCriandoOs(true);
+    setOsError('');
+    try {
+      await api.post(`/orders/from-ticket/${ticketId}`);
+      await Promise.all([loadOrdens(), loadTicket()]);
+    } catch (err: any) {
+      setOsError(err?.response?.data?.error || 'Erro ao criar OS a partir do ticket');
+    } finally {
+      setCriandoOs(false);
+    }
   };
 
   const loadTicket = useCallback(async () => {
@@ -130,12 +221,13 @@ export default function TicketAtendimentoPage() {
           setCliente(c);
         } catch {}
       }
+      loadOrdens();
     } catch (err) {
       console.error('Erro ao carregar ticket:', err);
     } finally {
       setLoading(false);
     }
-  }, [ticketId]);
+  }, [ticketId, loadOrdens]);
 
   useEffect(() => { loadTicket(); }, [loadTicket]);
 
@@ -157,6 +249,7 @@ export default function TicketAtendimentoPage() {
         to: phone,
         message: novaMsg.trim(),
         ticketId,
+        whatsappConnectionId: ticket?.whatsappConnectionId || undefined,
       });
       setNovaMsg('');
       await loadTicket();
@@ -269,8 +362,11 @@ export default function TicketAtendimentoPage() {
       </div>
 
       {/* === CABECALHO DO TICKET (contexto compacto) === */}
-      <div className="flex-shrink-0 px-4 pt-2">
+      <div className="flex-shrink-0 px-4 pt-2 space-y-2">
         <TicketTopo ticket={ticket} slaLabel={slaInfo ? (slaInfo.status === 'no_prazo' ? 'Dentro do prazo' : 'Prazo violado') : undefined} slaStatus={slaInfo?.status} />
+        {ticket && (
+          <ClassificationPanel ticketId={ticket.id} ticket={ticket} onClassificada={loadTicket} />
+        )}
       </div>
 
       {/* === WORKSPACE: CONVERSA | CLIENTE === */}
@@ -309,6 +405,28 @@ export default function TicketAtendimentoPage() {
             >
               {'\u2611\uFE0F'} Checklist
             </button>
+            <button
+              onClick={() => setAba('os')}
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                aba === 'os'
+                  ? 'text-slate-800 border-b-2 border-blue-500 bg-slate-50 dark:text-slate-100 dark:bg-slate-900'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+              }`}
+            >
+              <FileText size={14} className="inline -mt-0.5 mr-1" />
+              OS
+            </button>
+            <button
+              onClick={() => setAba('indicadores')}
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                aba === 'indicadores'
+                  ? 'text-slate-800 border-b-2 border-blue-500 bg-slate-50 dark:text-slate-100 dark:bg-slate-900'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+              }`}
+            >
+              <BarChart3 size={14} className="inline -mt-0.5 mr-1" />
+              Indicadores
+            </button>
             {/* Botao do painel do cliente (mobile) */}
             <button
               onClick={() => setSidebarAberta(true)}
@@ -346,10 +464,10 @@ export default function TicketAtendimentoPage() {
                     <div key={msg.id || i} className={`max-w-[78%] ${isCliente ? 'self-start' : 'self-end'}`}>
                       <div className={`px-3.5 py-2.5 rounded-xl text-sm leading-relaxed ${
                         isCliente
-                          ? 'bg-white border border-slate-200 rounded-bl-sm dark:bg-slate-800 dark:border-slate-700'
+                          ? 'bg-white border border-slate-200 rounded-bl-sm dark:bg-slate-800 dark:border-slate-600'
                           : isIA
-                            ? 'bg-blue-50 border border-blue-200 rounded-br-sm dark:bg-blue-900/30 dark:border-blue-700'
-                            : 'bg-emerald-50 border border-emerald-200 rounded-br-sm dark:bg-emerald-900/30 dark:border-emerald-700'
+                            ? 'bg-blue-50 border border-blue-200 rounded-br-sm dark:bg-blue-900/30 dark:border-blue-600'
+                            : 'bg-emerald-50 border border-emerald-200 rounded-br-sm dark:bg-emerald-900/30 dark:border-emerald-600'
                       }`}>
                         {msg.mediaUrl && msg.mimeType?.startsWith('image/') && (
                           <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="block mb-2">
@@ -381,9 +499,9 @@ export default function TicketAtendimentoPage() {
                             📎 Arquivo anexo
                           </a>
                         )}
-                        <div className={isCliente ? 'text-slate-800 dark:text-slate-200' : isIA ? 'text-blue-800 dark:text-blue-200' : 'text-emerald-800 dark:text-emerald-200'}>{msg.content || (msg.mediaUrl ? '' : '(sem conteúdo)')}</div>
+                        <div className={isCliente ? 'text-slate-800 dark:text-slate-100' : isIA ? 'text-blue-800 dark:text-blue-100' : 'text-emerald-800 dark:text-emerald-100'}>{msg.content || (msg.mediaUrl ? '' : '(sem conteúdo)')}</div>
                       </div>
-                      <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                      <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400 dark:text-slate-400">
                         <span>{new Date(msg.createdAt || msg.sentAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                         {isIA && <span className="text-blue-600 dark:text-blue-400 font-semibold bg-blue-100 dark:bg-blue-900/50 px-1.5 py-0.5 rounded text-[10px]">{'\uD83E\uDD16'} IA</span>}
                         {isOp && <span className="text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-100 dark:bg-emerald-900/50 px-1.5 py-0.5 rounded text-[10px]">{'\uD83D\uDC64'} Operador</span>}
@@ -477,6 +595,183 @@ export default function TicketAtendimentoPage() {
                   })}
                 </div>
               )}
+            </div>
+          ) : aba === 'os' ? (
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <ClipboardList size={15} className="text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Ordens de Serviço</span>
+                  {ordens.length > 0 && (
+                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{ordens.length}</span>
+                  )}
+                </div>
+                <button
+                  onClick={criarOs}
+                  disabled={criandoOs}
+                  className="flex items-center gap-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  {criandoOs ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  Criar OS
+                </button>
+              </div>
+
+              {osError && (
+                <div className="mb-3 flex items-center gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+                  <AlertTriangle size={13} />
+                  {osError}
+                </div>
+              )}
+
+              {ordens.length === 0 ? (
+                <div className="text-center py-12 text-sm text-slate-400 dark:text-slate-500">
+                  Nenhuma ordem de serviço vinculada a este ticket.
+                  <div className="mt-1 text-xs">Clique em "Criar OS" para gerar uma a partir do ticket.</div>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {ordens.map((os: any) => (
+                    <div key={os.id} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText size={15} className="text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{os.numeroOs}</p>
+                            <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{tipoLabel(os.tipoServico)} · {os.client?.nomeFantasia || os.client?.razaoSocial || '—'}</p>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap ${OS_STATUS_COLOR[os.status] || 'bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300'}`}>
+                          {OS_STATUS_LABEL[os.status] || os.status}
+                        </span>
+                      </div>
+
+                      {os.descricaoServico && (
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{os.descricaoServico}</p>
+                      )}
+
+                      <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-slate-400 dark:text-slate-500">
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <UserCheck size={12} className="flex-shrink-0" />
+                          <span className="truncate">{os.tecnicoResponsavel?.name || 'Sem técnico'}</span>
+                        </span>
+                        <span className="flex items-center gap-1.5 whitespace-nowrap">
+                          {os.valorServico != null && os.valorServico > 0 && (
+                            <span className="font-medium text-slate-600 dark:text-slate-300">
+                              {Number(os.valorServico).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </span>
+                          )}
+                          {os.signature?.assinadoEm && (
+                            <span title={`Assinada em ${new Date(os.signature.assinadoEm).toLocaleString('pt-BR')}`}>✍️</span>
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                          Criada em {os.createdAt ? new Date(os.createdAt).toLocaleDateString('pt-BR') : '—'}
+                        </span>
+                        <button
+                          onClick={() => navigate(`/app/orders/${os.id}`)}
+                          className="flex items-center gap-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                        >
+                          <ExternalLink size={12} />
+                          Abrir OS
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : aba === 'indicadores' ? (
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900 space-y-3">
+              {/* SLA em tempo real */}
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Clock size={15} className="text-blue-600 dark:text-blue-400" /> SLA em tempo real
+                  </h3>
+                  {slaIndicador?.pausado && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                      ⏸ Pausado
+                    </span>
+                  )}
+                </div>
+                {slaIndicador ? (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold ${
+                          slaIndicador.classificacao.estado === 'fora'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-200 dark:border-red-800'
+                            : slaIndicador.classificacao.estado === 'atencao'
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                        }`}>
+                          {slaIndicador.classificacao.icone} {slaIndicador.classificacao.texto}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-slate-900 dark:text-white">
+                          {slaIndicador.percentualConsumido}% <span className="text-xs font-medium text-slate-400 dark:text-slate-500">consumido</span>
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {slaIndicador.restantesMinutos > 0
+                            ? `${formatMin(slaIndicador.restantesMinutos)} restantes de ${formatMin(slaIndicador.totalMinutos)}`
+                            : `${formatMin(slaIndicador.totalMinutos)} excedido`}
+                          {slaIndicador.finalizado ? ' · Concluído' : ''} · Fonte: {slaIndicador.fonte}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="h-2.5 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700">
+                      <div
+                        className={`h-full transition-all ${slaIndicador.classificacao.estado === 'fora' ? 'bg-red-500' : slaIndicador.classificacao.estado === 'atencao' ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.min(100, slaIndicador.percentualConsumido)}%` }}
+                      />
+                    </div>
+                    {slaIndicador.classificacao.estado === 'atencao' && (
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                        ⚠️ SLA em risco a partir de {slaIndicador.slaRiscoPct}% consumido — priorize este atendimento.
+                      </p>
+                    )}
+                    {slaIndicador.classificacao.estado === 'fora' && (
+                      <p className="text-[11px] text-red-700 dark:text-red-400">
+                        ⛔ SLA violado. Registre a justificativa do atraso no encerramento.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 dark:text-slate-500">SLA não configurado para este ticket.</p>
+                )}
+              </div>
+
+              {/* Métricas do atendimento */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
+                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Tempo total</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-white">{formatMin(tempoTotalMin)}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
+                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Primeira resposta</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-white">{primeiraRespostaMin != null ? formatMin(primeiraRespostaMin) : '—'}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
+                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">TME — espera do cliente</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-white">{tmeTicketMin != null ? formatMin(tmeTicketMin) : '—'}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
+                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Última interação</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-white text-sm">{tempoRelativo(ultimaInteracao)}</p>
+                </div>
+              </div>
+
+              {/* TMR esperado vs meta (config) */}
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 text-xs text-slate-500 dark:text-slate-400">
+                A avaliação completa de TMR/TME/SLA por período e por analista está disponível na página{' '}
+                <Link to="/app/helpdesk/indicadores" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                  Indicadores de Atendimento
+                </Link>.
+              </div>
             </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900">

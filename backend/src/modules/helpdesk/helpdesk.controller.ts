@@ -21,6 +21,7 @@ import { sendWhatsAppMessage } from '../integrations/whatsapp/whatsapp.service';
 import { notificarAtendentesFila } from '../alerts/alerts.service';
 import { calcularFCR, metricasFCR } from './fcr.service';
 import { criarKanbanTaskDeTicket, tempoPorDepartamento } from './department-integration.service';
+import { validarClassificacaoObrigatoria } from './categorias.service';
 
 const PRIORIDADE_ORDEM: Record<string, number> = {
   urgente: 0,
@@ -203,7 +204,7 @@ export async function triageTicket(req: AuthRequest, res: Response) {
       const clientName = ticket.contactName ? ticket.contactName.split(' ')[0] : 'Cliente';
       const { montarPosicaoFilaComInfo } = await import('./menu');
       const posMsg = await montarPosicaoFilaComInfo(clientName, filaOrder, false, false);
-      await sendWhatsAppMessage(ticket.contactPhone, `${clientName}, obrigado por aguardar! Sua demanda foi direcionada ao departamento *${dept.nome}* e já está na fila de atendimento. 🏢\n\n${posMsg}`, undefined, ticket.contactJid || undefined).catch(() => {});
+      await sendWhatsAppMessage(ticket.contactPhone, `${clientName}, obrigado por aguardar! Sua demanda foi direcionada ao departamento *${dept.nome}* e já está na fila de atendimento. 🏢\n\n${posMsg}`, (ticket as any).whatsappConnectionId || undefined, ticket.contactJid || undefined).catch(() => {});
     }
 
     return res.json({ message: 'Ticket direcionado para a fila', ticket: updated, posicaoNaFila: filaOrder });
@@ -400,6 +401,17 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
 
     const ticket = await prisma.ticket.findUnique({ where: { id } });
     if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
+
+    if (etapa === 'concluido' && req.user?.role !== 'admin') {
+      try {
+        await validarClassificacaoObrigatoria(ticket);
+      } catch (e: any) {
+        if (e?.message?.includes('CLASSIFICACAO_OBRIGATORIA')) {
+          return res.status(400).json({ error: e.message.replace('CLASSIFICACAO_OBRIGATORIA: ', '') });
+        }
+        throw e;
+      }
+    }
 
     const etapaAnterior = ticket.etapa;
     const updateData: any = { etapa };

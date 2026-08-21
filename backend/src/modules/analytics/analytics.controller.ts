@@ -4,6 +4,55 @@ import { AuthRequest } from '../../shared/middleware/auth';
 import { env } from '../../config/env';
 import { callClaude } from '../../shared/aiClient';
 import { gerarDashboardExecutivo } from './dashboardExecutivo.service';
+import { getDashboardIa } from './dashboardIa.service';
+import { gerarAlertasVisaoGeral } from './alertasVisaoGeral.service';
+import { STATUS_ABERTO } from '../helpdesk/constants';
+
+// ── Visão Geral — Alertas e Atenção ─────────────────────────────────────
+// Endpoint: GET /api/analytics/visao-geral?dias=7|30|90
+// Compõe os alertas operacionais + chamados em risco + tarefas + dev/implant
+// + comportamento do analista + clientes com problema recorrente.
+export async function getVisaoGeral(req: AuthRequest, res: Response) {
+  try {
+    const dias = Math.min(Math.max(parseInt(String(req.query.dias || '30'), 10) || 30, 1), 90);
+    const fim = new Date();
+    fim.setHours(23, 59, 59, 999);
+    const inicio = new Date(fim);
+    inicio.setDate(fim.getDate() - (dias - 1));
+    inicio.setHours(0, 0, 0, 0);
+
+    const [totalTickets, ticketsFechados, ticketsAbertos, csatData] = await Promise.all([
+      prisma.ticket.count({ where: { createdAt: { gte: inicio, lte: fim } } }),
+      prisma.ticket.count({ where: { createdAt: { gte: inicio, lte: fim }, OR: [{ status: 'fechado' }, { etapa: 'concluido' }] } }),
+      prisma.ticket.count({ where: { status: { in: [...STATUS_ABERTO] } } }),
+      prisma.cSATResposta.aggregate({
+        where: { respondidoEm: { gte: inicio, lte: fim }, nota: { not: null } },
+        _avg: { nota: true },
+        _count: { id: true },
+      }),
+    ]);
+
+    const alertas = await gerarAlertasVisaoGeral(dias, {
+      totalTickets,
+      taxaResolucao: totalTickets > 0 ? Math.round((ticketsFechados / totalTickets) * 100) : 0,
+      tempoMedioRespostaMin: 0,
+      csatMedio: csatData._avg.nota ? Math.round(csatData._avg.nota * 100) / 100 : 0,
+      ticketsAbertos,
+      slaCumprido: 0,
+      slaTotal: 0,
+      taxaSla: 0,
+    });
+
+    res.json({
+      atualizadoEm: new Date().toISOString(),
+      periodo: { inicio: inicio.toISOString(), fim: fim.toISOString(), dias },
+      alertas,
+    });
+  } catch (err: any) {
+    console.error('Erro na visão geral:', err?.message || err);
+    res.status(500).json({ error: 'Erro ao carregar alertas da visão geral' });
+  }
+}
 
 // ── Dashboard Executivo Consolidado ─────────────────────────────────────
 // Endpoint: GET /api/analytics/executivo?dias=30
@@ -15,6 +64,19 @@ export async function getDashboardExecutivo(req: AuthRequest, res: Response) {
   } catch (err: any) {
     console.error('Erro no dashboard executivo:', err?.message || err);
     res.status(500).json({ error: 'Erro ao carregar dashboard executivo' });
+  }
+}
+
+// ── Dashboard IA (Gestão Inteligente) ───────────────────────────────────
+// Endpoint: GET /api/analytics/dashboard-ia?dias=1|7|30
+export async function getDashboardIaHandler(req: AuthRequest, res: Response) {
+  try {
+    const dias = parseInt(String(req.query.dias || '7'), 10) || 7;
+    const data = await getDashboardIa(dias);
+    res.json(data);
+  } catch (err: any) {
+    console.error('Erro no dashboard IA:', err?.message || err);
+    res.status(500).json({ error: 'Erro ao carregar dashboard IA' });
   }
 }
 

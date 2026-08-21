@@ -16,6 +16,7 @@ import { classificarPorPalavrasChave } from '../../helpdesk/rules.service';
 import { notificarAtendentesFila } from '../../alerts/alerts.service';
 import { processarDescricaoProblema, montarMensagemConfirmacao, analisarDescricaoProblema } from '../../ai/aiTriage.service';
 import { getConfigAutoAtendimento, propostaRespostaIA, enviarRespostaValidada, respostaJaValidada } from '../../ai/aiValidation.service';
+import { isOrigemIgnorada } from './contatosIgnorados.service';
 import {
   buscarTicketAtivo,
   buscarCsatPendente,
@@ -431,6 +432,20 @@ export async function processIncomingMessageHandler(
       return;
     }
 
+    // ── 0.1) Contato/grupo ignorado do Helpdesk ───────────────────────
+    // Proteção centralizada: se a origem da mensagem está na lista de
+    // contatos/grupos ignorados, NÃO inicia o fluxo do Helpdesk (não cria
+    // ticket, não coloca na fila, não envia saudação/menu, não aciona IA).
+    // A mensagem continua sendo recebida pelo WhatsApp normalmente.
+    const origemIgnorada = await isOrigemIgnorada({ phoneDigits, jid });
+    if (origemIgnorada.ignorado) {
+      console.log(
+        `[HELPDESK_IGNORADO] phone=${phoneDigits} jid=${jid} tipo=${origemIgnorada.registro?.tipo || 'contato'} ` +
+        `nome=${origemIgnorada.registro?.nome || '-'} event=SKIPPED — fluxo do Helpdesk não iniciado`,
+      );
+      return;
+    }
+
     const horarioCfg = await getHorarioConfig();
     const atendimentoAberto = await isAtendimentoAberto(horarioCfg);
 
@@ -438,6 +453,18 @@ export async function processIncomingMessageHandler(
     // Ticket fechado/cancelado NÃO é ativo — nova mensagem não o reabre.
     let ticket = await buscarTicketAtivo(phoneSemSufixo, jid);
     console.log(`[TICKET_LOOKUP] phone=${phoneSemSufixo} event=RESULT ticketId=${ticket?.id || 'nenhum'}`);
+
+    // Backfill do canal: ticket antigo (sem canal vinculado) recebe o canal
+    // da instância que está recebendo a mensagem AGORA. O canal é persistido
+    // uma única vez (primeira mensagem define) e nunca muda com transferências.
+    if (ticket && connectionId && !ticket.whatsappConnectionId) {
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { whatsappConnectionId: connectionId },
+      });
+      ticket.whatsappConnectionId = connectionId;
+      console.log(`[TICKET_BACKFILL] ticketId=${ticket.id} event=CANAL_VINCULADO connectionId=${connectionId}`);
+    }
 
     if (!ticket) {
       // ── 2) Sem ticket ativo → confirmar resolução pendente / avaliação ──
