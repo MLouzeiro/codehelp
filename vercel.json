@@ -31,5 +31,7 @@
       "src": "/(.*)",
       "dest": "/frontend/index.html"
     }
-  ]
+  ],
+  "outputDirectory": "frontend/dist",
+  "framework": null
 }

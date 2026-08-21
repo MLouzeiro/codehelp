@@ -2,6 +2,26 @@
 
 > Registro cronológico de entregas. Formato: `Data | Escopo | Resumo`.
 
+## v1.5.0 — 2026-08-21
+
+### Auditoria de Sistema Profissional + Deploy Prep
+
+**Schema**: `AuditLog` expandido com `severity`, `clienteId`, `success`, `errorMessage`, `requestId`, `fonte`, `entidadeRelacionada`, `entidadeRelacionadaId` + 6 novos índices. Novo model `AuditAlert` (tipo, titulo, descricao, severidade, status, metadata, analisadoPor, justificativa, arquivadoEm) + 6 índices.
+
+**Backend segurança**: `audit-security.service.ts` (22 indicadores de segurança, detecção de anomalias: excessão_exclusões, brute_force, alteração_permissoes_frequente, acesso_fora_horario; timeline por usuário com horários de atividade; filtros de exportação). `audit-alerts.service.ts` (CRUD alertas, stats, detecção automática).
+
+**Backend endpoints**: Controller expandido de 7 → 17 endpoints: security, anomalias, alerts CRUD, export CSV, violações, order/client audit.
+
+**Frontend**: `AuditoriaSistemaPage.tsx` reescrita com 5 abas: Visão Geral (24 cards com delta), Eventos (filtros avançados + timeline), Segurança (22 indicadores + anomalias), Alertas (pendentes/analisados/arquivados), Relatórios (CSV funcional).
+
+**Orders**: campos de implantação (tipoImplantacao, precoImplantacao, horasDev, horasSuporte) no createOrder/updateOrder, OrderForm e OrderDetail.
+
+**Deploy**: Dockerfile multi-stage para Fly.io, fly.toml, .dockerignore, vercel.json atualizado, .env.example completo, .gitignore expandido.
+
+**Documentação**: docs/GUIA-PROJETO.md, docs/GITHUB-LEIGO.md, docs/DEPLOY-VERCEL-LEIGO.md, docs/BACKUP-E-RESTAURACAO.md, docs/ARQUITETURA.md, docs/VARIAVEIS-AMBIENTE.md.
+
+**Testes**: `audit-extended.test.ts` 23/23, `orders.test.ts` 11/11. Backend 565/566, tsc 25 preexistentes (0 novos), frontend tsc 0.
+
 ## 2026-08-20
 
 ### Fase 22 — Dark Mode Global (tema escuro para todo o sistema)

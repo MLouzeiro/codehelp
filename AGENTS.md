@@ -355,6 +355,17 @@ npx expo run:ios             # Build iOS
 - [x] **Fase 5 — Frontend**: `AuditoriaSistemaPage.tsx` reescrita com 5 abas: **Visão Geral** (24 cards com delta, top ações, top usuários), **Eventos** (filtros avançados: módulo, severidade, fonte, data, busca + timeline com expand/collapse + badges de severidade/fonte/fluxo), **Segurança** (22 indicadores + anomalias detectadas com 🟢🟡🟠🔴), **Alertas** (CRUD: pendentes/analisados/arquivados + ações marcar analisado/arquivar), **Relatórios** (export CSV funcional, PDF/Excel placeholder).
 - [x] **Fase 7 — Testes**: `audit-extended.test.ts` **23/23** (logAudit novos campos, filtros severity/fonte/success, busca errorMessage, dashboard stats expandido, security indicators, anomalias, user timeline, alert CRUD, detectarEGerarAlertas). Backend **565/566** (única falha TESTE #31 flaky pré-existente), tsc **25 pré-existentes (0 novos)**, frontend tsc **0**.
 
+### Deploy Preparation (Vercel + Fly.io + Neon) — Completo
+- [x] **Diagnóstico**: 9 bloqueadores identificados (Baileys WebSocket, cron schedulers, local uploads, PDF storage, WhatsApp session state, in-memory state, startup logic, no connection pooling, Puppeteer)
+- [x] **Arquitetura**: Frontend Vercel (static) + Backend Fly.io (Docker, 256MB RAM free tier) + PostgreSQL Neon (500MB free). Total R$ 0,00.
+- [x] **Backend Dockerfile**: multi-stage build (builder + production), Prisma generate, 256MB RAM
+- [x] **fly.toml**: configuração Fly.io (gru region, auto_stop/start, volume persistente para storage)
+- [x] **vercel.json**: atualizado com routes para /api/* → api/index.ts, static files → frontend/
+- [x] **.dockerignore**: exclui node_modules, .git, .env, dist, storage temporário
+- [x] **.env.example**: completo com 30+ variáveis documentadas (DATABASE_URL, JWT, WhatsApp, IA, SMTP, Redis, Integration)
+- [x] **Documentação para leigos**: 6 guias em docs/ (GUIA-PROJETO, GITHUB-LEIGO, DEPLOY-VERCEL-LEIGO, BACKUP-E-RESTAURACAO, ARQUITETURA, VARIAVEIS-AMBIENTE)
+- [x] **CHANGELOG**: v1.5.0 adicionado com resumo completo
+
 ## Próximos passos
 - [ ] Fase 4 — Enriquecimento dos ~90 call sites de logAction com severity/clienteId
 - [ ] FASE 10 — Documentação final e FASE 11 — Testes finais de regressão
