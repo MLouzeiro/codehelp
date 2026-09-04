@@ -37,7 +37,7 @@ Resposta do atendente:
 Considere: educação, profissionalismo, clareza, empatia, resolução do problema, uso de linguagem adequada.`;
 
   try {
-    const text = await callClaude(prompt, 500);
+    const text = await callClaude(prompt, 500, 'ai-audit');
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Resposta não é JSON válido');
     const result = JSON.parse(jsonMatch[0]);

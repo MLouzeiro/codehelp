@@ -97,6 +97,7 @@ export async function gerarPendenciasHandler(req: AuthRequest, res: Response) {
       entidade: 'BillingPendency',
       detalhes: { periodo, criadas },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.json({ message: `${criadas} pendencia(s) criada(s)`, criadas });
   } catch (err: any) {

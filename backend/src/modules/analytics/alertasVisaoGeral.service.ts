@@ -208,7 +208,103 @@ export async function gerarAlertasVisaoGeral(
   const imp = await alertasTipoTarefa('implantacao', 'Implantação');
   alertas.push(...imp);
 
+  // ── Alertas de Qualidade Operacional ──────────────────────────────
+  const totalPeriodo = await prisma.ticket.count({
+    where: { createdAt: { gte: inicio, lte: fim } },
+  });
+  const qualidade = await alertasQualidade(inicio, fim, totalPeriodo);
+  alertas.push(...qualidade);
+
   return ordenarAlertas(alertas);
+}
+
+// ── Alertas de Qualidade ─────────────────────────────────────────────────
+async function alertasQualidade(inicio: Date, fim: Date, totalPeriodo: number): Promise<AlertOperacional[]> {
+  const alertas: AlertOperacional[] = [];
+
+  // Reaberturas elevadas
+  const reabertos = await prisma.aIAgentClosureAudit.count({
+    where: { tipo: 'reabertura', processadoEm: { gte: inicio, lte: fim } },
+  });
+  if (totalPeriodo > 0) {
+    const taxa = (reabertos / totalPeriodo) * 100;
+    if (taxa > 15) {
+      alertas.push({
+        nivel: 'critico',
+        tipo: 'reabertura_aumento',
+        titulo: 'Aumento significativo de reaberturas',
+        mensagem: `${reabertos} chamado(s) reaberto(s) (${taxa.toFixed(1)}% do total). Taxa acima de 15%.`,
+        contagem: reabertos,
+        icone: 'RotateCcw',
+      });
+    }
+  }
+
+  // Retrabalho elevado
+  const rework = await prisma.auditoriaProfissional.count({
+    where: {
+      auditadoEm: { gte: inicio, lte: fim },
+      OR: [{ retrabalho: true }, { classificacaoResolucao: 'REABERTO' }],
+    },
+  });
+  if (totalPeriodo > 0) {
+    const taxa = (rework / totalPeriodo) * 100;
+    if (taxa > 10) {
+      alertas.push({
+        nivel: 'atencao',
+        tipo: 'retrabalho_acima_meta',
+        titulo: 'Retrabalho acima da meta',
+        mensagem: `${rework} caso(s) classificado(s) como retrabalho (${taxa.toFixed(1)}%). Meta: ≤10%.`,
+        contagem: rework,
+        icone: 'RefreshCw',
+      });
+    }
+  }
+
+  // FCR baixo
+  const fcrTickets = await prisma.ticket.findMany({
+    where: {
+      status: { in: ['fechado', 'resolvido'] },
+      dataFechamento: { not: null, gte: inicio, lte: fim },
+    },
+    select: { id: true, resolvidoSemAjuda: true, metrics: { select: { totalReaberturas: true } } },
+  });
+  const fcrTotal = fcrTickets.length;
+  const fcrCount = fcrTickets.filter(t => t.resolvidoSemAjuda !== false && (t.metrics?.totalReaberturas || 0) === 0).length;
+  const fcrPct = fcrTotal > 0 ? (fcrCount / fcrTotal) * 100 : 0;
+  if (fcrTotal > 0 && fcrPct < 60) {
+    alertas.push({
+      nivel: 'atencao',
+      tipo: 'fcr_abaixo_meta',
+      titulo: 'FCR abaixo da meta',
+      mensagem: `First Contact Resolution em ${fcrPct.toFixed(0)}% (${fcrCount}/${fcrTotal}). Meta: 60%.`,
+      contagem: fcrTotal - fcrCount,
+      icone: 'Target',
+    });
+  }
+
+  // Problema recorrente sistêmico
+  const recorrentes = await prisma.ticket.groupBy({
+    by: ['assunto', 'categoria'],
+    where: { createdAt: { gte: inicio, lte: fim }, assunto: { not: null } },
+    _count: { id: true },
+    having: { id: { _count: { gte: 5 } } },
+    orderBy: { _count: { id: 'desc' } },
+    take: 3,
+  });
+
+  for (const rec of recorrentes) {
+    alertas.push({
+      nivel: 'critico',
+      tipo: 'problema_recorrente_sistemico',
+      titulo: 'Problema recorrente detectado',
+      mensagem: `"${rec.assunto || rec.categoria}" aparece em ${rec._count.id} chamados. Possível problema sistêmico.`,
+      contagem: rec._count.id,
+      icone: 'AlertTriangle',
+    });
+  }
+
+  return alertas;
 }
 
 // ── Cliente com problema recorrente ─────────────────────────────────────

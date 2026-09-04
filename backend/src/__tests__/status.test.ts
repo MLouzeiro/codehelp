@@ -90,8 +90,8 @@ describe('Status Service (Bloco 11)', () => {
 
   describe('escalarTicket', () => {
     it('move ticket para status=escalonado e atualiza idFila', async () => {
-      const filaN1 = await prisma.fila.findUnique({ where: { slug: 'n1' } });
-      const filaN2 = await prisma.fila.findUnique({ where: { slug: 'n2' } });
+      const filaN1 = await prisma.fila.findFirst({ where: { slug: 'n1' } });
+      const filaN2 = await prisma.fila.findFirst({ where: { slug: 'n2' } });
       const t = await prisma.ticket.create({
         data: {
           externalId: `esc-${Date.now()}-${Math.random()}`,
@@ -114,7 +114,7 @@ describe('Status Service (Bloco 11)', () => {
     });
 
     it('rejeita escalonar para N1', async () => {
-      const filaN1 = await prisma.fila.findUnique({ where: { slug: 'n1' } });
+      const filaN1 = await prisma.fila.findFirst({ where: { slug: 'n1' } });
       const t = await prisma.ticket.create({
         data: {
           externalId: `esc-n1-${Date.now()}-${Math.random()}`,

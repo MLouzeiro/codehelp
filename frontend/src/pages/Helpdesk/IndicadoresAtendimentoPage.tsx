@@ -6,6 +6,7 @@ import {
   TrendingUp, TrendingDown, FileText, Filter, X, BellRing,
   AlertTriangle, XCircle, Info, Users,
 } from 'lucide-react';
+import { AcronymText } from '../../components/AcronymText';
 import type {
   IndicadoresAtendimento,
   MetasIndicadores,
@@ -66,7 +67,7 @@ function CardIndicadorView({ card, invertido }: { card: CardIndicador; invertido
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={{ fontFamily: 'Lexend, sans-serif' }}>
         <Icon size={14} className="text-blue-600 dark:text-blue-400" />
-        {card.label}
+        <AcronymText text={card.label} />
       </div>
       <div className="flex items-end justify-between gap-2">
         <div>
@@ -534,12 +535,12 @@ export default function IndicadoresAtendimentoPage() {
                       <th className="text-left py-1.5 pr-2 font-semibold">Analista</th>
                       <th className="text-center py-1.5 px-2 font-semibold">Tickets</th>
                       <th className="text-center py-1.5 px-2 font-semibold">Resolvidos</th>
-                      <th className="text-center py-1.5 px-2 font-semibold">TMR</th>
-                      <th className="text-center py-1.5 px-2 font-semibold">TME</th>
+                      <th className="text-center py-1.5 px-2 font-semibold"><AcronymText text="TMR" /></th>
+                      <th className="text-center py-1.5 px-2 font-semibold"><AcronymText text="TME" /></th>
                       <th className="text-center py-1.5 px-2 font-semibold">1ª Resp.</th>
-                      <th className="text-center py-1.5 px-2 font-semibold">SLA</th>
-                      <th className="text-center py-1.5 px-2 font-semibold">CSAT</th>
-                      <th className="text-center py-1.5 px-2 font-semibold">FCR</th>
+                      <th className="text-center py-1.5 px-2 font-semibold"><AcronymText text="SLA" /></th>
+                      <th className="text-center py-1.5 px-2 font-semibold"><AcronymText text="CSAT" /></th>
+                      <th className="text-center py-1.5 px-2 font-semibold"><AcronymText text="FCR" /></th>
                       <th className="text-center py-1.5 px-2 font-semibold">Reab.</th>
                       <th className="text-center py-1.5 pl-2 font-semibold">Retrab.</th>
                     </tr>
@@ -585,11 +586,11 @@ export default function IndicadoresAtendimentoPage() {
             <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4" style={{ fontFamily: 'Khand, sans-serif' }}>Metas de Indicadores</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                TMR (Resolução) — min
+                <AcronymText text="TMR" /> (Resolução) — min
                 <input type="number" min={1} value={metas.tmrMetaMin} onChange={(e) => setMeta('tmrMetaMin', e.target.value)} className={selectCls} />
               </label>
               <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                TME (Espera) — min
+                <AcronymText text="TME" /> (Espera) — min
                 <input type="number" min={1} value={metas.tmeMetaMin} onChange={(e) => setMeta('tmeMetaMin', e.target.value)} className={selectCls} />
               </label>
               <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
@@ -597,11 +598,11 @@ export default function IndicadoresAtendimentoPage() {
                 <input type="number" min={1} value={metas.primeiraRespostaMetaMin} onChange={(e) => setMeta('primeiraRespostaMetaMin', e.target.value)} className={selectCls} />
               </label>
               <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                SLA meta — %
+                <AcronymText text="SLA" /> meta — %
                 <input type="number" min={1} max={100} value={metas.slaMetaPct} onChange={(e) => setMeta('slaMetaPct', e.target.value)} className={selectCls} />
               </label>
               <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                SLA em risco a partir de — %
+                <AcronymText text="SLA" /> em risco a partir de — %
                 <input type="number" min={1} max={100} value={metas.slaRiscoPct} onChange={(e) => setMeta('slaRiscoPct', e.target.value)} className={selectCls} />
               </label>
             </div>

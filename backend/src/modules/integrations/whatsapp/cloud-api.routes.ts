@@ -1,7 +1,20 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import { whatsappCloudAPIService } from './cloud-api.service';
 import { unifiedWhatsAppService } from './unified-whatsapp.service';
 import { env } from '../../../config/env';
+
+function verifyCloudWebhookSignature(req: Request): boolean {
+  const appSecret = env.whatsappCloudAppSecret;
+  if (!appSecret) {
+    console.warn('[Cloud Webhook] WHATSAPP_CLOUD_APP_SECRET nao configurado — webhook sem validacao HMAC');
+    return true; // fallback: aceitar se secret nao configurado (dev)
+  }
+  const signature = req.headers['x-hub-signature-256'] as string;
+  if (!signature) return false;
+  const expected = 'sha256=' + crypto.createHmac('sha256', appSecret).update(JSON.stringify(req.body)).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+}
 
 const router = Router();
 
@@ -74,9 +87,13 @@ router.get('/webhook', (req: Request, res: Response) => {
   }
 });
 
-// Webhook receiver (POST)
+// Webhook receiver (POST) — com validacao HMAC-SHA256
 router.post('/webhook', async (req: Request, res: Response) => {
   try {
+    if (!verifyCloudWebhookSignature(req)) {
+      console.warn('[Cloud Webhook] Assinatura HMAC invalida — requisicao rejeitada');
+      return res.sendStatus(403);
+    }
     await unifiedWhatsAppService.handleCloudWebhook(req.body);
     res.sendStatus(200);
   } catch (error: any) {

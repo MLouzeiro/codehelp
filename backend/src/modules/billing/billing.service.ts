@@ -56,6 +56,8 @@ export async function upsertBilling(input: BillingInput) {
         entidade: 'ClientBilling',
         entidadeId: existing.id,
         detalhes: { tipo: input.tipo, anterior, novo: input.quantidade, motivo: input.motivo },
+        severity: 'baixa',
+        clienteId: input.clientId,
       });
     }
     return existing;
@@ -91,6 +93,8 @@ export async function upsertBilling(input: BillingInput) {
     entidade: 'ClientBilling',
     entidadeId: created.id,
     detalhes: { tipo: input.tipo, quantidade: input.quantidade },
+    severity: 'baixa',
+    clienteId: input.clientId,
   });
 
   return created;
@@ -252,6 +256,8 @@ export async function resolverPendencia(
       valor: pendencia.valorTotal,
       observacao,
     },
+    severity: 'baixa',
+    clienteId: pendencia.clienteId,
   });
 
   return pendencia;

@@ -73,11 +73,13 @@ export const env = {
   evolutionApiUrl: process.env.EVOLUTION_API_URL || '',
   evolutionApiKey: process.env.EVOLUTION_API_KEY || '',
   evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME || 'codehelp',
+  evolutionWebhookSecret: process.env.EVOLUTION_WEBHOOK_SECRET || '',
   // WhatsApp Cloud API (Meta Official)
   whatsappCloudPhoneNumberId: process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID || '',
   whatsappCloudAccessToken: process.env.WHATSAPP_CLOUD_ACCESS_TOKEN || '',
   whatsappCloudApiVersion: process.env.WHATSAPP_CLOUD_API_VERSION || 'v19.0',
   whatsappCloudWebhookVerifyToken: process.env.WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN,
+  whatsappCloudAppSecret: process.env.WHATSAPP_CLOUD_APP_SECRET || '',
   // Backend URL for webhooks
   backendUrl: process.env.BACKEND_URL || 'http://localhost:3010',
 };

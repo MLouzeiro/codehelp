@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Brain, Users, TrendingUp, AlertTriangle, Star, Award,
-  RefreshCw, ChevronDown, ChevronUp, Search, BarChart3,
+  RefreshCw, ChevronDown, ChevronUp, Search, BarChart3, GraduationCap,
 } from 'lucide-react';
 import api from '../../services/api';
+import DiagnosticoDrawer from '../../components/DiagnosticoDrawer';
 
 interface RankingAgente {
   agentId: string;
@@ -111,6 +112,8 @@ export default function AuditoriaAtendimento() {
   const [loadingRelatorio, setLoadingRelatorio] = useState(false);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [filtroClassificacao, setFiltroClassificacao] = useState<string>('todos');
+  const [diagnosticoAgentId, setDiagnosticoAgentId] = useState<string | null>(null);
+  const [diagnosticoAgentName, setDiagnosticoAgentName] = useState<string>('');
 
   const loadRanking = useCallback(async () => {
     setLoading(true);
@@ -385,6 +388,12 @@ export default function AuditoriaAtendimento() {
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400">
                             {r.totalSugestoes} sugestões
                           </span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDiagnosticoAgentId(r.agentId); setDiagnosticoAgentName(r.agentName); }}
+                            className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors flex items-center gap-1"
+                          >
+                            <GraduationCap size={10} /> Treinamento
+                          </button>
                         </div>
                         {r.encerramentos && r.encerramentos.total > 0 && (
                           <div className="rounded-lg border border-zinc-700/60 bg-zinc-800/40 p-3 space-y-2">
@@ -430,6 +439,13 @@ export default function AuditoriaAtendimento() {
           )}
         </div>
       </div>
+
+      <DiagnosticoDrawer
+        open={!!diagnosticoAgentId}
+        onClose={() => { setDiagnosticoAgentId(null); setDiagnosticoAgentName(''); }}
+        agentId={diagnosticoAgentId || ''}
+        agentName={diagnosticoAgentName}
+      />
     </div>
   );
 }

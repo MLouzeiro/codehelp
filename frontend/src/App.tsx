@@ -63,12 +63,17 @@ const AuditoriaAnalistaPage = lazy(() => import('./pages/Helpdesk/AuditoriaAnali
 const AuditoriaProfissionalPage = lazy(() => import('./pages/Helpdesk/AuditoriaProfissionalPage'));
 const AuditoriaGeralPage = lazy(() => import('./pages/Helpdesk/AuditoriaGeralPage'));
 const IndicadoresAtendimentoPage = lazy(() => import('./pages/Helpdesk/IndicadoresAtendimentoPage'));
+const QualidadeOperacionalPage = lazy(() => import('./pages/Helpdesk/QualidadeOperacionalPage'));
 const TomadaDecisaoPage = lazy(() => import('./pages/Helpdesk/TomadaDecisaoPage'));
 const Aprovacoes = lazy(() => import('./pages/Helpdesk/Aprovacoes'));
 const KBList = lazy(() => import('./pages/KB/KBList'));
 const AutomationsPage = lazy(() => import('./pages/Automations/AutomationsPage'));
+const FlowBuilderPage = lazy(() => import('./pages/Automations/FlowBuilderPage'));
+const GlossarioPage = lazy(() => import('./pages/Settings/GlossarioPage'));
 const ChannelsPage = lazy(() => import('./pages/Settings/ChannelsPage'));
 const IntegracoesExternasPage = lazy(() => import('./pages/Settings/IntegracoesExternasPage'));
+const OsSignatureConfigPage = lazy(() => import('./pages/Settings/OsSignatureConfigPage'));
+const OSLayoutsPage = lazy(() => import('./pages/Settings/OSLayoutsPage'));
 const TimeTrackingPage = lazy(() => import('./pages/TimeTracking/TimeTrackingPage'));
 
 function PageLoader() {
@@ -136,6 +141,7 @@ export default function App() {
             <Route path="helpdesk/auditoria-profissional" element={<AuditoriaProfissionalPage />} />
             <Route path="helpdesk/auditoria-geral" element={<AuditoriaGeralPage />} />
             <Route path="helpdesk/indicadores" element={<IndicadoresAtendimentoPage />} />
+            <Route path="helpdesk/qualidade" element={<QualidadeOperacionalPage />} />
             <Route path="helpdesk/tomada-decisao" element={<TomadaDecisaoPage />} />
             <Route path="helpdesk/aprovacoes" element={<Aprovacoes />} />
             <Route path="relatorios/gerencial" element={<RelatorioGerencial />} />
@@ -144,8 +150,10 @@ export default function App() {
             <Route path="relatorios/analitico" element={<RelatorioAnalitico />} />
             <Route path="kb" element={<KBList />} />
             <Route path="automations" element={<AutomationsPage />} />
+            <Route path="automations/flow-builder" element={<FlowBuilderPage />} />
             <Route path="timetracking" element={<TimeTrackingPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="glossario" element={<GlossarioPage />} />
             <Route path="settings/users" element={<UsersPage />} />
             <Route path="settings/alerts" element={<AlertsPage />} />
             <Route path="settings/helpdesk-stages" element={<HelpdeskStagesPage />} />
@@ -162,6 +170,8 @@ export default function App() {
             <Route path="settings/auto-messages" element={<AutoMessagesPage />} />
             <Route path="settings/enquetes" element={<EnquetesPage />} />
             <Route path="settings/ai-auto-atendimento" element={<AIAutoAtendimentoPage />} />
+            <Route path="settings/os-signature-config" element={<OsSignatureConfigPage />} />
+            <Route path="settings/os-layouts" element={<OSLayoutsPage />} />
             <Route path="robos" element={<RobosPage />} />
           </Route>
         </Routes>

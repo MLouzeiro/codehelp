@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import dns from 'dns';
 import prisma from '../../../config/database';
 import { env } from '../../../config/env';
 
@@ -12,6 +13,24 @@ import { env } from '../../../config/env';
 //   - apiKey/token criptografados em repouso (AES-256-GCM) e mascarados na API.
 //   - webhooks recebidos validados por HMAC-SHA256 (webhookSecret).
 //   - rate limit + timeout + retry controlado + log de auditoria.
+//   - SSRF protection: bloqueio de URLs para redes internas.
+
+// ── SSRF Protection ────────────────────────────────────────────────────
+const PRIVATE_IP_REGEX = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.|localhost|::1|\[::1\]|169\.254\.|metadata\.google\.internal)/i;
+
+function isPrivateUrl(urlStr: string): boolean {
+  try {
+    const url = new URL(urlStr);
+    const hostname = url.hostname.toLowerCase();
+    if (PRIVATE_IP_REGEX.test(hostname)) return true;
+    // Block common internal hostnames
+    const blocked = ['localhost', 'metadata.google.internal', '169.254.169.254'];
+    if (blocked.includes(hostname)) return true;
+    return false;
+  } catch {
+    return true; // invalid URL = block
+  }
+}
 
 // ── Encryption at rest ────────────────────────────────────────────────
 // Chave derivada de INTEGRATION_ENCRYPTION_KEY ou (fallback determinístico)
@@ -143,6 +162,12 @@ export async function callExternal(opts: CallExternalOptions): Promise<CallExter
 
   const base = (integration.baseUrl || '').replace(/\/+$/, '');
   const url = `${base}${opts.path.startsWith('/') ? opts.path : `/${opts.path}`}`;
+
+  // SSRF protection: bloquear URLs para redes internas
+  if (isPrivateUrl(url)) {
+    return { ok: false, error: 'URL aponta para rede interna — bloqueado por seguranca', durationMs: Date.now() - started, retries: 0 };
+  }
+
   const method = opts.method || 'GET';
   const headers = buildAuthHeaders(integration);
   const timeoutMs = integration.timeoutMs || 15000;
@@ -302,7 +327,7 @@ export function validarWebhookSignature(slug: string, body: unknown, signature: 
 }
 
 export async function buscarPorSlug(slug: string): Promise<ExternalIntegrationRow | null> {
-  return prisma.externalIntegration.findUnique({ where: { slug } }) as Promise<ExternalIntegrationRow | null>;
+  return prisma.externalIntegration.findFirst({ where: { slug } }) as Promise<ExternalIntegrationRow | null>;
 }
 
 export function checkSignature(integration: { webhookSecret: string | null }, body: unknown, signature: string | undefined): boolean {

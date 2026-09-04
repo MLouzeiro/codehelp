@@ -25,6 +25,7 @@ export async function postRegra(req: AuthRequest, res: Response) {
       entidadeId: r.id,
       detalhes: { trigger: r.trigger, nome: r.nome },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.status(201).json(r);
   } catch (error) {

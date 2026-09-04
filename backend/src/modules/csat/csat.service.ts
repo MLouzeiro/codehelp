@@ -57,7 +57,7 @@ export async function montarMensagemCsatCustomizada(token: string): Promise<stri
   const url = `${env.appUrl}/csat/${token}`;
 
   try {
-    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'csat' } });
+    const config = await prisma.helpdeskConfig.findFirst({ where: { slug: 'csat' } });
     const customMsg = (config as any)?.mensagemCsat;
     if (customMsg) {
       return customMsg.replace(/\{\{url\}\}/g, url);
@@ -224,6 +224,7 @@ export async function responderCsat(token: string, input: RespostaInput) {
     entidade: 'CSATResposta',
     entidadeId: csat.id,
     detalhes: { ticketId: csat.ticketId, nota: input.nota, negativo: input.nota <= CSAT_NEGATIVO_LIMITE },
+    severity: input.nota <= CSAT_NEGATIVO_LIMITE ? 'media' : 'baixa',
   });
   return updated;
 }

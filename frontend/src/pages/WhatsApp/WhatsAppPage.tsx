@@ -613,7 +613,7 @@ export default function WhatsAppPage() {
 
   const carregarUsuarios = useCallback(async () => {
     try {
-      const { data } = await api.get('/users');
+      const { data } = await api.get('/users', { params: { active: 'true' } });
       setUsuarios(Array.isArray(data) ? data : data?.items || data?.users || []);
     } catch {}
   }, []);

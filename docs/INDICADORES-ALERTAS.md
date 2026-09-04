@@ -85,6 +85,66 @@ Endpoint: `GET /api/analytics/visao-geral?dias=7|30|90`. Compõe os alertas oper
 | `implantacao_atrasado` | 🟡 atenção | Implantação atrasada. |
 | `implantacao_em_andamento` | 🟢 info | Implantação em andamento. |
 
+### 2.3 Alertas de Qualidade (`alertasQualidade`)
+
+Compostos automaticamente pelo `qualidadeOperacional.service.ts` e inclusos na Visão Geral:
+
+| Tipo | Nível | Gatilho |
+|------|-------|---------|
+| `reabertura_aumento` | 🟡 atenção | Taxa de reabertura acima de 15% no período. |
+| `retrabalho_acima_meta` | 🟡 atenção | Taxa de retrabalho acima de 10%. |
+| `fcr_abaixo_meta` | 🟡 atenção | FCR abaixo de 60%. |
+| `problema_recorrente_sistemico` | 🔴 crítico | Mesmo problema afeta 3+ clientes diferentes. |
+
+---
+
+## 3. Qualidade Operacional
+
+Endpoint: `GET /api/helpdesk/qualidade?dias=7|30|90`. Página: `/app/helpdesk/qualidade`.
+
+### 3.1 Indicadores
+
+| Indicador | Sigla | Meta | Classificação |
+|-----------|-------|------|---------------|
+| **Reaberturas** | FQR | ≤ 5% | 🟢 ≤5% / 🟡 5–15% / 🔴 >15% |
+| **Recorrência** | FR | ≤ 10% | 🟢 ≤10% / 🟡 10–25% / 🔴 >25% |
+| **Retrabalho** | RR | ≤ 5% | 🟢 ≤5% / 🟡 5–10% / 🔴 >10% |
+| **FCR** | FCR | ≥ 60% | 🟢 ≥70% / 🟡 60–70% / 🔴 <60% |
+
+### 3.2 Endpoints
+
+| Rota | Descrição |
+|------|-----------|
+| `GET /api/helpdesk/qualidade` | Resumo completo (4 cards + alertas + sugestões + recorrência + retrabalho) |
+| `GET /api/helpdesk/qualidade/reaberturas` | Detalhe de chamados reabertos |
+| `GET /api/helpdesk/qualidade/recorrencia` | Detalhe de problemas recorrentes (filtro `?problema=`) |
+| `GET /api/helpdesk/qualidade/retrabalho` | Detalhe de casos de retrabalho |
+| `GET /api/helpdesk/qualidade/diagnostico/:tipo` | Diagnóstico IA (reabertura/recorrencia/retrabalho/fcr) |
+| `GET /api/helpdesk/qualidade/cliente/:clientId` | Qualidade por cliente específico |
+
+### 3.3 Sugestões de Melhoria
+
+O sistema gera sugestões automáticas categorizadas:
+
+| Categoria | Prioridade | Exemplo |
+|-----------|------------|---------|
+| `treinamento` | alta/média/baixa | "Necessário treinamento sobre [assunto] — [N] analistas afetados" |
+| `desenvolvimento` | alta/média/baixa | "Correção necessária no sistema para [problema]" |
+| `base_conhecimento` | alta/média/baixa | "Criar artigo sobre [assunto] — [N] chamados repetidos" |
+| `processo` | alta/média/baixa | "Revisar processo de [etapa] — [N] ocorrências" |
+| `automacao` | alta/média/baixa | "Automatizar [ação] — [N] casos manuais" |
+| `gestao` | alta/média/baixa | "Revisar设计ção de [recurso] — [N] problemas" |
+
+### 3.4 Diagnóstico IA
+
+O diagnóstico IA (`getDiagnosticoIa`) analisa os dados do período e retorna:
+- **Dados analisados**: métricas base do cálculo
+- **Evidências**: trechos de tickets que justificam a conclusão
+- **Conclusão**: resumo em linguagem natural
+- **Recomendação**: ação sugerida
+- **Fonte**: Claude API ou fallback local determinístico
+- **Confiança**: percentual de confiança na análise
+
 Ordem de exibição por severidade: `critico` → `atencao` → `info`.
 
 ---

@@ -205,7 +205,29 @@ export async function getBoard(boardId: string) {
 export async function createBoard(data: BoardCreateInput) {
   try {
     if (!data.nome || !data.nome.trim()) {
-      throw new Error('Nome do board e obrigatorio');
+      throw new Error('Nome do board é obrigatório');
+    }
+
+    const nomeTrimmed = data.nome.trim();
+
+    const existingInactive = await prisma.kanbanBoard.findFirst({
+      where: { nome: nomeTrimmed, ativo: false },
+      select: { id: true },
+    });
+
+    if (existingInactive) {
+      const reactivated = await prisma.kanbanBoard.update({
+        where: { id: existingInactive.id },
+        data: {
+          ativo: true,
+          descricao: data.descricao ?? null,
+          icone: data.icone ?? 'layout',
+          cor: data.cor ?? '#3b82f6',
+          criadorId: data.criadorId ?? null,
+        },
+        include: { columns: { orderBy: { ordem: 'asc' } } },
+      });
+      return reactivated;
     }
 
     const columnsData = data.columns && data.columns.length > 0
@@ -226,7 +248,7 @@ export async function createBoard(data: BoardCreateInput) {
 
     const board = await prisma.kanbanBoard.create({
       data: {
-        nome: data.nome.trim(),
+        nome: nomeTrimmed,
         descricao: data.descricao ?? null,
         icone: data.icone ?? 'layout',
         cor: data.cor ?? '#3b82f6',
@@ -1238,13 +1260,22 @@ export async function uploadAttachment(taskId: string, files: Express.Multer.Fil
   }
 }
 
-export async function deleteAttachment(attachmentId: string) {
+export async function deleteAttachment(attachmentId: string, userId?: string) {
   try {
     const attachment = await prisma.kanbanAttachment.findUnique({
       where: { id: attachmentId },
       select: { id: true, url: true, taskId: true, nomeArquivo: true },
     });
     if (!attachment) throw new Error('Anexo nao encontrado');
+
+    // IDOR protection: verificar se o usuario tem acesso à task
+    if (userId) {
+      const task = await prisma.kanbanTask.findUnique({
+        where: { id: attachment.taskId },
+        select: { id: true, boardId: true },
+      });
+      if (!task) throw new Error('Tarefa nao encontrada');
+    }
 
     const filePath = path.resolve(__dirname, '../../..', attachment.url);
     try {

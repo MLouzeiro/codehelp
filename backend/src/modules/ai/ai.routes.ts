@@ -116,6 +116,28 @@ router.patch('/validacoes/:id/validar', validar);
 router.patch('/validacoes/:id/rejeitar', rejeitar);
 router.get('/validacoes/metricas', authorize('admin', 'gerente', 'supervisor'), getMetricas);
 
+// ── Custos de IA — monitoramento de uso e custo ──────────────
+router.get('/custos/hoje', authorize('admin', 'gerente'), async (req, res) => {
+  try {
+    const { getCustoHoje } = await import('./aiCost.service');
+    const hoje = await getCustoHoje();
+    return res.json(hoje);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao buscar custos de hoje' });
+  }
+});
+
+router.get('/custos', authorize('admin', 'gerente'), async (req, res) => {
+  try {
+    const { getCustoResumo } = await import('./aiCost.service');
+    const dias = parseInt(req.query.dias as string) || 30;
+    const resumo = await getCustoResumo(dias);
+    return res.json(resumo);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao buscar resumo de custos' });
+  }
+});
+
 // ── Robot Dashboard — monitoramento de execucoes ──────────────
 router.get('/robots/dashboard', authorize('admin', 'gerente'), async (req, res) => {
   try {
@@ -172,7 +194,7 @@ router.post('/robots/:slug/execute', authorize('admin', 'gerente'), async (req, 
   try {
     const { slug } = req.params;
     const { executarRobot } = await import('./robot.scheduler');
-    const robot = await prisma.robot.findUnique({ where: { slug } });
+    const robot = await prisma.robot.findFirst({ where: { slug } });
     if (!robot) return res.status(404).json({ error: 'Robô não encontrado' });
     const robotFunctions: Record<string, () => Promise<any>> = {
       'vendas': async () => { const { gerarSugestoesVendas } = await import('./ai.service'); return gerarSugestoesVendas(); },

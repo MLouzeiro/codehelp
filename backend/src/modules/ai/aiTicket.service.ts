@@ -85,7 +85,7 @@ Responda APENAS com JSON (sem markdown):
   "motivo": "breve justificativa"
 }`;
 
-    const resposta = await callClaude(prompt, 300);
+    const resposta = await callClaude(prompt, 300, 'classificar-ticket');
     const jsonMatch = resposta.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -197,7 +197,7 @@ Responda APENAS com JSON (sem markdown):
   "urgenciaDetectada": true/false
 }`;
 
-    const resposta = await callClaude(prompt, 500);
+    const resposta = await callClaude(prompt, 500, 'analise-contexto');
     const jsonMatch = resposta.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -250,7 +250,7 @@ Instruções:
 
 Gere APENAS o texto da resposta (sem JSON, sem formatação):`;
 
-    const resposta = await callClaude(prompt, 600);
+    const resposta = await callClaude(prompt, 600, 'sugerir-resposta');
 
     // Salvar sugestao no ticket
     await prisma.ticket.update({
@@ -366,7 +366,7 @@ Responda APENAS com JSON (sem markdown):
   "sinaisInsatisfacao": [{"tipo": "reclamacao_demora", "descricao": "...", "severidade": "alta"}]
 }`;
 
-    const resposta = await callClaude(prompt, 1200);
+    const resposta = await callClaude(prompt, 1200, 'relatorio-completo');
     const jsonMatch = resposta.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -457,7 +457,7 @@ Responda APENAS com JSON (sem markdown):
   "notaCompleta": "texto formatado da nota"
 }`;
 
-    const resposta = await callClaude(prompt, 1000);
+    const resposta = await callClaude(prompt, 1000, 'nota-encerramento');
     const jsonMatch = resposta.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -626,7 +626,7 @@ Responda APENAS com JSON (sem markdown):
   "confianca": 0-100 (confiança na resposta)
 }`;
 
-    const resposta = await callClaude(prompt, 800);
+    const resposta = await callClaude(prompt, 800, 'auto-atendimento');
     const jsonMatch = resposta.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -730,6 +730,7 @@ export async function resolverTicketPorIa(ticketId: string): Promise<void> {
     entidade: 'Ticket',
     entidadeId: ticketId,
     detalhes: { motivo: 'Atendimento realizado integralmente pela IA' },
+    severity: 'media',
   });
 }
 
@@ -785,7 +786,7 @@ Critérios:
 - Uso correto da base de conhecimento
 - Tempo de resposta adequado`;
 
-    const resposta = await callClaude(prompt, 800);
+    const resposta = await callClaude(prompt, 800, 'avaliar-qualidade');
     const jsonMatch = resposta.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -889,6 +890,7 @@ export async function corrigirResposta(
       mensagemOriginal: dados.mensagemOriginal.slice(0, 100),
       correcao: dados.correcao.slice(0, 100),
     },
+    severity: 'media',
   });
 
   return { id: correcao.id, treinada: false };

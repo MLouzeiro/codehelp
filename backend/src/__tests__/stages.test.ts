@@ -244,7 +244,8 @@ describe('Stages Service (Bloco 17)', () => {
       await prisma.helpdeskConfig.updateMany({ data: { etapaInicial: false } });
       const slug = await etapaInicialSlug();
       expect(slug).toBe('fila');
-      await prisma.helpdeskConfig.update({ where: { slug: 'fila' }, data: { etapaInicial: true } });
+      const cfg = await prisma.helpdeskConfig.findFirst({ where: { slug: 'fila' } });
+      if (cfg) await prisma.helpdeskConfig.update({ where: { id: cfg.id }, data: { etapaInicial: true } });
     });
   });
 });

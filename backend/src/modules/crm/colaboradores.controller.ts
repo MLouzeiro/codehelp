@@ -45,6 +45,8 @@ export async function postColaborador(req: AuthRequest, res: Response) {
       entidadeId: colab.id,
       detalhes: { clientId, nome: colab.nome },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
+      clienteId: clientId,
     });
     return res.status(201).json(colab);
   } catch (error: any) {
@@ -70,6 +72,8 @@ export async function putColaborador(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: req.body,
       ip: getIpFromRequest(req),
+      severity: 'baixa',
+      clienteId: existente.clientId,
     });
     return res.json(colab);
   } catch (error) {
@@ -81,6 +85,8 @@ export async function putColaborador(req: AuthRequest, res: Response) {
 export async function deleteColaborador(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
+    const existente = await getColaborador(id);
+    if (!existente) return res.status(404).json({ error: 'Colaborador nao encontrado' });
     const ok = await deletarColaborador(id);
     if (!ok) return res.status(404).json({ error: 'Colaborador nao encontrado' });
     await logAction({
@@ -89,6 +95,8 @@ export async function deleteColaborador(req: AuthRequest, res: Response) {
       entidade: 'Colaborador',
       entidadeId: id,
       ip: getIpFromRequest(req),
+      severity: 'media',
+      clienteId: existente.clientId,
     });
     return res.json({ ok: true });
   } catch (error) {

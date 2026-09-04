@@ -89,7 +89,7 @@ export async function listarAssuntos(opts?: { categoriaId?: string; incluirInati
 
 export async function criarCategoria(data: CategoriaInput) {
   const slug = slugify(data.nome);
-  const existente = await prisma.categoria.findUnique({ where: { slug } });
+  const existente = await prisma.categoria.findFirst({ where: { slug } });
   if (existente) throw new Error('Ja existe categoria com esse nome');
   return prisma.categoria.create({
     data: {
@@ -146,7 +146,7 @@ export async function criarAssunto(data: AssuntoInput) {
   const categoria = await prisma.categoria.findUnique({ where: { id: data.categoriaId } });
   if (!categoria) throw new Error('Categoria nao encontrada');
   const slug = slugify(`${categoria.slug}__${data.nome}`);
-  const existente = await prisma.assunto.findUnique({ where: { slug } });
+  const existente = await prisma.assunto.findFirst({ where: { slug } });
   if (existente) throw new Error('Ja existe assunto com esse nome nessa categoria');
   return prisma.assunto.create({
     data: {
@@ -202,7 +202,7 @@ export async function inativarAssunto(id: string, ativo: boolean) {
 // ── Configuracao: exigir classificacao ────────────────────────────────
 
 export async function getExigirClassificacao(): Promise<boolean> {
-  const cfg = await prisma.helpdeskConfig.findUnique({ where: { slug: CONFIG_SLUG } });
+  const cfg = await prisma.helpdeskConfig.findFirst({ where: { slug: CONFIG_SLUG } });
   if (!cfg || !cfg.descricao) return false;
   try {
     return JSON.parse(cfg.descricao).ativo === true;
@@ -213,7 +213,7 @@ export async function getExigirClassificacao(): Promise<boolean> {
 
 export async function setExigirClassificacao(ativo: boolean) {
   const json = JSON.stringify({ ativo });
-  const existing = await prisma.helpdeskConfig.findUnique({ where: { slug: CONFIG_SLUG } });
+  const existing = await prisma.helpdeskConfig.findFirst({ where: { slug: CONFIG_SLUG } });
   if (existing) {
     return prisma.helpdeskConfig.update({
       where: { id: existing.id },
@@ -348,6 +348,8 @@ export async function aplicarClassificacao(params: {
       origem: params.origem || 'manual',
     },
     ip: params.ip || null,
+    severity: 'baixa',
+    clienteId: ticket.clientId,
   });
 
   return { ticket: ticketAtualizado, semAlteracao: false };
@@ -428,7 +430,7 @@ Responda APENAS com JSON (sem markdown):
   "confianca": 0-100,
   "motivo": "breve justificativa"
 }`;
-    const resposta = await callClaude(prompt, 300);
+    const resposta = await callClaude(prompt, 300, 'categorias');
     const jsonMatch = resposta.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);

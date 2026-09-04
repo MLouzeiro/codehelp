@@ -44,7 +44,7 @@ export async function createDepartamento(input: DepartamentoInput) {
     badRequest('Nome do departamento é obrigatório.', 'nome');
   }
 
-  const existente = await prisma.departamento.findUnique({ where: { slug: input.slug } });
+  const existente = await prisma.departamento.findFirst({ where: { slug: input.slug } });
   if (existente) {
     badRequest('Já existe um departamento com este slug.', 'slug');
   }
@@ -123,7 +123,7 @@ export async function createNivel(input: NivelInput) {
     badRequest('Nome do nível é obrigatório.', 'nome');
   }
 
-  const existente = await prisma.nivelSuporte.findUnique({ where: { slug: input.slug } });
+  const existente = await prisma.nivelSuporte.findFirst({ where: { slug: input.slug } });
   if (existente) {
     badRequest('Já existe um nível com este slug.', 'slug');
   }

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import ReportActions from '../../components/reports/ReportActions';
 import ReportKpiCard from '../../components/reports/ReportKpiCard';
+import DiagnosticoDrawer from '../../components/DiagnosticoDrawer';
 
 interface ItemFila {
   id: string;
@@ -155,6 +156,8 @@ export default function AuditoriaProfissionalPage() {
   const [auditando, setAuditando] = useState(false);
   const [justificativa, setJustificativa] = useState('');
   const [filtrando, setFiltrando] = useState<string>('todos');
+  const [diagnosticoAgentId, setDiagnosticoAgentId] = useState<string | null>(null);
+  const [diagnosticoAgentName, setDiagnosticoAgentName] = useState('');
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -669,6 +672,12 @@ export default function AuditoriaProfissionalPage() {
           </div>
         </div>
       )}
+      <DiagnosticoDrawer
+        open={!!diagnosticoAgentId}
+        onClose={() => { setDiagnosticoAgentId(null); setDiagnosticoAgentName(''); }}
+        agentId={diagnosticoAgentId || ''}
+        agentName={diagnosticoAgentName}
+      />
     </div>
   );
 }

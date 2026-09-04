@@ -408,7 +408,7 @@ export default function HelpdeskKanban() {
 
   const loadAgents = useCallback(async () => {
     try {
-      const { data } = await api.get('/auth/users');
+      const { data } = await api.get('/auth/users', { params: { active: 'true' } });
       setAgents(data.filter((u: any) => u.role !== 'comercial' && u.role !== 'vendedor'));
     } catch { }
   }, []);

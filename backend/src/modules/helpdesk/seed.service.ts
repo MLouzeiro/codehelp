@@ -132,26 +132,32 @@ export async function ensureAssuntos() {
   for (const a of ASSUNTOS_PADRAO) {
     const categoriaId = bySlug.get(a.categoriaSlug);
     if (!categoriaId) continue;
-    await prisma.assunto.upsert({
-      where: { slug: a.slug },
-      create: {
-        slug: a.slug,
-        nome: a.nome,
-        descricao: a.descricao || null,
-        categoriaId,
-        prioridadePadrao: a.prioridadePadrao || 'media',
-        slaPadraoMin: a.slaPadraoMin ?? null,
-        ordem: a.ordem,
-      },
-      update: {
-        nome: a.nome,
-        descricao: a.descricao || null,
-        categoriaId,
-        prioridadePadrao: a.prioridadePadrao || 'media',
-        slaPadraoMin: a.slaPadraoMin ?? null,
-        ordem: a.ordem,
-      },
-    });
+    const existing = await prisma.assunto.findFirst({ where: { slug: a.slug } });
+    if (existing) {
+      await prisma.assunto.update({
+        where: { id: existing.id },
+        data: {
+          nome: a.nome,
+          descricao: a.descricao || null,
+          categoriaId,
+          prioridadePadrao: a.prioridadePadrao || 'media',
+          slaPadraoMin: a.slaPadraoMin ?? null,
+          ordem: a.ordem,
+        },
+      });
+    } else {
+      await prisma.assunto.create({
+        data: {
+          slug: a.slug,
+          nome: a.nome,
+          descricao: a.descricao || null,
+          categoriaId,
+          prioridadePadrao: a.prioridadePadrao || 'media',
+          slaPadraoMin: a.slaPadraoMin ?? null,
+          ordem: a.ordem,
+        },
+      });
+    }
   }
 }
 
@@ -162,50 +168,62 @@ export async function ensureCategoriasAssuntos() {
 
 export async function ensureFilas() {
   for (const fila of FILAS_PADRAO) {
-    await prisma.fila.upsert({
-      where: { slug: fila.slug },
-      create: fila,
-      update: {
-        nome: fila.nome,
-        descricao: fila.descricao,
-        nivel: fila.nivel,
-        slaMinutos: fila.slaMinutos,
-        cor: fila.cor,
-        icone: fila.icone,
-        ordem: fila.ordem,
-      },
-    });
+    const existing = await prisma.fila.findFirst({ where: { slug: fila.slug } });
+    if (existing) {
+      await prisma.fila.update({
+        where: { id: existing.id },
+        data: {
+          nome: fila.nome,
+          descricao: fila.descricao,
+          nivel: fila.nivel,
+          slaMinutos: fila.slaMinutos,
+          cor: fila.cor,
+          icone: fila.icone,
+          ordem: fila.ordem,
+        },
+      });
+    } else {
+      await prisma.fila.create({ data: fila });
+    }
   }
 }
 
 export async function ensureSLAConfigs() {
   for (const sla of SLA_PADRAO) {
-    await prisma.sLAConfig.upsert({
-      where: { prioridade: sla.prioridade },
-      create: sla,
-      update: {
-        slaMinutosPrimeiraResposta: sla.slaMinutosPrimeiraResposta,
-        slaMinutosResolucao: sla.slaMinutosResolucao,
-        alerta75Porcento: sla.alerta75Porcento,
-        alerta90Porcento: sla.alerta90Porcento,
-      },
-    });
+    const existing = await prisma.sLAConfig.findFirst({ where: { prioridade: sla.prioridade } });
+    if (existing) {
+      await prisma.sLAConfig.update({
+        where: { id: existing.id },
+        data: {
+          slaMinutosPrimeiraResposta: sla.slaMinutosPrimeiraResposta,
+          slaMinutosResolucao: sla.slaMinutosResolucao,
+          alerta75Porcento: sla.alerta75Porcento,
+          alerta90Porcento: sla.alerta90Porcento,
+        },
+      });
+    } else {
+      await prisma.sLAConfig.create({ data: sla });
+    }
   }
 }
 
 export async function ensureCategorias() {
   for (const cat of CATEGORIAS_PADRAO) {
-    await prisma.categoria.upsert({
-      where: { slug: cat.slug },
-      create: cat,
-      update: {
-        nome: cat.nome,
-        descricao: cat.descricao,
-        cor: cat.cor,
-        icone: cat.icone,
-        ordem: cat.ordem,
-      },
-    });
+    const existing = await prisma.categoria.findFirst({ where: { slug: cat.slug } });
+    if (existing) {
+      await prisma.categoria.update({
+        where: { id: existing.id },
+        data: {
+          nome: cat.nome,
+          descricao: cat.descricao,
+          cor: cat.cor,
+          icone: cat.icone,
+          ordem: cat.ordem,
+        },
+      });
+    } else {
+      await prisma.categoria.create({ data: cat });
+    }
   }
 }
 
@@ -225,15 +243,19 @@ export async function migrateCategoriaStringToFK() {
     let atualizados = 0;
     for (const t of ticketsSemFK) {
       const slug = t.categoria as string;
-      const cat = await prisma.categoria.upsert({
-        where: { slug },
-        create: {
-          slug,
-          nome: slug.replace(/_/g, ' '),
-          ordem: 999,
-        },
-        update: {},
-      });
+      const catExisting = await prisma.categoria.findFirst({ where: { slug } });
+      let cat;
+      if (catExisting) {
+        cat = catExisting;
+      } else {
+        cat = await prisma.categoria.create({
+          data: {
+            slug,
+            nome: slug.replace(/_/g, ' '),
+            ordem: 999,
+          },
+        });
+      }
       await prisma.ticket.update({
         where: { id: t.id },
         data: { categoriaId: cat.id },

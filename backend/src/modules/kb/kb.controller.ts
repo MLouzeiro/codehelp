@@ -46,6 +46,7 @@ export async function postKb(req: AuthRequest, res: Response) {
       entidadeId: kb.id,
       detalhes: { titulo, publicado: kb.publicado },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.status(201).json(kb);
   } catch (error: any) {
@@ -121,6 +122,7 @@ export async function patchKb(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { campos: Object.keys(req.body) },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.json(kb);
   } catch (error: any) {
@@ -145,6 +147,7 @@ export async function deleteKb(req: AuthRequest, res: Response) {
       entidade: 'KBArticle',
       entidadeId: id,
       ip: getIpFromRequest(req),
+      severity: 'alta',
     });
     return res.json({ success: true });
   } catch (error: any) {
@@ -171,6 +174,7 @@ export async function postPublicarKb(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { publicado: !!publicado },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.json(kb);
   } catch (error: any) {

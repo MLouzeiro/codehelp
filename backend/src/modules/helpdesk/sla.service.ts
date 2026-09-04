@@ -21,7 +21,7 @@ export async function calcularSlaTotalMinutos(args: {
   idFila?: string | null;
 }): Promise<{ minutos: number; fonte: 'prioridade' | 'fila' | 'default' }> {
   if (args.prioridade) {
-    const sla = await prisma.sLAConfig.findUnique({ where: { prioridade: args.prioridade } });
+    const sla = await prisma.sLAConfig.findFirst({ where: { prioridade: args.prioridade } });
     if (sla && sla.ativo) {
       return { minutos: sla.slaMinutosResolucao, fonte: 'prioridade' };
     }

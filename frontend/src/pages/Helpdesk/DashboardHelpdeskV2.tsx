@@ -10,6 +10,7 @@ import {
   BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell,
   PieChart, Pie,
 } from 'recharts';
+import { AcronymText } from '../../components/AcronymText';
 
 interface KpiCards {
   totalTicketsMonth: number;
@@ -341,7 +342,7 @@ export default function DashboardHelpdeskV2() {
             <p className="text-4xl font-bold text-emerald-400" style={{ fontFamily: 'Khand, sans-serif' }}>
               {csatGeral.media > 0 ? `${csatGeral.media}/5` : '—'}
             </p>
-            <p className="text-violet-200 text-sm mt-1">Nota média CSAT ({csatGeral.total} respostas)</p>
+            <p className="text-violet-200 text-sm mt-1">Nota média <AcronymText text="CSAT" /> ({csatGeral.total} respostas)</p>
           </div>
           <div className="flex flex-col justify-center">
             <p className="text-sm text-violet-200 leading-relaxed">
@@ -383,10 +384,10 @@ export default function DashboardHelpdeskV2() {
             <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
               <Star size={16} className="text-amber-600 dark:text-amber-400" />
             </div>
-            Avaliações CSAT por Atendente
+            Avaliações <AcronymText text="CSAT" /> por Atendente
           </h3>
           {csatData.length === 0 ? (
-            <p className="text-center py-16 text-neutral-400 dark:text-slate-500 text-sm">Nenhuma avaliação CSAT ainda</p>
+            <p className="text-center py-16 text-neutral-400 dark:text-slate-500 text-sm">Nenhuma avaliação <AcronymText text="CSAT" /> ainda</p>
           ) : (
             <div className="space-y-3 max-h-[280px] overflow-y-auto">
               {csatData.map(a => (

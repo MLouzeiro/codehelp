@@ -59,7 +59,7 @@ describe('KB Service (Bloco 6)', () => {
     });
 
     it('cria artigo com categoriaId e tags', async () => {
-      const cat = await prisma.categoria.findUnique({ where: { slug: 'suporte_tecnico' } });
+      const cat = await prisma.categoria.findFirst({ where: { slug: 'suporte_tecnico' } });
       const kb = await criarKb({
         titulo: 'Erro de Login',
         conteudo: 'Como resolver erro 401',
@@ -125,7 +125,7 @@ describe('KB Service (Bloco 6)', () => {
 
   describe('listarKb', () => {
     it('filtra por categoria', async () => {
-      const cat = await prisma.categoria.findUnique({ where: { slug: 'financeiro' } });
+      const cat = await prisma.categoria.findFirst({ where: { slug: 'financeiro' } });
       const k1 = await criarKb({ titulo: 'KB Fin 1', conteudo: 'x', categoriaId: cat!.id, publicado: true });
       const k2 = await criarKb({ titulo: 'KB Sup 1', conteudo: 'x' });
       const r = await listarKb({ categoriaId: cat!.id });
@@ -166,7 +166,7 @@ describe('KB Service (Bloco 6)', () => {
 
   describe('sugerirKbParaTicket', () => {
     it('sugere artigos pela categoria do ticket', async () => {
-      const cat = await prisma.categoria.findUnique({ where: { slug: 'financeiro' } });
+      const cat = await prisma.categoria.findFirst({ where: { slug: 'financeiro' } });
       const kb = await criarKb({ titulo: 'Boleto e Cobranca', conteudo: 'instrucoes', categoriaId: cat!.id, publicado: true });
       const ticket = await prisma.ticket.create({
         data: {
@@ -185,7 +185,7 @@ describe('KB Service (Bloco 6)', () => {
     });
 
     it('nao retorna artigos nao publicados', async () => {
-      const cat = await prisma.categoria.findUnique({ where: { slug: 'financeiro' } });
+      const cat = await prisma.categoria.findFirst({ where: { slug: 'financeiro' } });
       const kb = await criarKb({ titulo: 'Rascunho Sugestao', conteudo: 'x', categoriaId: cat!.id, publicado: false });
       const ticket = await prisma.ticket.create({
         data: {

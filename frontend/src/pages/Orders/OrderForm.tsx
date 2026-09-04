@@ -10,21 +10,26 @@ export default function OrderForm() {
 
   const [clients, setClients] = useState<any[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
+  const [layouts, setLayouts] = useState<any[]>([]);
+  const taskTitle = searchParams.get('taskTitle') || '';
+  const taskDescricao = searchParams.get('taskDescricao') || '';
+  const taskObservacoes = searchParams.get('taskObservacoes') || '';
   const [form, setForm] = useState({
     clientId: searchParams.get('clientId') || '',
     tipoServico: 'suporte',
-    descricaoServico: '',
+    descricaoServico: taskTitle ? `${taskTitle}${taskDescricao ? '\n\n' + taskDescricao : ''}` : '',
     sistemasEnvolvidos: '',
     equipamentos: '',
     tecnicoResponsavelId: '',
     valorServico: '',
     dataPrevistaEntrega: '',
     ticketId: searchParams.get('ticketId') || '',
-    observacoes: '',
+    observacoes: taskObservacoes,
     tipoImplantacao: '',
     precoImplantacao: '',
     horasDev: '',
     horasSuporte: '',
+    layoutId: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -35,12 +40,16 @@ export default function OrderForm() {
 
   const loadSelects = async () => {
     try {
-      const [clientsRes, techsRes] = await Promise.all([
+      const [clientsRes, techsRes, layoutsRes] = await Promise.all([
         api.get('/crm/clients', { params: { limit: 200 } }),
-        api.get('/auth/users'),
+        api.get('/auth/users', { params: { active: 'true' } }),
+        api.get('/orders/layouts').catch(() => ({ data: [] })),
       ]);
       setClients(clientsRes.data.clients);
       setTechnicians(techsRes.data.filter((u: any) => ['admin', 'gerente', 'tecnico'].includes(u.role)));
+      setLayouts(layoutsRes.data || []);
+      const defaultLayout = layoutsRes.data?.find((l: any) => l.padrao);
+      if (defaultLayout && !isEdit) setForm(prev => ({ ...prev, layoutId: defaultLayout.id }));
     } catch (err) { console.error(err); }
   };
 
@@ -62,6 +71,7 @@ export default function OrderForm() {
         precoImplantacao: data.precoImplantacao?.toString() || '',
         horasDev: data.horasDev?.toString() || '',
         horasSuporte: data.horasSuporte?.toString() || '',
+        layoutId: data.layoutId || '',
       });
     } catch (err) { console.error(err); }
   };
@@ -79,12 +89,28 @@ export default function OrderForm() {
         horasSuporte: form.horasSuporte ? parseFloat(form.horasSuporte) : 0,
       };
 
+      let createdOrderId = id;
       if (isEdit) {
         await api.put(`/orders/${id}`, payload);
       } else {
-        await api.post('/orders', payload);
+        const { data: created } = await api.post('/orders', payload);
+        createdOrderId = created.id;
       }
-      navigate('/app/orders');
+
+      const taskId = searchParams.get('taskId');
+      if (taskId && createdOrderId) {
+        try {
+          await api.patch(`/kanban/tasks/${taskId}`, { orderId: createdOrderId });
+        } catch (linkErr) {
+          console.error('Erro ao linkar tarefa à OS:', linkErr);
+        }
+      }
+
+      if (taskId) {
+        navigate(`/app/orders/${createdOrderId}`);
+      } else {
+        navigate('/app/orders');
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -96,7 +122,9 @@ export default function OrderForm() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">{isEdit ? 'Editar OS' : 'Nova Ordem de Serviço'}</h1>
-        <p className="text-gray-500 dark:text-slate-400">Preencha os dados da OS</p>
+        <p className="text-gray-500 dark:text-slate-400">
+          {searchParams.get('taskId') ? 'Criada a partir de tarefa interna — revise e confirme os dados' : 'Preencha os dados da OS'}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="card space-y-4 dark:bg-slate-800 dark:border-slate-700">
@@ -127,6 +155,16 @@ export default function OrderForm() {
               {technicians.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
+
+          {layouts.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Layout do Documento</label>
+              <select value={form.layoutId} onChange={(e) => setForm({ ...form, layoutId: e.target.value })} className="input">
+                <option value="">Padrão</option>
+                {layouts.map((l: any) => <option key={l.id} value={l.id}>{l.nome}{l.padrao ? ' (padrão)' : ''}</option>)}
+              </select>
+            </div>
+          )}
 
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Descrição do Serviço</label>

@@ -88,7 +88,7 @@ describe('Helpdesk Entities (Bloco 1)', () => {
     });
 
     it('categoria existe e pode ser usada em KBArticle', async () => {
-      const cat = await prisma.categoria.findUnique({ where: { slug: 'suporte_tecnico' } });
+      const cat = await prisma.categoria.findFirst({ where: { slug: 'suporte_tecnico' } });
       expect(cat).toBeTruthy();
       expect(cat?.ativo).toBe(true);
     });
@@ -126,7 +126,7 @@ describe('Helpdesk Entities (Bloco 1)', () => {
       await migrateCategoriaStringToFK();
       const updated = await prisma.ticket.findUnique({ where: { id: ticket.id } });
       expect(updated?.categoriaId).toBeTruthy();
-      const cat = await prisma.categoria.findUnique({ where: { slug: 'categoria_rara_xyz' } });
+      const cat = await prisma.categoria.findFirst({ where: { slug: 'categoria_rara_xyz' } });
       expect(cat).toBeTruthy();
       await prisma.ticket.delete({ where: { id: ticket.id } });
     });
@@ -144,7 +144,7 @@ describe('Helpdesk Entities (Bloco 1)', () => {
       });
       await migrateCategoriaStringToFK();
       const updated = await prisma.ticket.findUnique({ where: { id: ticket.id } });
-      const catFin = await prisma.categoria.findUnique({ where: { slug: 'financeiro' } });
+      const catFin = await prisma.categoria.findFirst({ where: { slug: 'financeiro' } });
       expect(updated?.categoriaId).toBe(catFin?.id);
       await prisma.ticket.delete({ where: { id: ticket.id } });
     });
@@ -172,8 +172,8 @@ describe('Helpdesk Entities (Bloco 1)', () => {
 
   describe('Novos campos do Ticket (Bloco 2)', () => {
     it('Ticket aceita idFila, categoriaId, ativoId, slaTotalMinutos, slaPausadoEm', async () => {
-      const filaN1 = await prisma.fila.findUnique({ where: { slug: 'n1' } });
-      const catSup = await prisma.categoria.findUnique({ where: { slug: 'suporte_tecnico' } });
+      const filaN1 = await prisma.fila.findFirst({ where: { slug: 'n1' } });
+      const catSup = await prisma.categoria.findFirst({ where: { slug: 'suporte_tecnico' } });
       const cliente = await prisma.client.create({
         data: { razaoSocial: 'Empresa Teste SLA', segmento: 'laboratorio' },
       });

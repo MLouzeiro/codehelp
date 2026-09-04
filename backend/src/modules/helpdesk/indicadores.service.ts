@@ -133,7 +133,7 @@ export const METAS_INDICADORES_DEFAULT: MetasIndicadores = {
 const CONFIG_SLUG = 'metas_indicadores';
 
 export async function getMetasIndicadores(): Promise<MetasIndicadores> {
-  const cfg = await prisma.helpdeskConfig.findUnique({ where: { slug: CONFIG_SLUG } });
+  const cfg = await prisma.helpdeskConfig.findFirst({ where: { slug: CONFIG_SLUG } });
   if (!cfg || !cfg.descricao) return { ...METAS_INDICADORES_DEFAULT };
   try {
     const parsed = JSON.parse(cfg.descricao);
@@ -158,7 +158,7 @@ export async function setMetasIndicadores(metas: Partial<MetasIndicadores>): Pro
   novo.slaMetaPct = Math.min(100, Math.max(1, Math.round(novo.slaMetaPct)));
   novo.slaRiscoPct = Math.min(100, Math.max(1, Math.round(novo.slaRiscoPct)));
 
-  const existing = await prisma.helpdeskConfig.findUnique({ where: { slug: CONFIG_SLUG } });
+  const existing = await prisma.helpdeskConfig.findFirst({ where: { slug: CONFIG_SLUG } });
   if (existing) {
     await prisma.helpdeskConfig.update({
       where: { id: existing.id },

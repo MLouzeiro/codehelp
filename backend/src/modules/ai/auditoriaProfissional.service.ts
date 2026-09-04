@@ -607,7 +607,7 @@ export async function auditarTicket(ticketId: string, usarIa = true): Promise<an
     if (usarIa && hasClaude()) {
       try {
         const prompt = buildPromptAuditoria(ticket, mensagens, dadosContexto);
-        const resposta = await callClaude(prompt, 2500);
+        const resposta = await callClaude(prompt, 2500, 'auditoria-profissional');
         const parsed = extrairJson(resposta);
         resultado = normalizarResultado(parsed);
         validarEvidencias(resultado, mensagens);

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../../shared/middleware/auth';
+import { rateLimiter } from '../../shared/middleware/rateLimiter';
 import {
   solicitarAprovacaoHandler,
   enviarAprovacaoWhatsAppHandler,
@@ -12,8 +13,11 @@ import {
 
 const router = Router();
 
+// Rate limiter para decisao por token (brute-force protection)
+const approvalTokenRateLimit = rateLimiter({ windowMs: 60 * 1000, max: 10, keyPrefix: 'approval_token', message: 'Muitas tentativas. Aguarde 1 minuto.' });
+
 // Rota pública por token (link de validação) — NÃO cria ticket, não exige login
-router.post('/token/:token/decidir', decidirAprovacaoPorTokenHandler);
+router.post('/token/:token/decidir', approvalTokenRateLimit, decidirAprovacaoPorTokenHandler);
 
 router.use(authenticate);
 

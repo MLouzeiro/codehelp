@@ -8,6 +8,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   LineChart, Line, PieChart, Pie, Cell, Legend,
 } from 'recharts';
+import { AcronymText } from '../../components/AcronymText';
 
 interface Opcoes {
   filas: { id: string; nome: string }[];
@@ -363,7 +364,7 @@ export default function RelatorioAnalitico() {
               </div>
               <div className="mt-3">
                 <div className="text-xl font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{c.valor}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>{c.label}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text={c.label} /></div>
               </div>
             </div>
           );
@@ -461,7 +462,7 @@ export default function RelatorioAnalitico() {
                   <div key={a.valor} className="flex items-center justify-between text-sm">
                     <span className="text-slate-600 dark:text-slate-300 truncate" style={{ fontFamily: 'Lexend, sans-serif' }}>{a.valor}</span>
                     <span className="text-slate-400 text-xs" style={{ fontFamily: 'Lexend, sans-serif' }}>
-                      {a.atendidos} · {a.fechados} fechados · {formatarTempo(a.tempoMedioMin)} · CSAT {a.csatMedio || '—'}
+                       {a.atendidos} · {a.fechados} fechados · {formatarTempo(a.tempoMedioMin)} · <AcronymText text="CSAT" /> {a.csatMedio || '—'}
                     </span>
                   </div>
                 ))}

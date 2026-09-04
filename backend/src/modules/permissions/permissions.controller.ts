@@ -76,6 +76,7 @@ export async function putRole(req: AuthRequest, res: Response) {
       entidade: 'RolePermission',
       detalhes: { role, total: permissions.length },
       ip: getIpFromRequest(req),
+      severity: 'alta',
     });
     return res.json({ ok: true, overrides: result });
   } catch (err) {
@@ -98,6 +99,7 @@ export async function patchPermission(req: AuthRequest, res: Response) {
       entidadeId: p.id,
       detalhes: { role, resource, action },
       ip: getIpFromRequest(req),
+      severity: 'alta',
     });
     return res.json(p);
   } catch (err) {
@@ -115,6 +117,7 @@ export async function deletePermission(req: AuthRequest, res: Response) {
       entidade: 'RolePermission',
       detalhes: { role, resource, action },
       ip: getIpFromRequest(req),
+      severity: 'alta',
     });
     return res.json({ ok: true });
   } catch (err) {
@@ -132,6 +135,7 @@ export async function postReset(req: AuthRequest, res: Response) {
       entidade: 'RolePermission',
       detalhes: { role },
       ip: getIpFromRequest(req),
+      severity: 'alta',
     });
     return res.json({ ok: true, effective });
   } catch (err) {

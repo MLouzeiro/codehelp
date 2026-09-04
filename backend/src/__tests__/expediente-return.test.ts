@@ -32,10 +32,13 @@ let horarioSnapshot: HorarioSnapshot | null = null;
 // Força atendimento FECHADO de forma determinística: diasAtendimento vazio →
 // isHorarioAtendimento sempre false (independente de horário/timezone).
 async function fecharAtendimento() {
-  await prisma.helpdeskConfig.update({
-    where: { slug: 'fila' },
-    data: { diasAtendimento: '' },
-  });
+  const cfg = await prisma.helpdeskConfig.findFirst({ where: { slug: 'fila' } });
+  if (cfg) {
+    await prisma.helpdeskConfig.update({
+      where: { id: cfg.id },
+      data: { diasAtendimento: '' },
+    });
+  }
 }
 
 beforeAll(async () => {

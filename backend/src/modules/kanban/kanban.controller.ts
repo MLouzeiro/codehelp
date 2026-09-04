@@ -25,10 +25,10 @@ export async function getBoard(req: AuthRequest, res: Response) {
 
 export async function createBoard(req: AuthRequest, res: Response) {
   try {
-    const board = await service.createBoard(req.body);
+    const board = await service.createBoard({ ...req.body, criadorId: req.user?.id ?? null });
     return res.status(201).json(board);
   } catch (error: any) {
-    if (error.message?.includes('obrigatório')) {
+    if (error.message?.includes('obrigatório') || error.message?.includes('obrigatorio')) {
       return res.status(400).json({ error: error.message });
     }
     console.error('Erro ao criar board:', error);
@@ -41,10 +41,10 @@ export async function updateBoard(req: AuthRequest, res: Response) {
     const board = await service.updateBoard(req.params.boardId, req.body);
     return res.json(board);
   } catch (error: any) {
-    if (error.message?.includes('não encontrado')) {
+    if (error.message?.includes('não encontrado') || error.message?.includes('nao encontrado')) {
       return res.status(404).json({ error: error.message });
     }
-    if (error.message?.includes('obrigatório')) {
+    if (error.message?.includes('obrigatório') || error.message?.includes('obrigatorio')) {
       return res.status(400).json({ error: error.message });
     }
     console.error('Erro ao atualizar board:', error);

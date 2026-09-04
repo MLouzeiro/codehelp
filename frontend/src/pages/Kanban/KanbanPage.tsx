@@ -61,11 +61,15 @@ export default function KanbanPage() {
 
   const handleCreateBoard = async () => {
     if (!newBoardForm.nome.trim()) return;
-    const board = await createBoard(newBoardForm);
-    setShowNewBoard(false);
-    setNewBoardForm({ nome: '', descricao: '', cor: '#3b82f6', icone: '📋' });
-    fetchBoards();
-    if (board?.id) fetchBoard(board.id);
+    try {
+      const board = await createBoard(newBoardForm);
+      setShowNewBoard(false);
+      setNewBoardForm({ nome: '', descricao: '', cor: '#3b82f6', icone: '📋' });
+      fetchBoards();
+      if (board?.id) fetchBoard(board.id);
+    } catch {
+      // Erro já tratado no hook (setError)
+    }
   };
 
   const handleCreateFromTemplate = async (templateId: string) => {

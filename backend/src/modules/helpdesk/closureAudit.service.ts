@@ -219,7 +219,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const text = await callClaude(prompt, 600);
+    const text = await callClaude(prompt, 600, 'closure-audit');
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('JSON inválido');
     const parsed = JSON.parse(jsonMatch[0]);

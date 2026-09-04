@@ -44,7 +44,7 @@ Prioridade atual: ${task.prioridade}
 Responda APENAS com o JSON, sem texto adicional.`;
 
   try {
-    const text = await callClaude(prompt, 300);
+    const text = await callClaude(prompt, 300, 'kanban-categorize');
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Resposta não é JSON válido');

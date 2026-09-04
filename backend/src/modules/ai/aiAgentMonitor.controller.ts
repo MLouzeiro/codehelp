@@ -8,6 +8,7 @@ import {
   getRankingAgentes,
   getEncerramentosAgente,
   auditarEncerramentoTicket,
+  gerarDiagnosticoTreinamento,
 } from './aiAgentMonitor.service';
 
 export async function avaliarMensagemHandler(req: AuthRequest, res: Response) {
@@ -114,5 +115,21 @@ export async function encerramentoTicketHandler(req: AuthRequest, res: Response)
   } catch (error: any) {
     console.error('Erro ao auditar encerramento do ticket:', error?.message);
     return res.status(500).json({ error: 'Erro ao auditar encerramento do ticket' });
+  }
+}
+
+export async function diagnosticoTreinamentoHandler(req: AuthRequest, res: Response) {
+  try {
+    const { agentId } = req.params;
+    const dias = parseInt(req.query.dias as string) || 30;
+
+    const diagnostico = await gerarDiagnosticoTreinamento(agentId, dias);
+    if (!diagnostico) {
+      return res.status(404).json({ error: 'Agente não encontrado ou sem dados' });
+    }
+    return res.json(diagnostico);
+  } catch (error: any) {
+    console.error('Erro ao gerar diagnóstico de treinamento:', error?.message);
+    return res.status(500).json({ error: 'Erro ao gerar diagnóstico de treinamento' });
   }
 }

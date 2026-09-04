@@ -15,11 +15,12 @@ const DEPT_SLUG = 'n1';
 
 beforeAll(async () => {
   await ensureHelpdeskEntities();
-  await prisma.departamento.upsert({
-    where: { slug: DEPT_SLUG },
-    create: { slug: DEPT_SLUG, nome: 'N1 - Suporte Inicial', ativo: true, ordem: 0 },
-    update: { ativo: true },
-  });
+  const existing = await prisma.departamento.findFirst({ where: { slug: DEPT_SLUG } });
+  if (existing) {
+    await prisma.departamento.update({ where: { id: existing.id }, data: { ativo: true } });
+  } else {
+    await prisma.departamento.create({ data: { slug: DEPT_SLUG, nome: 'N1 - Suporte Inicial', ativo: true, ordem: 0 } });
+  }
 });
 
 afterEach(async () => {

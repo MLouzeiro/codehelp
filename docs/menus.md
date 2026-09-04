@@ -77,6 +77,37 @@ O CodeHelp possui **16 menus principais** organizados na sidebar lateral. Alguns
 
 ---
 
+## 4.1 Gestão & Indicadores (submenu)
+
+**Descrição:** Submenu consolidado de indicadores e dashboards gerenciais.
+
+| Menu | Rota | Descrição | Permissão |
+|------|------|-----------|-----------|
+| Métricas Operacionais | `/app/helpdesk/metrics` | Métricas detalhadas de desempenho | admin, gerente |
+| Indicadores de Atendimento | `/app/helpdesk/indicadores` | TMR, TME, PR, SLA com metas e classificação 🟢🟡🔴 | admin, gerente |
+| Métricas de Negócio | `/app/helpdesk/business-metrics` | Métricas de negócio e financeiras | admin, gerente |
+| Dashboard Executivo | `/app/relatorios/executivo` | Painel executivo com período selecionável | admin, gerente |
+| Dashboard IA | `/app/relatorios/ia` | Insights gerenciais via IA + indicadores | admin, gerente |
+| **Qualidade Operacional** | `/app/helpdesk/qualidade` | Reaberturas, recorrência, retrabalho, FCR, alertas e sugestões | admin, gerente |
+
+---
+
+## 4.2 Auditoria & Decisão (submenu)
+
+**Descrição:** Submenu de auditoria inteligente e tomada de decisão.
+
+| Menu | Rota | Descrição | Permissão |
+|------|------|-----------|-----------|
+| Auditoria IA | `/app/helpdesk/auditoria-ia` | Auditoria de atendimentos por IA | admin, gerente |
+| Auditoria de Encerramento | `/app/helpdesk/auditoria-encerramento` | Detecção de encerramento prematuro | admin, gerente |
+| Auditoria por Analista | `/app/helpdesk/auditoria-analista` | Performance individual por analista | admin, gerente |
+| Auditoria de Atendimentos | `/app/helpdesk/auditoria-profissional` | Auditoria profissional com 14 categorias | admin, gerente |
+| Auditoria Geral | `/app/helpdesk/auditoria-geral` | Panorama completo de auditoria | admin, gerente |
+| Tomada de Decisão | `/app/helpdesk/tomada-decisao` | Recomendações e plano de ação | admin, gerente |
+| Auditoria do Sistema | `/app/auditoria/sistema` | Log de auditoria do sistema | admin, gerente |
+
+---
+
 ## 5. Quadro de Status (`/app/helpdesk/board`)
 
 **Descrição:** Visualização read-only de todos os tickets organizados por status.

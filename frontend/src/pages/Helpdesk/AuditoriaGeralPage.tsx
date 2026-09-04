@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import ReportActions from '../../components/reports/ReportActions';
 import ReportKpiCard from '../../components/reports/ReportKpiCard';
+import { AcronymText } from '../../components/AcronymText';
 
 interface Panorama {
   periodo: { inicio: string | null; fim: string | null };
@@ -195,7 +196,7 @@ export default function AuditoriaGeralPage() {
                           <span className="flex items-center gap-1"><TrendingUp size={12} /> Resolução {a.taxaResolucao}%</span>
                           <span className="flex items-center gap-1"><RotateCcw size={12} /> Reabertura {a.taxaReabertura}%</span>
                           <span className="flex items-center gap-1"><Repeat size={12} /> Retrabalho {a.taxaRetrabalho}%</span>
-                          {a.csatMedia != null && <span className="flex items-center gap-1"><Star size={12} /> CSAT {a.csatMedia.toFixed(1)}</span>}
+                           {a.csatMedia != null && <span className="flex items-center gap-1"><Star size={12} /> <AcronymText text="CSAT" /> {a.csatMedia.toFixed(1)}</span>}
                         </div>
                       </div>
                     );
@@ -352,7 +353,7 @@ export default function AuditoriaGeralPage() {
           <div className="flex items-center gap-2 text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>
             <RefreshCw size={13} />
             <span>
-              Atualizado em {new Date(panorama!.periodo?.fim || Date.now()).toLocaleDateString('pt-BR')} · Custo médio operacional {ind.custoOperacionalMedioMin || 0} min · CSAT médio {ind.csatMedia != null ? ind.csatMedia.toFixed(1) : '—'}
+              Atualizado em {new Date(panorama!.periodo?.fim || Date.now()).toLocaleDateString('pt-BR')} · Custo médio operacional {ind.custoOperacionalMedioMin || 0} min · <AcronymText text="CSAT" /> médio {ind.csatMedia != null ? ind.csatMedia.toFixed(1) : '—'}
             </span>
           </div>
         </>

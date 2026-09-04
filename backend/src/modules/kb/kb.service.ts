@@ -40,7 +40,7 @@ export async function slugUnico(base: string, ignoreId?: string): Promise<string
   let slug = slugify(base) || `kb-${Date.now()}`;
   let tentativas = 0;
   while (tentativas < 100) {
-    const existente = await prisma.kBArticle.findUnique({ where: { slug } });
+    const existente = await prisma.kBArticle.findFirst({ where: { slug } });
     if (!existente || existente.id === ignoreId) return slug;
     tentativas++;
     slug = `${slugify(base)}-${tentativas}`;
@@ -178,7 +178,7 @@ export async function getKb(id: string) {
 }
 
 export async function getKbPorSlug(slug: string) {
-  return prisma.kBArticle.findUnique({
+  return prisma.kBArticle.findFirst({
     where: { slug },
     include: { categoria: true, autor: { select: { id: true, name: true } } },
   });

@@ -30,7 +30,7 @@ code-help/
 │   │   │   ├── auth/            # auth.controller.ts, rbac.ts
 │   │   │   ├── helpdesk/        # helpdesk.service.ts, autoMessages.service.ts
 │   │   │   ├── crm/             # crm.controller.ts
-│   │   │   ├── orders/          # orders.controller.ts
+│   │   │   ├── orders/          # orders.controller.ts, os-layout.service.ts
 │   │   │   ├── whatsapp/        # providers, handler compartilhado
 │   │   │   ├── ai/              # aiTriage.service.ts, aiValidation.service.ts
 │   │   │   ├── billing/         # billing.service.ts
@@ -65,7 +65,7 @@ code-help/
 │   │   │   ├── WhatsApp/        # WhatsAppPage, WhatsAppConnectionsPage
 │   │   │   ├── Kanban/          # KanbanPage (tarefas internas)
 │   │   │   ├── Orders/          # OrderList, OrderForm, SignPage
-│   │   │   └── Settings/        # HelpdeskConfigPage, Departamentos, Filas
+│   │   │   └── Settings/        # HelpdeskConfigPage, Departamentos, Filas, OSLayoutsPage
 │   │   ├── services/            # api.ts, auth.tsx, ThemeContext.tsx
 │   │   └── types/               # index.ts (interfaces)
 │   └── dist/                    # Build (gitignored)
@@ -159,6 +159,17 @@ npm run db:studio            # Prisma Studio
 - **NUNCA editar migrations geradas** — criar nova migration se necessário
 - **SEMPRE usar `upsert`** quando o dado pode ou não existir
 
+#### Segurança
+- **NUNCA usar `innerHTML`** com dados do usuário — usar `textContent` ou `createElement`
+- **NUNCA usar `document.write()`** com conteúdo dinâmico — usar DOM manipulation segura
+- **SEMPRE validar assinatura HMAC** em webhooks (Cloud API: `X-Hub-Signature-256`, Evolution: query/header secret)
+- **SEMPRE usar `rateLimiter`** em endpoints públicos de token (sign, approval, login)
+- **SEMPRE bloquear IPs privados** em `callExternal()` (SSRF protection)
+- **Session token obrigatório** no refresh — retornar 400 se ausente
+- **Logout server-side** — limpar `sessionToken` no banco via `POST /api/auth/logout`
+- **Senha mínima 8 caracteres** — validação Zod em todos os schemas
+- **NUNCA expor `password` ou `sessionToken`** em respostas API
+
 ## Regras por submódulo
 
 ### M1 — Autenticação
@@ -228,6 +239,38 @@ npx expo run:ios             # Build iOS
 - [ ] Deploy do backend (Vercel não suporta Express nativamente)
 
 ## Progresso Recente (SessãoAtual)
+
+### Layouts de OS — Completo (v1.7.0)
+- [x] **Schema**: model `OSLayout` (nome, descricao, tipo personalizado/pdf_importado, configuracao JSON com cores/cabeçalho/rodapé/seções, timbradoPath, timbradoApply, margens 4 campos, organizationId) + `layoutId` em `ServiceOrder`
+- [x] **Backend**: `os-layout.service.ts` (CRUD, upload timbrado, config parsing, default layout), `os-layout.controller.ts` (9 handlers), `os-layout.routes.ts` (multer upload)
+- [x] **Backend**: PDF generator refatorado (`pdf.service.ts`) — `buildPdfWithLayout` (personalizado) + `buildPdfWithTimbrado` (pdf_importado via pdf-lib merge); suporte 1-página e multi-página; margens reservadas configuráveis
+- [x] **Frontend**: `OSLayoutsPage.tsx` (listagem, editor modal com cores/cabeçalho/rodapé/seções/margens, upload timbrado, duplicar, padrão, excluir)
+- [x] **Frontend**: Seletor de layout no `OrderForm.tsx` e `OrderDetail.tsx`; download PDF com layout selecionado
+- [x] **Integração**: rota + menu em Configurações → Layouts de OS
+- [x] Verificação: backend tsc 0 erros novos, frontend tsc 0, vitest 5/5
+
+### Enriquecimento de Auditoria — Completo (Fase 4)
+- [x] **Interface**: `LogParams` estendido com `severity?: string` e `clienteId?: string`
+- [x] **Wrapper**: `logAction` passa os campos para `logAudit`
+- [x] **53 call sites** enriquecidos em 16 arquivos (helpdesk, billing, permissions, crm, ai, csat, kb, automations, feriados)
+- [x] **Classificação**: alta (deletar, permissoes, encerrar_sem_resolucao), media (escalar, sla, config), baixa (criar, atualizar, mover_etapa)
+- [x] Verificação: backend tsc 0 erros novos, frontend 5/5, audit tests 23/23
+
+### Qualidade Operacional — Sistema Unificado (v1.6.0)
+- [x] **Backend**: `qualidadeOperacional.service.ts` — agregador central (reaberturas, recorrência, retrabalho, FCR, alertas, sugestões, diagnóstico IA, qualidade por cliente)
+- [x] **Backend**: `qualidade.controller.ts` + `qualidade.routes.ts` — 7 endpoints sob `/api/helpdesk/qualidade/*`
+- [x] **Backend**: 4 novos tipos de alerta em `alertasVisaoGeral.service.ts` (reabertura_aumento, retrabalho_acima_meta, fcr_abaixo_meta, problema_recorrente_sistemico)
+- [x] **Frontend**: `QualidadeOperacionalPage.tsx` (`/app/helpdesk/qualidade`) — 4 cards indicadores, alertas, sugestões, tabela recorrência, retrabalho por analista, 4 modais drill-down, presets período
+- [x] **Frontend**: interfaces `QualidadeOperacional` + 8 tipos em `types/index.ts`
+- [x] **Frontend**: termos FQR/FR/RR no `metricGlossary.ts`
+- [x] **Frontend**: rota + menu no submenu "Gestão & Indicadores"
+- [x] Verificação: backend tsc 0 erros novos, frontend tsc 0, vitest 5/5
+
+### Correção — Menu/Sidebar Piscando (v1.6.0)
+- [x] **Causa raiz**: `<Suspense>` no `App.tsx` envolvia todas as rotas incluindo Layout; lazy-loading de páginas filhas desmontava a sidebar
+- [x] **Correção**: `<Suspense>` adicionado dentro de `Layout.tsx` envolvendo `<Outlet />` — lazy-loading capturado localmente
+- [x] **Arquivo**: `frontend/src/components/Layout.tsx` (3 linhas adicionadas)
+- [x] Verificação: frontend tsc 0, vitest 5/5, todas as funcionalidades preservadas
 
 ### Roadmap v1.4 — Fases 4 a 9 concluídas (commits `2a34760` a `a9a6a06`)
 - [x] **FASE 4 — Aprovações via WhatsApp**: `Aprovacao` + `canal`, `telefoneAprovador`, `token` (@unique), `expiraEm`; `decidirAprovacaoPorToken` (público, sem criar ticket); `processarRespostaAprovacaoWhatsApp` intercepta no handler canônico ANTES da criação de ticket (ZERO novo ticket) via interactiveId `aprovacao_<id>_aprovar|rejeitar` ou texto (aprovar/1/sim/rejeitar/2/não) casado pelo telefone; página pública `/aprovacoes/:token`
@@ -366,6 +409,26 @@ npx expo run:ios             # Build iOS
 - [x] **Documentação para leigos**: 6 guias em docs/ (GUIA-PROJETO, GITHUB-LEIGO, DEPLOY-VERCEL-LEIGO, BACKUP-E-RESTAURACAO, ARQUITETURA, VARIAVEIS-AMBIENTE)
 - [x] **CHANGELOG**: v1.5.0 adicionado com resumo completo
 
+### Auditoria de Segurança Completo (v1.6.1)
+- [x] **Auditoria 4 camadas**: Autenticação/Autorização, Banco de Dados, APIs/Webhooks, Frontend — 48 vulnerabilidades identificadas (7 críticas, 13 altas, 18 médias, 10 baixas)
+- [x] **C6**: XSS Stored via `innerHTML` em `KanbanBoard.tsx` — corrigido com `createElement` + `textContent`
+- [x] **C7**: XSS Stored via `document.write()` em `TicketHistoricoModal.tsx` — corrigido com função `esc()` para escapar HTML
+- [x] **C1**: WhatsApp Cloud API webhook sem HMAC — adicionada validação `X-Hub-Signature-256` HMAC-SHA256
+- [x] **C2**: Evolution API webhook sem validação — adicionada validação de secret via query param/header
+- [x] **H3**: IDOR Kanban attachment delete — adicionada verificação de ownership via task
+- [x] **H4**: Rate limiting em endpoints de token — `rateLimiter.ts` (in-memory) com 5 req/min login, 10 req/min sign, 10 req/min approval
+- [x] **H5**: SSRF em integrações externas — `isPrivateUrl()` bloqueia IPs privados/localhost/metadata
+- [x] **H8-H9**: Refresh token binding — `sessionToken` obrigatório no refresh + `POST /api/auth/logout` limpa sessionToken no banco
+- [x] **H11**: Senha mínima aumentada de 6 para 8 caracteres (Zod schemas)
+- [x] **Novo middleware**: `rateLimiter.ts` — rate limiter in-memory genérico com headers X-RateLimit-*
+- [x] **Novas env vars**: `WHATSAPP_CLOUD_APP_SECRET`, `EVOLUTION_WEBHOOK_SECRET` (adicionadas em env.ts + .env.example)
+- [x] **Documentação**: `docs/SEGURANCA.md` completa (14 seções: auth, RBAC, webhooks, rate limiting, SSRF, XSS, uploads, dados sensíveis, CORS, headers, variáveis, checklist)
+- [x] **Testes**: Auth tests atualizados (20/20 passando) — sessionToken obrigatório no refresh, novo teste de session mismatch
+- [x] **Backend tsc**: 0 erros novos (25 pré-existentes intactos)
+- [x] **Frontend tsc**: 0 erros
+- [x] **Frontend tests**: 5/5 passando
+- [x] **Backend tests**: auth 20/20, orders 11/11, indicadores 17/17, public-api 14/14, alertas 7/7, audit 23/23, auditoria-profissional 12/12, alertas-operacionais 12/12
+
 ## Próximos passos
-- [ ] Fase 4 — Enriquecimento dos ~90 call sites de logAction com severity/clienteId
-- [ ] FASE 10 — Documentação final e FASE 11 — Testes finais de regressão
+- [x] Fase 4 — Enriquecimento dos ~90 call sites de logAction com severity/clienteId
+- [x] FASE 10 — Documentação final e FASE 11 — Testes finais de regressão

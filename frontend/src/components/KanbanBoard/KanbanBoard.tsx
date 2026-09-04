@@ -11,6 +11,7 @@ import {
   Image as ImageIcon, Paperclip, Settings, Tag, GripVertical, Eye, EyeOff,
   LayoutGrid, Search, Copy, ArrowRightLeft, AlertTriangle, Clock, Download,
   Loader2, Sparkles, Play, Pause, Square, Archive, RotateCcw, FolderOpen,
+  FileText,
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { useKanban } from '../../hooks/useKanban';
@@ -271,7 +272,7 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
 
   useEffect(() => {
     if (showNewTask && users.length === 0) {
-      api.get('/auth/users').then(({ data }) => setUsers(data)).catch(() => {});
+      api.get('/auth/users', { params: { active: 'true' } }).then(({ data }) => setUsers(data)).catch(() => {});
     }
   }, [showNewTask]);
 
@@ -489,7 +490,7 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
 function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClose: () => void; onRefresh?: () => void }) {
   const { user } = useAuth();
   const kanbanCtx = useKanban();
-  const { updateTask, createSubtask, toggleSubtask, deleteSubtask, addComment, getActivityLog, uploadAttachments, deleteAttachment, createTag, deleteTag, transferTask, duplicateTask, boards, fetchBoards, archiveTask, reopenTask, getTaskTimeSummary, pauseTimer, resumeTimer } = kanbanCtx;
+  const { updateTask, createSubtask, toggleSubtask, deleteSubtask, addComment, getActivityLog, uploadAttachments, deleteAttachment, createTag, deleteTag, transferTask, duplicateTask, boards, fetchBoards, archiveTask, reopenTask, getTaskDetail, getTaskTimeSummary, pauseTimer, resumeTimer } = kanbanCtx;
   const isAdmin = user?.role === 'admin' || user?.role === 'gerente';
   const [activity, setActivity] = useState<any[]>([]);
   const [comment, setComment] = useState('');
@@ -529,10 +530,19 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
   const [duplicating, setDuplicating] = useState(false);
   const [showImportChecklist, setShowImportChecklist] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [showClientSelect, setShowClientSelect] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
+  const [clientOptions, setClientOptions] = useState<any[]>([]);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [descricaoLocal, setDescricaoLocal] = useState(task?.descricao || '');
   const [localSubtasks, setLocalSubtasks] = useState<any[]>(task?.subtasks || []);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [taskDetail, setTaskDetail] = useState<any>(null);
+
+  useEffect(() => {
+    if (!task?.id) return;
+    getTaskDetail(task.id).then(setTaskDetail).catch(() => {});
+  }, [task?.id]);
 
   useEffect(() => {
     if (!task?.id) return;
@@ -622,6 +632,39 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
     setShowReopen(false);
     setReopenMotivo('');
     onRefresh?.();
+  };
+
+  const handleCreateOrder = async () => {
+    const existingOrder = taskDetail?.order || task.order;
+    if (existingOrder) {
+      if (!confirm('Esta tarefa já está vinculada a uma OS. Deseja criar outra?')) return;
+    }
+    if (!task.client) {
+      setShowClientSelect(true);
+      try {
+        const { data } = await api.get('/crm/clients', { params: { limit: 200 } });
+        setClientOptions(data.clients || []);
+      } catch {}
+      return;
+    }
+    const params = new URLSearchParams({
+      clientId: task.client.id,
+      taskId: task.id,
+      taskTitle: task.titulo,
+    });
+    if (task.descricao) params.set('taskDescricao', task.descricao);
+    window.location.href = `/app/orders/new?${params.toString()}`;
+  };
+
+  const handleSelectClientAndCreateOrder = (clientId: string) => {
+    setShowClientSelect(false);
+    const params = new URLSearchParams({
+      clientId,
+      taskId: task.id,
+      taskTitle: task.titulo,
+    });
+    if (task.descricao) params.set('taskDescricao', task.descricao);
+    window.location.href = `/app/orders/new?${params.toString()}`;
   };
 
   const handleSave = async () => {
@@ -781,6 +824,11 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
                 <button onClick={() => { setShowTransfer(true); fetchBoards(); }} className="text-xs text-gray-500 dark:text-slate-400 hover:text-codemed-600 flex items-center gap-1" title="Transferir para outro quadro">
                   <ArrowRightLeft size={14} /> Transferir
                 </button>
+                {!task.order && !taskDetail?.order && (
+                  <button onClick={handleCreateOrder} className="text-xs text-gray-500 dark:text-slate-400 hover:text-green-600 flex items-center gap-1" title="Criar Ordem de Serviço a partir desta tarefa">
+                    <FileText size={14} /> Criar OS
+                  </button>
+                )}
               </>
             )}
             {task.dataConclusao && (
@@ -838,6 +886,23 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
               </button>
               <button onClick={() => setShowTransfer(false)} className="text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">Cancelar</button>
             </div>
+          </div>
+        )}
+
+        {/* Client Selection Modal for OS creation */}
+        {showClientSelect && (
+          <div className="px-5 py-3 bg-blue-50 dark:bg-slate-900/60 border-b border-blue-200 dark:border-slate-700">
+            <label className="text-xs text-blue-700 dark:text-blue-400 font-medium block mb-1">Selecione o cliente para a OS</label>
+            <input autoFocus value={clientSearch} onChange={e => setClientSearch(e.target.value)} className="input text-sm w-full mb-2" placeholder="Buscar cliente..." />
+            <div className="max-h-40 overflow-y-auto space-y-1">
+              {clientOptions.filter(c => !clientSearch || c.razaoSocial?.toLowerCase().includes(clientSearch.toLowerCase()) || c.nomeFantasia?.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
+                <button key={c.id} onClick={() => handleSelectClientAndCreateOrder(c.id)} className="w-full text-left text-sm px-3 py-1.5 rounded hover:bg-blue-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200">
+                  {c.nomeFantasia || c.razaoSocial}
+                </button>
+              ))}
+              {clientOptions.length === 0 && <p className="text-xs text-gray-400">Nenhum cliente encontrado</p>}
+            </div>
+            <button onClick={() => setShowClientSelect(false)} className="text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 mt-2">Cancelar</button>
           </div>
         )}
 
@@ -1035,6 +1100,16 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
                     {task.ticketId && (
                       <div className="col-span-2"><span className="text-gray-400 dark:text-slate-500 text-xs">Ticket</span><span className="ml-2 text-purple-600 dark:text-purple-400 text-xs font-mono">#{task.ticketId.slice(0, 8)}</span></div>
                     )}
+                    {(taskDetail?.order || task.order) && (() => {
+                      const ord = taskDetail?.order || task.order;
+                      return (
+                        <div className="col-span-2 flex items-center gap-2">
+                          <span className="text-gray-400 dark:text-slate-500 text-xs">OS</span>
+                          <span className="ml-2 text-green-600 dark:text-green-400 text-xs font-mono">{ord.numeroOs}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">{ord.status}</span>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Tags Section */}
@@ -1181,7 +1256,27 @@ function TaskDetailPanel({ task, onClose, onRefresh }: { task: KanbanTask; onClo
                             if (parent && !parent.querySelector('.img-error-detail')) {
                               const errorDiv = document.createElement('div');
                               errorDiv.className = 'img-error-detail w-full h-24 flex flex-col items-center justify-center text-gray-400 gap-1';
-                              errorDiv.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span class="text-[9px] truncate max-w-[90%] px-1">' + att.nomeArquivo + '</span>';
+                              const svgNS = 'http://www.w3.org/2000/svg';
+                              const svg = document.createElementNS(svgNS, 'svg');
+                              svg.setAttribute('width', '20');
+                              svg.setAttribute('height', '20');
+                              svg.setAttribute('viewBox', '0 0 24 24');
+                              svg.setAttribute('fill', 'none');
+                              svg.setAttribute('stroke', 'currentColor');
+                              svg.setAttribute('stroke-width', '2');
+                              const rect = document.createElementNS(svgNS, 'rect');
+                              rect.setAttribute('x', '3'); rect.setAttribute('y', '3');
+                              rect.setAttribute('width', '18'); rect.setAttribute('height', '18');
+                              rect.setAttribute('rx', '2'); rect.setAttribute('ry', '2');
+                              const circle = document.createElementNS(svgNS, 'circle');
+                              circle.setAttribute('cx', '8.5'); circle.setAttribute('cy', '8.5'); circle.setAttribute('r', '1.5');
+                              const polyline = document.createElementNS(svgNS, 'polyline');
+                              polyline.setAttribute('points', '21 15 16 10 5 21');
+                              svg.append(rect, circle, polyline);
+                              const span = document.createElement('span');
+                              span.className = 'text-[9px] truncate max-w-[90%] px-1';
+                              span.textContent = att.nomeArquivo;
+                              errorDiv.append(svg, span);
                               parent.appendChild(errorDiv);
                             }
                           }}

@@ -166,7 +166,8 @@ describe('Auth Controller — Task 2.1', () => {
         signature: null,
         online: false,
         lastSeenAt: null,
-        sessionToken: null,
+        sessionToken: 'test-session-uuid',
+        organizationId: null,
         departamentos: [],
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -181,7 +182,7 @@ describe('Auth Controller — Task 2.1', () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
       vi.mocked(prisma.user.update).mockResolvedValue(mockUser as any);
 
-      const { req, res } = mockReqRes({ body: { refreshToken: validToken } });
+      const { req, res } = mockReqRes({ body: { refreshToken: validToken, sessionToken: 'test-session-uuid' } });
 
       await refreshToken(req, res);
 
@@ -204,9 +205,19 @@ describe('Auth Controller — Task 2.1', () => {
       expect(res.json).toHaveBeenCalledWith({ error: 'Refresh token é obrigatório' });
     });
 
+    it('deve retornar 400 quando session token não for fornecido', async () => {
+      const validToken = jwt.sign({ id: '550e8400-e29b-41d4-a716-446655440000' }, env.jwtRefreshSecret, { expiresIn: '7d' });
+      const { req, res } = mockReqRes({ body: { refreshToken: validToken } });
+
+      await refreshToken(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Session token é obrigatório' });
+    });
+
     it('deve retornar 401 para refresh token inválido', async () => {
       const { req, res } = mockReqRes({
-        body: { refreshToken: 'token_obviamente_invalido' },
+        body: { refreshToken: 'token_obviamente_invalido', sessionToken: 'test-session-uuid' },
       });
 
       await refreshToken(req, res);
@@ -224,12 +235,39 @@ describe('Auth Controller — Task 2.1', () => {
 
       vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
 
-      const { req, res } = mockReqRes({ body: { refreshToken: validToken } });
+      const { req, res } = mockReqRes({ body: { refreshToken: validToken, sessionToken: 'test-session-uuid' } });
 
       await refreshToken(req, res);
 
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({ error: 'Usuário inválido' });
+    });
+
+    it('deve retornar 401 quando session token não bate', async () => {
+      const mockUser = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        email: 'admin@codemed.com.br',
+        role: 'admin',
+        isMaster: true,
+        active: true,
+        sessionToken: 'session_correto',
+        departamentos: [],
+      };
+
+      const validToken = jwt.sign(
+        { id: '550e8400-e29b-41d4-a716-446655440000' },
+        env.jwtRefreshSecret,
+        { expiresIn: '7d' }
+      );
+
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+
+      const { req, res } = mockReqRes({ body: { refreshToken: validToken, sessionToken: 'session_errado' } });
+
+      await refreshToken(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Sessão encerrada em outro dispositivo' });
     });
   });
 

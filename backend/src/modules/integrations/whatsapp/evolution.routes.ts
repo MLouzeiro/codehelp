@@ -89,9 +89,17 @@ router.post('/message/send', async (req: Request, res: Response) => {
   }
 });
 
-// Webhook receiver for Evolution API
+// Webhook receiver for Evolution API — com validacao de secret
 router.post('/webhook', async (req: Request, res: Response) => {
   try {
+    const webhookSecret = env.evolutionWebhookSecret;
+    if (webhookSecret) {
+      const reqSecret = (req.query.apikey as string) || (req.headers['x-evolution-api-key'] as string) || '';
+      if (reqSecret !== webhookSecret) {
+        console.warn('[Evolution Webhook] Secret invalido — requisicao rejeitada');
+        return res.sendStatus(403);
+      }
+    }
     await unifiedWhatsAppService.handleEvolutionWebhook(req.body);
     res.sendStatus(200);
   } catch (error: any) {

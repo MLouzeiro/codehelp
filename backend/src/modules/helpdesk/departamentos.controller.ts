@@ -44,6 +44,7 @@ export async function postDepartamento(req: AuthRequest, res: Response) {
       entidadeId: dept.id,
       detalhes: { slug: dept.slug, nome: dept.nome },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.status(201).json(dept);
   } catch (err) {
@@ -62,6 +63,7 @@ export async function putDepartamento(req: AuthRequest, res: Response) {
       entidadeId: dept.id,
       detalhes: { campos: Object.keys(req.body) },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.json(dept);
   } catch (err) {
@@ -79,6 +81,7 @@ export async function toggleDepartamentoHandler(req: AuthRequest, res: Response)
       entidade: 'Departamento',
       entidadeId: dept.id,
       ip: getIpFromRequest(req),
+      severity: dept.ativo ? 'baixa' : 'media',
     });
     return res.json(dept);
   } catch (err) {
@@ -108,6 +111,7 @@ export async function postNivel(req: AuthRequest, res: Response) {
       entidadeId: nivel.id,
       detalhes: { slug: nivel.slug, nome: nivel.nome },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.status(201).json(nivel);
   } catch (err) {
@@ -126,6 +130,7 @@ export async function putNivel(req: AuthRequest, res: Response) {
       entidadeId: nivel.id,
       detalhes: { campos: Object.keys(req.body) },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.json(nivel);
   } catch (err) {
@@ -143,6 +148,7 @@ export async function toggleNivelHandler(req: AuthRequest, res: Response) {
       entidade: 'NivelSuporte',
       entidadeId: nivel.id,
       ip: getIpFromRequest(req),
+      severity: nivel.ativo ? 'baixa' : 'media',
     });
     return res.json(nivel);
   } catch (err) {

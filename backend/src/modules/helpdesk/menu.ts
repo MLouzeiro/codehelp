@@ -56,10 +56,10 @@ export async function montarBoasVindas(nome: string, now: Date = new Date()): Pr
   // Mensagem completa padrão — saudação + departamentos numerados + instrução.
   // Usada tanto na descrição da lista interativa (evolution/cloud) quanto no
   // fallback de texto (Baileys/webjs). Mantém a opção de digitar o número.
-  let descricao = `Olá, ${nomeFmt}! 👋\n${saudacao}!\n\nQue bom ter você por aqui! 😊\n\nComo podemos ajudar?\n\n🏢 *ESCOLHA O DEPARTAMENTO*\n\n${lista}\n\n${SEPARADOR_MENU}\n\n👉 *Digite o número da opção desejada.*\n\nExemplo:\n*1* para ${departamentos[0].nome}.`;
+  let descricao = `Olá, ${nomeFmt}! 👋\n\n${saudacao}!\n\nQue bom ter você por aqui. 😊\nVamos direcionar seu atendimento para a equipe certa.\n\n🏢 *ESCOLHA O DEPARTAMENTO*\n\n${lista}\n\n${SEPARADOR_MENU}\n\n👉 *Digite o número do departamento desejado.*\n\nExemplo: *1*`;
 
   try {
-    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
+    const config = await prisma.helpdeskConfig.findFirst({ where: { slug: 'fila' } });
     if (config?.mensagemBoasVindas) {
       descricao = interpolar(config.mensagemBoasVindas, {
         nome: nomeFmt,
@@ -77,7 +77,7 @@ export async function montarBoasVindas(nome: string, now: Date = new Date()): Pr
   const temLista = descricao.includes('🏢') || descricao.includes('ESCOLHA O DEPARTAMENTO') || descricao.includes('1️⃣') || descricao.includes('departamentos');
   const fallbackTexto = temLista
     ? descricao
-    : `${descricao}\n\n🏢 *ESCOLHA O DEPARTAMENTO*\n\n${lista}\n\n${SEPARADOR_MENU}\n\n👉 *Digite o número da opção desejada.*\n\nExemplo:\n*1* para ${departamentos[0].nome}.`;
+    : `${descricao}\n\n🏢 *ESCOLHA O DEPARTAMENTO*\n\n${lista}\n\n${SEPARADOR_MENU}\n\n👉 *Digite o número do departamento desejado.*\n\nExemplo: *1*`;
 
   return { descricao, fallbackTexto };
 }
@@ -89,10 +89,10 @@ export async function montarOpcaoInvalida(nome: string): Promise<string> {
   });
 
   const lista = formatarDepartamentosNumerados(departamentos);
-  const defaultMsg = `⚠️ Não consegui identificar a opção.\n\nPor favor, escolha uma das opções abaixo:\n\n${lista}\n\n👉 Digite apenas o *número* da opção desejada.`;
+  const defaultMsg = `Não consegui identificar sua opção. 😊\n\nPor favor, escolha um dos números abaixo:\n\n${lista}\n\n👉 *Digite o número do departamento desejado.*`;
 
   try {
-    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
+    const config = await prisma.helpdeskConfig.findFirst({ where: { slug: 'fila' } });
     if ((config as any)?.mensagemOpcaoInvalida) {
       return interpolar((config as any).mensagemOpcaoInvalida, {
         nome: nome || 'cliente',
@@ -143,7 +143,7 @@ export async function resolverOpcaoMenu(opcao: string): Promise<{
 export async function montarAckDepartamento(nome: string, deptNome: string): Promise<string> {
   // Verificar se existe mensagem customizada no HelpdeskConfig
   try {
-    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'auto_atendimento' } });
+    const config = await prisma.helpdeskConfig.findFirst({ where: { slug: 'auto_atendimento' } });
     if ((config as any)?.mensagemDescricaoProblema) {
       return interpolar((config as any).mensagemDescricaoProblema, {
         nome: nome || 'cliente',
@@ -152,7 +152,7 @@ export async function montarAckDepartamento(nome: string, deptNome: string): Pro
     }
   } catch {}
 
-  return `✅ Perfeito, ${nome || 'cliente'}!\n\nVocê selecionou:\n🏢 *${deptNome}*\n\nAgora, por favor, descreva brevemente o que está acontecendo.\n\nQuanto mais detalhes você fornecer, mais rápido poderemos ajudar. 😊`;
+  return `Perfeito! 👍\n\nVocê selecionou *${deptNome}*.\n\nAgora me conte, por favor, o que está acontecendo.\n\nDescreva o problema ou a solicitação com o máximo de detalhes possível. Assim conseguimos encaminhar seu atendimento corretamente.`;
 }
 
 export async function montarPosicaoFilaComInfo(nome: string, posicao: number, jaInformouAssunto: boolean, jaInformouLab: boolean): Promise<string> {
@@ -175,7 +175,7 @@ export async function montarAckSuporte(nome: string): Promise<string> {
   const DEFAULT_ACK = 'Perfeito, {{nome}}! 🛠️\nVocê escolheu *Suporte*.\nDescreva seu problema que um analista técnico te atenderá em breve.';
   let template = DEFAULT_ACK;
   try {
-    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
+    const config = await prisma.helpdeskConfig.findFirst({ where: { slug: 'fila' } });
     if (config?.mensagemAckSuporte) template = config.mensagemAckSuporte;
   } catch {}
   return interpolar(template, { nome: nome || 'cliente' });
@@ -185,7 +185,7 @@ export async function montarAckComercial(nome: string): Promise<string> {
   const DEFAULT_ACK = 'Ótimo, {{nome}}! 💼\nVocê escolheu *Comercial*.\nUm de nossos consultores entrará em contato com você em instantes.';
   let template = DEFAULT_ACK;
   try {
-    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
+    const config = await prisma.helpdeskConfig.findFirst({ where: { slug: 'fila' } });
     if (config?.mensagemAckComercial) template = config.mensagemAckComercial;
   } catch {}
   return interpolar(template, { nome: nome || 'cliente' });

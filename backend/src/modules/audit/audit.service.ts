@@ -79,6 +79,8 @@ export interface LogParams {
   entidadeId?: string | null;
   detalhes?: Record<string, any> | string | null;
   ip?: string | null;
+  severity?: string | null;
+  clienteId?: string | null;
 }
 
 export interface AuditLogParams {
@@ -162,6 +164,8 @@ export async function logAction(params: LogParams): Promise<void> {
           ? JSON.stringify(params.detalhes)
           : null,
     ip: params.ip,
+    severity: params.severity || null,
+    clienteId: params.clienteId || null,
   });
 }
 

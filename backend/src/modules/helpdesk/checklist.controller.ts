@@ -55,6 +55,7 @@ export async function addChecklistItem(req: AuthRequest, res: Response) {
       entidadeId: item.id,
       detalhes: { ticketId, titulo: item.titulo, ordem: item.ordem },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
 
     return res.status(201).json(item);
@@ -84,6 +85,7 @@ export async function toggleChecklistItem(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { ticketId: item.ticketId, concluida: updated.concluida },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
 
     return res.json(updated);
@@ -120,6 +122,7 @@ export async function updateChecklistItem(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { ticketId: item.ticketId, campos: Object.keys(data).filter((k) => k !== 'updatedAt') },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
 
     return res.json(updated);
@@ -143,6 +146,7 @@ export async function deleteChecklistItem(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { ticketId: item.ticketId, titulo: item.titulo },
       ip: getIpFromRequest(req),
+      severity: 'media',
     });
 
     return res.status(204).send();
@@ -177,8 +181,9 @@ export async function reorderChecklist(req: AuthRequest, res: Response) {
       acao: 'atualizar',
       entidade: 'TicketChecklist',
       entidadeId: ticketId,
-      detalhes: { ticketId, reorderCount: items.length },
+      detalhes: { ticketId, ordem: items.map((i: any) => i.id) },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
 
     const reordered = await prisma.ticketChecklist.findMany({

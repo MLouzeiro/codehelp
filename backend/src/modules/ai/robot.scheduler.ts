@@ -36,7 +36,7 @@ export async function executarRobot(
   nome: string,
   fn: () => Promise<any>
 ): Promise<void> {
-  const robot = await prisma.robot.findUnique({ where: { slug } });
+  const robot = await prisma.robot.findFirst({ where: { slug } });
   if (!robot) return;
 
   const execution: RobotExecution = {

@@ -4,6 +4,8 @@ import {
   RefreshCw, TrendingUp, TrendingDown, Clock, CheckCircle, Star, Zap,
   Users, Loader2, BarChart3, AlertTriangle, Brain, Bot, ShieldAlert, Activity,
 } from 'lucide-react';
+import DiagnosticoDrawer from '../../components/DiagnosticoDrawer';
+import { AcronymText } from '../../components/AcronymText';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
@@ -145,6 +147,8 @@ export default function DashboardIA() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dias, setDias] = useState(7);
+  const [diagnosticoAgentId, setDiagnosticoAgentId] = useState<string | null>(null);
+  const [diagnosticoAgentName, setDiagnosticoAgentName] = useState<string>('');
 
   const carregar = useCallback(async (d: number) => {
     setLoading(true);
@@ -276,7 +280,7 @@ export default function DashboardIA() {
                 <div className="text-xl font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>
                   {c.valor}{c.unidade ? ` ${c.unidade === 'min' ? 'min' : c.unidade === 'tickets' ? '' : c.unidade}` : ''}
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>{c.label}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text={c.label} /></div>
                 <div className="flex items-center gap-1 flex-wrap">
                   <ClassificacaoPill cls={c.classificacao} />
                   {c.meta > 0 && (
@@ -377,10 +381,10 @@ export default function DashboardIA() {
               <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700">
                 <th className="py-2 pr-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>Analista</th>
                 <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>Tickets</th>
-                <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>FCR</th>
-                <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>CSAT</th>
-                <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>TMR</th>
-                <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>SLA</th>
+                <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text="FCR" /></th>
+                <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text="CSAT" /></th>
+                <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text="TMR" /></th>
+                <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text="SLA" /></th>
                 <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>Nota IA</th>
                 <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>Encerramentos</th>
                 <th className="py-2 pl-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>Retrabalho</th>
@@ -407,13 +411,17 @@ export default function DashboardIA() {
                   <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300" style={{ fontFamily: 'Lexend, sans-serif' }}>{a.taxaSla}%</td>
                   <td className="py-2.5 px-3">
                     {a.notaIa != null ? (
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        a.notaIa >= 8 ? 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30'
-                        : a.notaIa >= 6 ? 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30'
-                        : 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30'
-                      }`} style={{ fontFamily: 'Lexend, sans-serif' }}>
+                      <button
+                        onClick={() => { setDiagnosticoAgentId(a.agenteId); setDiagnosticoAgentName(a.agenteNome); }}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold cursor-pointer hover:ring-2 hover:ring-violet-300 dark:hover:ring-violet-600 transition-all ${
+                          a.notaIa >= 8 ? 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30'
+                          : a.notaIa >= 6 ? 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30'
+                          : 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30'
+                        }`} style={{ fontFamily: 'Lexend, sans-serif' }}
+                        title="Ver diagnóstico de treinamento"
+                      >
                         {a.notaIa}/10
-                      </span>
+                      </button>
                     ) : (
                       <span className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>—</span>
                     )}
@@ -463,6 +471,14 @@ export default function DashboardIA() {
           </table>
         </div>
       </div>
+
+      <DiagnosticoDrawer
+        open={!!diagnosticoAgentId}
+        onClose={() => { setDiagnosticoAgentId(null); setDiagnosticoAgentName(''); }}
+        agentId={diagnosticoAgentId || ''}
+        agentName={diagnosticoAgentName}
+        dias={dias}
+      />
     </div>
   );
 }

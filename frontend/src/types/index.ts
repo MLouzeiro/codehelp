@@ -939,3 +939,129 @@ export interface SlaTicketIndicador {
   slaRiscoPct: number;
   statusSla: string;
 }
+
+// ── Qualidade Operacional ────────────────────────────────────────────────
+
+export interface ClassificacaoQualidade {
+  estado: 'dentro' | 'atencao' | 'fora';
+  icone: '🟢' | '🟡' | '🔴';
+  texto: string;
+}
+
+export interface CardQualidade {
+  label: string;
+  valor: number | string;
+  unidade: string;
+  percentual?: number;
+  classificacao: ClassificacaoQualidade;
+  delta: number | null;
+  deltaLabel: string;
+}
+
+export interface ReaberturaDetalhe {
+  ticketId: string;
+  protocolo: string | null;
+  contactName: string | null;
+  clientId: string | null;
+  clientNome: string | null;
+  agenteId: string | null;
+  agenteNome: string | null;
+  categoria: string | null;
+  assunto: string | null;
+  dataAbertura: string;
+  dataFechamento: string | null;
+  motivoStatus: string | null;
+  totalReaberturas: number;
+  csatNota: number | null;
+}
+
+export interface ProblemaRecorrente {
+  problema: string;
+  categoria: string | null;
+  assunto: string | null;
+  ocorrencias: number;
+  clientesAfetados: number;
+  clientes: Array<{ clienteId: string; nome: string; quantidade: number }>;
+  ticketIds: string[];
+  retrabalho: number;
+}
+
+export interface RetrabalhoDetalhe {
+  ticketId: string;
+  protocolo: string | null;
+  contactName: string | null;
+  agenteId: string | null;
+  agenteNome: string | null;
+  categoria: string | null;
+  motivo: string;
+  tempoMin: number;
+  custoOperacionalMin: number | null;
+}
+
+export interface AlertaQualidade {
+  nivel: 'info' | 'atencao' | 'critico';
+  tipo: string;
+  titulo: string;
+  mensagem: string;
+  contagem: number;
+  icone: string;
+  link?: string;
+}
+
+export interface SugestaoQualidade {
+  categoria: 'treinamento' | 'desenvolvimento' | 'base_conhecimento' | 'processo' | 'automacao' | 'gestao';
+  titulo: string;
+  problema: string;
+  ocorrencias: number;
+  clientesAfetados: number;
+  diagnostico: string;
+  sugestao: string;
+  prioridade: 'alta' | 'media' | 'baixa';
+}
+
+export interface DiagnosticoIa {
+  titulo: string;
+  dadosAnalisados: string[];
+  evidencias: string[];
+  conclusao: string;
+  recomendacao: string;
+  confianca: number | null;
+  modelo: string;
+}
+
+export interface QualidadeOperacional {
+  atualizadoEm: string;
+  periodo: { inicio: string; fim: string; label: string; dias: number };
+  reaberturas: {
+    total: number;
+    percentual: number;
+    delta: number | null;
+    porAnalista: Array<{ agenteId: string; agenteNome: string; total: number }>;
+    porCliente: Array<{ clienteId: string; nome: string; total: number }>;
+    porCategoria: Array<{ categoria: string; total: number }>;
+  };
+  recorrencia: {
+    total: number;
+    percentual: number;
+    delta: number | null;
+    problemas: ProblemaRecorrente[];
+  };
+  retrabalho: {
+    total: number;
+    percentual: number;
+    delta: number | null;
+    tempoAdicionalMin: number;
+    porAnalista: Array<{ agenteId: string; agenteNome: string; total: number; tempoMin: number }>;
+    porDepartamento: Array<{ departamento: string; total: number }>;
+    porCategoria: Array<{ categoria: string; total: number }>;
+  };
+  fcr: {
+    percentual: number;
+    total: number;
+    resolvidos: number;
+    naoResolvidos: number;
+    delta: number | null;
+  };
+  alertas: AlertaQualidade[];
+  sugestoes: SugestaoQualidade[];
+}

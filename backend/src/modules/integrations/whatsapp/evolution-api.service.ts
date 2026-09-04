@@ -260,6 +260,44 @@ class EvolutionAPIService {
     }
   }
 
+  async sendDocument(
+    to: string,
+    documentBase64: string,
+    fileName: string,
+    caption?: string,
+    instanceName?: string,
+  ): Promise<{ success: boolean; error?: string; messageId?: string }> {
+    const instance = instanceName || this.config.instanceName;
+    const phone = normalizePhone(to);
+
+    try {
+      const response = await fetch(`${this.config.baseUrl}/message/sendMedia/${instance}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': this.config.apiKey,
+        },
+        body: JSON.stringify({
+          number: phone,
+          mediatype: 'document',
+          media: documentBase64,
+          fileName,
+          caption: caption || '',
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        return { success: false, error };
+      }
+
+      const data: any = await response.json();
+      return { success: true, messageId: data.key?.id || data.messageId };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
   // ── Webhook Handler ────────────────────────────────────────────────
 
   async handleWebhook(payload: any): Promise<void> {
@@ -290,6 +328,15 @@ class EvolutionAPIService {
 
       // Filtrar mensagens de grupos
       if (remoteJid.endsWith('@g.us')) return;
+
+      // Detectar mensagem revogada/apagada
+      const isRevoked = (msg as any).update?.messageStatus === 'REVOKE' ||
+        (msg as any).messageStatus === 'REVOKE' ||
+        !msg.message || Object.keys(msg.message || {}).length === 0;
+      if (isRevoked) {
+        console.log(`[Evolution API] Mensagem revogada/apagada ignorada messageId=${msg.key?.id}`);
+        return;
+      }
 
       const phone = remoteJid.replace(/@c\.us$/i, '');
       if (!phone) return;

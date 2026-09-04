@@ -421,6 +421,17 @@ class BaileysProviderService {
           const fromMe = msg.key?.fromMe;
           const remoteJid = msg.key?.remoteJid;
           const hasMsg = !!msg.message;
+
+          // Detectar mensagem revogada (protocolMessage type 0 = REVOKE)
+          const contentType = hasMsg ? getContentType(msg.message!) : null;
+          const isRevoked = contentType === 'protocolMessage' &&
+            (msg.message as any)?.protocolMessage?.type === 0;
+
+          if (isRevoked) {
+            console.log(`[Baileys ${sessionId}] Mensagem revogada ignorada messageId=${msg.key?.id}`);
+            continue;
+          }
+
           console.log(`[Baileys ${sessionId}] Msg recebida: fromMe=${fromMe}, jid=${remoteJid}, hasMsg=${hasMsg}, pushName=${msg.pushName}`);
           await this.processIncomingMessage(msg, sessionId);
         } catch (err) {

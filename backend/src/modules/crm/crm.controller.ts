@@ -297,7 +297,7 @@ export async function createTheme(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: 'Slug e nome são obrigatórios' });
     }
 
-    const existing = await prisma.helpdeskConfig.findUnique({ where: { slug } });
+    const existing = await prisma.helpdeskConfig.findFirst({ where: { slug } });
     if (existing) {
       return res.status(409).json({ error: 'Tema com este slug já existe' });
     }
@@ -335,7 +335,7 @@ export async function updateTheme(req: AuthRequest, res: Response) {
     }
 
     if (slug && slug !== existing.slug) {
-      const slugExists = await prisma.helpdeskConfig.findUnique({ where: { slug } });
+      const slugExists = await prisma.helpdeskConfig.findFirst({ where: { slug } });
       if (slugExists) {
         return res.status(409).json({ error: 'Tema com este slug já existe' });
       }

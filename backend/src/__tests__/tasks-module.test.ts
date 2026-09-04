@@ -306,13 +306,13 @@ describe('Controle de tempo da tarefa (spec §5/§6/§9/§10/§12/§41)', () => 
     timeEntryId = entry.id;
 
     const paused = await tt.pauseTimer(entry.id, userAId, 'almoco');
-    expect(paused.pausado).toBe(true);
+    expect(paused!.pausado).toBe(true);
 
     await new Promise((r) => setTimeout(r, 30));
 
     const resumed = await tt.resumeTimer(entry.id, userAId, 'voltou');
-    expect(resumed.pausado).toBe(false);
-    expect(resumed.pausadoTotalMin).toBeGreaterThanOrEqual(0);
+    expect(resumed!.pausado).toBe(false);
+    expect(resumed!.pausadoTotalMin).toBeGreaterThanOrEqual(0);
 
     await new Promise((r) => setTimeout(r, 30));
     const stopped = await tt.stopTimer(entry.id, userAId);
@@ -322,11 +322,11 @@ describe('Controle de tempo da tarefa (spec §5/§6/§9/§10/§12/§41)', () => 
     expect(blocks.map((b) => b.tipo)).toEqual(['inicio', 'pausa', 'retomada', 'fim']);
 
     const summary = await tt.getTaskTimeSummary(task.id);
-    expect(summary.porTipo.desenvolvimento).toBe(stopped.duracaoMin);
+    expect(summary.porTipo.desenvolvimento).toBe(stopped!.duracaoMin);
     expect(summary.blocos.length).toBe(1);
 
     const taskUpdated = await prisma.kanbanTask.findUnique({ where: { id: task.id } });
-    expect(taskUpdated?.horasTrabalhadas).toBe(Math.round((stopped.duracaoMin / 60) * 100) / 100);
+    expect(taskUpdated?.horasTrabalhadas).toBe(Math.round((stopped!.duracaoMin! / 60) * 100) / 100);
   });
 
   it('ajuste manual de tempo é auditado com antes/depois e motivo obrigatório', async () => {
@@ -349,7 +349,7 @@ describe('Controle de tempo da tarefa (spec §5/§6/§9/§10/§12/§41)', () => 
     await expect(tt.ajustarTempo(entry.id, 60, '')).rejects.toThrow('obrigatório');
 
     const adjusted = await tt.ajustarTempo(entry.id, 90, 'correção de apontamento', userBId);
-    expect(adjusted.duracaoMin).toBe(90);
+    expect(adjusted!.duracaoMin).toBe(90);
 
     const audit = await prisma.auditLog.findFirst({
       where: { entidade: 'TimeEntry', entidadeId: entry.id, acao: 'ajuste_manual_tempo' },

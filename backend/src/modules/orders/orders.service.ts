@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { generateOsNumber } from '../../shared/utils/helpers';
+import crypto from 'crypto';
 
 // ── Timeline de status (tempo por status + auditoria) ─────────────────
 
@@ -247,6 +248,92 @@ export async function listOrdersForReport(filters: OrderReportFilters = {}) {
       signature: { select: { assinadoEm: true, assinanteNome: true } },
     },
   });
+}
+
+// ── CRUD de Itens da OS ──────────────────────────────────────────────
+
+export interface CreateOrderItemParams {
+  orderId: string;
+  descricao: string;
+  tipo?: string;
+  quantidade?: number;
+  valorUnitario?: number | null;
+  valorTotal?: number | null;
+  observacoes?: string | null;
+}
+
+export async function listOrderItems(orderId: string) {
+  return prisma.serviceOrderItem.findMany({
+    where: { orderId },
+    orderBy: { createdAt: 'asc' },
+  });
+}
+
+export async function createOrderItem(params: CreateOrderItemParams) {
+  const order = await prisma.serviceOrder.findUnique({ where: { id: params.orderId }, select: { id: true, status: true } });
+  if (!order) throw new Error('OS não encontrada');
+  if (order.status === 'assinada' || order.status === 'concluida' || order.status === 'cancelada') {
+    throw new Error('OS finalizada ou cancelada — não é possível adicionar itens');
+  }
+
+  const valorTotal = params.quantidade && params.valorUnitario
+    ? params.quantidade * params.valorUnitario
+    : params.valorTotal ?? null;
+
+  return prisma.serviceOrderItem.create({
+    data: {
+      orderId: params.orderId,
+      descricao: params.descricao,
+      tipo: params.tipo || 'servico',
+      quantidade: params.quantidade ?? 1,
+      valorUnitario: params.valorUnitario ?? null,
+      valorTotal,
+      observacoes: params.observacoes ?? null,
+    },
+  });
+}
+
+export async function updateOrderItem(itemId: string, data: Partial<CreateOrderItemParams>) {
+  const existing = await prisma.serviceOrderItem.findUnique({ where: { id: itemId }, include: { order: { select: { status: true } } } });
+  if (!existing) throw new Error('Item não encontrado');
+  if (existing.order.status === 'assinada' || existing.order.status === 'concluida' || existing.order.status === 'cancelada') {
+    throw new Error('OS finalizada ou cancelada — não é possível editar itens');
+  }
+
+  const updateData: any = { ...data };
+  delete updateData.orderId;
+
+  if (updateData.quantidade !== undefined || updateData.valorUnitario !== undefined) {
+    const qtd = updateData.quantidade ?? existing.quantidade;
+    const val = updateData.valorUnitario ?? existing.valorUnitario;
+    updateData.valorTotal = qtd && val ? qtd * val : null;
+  }
+
+  return prisma.serviceOrderItem.update({ where: { id: itemId }, data: updateData });
+}
+
+export async function deleteOrderItem(itemId: string) {
+  const existing = await prisma.serviceOrderItem.findUnique({ where: { id: itemId }, include: { order: { select: { status: true } } } });
+  if (!existing) throw new Error('Item não encontrado');
+  if (existing.order.status === 'assinada' || existing.order.status === 'concluida' || existing.order.status === 'cancelada') {
+    throw new Error('OS finalizada ou cancelada — não é possível remover itens');
+  }
+  return prisma.serviceOrderItem.delete({ where: { id: itemId } });
+}
+
+export async function getTotalItensOrder(orderId: string): Promise<number> {
+  const result = await prisma.serviceOrderItem.aggregate({
+    where: { orderId },
+    _sum: { valorTotal: true },
+  });
+  return result._sum.valorTotal ?? 0;
+}
+
+// ── Document Hash para integridade ──────────────────────────────────
+
+export function calcularDocumentHash(orderId: string, assinaturaBase64: string, timestamp: string): string {
+  const payload = `${orderId}:${assinaturaBase64}:${timestamp}`;
+  return crypto.createHash('sha256').update(payload).digest('hex');
 }
 
 export function exportOrdersCsv(orders: any[]): string {

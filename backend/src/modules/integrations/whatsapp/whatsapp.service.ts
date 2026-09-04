@@ -246,6 +246,66 @@ export async function sendWhatsAppMessage(
   return { success: false, error: 'Canal de envio nao definido e sem conexao legada disponivel' };
 }
 
+// ── Send Document (PDF, etc.) ──────────────────────────────────────────
+export async function sendWhatsAppDocument(
+  to: string,
+  documentBase64: string,
+  fileName: string,
+  caption: string,
+  connectionId?: string,
+  jid?: string,
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  const phone = to.replace(/[^\d]/g, '');
+
+  if (connectionId) {
+    let conn: { provider: string | null; slug: string } | null = null;
+    try {
+      conn = await prisma.whatsAppConnection.findUnique({
+        where: { id: connectionId },
+        select: { provider: true, slug: true },
+      });
+    } catch {}
+    const provider = conn?.provider || 'baileys';
+
+    if (provider === 'evolution') {
+      try {
+        const { evolutionApiService } = await import('./evolution-api.service');
+        const instanceName = conn?.slug || connectionId;
+        return await evolutionApiService.sendDocument(phone, documentBase64, fileName, caption, instanceName);
+      } catch (e: any) {
+        return { success: false, error: `Evolution falhou: ${e?.message || e}` };
+      }
+    }
+
+    if (provider === 'cloud') {
+      try {
+        const { whatsappCloudAPIService } = await import('./cloud-api.service');
+        return await whatsappCloudAPIService.sendDocumentMessage(phone, documentBase64, fileName, caption);
+      } catch (e: any) {
+        return { success: false, error: `Cloud API falhou: ${e?.message || e}` };
+      }
+    }
+
+    // Baileys: fallback para texto (nao suporta envio de documentos no servico unificado)
+    if (provider === 'baileys') {
+      console.log(`[WhatsApp] Baileys nao suporta envio de documento. Enviando texto com informacoes.`);
+      const fallbackMsg = caption || `[${fileName}]`;
+      return sendWhatsAppMessage(phone, fallbackMsg, connectionId, jid);
+    }
+
+    return { success: false, error: `Provider "${provider}" nao suportado para envio de documento` };
+  }
+
+  // Sem canal definido → legado
+  if (baileysProviderService.isLegacyConnected()) {
+    console.log(`[WhatsApp] Legado nao suporta envio de documento. Enviando texto.`);
+    const fallbackMsg = caption || `[${fileName}]`;
+    return baileysProviderService.sendTextLegacy(phone, fallbackMsg, jid);
+  }
+
+  return { success: false, error: 'Canal de envio nao definido e sem conexao legada disponivel' };
+}
+
 export async function sendWhatsAppListMessage(
   to: string,
   buttonText: string,
@@ -406,7 +466,32 @@ export async function getChatsList(): Promise<any[]> {
 }
 
 // ── Multi-connection status ─────────────────────────────────────────────
-export const whatsappConnectionManager = {
+interface ConnectionRuntime {
+  id: string;
+  connected: boolean;
+  qrCode: string | null;
+  error: string | null;
+  client: any;
+}
+
+interface ConnectionStatus {
+  id: string;
+  connected: boolean;
+  scanning: boolean;
+  state: string;
+  error: string | null;
+  qrCode: string | null;
+  lastMessageAt: Date | null;
+  lastHeartbeat: number;
+}
+
+export const whatsappConnectionManager: {
+  getConnectionRuntime: (id: string) => ConnectionRuntime | null;
+  getClient: (id: string) => any;
+  getAllConnectionsStatus: () => ConnectionStatus[];
+  disconnectConnection: (id: string) => Promise<void>;
+  getConnectionStatus: (id: string) => Promise<ConnectionStatus>;
+} = {
   getConnectionRuntime: (id: string) => {
     const state = baileysProviderService.getMultiState(id);
     if (!state) return null;

@@ -54,6 +54,7 @@ export default function TicketHistoricoModal({ open, onClose, ticketId, protocol
   const exportPDF = () => {
     const win = window.open('', '_blank');
     if (!win) return;
+    const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     const messagesHtml = messages.map((m) => {
       const time = new Date(m.createdAt || m.sentAt).toLocaleString('pt-BR');
       const isClient = !m.fromMe;
@@ -61,9 +62,9 @@ export default function TicketHistoricoModal({ open, onClose, ticketId, protocol
       const sender = m.fromMe ? (isBot ? 'Bot/IA' : 'Operador') : (ticket?.contactName || 'Cliente');
       const bg = isClient ? '#f1f5f9' : isBot ? '#eff6ff' : '#ecfdf5';
       const align = isClient ? 'left' : 'right';
-      return `<div style="text-align:${align};margin:8px 0"><div style="display:inline-block;max-width:75%;background:${bg};padding:8px 12px;border-radius:12px;text-align:left"><div style="font-size:11px;color:#64748b;margin-bottom:2px"><b>${sender}</b> ${time}</div><div style="font-size:13px;color:#1e293b">${m.content || ''}</div></div></div>`;
+      return `<div style="text-align:${align};margin:8px 0"><div style="display:inline-block;max-width:75%;background:${bg};padding:8px 12px;border-radius:12px;text-align:left"><div style="font-size:11px;color:#64748b;margin-bottom:2px"><b>${esc(sender)}</b> ${time}</div><div style="font-size:13px;color:#1e293b">${esc(m.content || '')}</div></div></div>`;
     }).join('');
-    win.document.write(`<html><head><title>Chat ${protocolo || ''}</title><style>body{font-family:sans-serif;padding:20px;max-width:700px;margin:0 auto}</style></head><body><h2 style="text-align:center;color:#334155">Chat ${protocolo || ''}</h2>${messagesHtml}</body></html>`);
+    win.document.write(`<html><head><title>Chat ${esc(protocolo || '')}</title><style>body{font-family:sans-serif;padding:20px;max-width:700px;margin:0 auto}</style></head><body><h2 style="text-align:center;color:#334155">Chat ${esc(protocolo || '')}</h2>${messagesHtml}</body></html>`);
     win.document.close();
     win.print();
   };

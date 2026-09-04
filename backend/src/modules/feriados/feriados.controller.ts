@@ -62,6 +62,7 @@ export async function postCreate(req: AuthRequest, res: Response) {
       entidadeId: result.id,
       detalhes: { nome: result.nome, data: result.data },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.status(201).json(result);
   } catch (err) {
@@ -82,6 +83,7 @@ export async function putUpdate(req: AuthRequest, res: Response) {
       entidadeId: result.id,
       detalhes: { nome: result.nome },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.json(result);
   } catch (err) {
@@ -98,6 +100,7 @@ export async function delRemove(req: AuthRequest, res: Response) {
       entidade: 'Feriado',
       entidadeId: req.params.id,
       ip: getIpFromRequest(req),
+      severity: 'media',
     });
     return res.json({ ok: true });
   } catch (err) {

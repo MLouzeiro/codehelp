@@ -547,7 +547,7 @@ REGRAS:
 4. Priorize: KB (base de conhecimento), automação, treinamento, processos
 5. Responda APENAS com JSON: { "sugestoes": ["sugestão 1", "sugestão 2", ...] }`;
 
-    const text = await callClaude(prompt, 600);
+    const text = await callClaude(prompt, 600, 'weekly-report');
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);

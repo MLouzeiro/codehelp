@@ -8,6 +8,7 @@ import {
 import ReportActions from '../../components/reports/ReportActions';
 import ReportKpiCard from '../../components/reports/ReportKpiCard';
 import ReportFilters, { FiltrosBase, FILTROS_LIMPOS, FiltroOpcoes } from '../../components/reports/ReportFilters';
+import { AcronymText } from '../../components/AcronymText';
 
 interface TicketEncerrado {
   id: string;
@@ -512,7 +513,7 @@ export default function AuditoriaEncerramentoPage() {
                   <div className="text-slate-700 dark:text-slate-200 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>{ticketAberto.assigneeName || '—'}</div>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/40">
-                  <div className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>CSAT</div>
+                   <div className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text="CSAT" /></div>
                   <div className="text-slate-700 dark:text-slate-200 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>
                     {ticketAberto.csatRespondido ? `${ticketAberto.csatNota}/5` : 'Não respondido'}
                   </div>

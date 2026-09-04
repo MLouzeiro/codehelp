@@ -1,5 +1,5 @@
 ﻿import { Link, useLocation } from 'react-router-dom';
-import { Users, Bell, Inbox, Shield, Settings2, Lock, CalendarOff, MessageSquare, Clock, Building2, Layers, ListTodo, FileText, Bot, Radio, BarChart3, ListTree } from 'lucide-react';
+import { Users, Bell, Inbox, Shield, Settings2, Lock, CalendarOff, MessageSquare, Clock, Building2, Layers, ListTodo, FileText, Bot, Radio, BarChart3, ListTree, Link2, Palette } from 'lucide-react';
 
 export default function SettingsPage() {
   const location = useLocation();
@@ -20,6 +20,8 @@ export default function SettingsPage() {
     { path: '/app/settings/alerts', label: 'Alertas', icon: Bell, desc: 'Configurar alertas semanais e destinatários' },
     { path: '/app/settings/alert-settings', label: 'Alertas Atendente', icon: Bell, desc: 'Configurar alertas sonoros e notificações' },
     { path: '/app/settings/channels', label: 'Canais de Atendimento', icon: Radio, desc: 'Gerenciar WhatsApp, E-mail, Instagram, Facebook e outros canais' },
+    { path: '/app/settings/os-signature-config', label: 'Endereco Publico das OS', icon: Link2, desc: 'Configurar endereco utilizado nos links de assinatura das Ordens de Servico' },
+    { path: '/app/settings/os-layouts', label: 'Layouts de OS', icon: Palette, desc: 'Gerenciar layouts e timbrados para Ordens de Serviço' },
   ];
 
   return (

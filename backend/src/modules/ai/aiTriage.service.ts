@@ -74,7 +74,7 @@ Responda APENAS com JSON (sem markdown):
   "categoria": "suporte_tecnico"
 }`;
 
-    const resposta = await callClaude(prompt, 400);
+    const resposta = await callClaude(prompt, 400, 'triagem');
     const jsonMatch = resposta.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);

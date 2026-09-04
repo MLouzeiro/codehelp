@@ -17,6 +17,7 @@ export interface AuthRequest extends Request {
     email: string;
     role: string;
     isMaster: boolean;
+    organizationId: string | null;
     departamentos: UserDepartamentoInfo[];
   };
 }
@@ -34,6 +35,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       where: { id: decoded.id },
       select: {
         id: true, name: true, email: true, role: true, isMaster: true, active: true, sessionToken: true,
+        organizationId: true,
         departamentos: {
           select: {
             departamento: { select: { id: true, slug: true, nome: true } },
@@ -53,6 +55,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       email: user.email,
       role: user.role,
       isMaster: user.isMaster,
+      organizationId: user.organizationId,
       departamentos: user.departamentos.map((d) => d.departamento),
     };
     next();

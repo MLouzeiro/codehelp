@@ -47,7 +47,7 @@ export async function createConnection(input: WhatsAppConnectionInput) {
   if (!input.numero?.trim()) throw new Error('Numero e obrigatorio');
 
   const slug = input.slug?.trim() || toKebabCase(input.nome);
-  const existingSlug = await prisma.whatsAppConnection.findUnique({ where: { slug } });
+  const existingSlug = await prisma.whatsAppConnection.findFirst({ where: { slug } });
   if (existingSlug) throw new Error('Ja existe uma conexao com este slug');
 
   const existingNum = await prisma.whatsAppConnection.findFirst({

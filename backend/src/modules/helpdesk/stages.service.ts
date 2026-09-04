@@ -64,7 +64,7 @@ export async function getStageById(id: string) {
 }
 
 export async function getStageBySlug(slug: string) {
-  return prisma.helpdeskConfig.findUnique({ where: { slug } });
+  return prisma.helpdeskConfig.findFirst({ where: { slug } });
 }
 
 export async function etapaInicialSlug() {
@@ -73,7 +73,7 @@ export async function etapaInicialSlug() {
     select: { slug: true },
   });
   if (inicial) return inicial.slug;
-  const fila = await prisma.helpdeskConfig.findUnique({
+  const fila = await prisma.helpdeskConfig.findFirst({
     where: { slug: 'fila' },
     select: { slug: true },
   });
@@ -88,7 +88,7 @@ export async function createStage(input: StageCreateInput) {
     badRequest('Nome da etapa e obrigatorio.', 'nome');
   }
 
-  const existente = await prisma.helpdeskConfig.findUnique({ where: { slug: input.slug } });
+  const existente = await prisma.helpdeskConfig.findFirst({ where: { slug: input.slug } });
   if (existente) {
     badRequest('Ja existe uma etapa com este slug.', 'slug');
   }

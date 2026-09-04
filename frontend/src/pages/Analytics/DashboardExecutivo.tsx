@@ -8,6 +8,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   LineChart, Line, PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from 'recharts';
+import { AcronymText } from '../../components/AcronymText';
 
 interface DashboardExecutivo {
   atualizadoEm: string;
@@ -172,7 +173,7 @@ export default function DashboardExecutivo() {
               </div>
               <div className="mt-3">
                 <div className="text-xl font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{c.valor}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>{c.label}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text={c.label} /></div>
               </div>
             </div>
           );
@@ -308,7 +309,7 @@ export default function DashboardExecutivo() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2" style={{ fontFamily: 'Khand, sans-serif' }}>
-            <Star size={16} className="text-pink-600" /> Evolução do CSAT
+            <Star size={16} className="text-pink-600" /> Evolução do <AcronymText text="CSAT" />
           </h2>
           {d.csatTrending.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
@@ -382,7 +383,7 @@ export default function DashboardExecutivo() {
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-semibold text-slate-700 dark:text-slate-200" style={{ fontFamily: 'Lexend, sans-serif' }}>{a.csatMedio ? `${a.csatMedio}/5` : '—'}</div>
-                  <div className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>CSAT</div>
+                   <div className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text="CSAT" /></div>
                 </div>
               </div>
             ))}

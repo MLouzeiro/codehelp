@@ -27,17 +27,20 @@ backend/prisma/seed.d.ts.map
 # -----------------------------------------------------------------------------
 .env
 .env.local
+.env.web
 .env.development
 .env.production
 .env.staging
 backend/.env
 backend/.env.local
+backend/.env.web
 frontend/.env
 frontend/.env.local
 *.key
 *.pem
 *.cert
 **/service-account*.json
+backups/
 
 # -----------------------------------------------------------------------------
 # Banco de dados local
@@ -114,3 +117,17 @@ backend/check_stages.js
 # Build do backend (gerado por tsc)
 # -----------------------------------------------------------------------------
 backend/dist/
+
+# Arquivos locais e sensíveis
+.neon
+*.sql
+.next/
+backend/.next/
+backend/storage/
+
+# Arquivos locais e sensíveis
+.neon
+*.sql
+.next/
+backend/.next/
+backend/storage/

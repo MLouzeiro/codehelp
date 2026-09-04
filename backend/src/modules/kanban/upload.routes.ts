@@ -71,7 +71,8 @@ router.post('/tasks/:taskId/attachments', upload.array('files', MAX_FILES), asyn
 router.delete('/attachments/:attachmentId', async (req: Request, res: Response) => {
   try {
     const { attachmentId } = req.params;
-    await deleteAttachment(attachmentId);
+    const usuarioId = (req as any).user?.id;
+    await deleteAttachment(attachmentId, usuarioId);
     return res.status(204).send();
   } catch (error: any) {
     console.error('Erro ao deletar anexo:', error);

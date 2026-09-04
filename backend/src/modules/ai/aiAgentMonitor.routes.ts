@@ -8,6 +8,7 @@ import {
   rankingAgentesHandler,
   encerramentosAgenteHandler,
   encerramentoTicketHandler,
+  diagnosticoTreinamentoHandler,
 } from './aiAgentMonitor.controller';
 
 const router = Router();
@@ -21,5 +22,6 @@ router.get('/relatorio/:ticketId', relatorioAuditoriaHandler);
 router.get('/encerramentos/ticket/:ticketId', encerramentoTicketHandler);
 router.get('/encerramentos/:agentId', encerramentosAgenteHandler);
 router.get('/ranking', authorize('admin', 'gerente'), rankingAgentesHandler);
+router.get('/diagnostico-treinamento/:agentId', authorize('admin', 'gerente'), diagnosticoTreinamentoHandler);
 
 export default router;

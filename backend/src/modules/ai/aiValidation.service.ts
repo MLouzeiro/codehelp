@@ -36,7 +36,7 @@ export interface MetricasValidacao {
 // ── 1. OBTER CONFIG GLOBAL ─────────────────────────────────────
 
 export async function getConfigAutoAtendimento(): Promise<ValidacaoConfig> {
-  const config = await prisma.helpdeskConfig.findUnique({
+  const config = await prisma.helpdeskConfig.findFirst({
     where: { slug: 'auto_atendimento' },
   });
 
@@ -69,7 +69,7 @@ export async function getConfigAutoAtendimento(): Promise<ValidacaoConfig> {
 export async function updateConfigAutoAtendimento(
   dados: Partial<ValidacaoConfig>
 ): Promise<ValidacaoConfig> {
-  const config = await prisma.helpdeskConfig.findUnique({
+  const config = await prisma.helpdeskConfig.findFirst({
     where: { slug: 'auto_atendimento' },
   });
 
@@ -92,7 +92,7 @@ export async function updateConfigAutoAtendimento(
   }
 
   const atualizado = await prisma.helpdeskConfig.update({
-    where: { slug: 'auto_atendimento' },
+    where: { id: config.id },
     data: {
       ...(dados.autoAtendimentoAtivo !== undefined && { autoAtendimentoAtivo: dados.autoAtendimentoAtivo }),
       ...(dados.thresholdValidacoes !== undefined && { thresholdValidacoes: dados.thresholdValidacoes }),
@@ -191,7 +191,7 @@ Responda APENAS com JSON (sem markdown):
   "confianca": 0-100
 }`;
 
-      const resposta = await callClaude(prompt, 800);
+      const resposta = await callClaude(prompt, 800, 'validacao');
       const jsonMatch = resposta.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);

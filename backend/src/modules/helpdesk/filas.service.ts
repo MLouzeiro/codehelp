@@ -66,7 +66,7 @@ export async function createFila(input: FilaInput) {
 
   const slug = input.slug?.trim() || toKebabCase(input.nome);
 
-  const existingSlug = await prisma.fila.findUnique({ where: { slug } });
+  const existingSlug = await prisma.fila.findFirst({ where: { slug } });
   if (existingSlug) throw badRequest('Já existe uma fila com este slug', 'slug');
 
   const existing = await prisma.fila.findFirst({

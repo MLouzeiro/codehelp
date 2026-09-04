@@ -197,7 +197,7 @@ REGRAS:
 4. Responda APENAS com JSON: {"insights":[{"texto":"...","gravidade":"info|atencao|critico"}]}`;
 
   try {
-    const text = await callClaude(prompt, 500);
+    const text = await callClaude(prompt, 500, 'dashboard-ia');
     const match = text.match(/\{[\s\S]*\}/);
     if (match) {
       const parsed = JSON.parse(match[0]);

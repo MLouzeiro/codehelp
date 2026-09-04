@@ -51,4 +51,6 @@ RUN mkdir -p /app/storage/uploads /app/storage/pdfs /app/whatsapp-session
 EXPOSE 3010
 
 # Comando de inicializacao
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/server.js"]
+# CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/server.js"]
+
+CMD ["node", "dist/server.js"]

@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
-import { Plus, X, User, Shield, Mail, Phone, ChevronDown, Check, AlertCircle, Building2, Archive, ArchiveRestore } from 'lucide-react';
+import { Plus, X, User, Shield, Mail, Phone, ChevronDown, Check, AlertCircle, Building2, Archive, ArchiveRestore, Trash2 } from 'lucide-react';
 import type { Departamento } from '../../types';
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; permissions: string[] }> = {
@@ -61,6 +61,19 @@ export default function UsersPage() {
   const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const initialLoadedRef = useRef(false);
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<{ id: string; name: string } | null>(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ archivedCount: number; failedCount: number; failed: { name: string; reason: string }[] } | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteBlocking, setDeleteBlocking] = useState<string[] | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => { loadUsers(); loadDepartamentos(); }, []);
 
@@ -132,14 +145,61 @@ export default function UsersPage() {
     } finally { setSaving(false); }
   };
 
-  const archiveUser = async (id: string, name: string) => {
-    if (!window.confirm(`Arquivar "${name}"?\n\nO usuário será ocultado da lista de funcionários e não poderá mais entrar no sistema.`)) return;
+  const requestArchive = (id: string, name: string) => {
+    setArchiveTarget({ id, name });
+    setShowArchiveModal(true);
+    setBulkResult(null);
+  };
+
+  const confirmArchive = async () => {
+    if (!archiveTarget) return;
+    setArchiving(true);
     try {
-      await api.delete(`/auth/users/${id}`);
+      await api.delete(`/auth/users/${archiveTarget.id}`);
+      setShowArchiveModal(false);
+      setArchiveTarget(null);
+      setSelectedIds(prev => prev.filter(id => id !== archiveTarget.id));
       loadUsers();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao arquivar usuário');
+      setShowArchiveModal(false);
+    } finally {
+      setArchiving(false);
     }
+  };
+
+  const requestBulkArchive = () => {
+    if (selectedIds.length === 0) return;
+    setBulkResult(null);
+    setBulkMode(true);
+    setShowArchiveModal(true);
+  };
+
+  const confirmBulkArchive = async () => {
+    if (selectedIds.length === 0) return;
+    setArchiving(true);
+    try {
+      const { data } = await api.post('/auth/users/bulk-archive', { ids: selectedIds });
+      setBulkResult({
+        archivedCount: data.archivedCount,
+        failedCount: data.failedCount,
+        failed: data.failed || [],
+      });
+      setSelectedIds([]);
+      loadUsers();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao arquivar usuários');
+      setShowArchiveModal(false);
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const closeArchiveModal = () => {
+    setShowArchiveModal(false);
+    setArchiveTarget(null);
+    setBulkMode(false);
+    setBulkResult(null);
   };
 
   const restoreUser = async (id: string) => {
@@ -152,7 +212,62 @@ export default function UsersPage() {
   const toggleArchivedView = () => {
     const next = !showArchived;
     setShowArchived(next);
+    setSelectedIds([]);
     loadUsers(next);
+  };
+
+  const requestDeletePermanently = (id: string, name: string) => {
+    setDeleteTarget({ id, name });
+    setDeleteError(null);
+    setDeleteBlocking(null);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeletePermanently = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
+    setDeleteBlocking(null);
+    try {
+      await api.delete(`/auth/users/${deleteTarget.id}/permanently`);
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
+      setToast({ type: 'success', message: 'Usuário excluído com sucesso.' });
+      loadUsers();
+      setTimeout(() => setToast(null), 4000);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      if (status === 409 && data?.blocking) {
+        setDeleteBlocking(data.blocking);
+        setDeleteError(data.message || 'Existem registros vinculados a este usuário.');
+      } else {
+        setDeleteError(data?.error || 'Não foi possível excluir o usuário.');
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeleteTarget(null);
+    setDeleteError(null);
+    setDeleteBlocking(null);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === users.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(users.map(u => u.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -186,6 +301,46 @@ export default function UsersPage() {
         </div>
       )}
 
+      {!showArchived && users.length > 0 && (
+        <div className="flex items-center gap-3 px-1">
+          <label className="flex items-center gap-2 text-xs text-neutral-500 dark:text-slate-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={users.length > 0 && selectedIds.length === users.length}
+              onChange={toggleSelectAll}
+              className="rounded border-gray-300 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
+            />
+            Selecionar todos
+          </label>
+          {selectedIds.length > 0 && (
+            <span className="text-xs text-neutral-400 dark:text-slate-500">
+              {selectedIds.length} selecionado(s)
+            </span>
+          )}
+        </div>
+      )}
+
+      {!showArchived && selectedIds.length > 0 && (
+        <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3">
+          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+            {selectedIds.length} usuário(s) selecionado(s)
+          </span>
+          <div className="flex-1" />
+          <button
+            onClick={() => setSelectedIds([])}
+            className="text-xs text-neutral-500 dark:text-slate-400 hover:text-neutral-700 px-2 py-1"
+          >
+            Limpar seleção
+          </button>
+          <button
+            onClick={requestBulkArchive}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg text-red-600 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 transition-colors flex items-center gap-1"
+          >
+            <Archive size={14} /> Excluir selecionados
+          </button>
+        </div>
+      )}
+
       <div className="grid gap-3">
         {loading && !initialLoadedRef.current ? (
           <div className="text-center py-12 text-neutral-400 dark:text-slate-500">Carregando...</div>
@@ -196,10 +351,19 @@ export default function UsersPage() {
         ) : !loading && !error && users.length > 0 ? (
           users.map((u) => {
             const roleCfg = ROLE_CONFIG[u.role] || ROLE_CONFIG.tecnico;
+            const isSelected = selectedIds.includes(u.id);
             return (
-              <div key={u.id} className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-100 dark:border-slate-700/50 shadow-sm p-5 hover:shadow-md transition-shadow">
+              <div key={u.id} className={`bg-white dark:bg-slate-800 rounded-xl border shadow-sm p-5 hover:shadow-md transition-shadow ${isSelected ? 'border-blue-300 dark:border-blue-700' : 'border-neutral-100 dark:border-slate-700/50'}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
+                    {!showArchived && (
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(u.id)}
+                        className="rounded border-gray-300 text-blue-600 dark:text-blue-400 focus:ring-blue-500 flex-shrink-0"
+                      />
+                    )}
                     <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                       <span className="text-green-700 font-bold text-lg">
                         {u.name?.charAt(0).toUpperCase()}
@@ -235,12 +399,18 @@ export default function UsersPage() {
                       Editar
                     </button>
                     {showArchived ? (
-                      <button onClick={() => restoreUser(u.id)}
-                        className="text-xs font-medium px-3 py-1.5 rounded-lg text-green-600 hover:bg-green-50 transition-colors flex items-center gap-1">
-                        <ArchiveRestore size={14} /> Restaurar
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => restoreUser(u.id)}
+                          className="text-xs font-medium px-3 py-1.5 rounded-lg text-green-600 hover:bg-green-50 transition-colors flex items-center gap-1">
+                          <ArchiveRestore size={14} /> Restaurar
+                        </button>
+                        <button onClick={() => requestDeletePermanently(u.id, u.name)}
+                          className="text-xs font-medium px-3 py-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1">
+                          <Trash2 size={14} /> Excluir
+                        </button>
+                      </div>
                     ) : (
-                      <button onClick={() => archiveUser(u.id, u.name)}
+                      <button onClick={() => requestArchive(u.id, u.name)}
                         className="text-xs font-medium px-3 py-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1">
                         <Archive size={14} /> Arquivar
                       </button>
@@ -268,6 +438,110 @@ export default function UsersPage() {
           })
         ) : null}
       </div>
+
+      {showArchiveModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={closeArchiveModal}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+            {bulkResult ? (
+              <>
+                <h3 className="font-semibold text-lg text-codemed-700">Operação concluída</h3>
+                <div className="space-y-2 text-sm">
+                  <p className="text-green-600">{bulkResult.archivedCount} usuário(s) arquivado(s) com sucesso.</p>
+                  {bulkResult.failedCount > 0 && (
+                    <>
+                      <p className="text-amber-600">{bulkResult.failedCount} usuário(s) não pôde(m) ser arquivado(s):</p>
+                      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 space-y-1 max-h-40 overflow-y-auto">
+                        {bulkResult.failed.map((f, i) => (
+                          <p key={i} className="text-xs text-amber-700 dark:text-amber-300">
+                            <strong>{f.name}</strong>: {f.reason}
+                          </p>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="flex justify-end pt-2">
+                  <button onClick={closeArchiveModal} className="btn-primary text-sm px-6">Fechar</button>
+                </div>
+              </>
+            ) : bulkMode ? (
+              <>
+                <h3 className="font-semibold text-lg text-codemed-700">
+                  Excluir {selectedIds.length} usuário{selectedIds.length > 1 ? 's' : ''}?
+                </h3>
+                <p className="text-sm text-neutral-600 dark:text-slate-300">
+                  Os {selectedIds.length} usuário(s) selecionado(s) perderão o acesso ao sistema e serão ocultados da lista de funcionários.
+                </p>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={closeArchiveModal} className="btn-secondary text-sm flex-1" disabled={archiving}>Cancelar</button>
+                  <button onClick={confirmBulkArchive} disabled={archiving} className="btn-primary text-sm flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50">
+                    {archiving ? 'Arquivando...' : `Excluir ${selectedIds.length} usuário${selectedIds.length > 1 ? 's' : ''}`}
+                  </button>
+                </div>
+              </>
+            ) : archiveTarget ? (
+              <>
+                <h3 className="font-semibold text-lg text-codemed-700">Excluir usuário?</h3>
+                <div className="text-sm text-neutral-600 dark:text-slate-300 space-y-2">
+                  <p> Você está prestes a excluir o usuário:</p>
+                  <p className="font-semibold text-codemed-700">{archiveTarget.name}</p>
+                  <p className="text-xs text-neutral-500 dark:text-slate-400">
+                    Esta ação poderá afetar os acessos e vínculos desse usuário.
+                  </p>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={closeArchiveModal} className="btn-secondary text-sm flex-1" disabled={archiving}>Cancelar</button>
+                  <button onClick={confirmArchive} disabled={archiving} className="btn-primary text-sm flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50">
+                    {archiving ? 'Arquivando...' : 'Excluir usuário'}
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={closeDeleteModal}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-lg text-codemed-700">Excluir permanentemente?</h3>
+            <div className="text-sm text-neutral-600 dark:text-slate-300 space-y-2">
+              <p>Tem certeza que deseja excluir definitivamente este usuário?</p>
+              {deleteTarget && (
+                <p className="font-semibold text-codemed-700">{deleteTarget.name}</p>
+              )}
+              <p className="text-xs text-red-500 dark:text-red-400 font-medium">
+                Essa ação não poderá ser desfeita.
+              </p>
+            </div>
+            {deleteError && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                <p className="text-xs text-red-700 dark:text-red-300 font-medium mb-1">{deleteError}</p>
+                {deleteBlocking && deleteBlocking.length > 0 && (
+                  <ul className="text-xs text-red-600 dark:text-red-400 space-y-0.5 mt-2 list-disc list-inside">
+                    {deleteBlocking.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            <div className="flex gap-3 pt-2">
+              <button onClick={closeDeleteModal} className="btn-secondary text-sm flex-1" disabled={deleting}>Cancelar</button>
+              <button onClick={confirmDeletePermanently} disabled={deleting} className="btn-primary text-sm flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50">
+                {deleting ? 'Excluindo...' : 'Excluir definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 transition-all ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+          {toast.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
+          {toast.message}
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setShowModal(false)}>

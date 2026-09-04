@@ -111,6 +111,8 @@ export async function escalarTicket(ticketId: string, novaFilaId: string, motivo
     entidadeId: ticketId,
     detalhes: { filaOrigem: ticket.idFila, filaDestino: novaFilaId, filaNome: fila.nome, motivo },
     ip: ip || null,
+    severity: 'media',
+    clienteId: ticket.clientId,
   });
   return { ticket: updated, fila };
 }
@@ -145,6 +147,8 @@ export async function marcarResolvido(ticketId: string, resumoFinal: string, usu
     entidadeId: ticketId,
     detalhes: { status: 'resolvido', resumoFinal },
     ip: ip || null,
+    severity: 'baixa',
+    clienteId: ticket.clientId,
   });
   return updated;
 }

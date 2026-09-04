@@ -27,7 +27,7 @@ const DEFAULT_ALERTS: AlertConfig[] = [
 
 export async function getAlertConfigs(userId: string): Promise<AlertConfig[]> {
   try {
-    const savedConfig = await prisma.helpdeskConfig.findUnique({ where: { slug: `alert_${userId}` } });
+    const savedConfig = await prisma.helpdeskConfig.findFirst({ where: { slug: `alert_${userId}` } });
     if (savedConfig && savedConfig.descricao) {
       const parsed = JSON.parse(savedConfig.descricao);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -45,7 +45,7 @@ export async function saveAlertConfigs(userId: string, configs: AlertConfig[]): 
   const json = JSON.stringify(configs);
 
   try {
-    const existing = await prisma.helpdeskConfig.findUnique({ where: { slug } });
+    const existing = await prisma.helpdeskConfig.findFirst({ where: { slug } });
     if (existing) {
       await prisma.helpdeskConfig.update({ where: { id: existing.id }, data: { descricao: json } });
     } else {

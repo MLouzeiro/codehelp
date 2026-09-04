@@ -1,7 +1,8 @@
 import {
   LayoutDashboard, Stethoscope, Activity, ArrowUpDown, LineChart, BarChart3,
   Brain, Shield, Users, TrendingUp, FileText, Timer, BookOpen, Zap, MessageSquare,
-  Bot, Settings, Kanban, Gauge, ChevronDown, Ban, Archive, FileSearch,
+  Bot, Settings, Kanban, Gauge, ChevronDown, Ban, Archive, FileSearch, GitBranch,
+  RotateCcw,
 } from 'lucide-react';
 
 export type Role = string;
@@ -65,6 +66,7 @@ export const NAV_GROUPS: NavGroup[] = [
           { path: '/app/helpdesk/business-metrics', label: 'Métricas de Negócio', icon: BarChart3, roles: ['admin', 'gerente'] },
           { path: '/app/relatorios/executivo', label: 'Dashboard Executivo', icon: LineChart, roles: ['admin', 'gerente'] },
           { path: '/app/relatorios/ia', label: 'Dashboard IA', icon: Brain, roles: ['admin', 'gerente'] },
+          { path: '/app/helpdesk/qualidade', label: 'Qualidade Operacional', icon: RotateCcw, roles: ['admin', 'gerente'] },
         ],
       },
       {
@@ -125,6 +127,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/app/kanban/arquivadas', label: 'Tarefas Arquivadas', icon: Archive, roles: ['admin', 'gerente'] },
       { path: '/app/kb', label: 'Base de Conhecimento', icon: BookOpen, roles: ['admin', 'gerente', 'tecnico', 'vendedor'] },
       { path: '/app/automations', label: 'Automações', icon: Zap, roles: ['admin', 'gerente', 'supervisor'] },
+      { path: '/app/automations/flow-builder', label: 'Construtor de Fluxos', icon: GitBranch, roles: ['admin', 'gerente', 'supervisor'] },
     ],
   },
   {
@@ -145,6 +148,7 @@ export const NAV_GROUPS: NavGroup[] = [
     roles: ['admin', 'gerente'],
     items: [
       { path: '/app/settings', label: 'Configurações', icon: Settings },
+      { path: '/app/glossario', label: 'Glossário de Métricas', icon: BookOpen },
     ],
   },
 ];

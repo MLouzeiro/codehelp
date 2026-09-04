@@ -162,7 +162,7 @@ async function confirmarEmpresaTicket(
 
   console.log(`[BOT FLOW] ticketId=${ticket.id} state=AWAITING_COMPANY companyId=${clientId} nextState=AWAITING_DESCRIPTION`);
 
-  const msg = `${ticket.contactName || 'Cliente'}, empresa confirmada! ✅\n\n*Empresa:* ${razaoSocial}\n\n📝 Agora, por favor, *descreva detalhadamente* seu problema ou solicitação. Quanto mais informações, melhor poderemos ajudá-lo.`;
+  const msg = `${ticket.contactName || 'Cliente'}, empresa confirmada! ✅\n\n*Empresa:* ${razaoSocial}\n\n📝 Agora, por favor, *descreva detalhadamente* seu problema ou solicitação.\n\nQuanto mais informações, melhor poderemos ajudá-lo.`;
   const result = await sendMessage(chatId, msg);
   if (result?.success) {
     await prisma.message.create({
@@ -328,7 +328,7 @@ async function processarDescricaoBot(
   console.log(`[BOT FLOW] ticketId=${ticket.id} state=AWAITING_DESCRIPTION incomingMessage="${text.slice(0, 80)}" nextState=QUEUED subject="${assuntoFinal}"`);
   console.log(`[TICKET] ticketId=${ticket.id} department=${ticket.departamentoId} protocolo=${protocolo} company=${ticket.clientId || 'n/a'} queue=fila status=aberto`);
 
-  const msgConfirmacao = `${ticket.contactName || 'Cliente'}, seu atendimento foi registrado com sucesso! ✅\n\n*Protocolo:* #${protocolo}\n*Assunto:* ${assuntoFinal}\n\nSeu chamado foi encaminhado para a fila do departamento. Em breve um analista dará continuidade ao atendimento.`;
+  const msgConfirmacao = `${ticket.contactName || 'Cliente'}, seu atendimento foi registrado com sucesso! ✅\n\n*Protocolo:* #${protocolo}\n*Assunto:* ${assuntoFinal}\n\nSeu chamado foi encaminhado para a fila do departamento. Em breve um analista dará continuidade ao atendimento.\n\nPor favor, aguarde. 🙏`;
   const result = await sendMessage(chatId, msgConfirmacao);
   if (result?.success) {
     await prisma.message.create({
@@ -368,6 +368,8 @@ export interface IncomingMessageData {
   interactiveId?: string;
   /** ID único da mensagem no provider (para dedupe de webhooks duplicados). */
   messageId?: string;
+  /** TRUE quando o provider detectou mensagem apagada/revogada — NÃO processa. */
+  isDeletedMessage?: boolean;
 }
 
 export interface SendMessageFn {
@@ -381,6 +383,12 @@ export async function processIncomingMessageHandler(
   const { phone, contactName, mediaUrl, mimeType, connectionId, provider } = data;
 
   if (!phone) return;
+
+  // Mensagem apagada/revogada — NÃO processar (evita reabrir chamados encerrados)
+  if (data.isDeletedMessage) {
+    console.log(`[WhatsApp] Mensagem apagada ignorada phone=${phone} provider=${provider}`);
+    return;
+  }
 
   const chatId = phone.replace(/@c\.us$/i, '');
   const phoneDigits = chatId.replace(/[^\d]/g, '');
@@ -498,6 +506,37 @@ export async function processIncomingMessageHandler(
         // pendente (marca cancelada) e segue para criar um novo chamado.
         console.log(`[WhatsApp] Avaliação pendente ignorada (mensagem não é resposta) — criando novo ticket`);
         await abandonarAvaliacaoPendente(phoneDigits, csatPendente.csat);
+      } else {
+        // Retry: CSAT foi criada mas não entregue (enviadoEm=null).
+        // Busca CSATs não enviadas e tenta reenviar antes de criar novo ticket.
+        const csatNaoEnviada = await prisma.cSATResposta.findFirst({
+          where: {
+            respondidoEm: null,
+            enviadoEm: null,
+            ticket: {
+              OR: [
+                ...(jid ? [{ contactJid: jid }] : []),
+                { contactPhone: phoneDigits },
+              ],
+              evaluationStatus: { in: ['aguardando'] },
+            },
+          },
+          include: { ticket: true },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (csatNaoEnviada && csatNaoEnviada.ticket) {
+          console.log(`[EVALUATION_RETRY] phone=${phoneDigits} ticketId=${csatNaoEnviada.ticketId} evaluationId=${csatNaoEnviada.id} event=RETRY_SEND`);
+          const { enviarMensagemCsat } = await import('../../csat/csat.service');
+          const retryResult = await enviarMensagemCsat(csatNaoEnviada.id);
+          if (retryResult.enviado) {
+            console.log(`[EVALUATION_RETRY] ticketId=${csatNaoEnviada.ticketId} event=RETRY_SUCCESS`);
+            return;
+          }
+          // Retry falhou → cancela e segue para novo ticket
+          console.log(`[EVALUATION_RETRY] ticketId=${csatNaoEnviada.ticketId} event=RETRY_FAILED erro=${retryResult.erro}`);
+          await abandonarAvaliacaoPendente(phoneDigits, csatNaoEnviada);
+        }
       }
 
       // Cancelar avaliações criadas mas nunca enviadas (evita retry tardio de chamado antigo)

@@ -30,7 +30,7 @@ describe('SLA Service (Bloco 3)', () => {
     });
 
     it('sem prioridade -> cai para Fila N1 (60)', async () => {
-      const filaN1 = await prisma.fila.findUnique({ where: { slug: 'n1' } });
+      const filaN1 = await prisma.fila.findFirst({ where: { slug: 'n1' } });
       const r = await calcularSlaTotalMinutos({ idFila: filaN1!.id });
       expect(r.fonte).toBe('fila');
       expect(r.minutos).toBe(60);
@@ -43,7 +43,7 @@ describe('SLA Service (Bloco 3)', () => {
     });
 
     it('prioridade sempre vence sobre fila', async () => {
-      const filaN3 = await prisma.fila.findUnique({ where: { slug: 'n3' } });
+      const filaN3 = await prisma.fila.findFirst({ where: { slug: 'n3' } });
       const r = await calcularSlaTotalMinutos({ prioridade: 'baixa', idFila: filaN3!.id });
       expect(r.fonte).toBe('prioridade');
       expect(r.minutos).toBe(1440);

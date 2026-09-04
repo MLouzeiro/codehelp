@@ -9,6 +9,7 @@ import ReportKpiCard from '../../components/reports/ReportKpiCard';
 import AuditoriaFiltros, {
   AnalistaOpcao, FiltrosAuditoria, PeriodoFiltro, periodoLabel, periodoParaDatas,
 } from '../../components/reports/AuditoriaFiltros';
+import { AcronymText } from '../../components/AcronymText';
 
 interface TicketResumo {
   ticketId: string;
@@ -168,7 +169,7 @@ export default function AuditoriaAnalistaPage() {
   const carregarAnalistas = useCallback(async () => {
     setAnalistasCarregando(true);
     try {
-      const { data } = await api.get('/auth/users');
+      const { data } = await api.get('/auth/users', { params: { active: 'true' } });
       const lista = Array.isArray(data) ? data : data?.users || data?.data || [];
       const filtrados = lista.filter((u: any) =>
         ['tecnico', 'gerente', 'admin', 'comercial'].includes(u.role)
@@ -427,7 +428,7 @@ export default function AuditoriaAnalistaPage() {
                     {COLUNAS_RANKING.map(col => (
                       <th key={col.chave} className={`px-3 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide cursor-pointer select-none hover:text-red-600 dark:hover:text-red-400 ${col.alinhar || 'text-left'}`} style={{ fontFamily: 'Lexend, sans-serif' }} onClick={() => ordenarPor(col.chave)}>
                         <span className="inline-flex items-center gap-1">
-                          {col.label}
+                          <AcronymText text={col.label} />
                           {colunaOrdenacao === col.chave ? (
                             ordemAsc ? <ArrowUp size={11} /> : <ArrowDown size={11} />
                           ) : <ArrowUpDown size={11} className="opacity-40" />}

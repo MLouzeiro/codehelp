@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import prisma from '../config/database';
 import { logAudit, getLogs, getAuditDashboardStats } from '../modules/audit/audit.service';
 import { getSecurityIndicators, getAnomalias, getUserTimeline } from '../modules/audit/audit-security.service';

@@ -17,7 +17,7 @@ export const ETAPAS_PADRAO = [
 const MENSAGENS_PADRAO: Record<string, string> = {
   fila: 'Olá {{nome_contato}}! 👋\n\nRecebemos sua mensagem e seu chamado foi aberto com sucesso.\n📋 Protocolo: *{{numero_protocolo}}*\n⏱️ Em breve um de nossos analistas irá te atender.\n\nAguarde um instante, por favor.\n\nAtenciosamente,\nEquipe Codemed',
   triagem: 'Olá {{nome_contato}}! 🤖\n\nEstou analisando sua solicitação para direcioná-la ao analista mais adequado.\n📋 Protocolo: *{{numero_protocolo}}*\n\nIsso leva apenas alguns segundos...\n\nEquipe Codemed',
-  aguardando_expediente: 'Olá {{nome_contato}}! 🌙\n\nNosso horário de atendimento é de segunda a sexta, das 08:00 às 18:00.\n\nRecebemos sua mensagem e ela ficou registrada. Assim que o expediente iniciar, um de nossos analistas irá te atender automaticamente.\n\nAtenciosamente,\nEquipe Codemed',
+  aguardando_expediente: 'Olá {{nome_contato}}! 🌙\n\nNosso horário de atendimento é:\n• Segunda a sexta: 07:00 às 18:00\n• Sábado: 07:00 às 12:00\n\nRecebemos sua mensagem e ela ficou registrada. Assim que o expediente iniciar, um de nossos analistas irá te atender automaticamente.\n\nAtenciosamente,\nEquipe Codemed',
   em_atendimento: 'Olá {{nome_contato}}! 👨‍💻\n\nVocê foi atendido por *{{tecnico}}* e seu atendimento já está em andamento.\n📋 Protocolo: *{{numero_protocolo}}*\n\nCaso precise de algo, é só responder por aqui mesmo.\n\nAtenciosamente,\nEquipe Codemed',
   aguardando_cliente: 'Olá {{nome_contato}}! ⏳\n\nEstamos aguardando um retorno seu para dar continuidade ao atendimento do protocolo *{{numero_protocolo}}*.\n\nQuando puder, responda esta mensagem. Seu chamado continua aberto.\n\nAtenciosamente,\nEquipe Codemed',
   aguardando_os: 'Olá {{nome_contato}}! 📄\n\nVamos gerar a Ordem de Serviço referente ao seu atendimento.\n📋 Protocolo: *{{numero_protocolo}}*\n\nEm breve enviaremos o link para assinatura.\n\nAtenciosamente,\nEquipe Codemed',
@@ -45,12 +45,15 @@ const MENSAGEM_OPCAO_INVALIDA_PADRAO_ANTERIOR =
   'Hmm, não entendi sua resposta, {{nome}} 😅\n\nPor favor, digite o *número* da opção desejada:\n\n{{departamentos}}';
 
 const MENSAGEM_FORA_HORARIO_PADRAO =
-  'Ola! Nosso horario de atendimento e de segunda a sexta, das 08:00 as 18:00. ' +
-  'Deixamos seu contato registrado e um atendente human o respondera assim que possivel. 🙏';
+  'Olá! 👋\n\nNosso horário de atendimento é:\n' +
+  '• Segunda a sexta: 07:00 às 18:00\n' +
+  '• Sábado: 07:00 às 12:00\n\n' +
+  'No momento estamos fora do expediente, mas deixamos seu contato registrado. ' +
+  'Um atendente humano o responderá assim que o expediente iniciar. 🙏';
 
 export async function ensureHelpdeskConfigs() {
   for (const etapa of ETAPAS_PADRAO) {
-    const existing = await prisma.helpdeskConfig.findUnique({ where: { slug: etapa.slug } });
+    const existing = await prisma.helpdeskConfig.findFirst({ where: { slug: etapa.slug } });
     if (!existing) {
       const isFila = etapa.slug === 'fila';
       const isAguardandoExpediente = etapa.slug === 'aguardando_expediente';
@@ -70,9 +73,11 @@ export async function ensureHelpdeskConfigs() {
           mensagemBoasVindas: isFila ? MENSAGEM_BOAS_VINDAS_PADRAO : null,
           mensagemOpcaoInvalida: isFila ? MENSAGEM_OPCAO_INVALIDA_PADRAO : null,
           mensagemForaHorario: isFila ? MENSAGEM_FORA_HORARIO_PADRAO : null,
-          horarioInicio: isFila ? '08:00' : null,
+          horarioInicio: isFila ? '07:00' : null,
           horarioFim: isFila ? '18:00' : null,
-          diasAtendimento: isFila ? '1,2,3,4,5' : null,
+          horarioSabadoInicio: isFila ? '07:00' : null,
+          horarioSabadoFim: isFila ? '12:00' : null,
+          diasAtendimento: isFila ? '1,2,3,4,5,6' : null,
         },
       });
     } else if (etapa.slug === 'fila') {
@@ -87,9 +92,11 @@ export async function ensureHelpdeskConfigs() {
       if ((existing as any).mensagemOpcaoInvalida === MENSAGEM_OPCAO_INVALIDA_ANTERIOR) data.mensagemOpcaoInvalida = MENSAGEM_OPCAO_INVALIDA_PADRAO;
       if ((existing as any).mensagemOpcaoInvalida === MENSAGEM_OPCAO_INVALIDA_PADRAO_ANTERIOR) data.mensagemOpcaoInvalida = MENSAGEM_OPCAO_INVALIDA_PADRAO;
       if (!existing.mensagemForaHorario) data.mensagemForaHorario = MENSAGEM_FORA_HORARIO_PADRAO;
-      if (!existing.horarioInicio) data.horarioInicio = '08:00';
+      if (!existing.horarioInicio || existing.horarioInicio === '08:00') data.horarioInicio = '07:00';
       if (!existing.horarioFim) data.horarioFim = '18:00';
-      if (!existing.diasAtendimento) data.diasAtendimento = '1,2,3,4,5';
+      if (!(existing as any).horarioSabadoInicio) data.horarioSabadoInicio = '07:00';
+      if (!(existing as any).horarioSabadoFim) data.horarioSabadoFim = '12:00';
+      if (!existing.diasAtendimento || existing.diasAtendimento === '1,2,3,4,5') data.diasAtendimento = '1,2,3,4,5,6';
       if (Object.keys(data).length > 0) {
         await prisma.helpdeskConfig.update({ where: { id: existing.id }, data });
       }
@@ -116,9 +123,9 @@ export async function migrateLegacyTickets() {
 
 export async function migrateLegacyTriagemConfig() {
   try {
-    const triagem = await prisma.helpdeskConfig.findUnique({ where: { slug: 'triagem' } });
+    const triagem = await prisma.helpdeskConfig.findFirst({ where: { slug: 'triagem' } });
     if (!triagem) return;
-    const fila = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
+    const fila = await prisma.helpdeskConfig.findFirst({ where: { slug: 'fila' } });
     if (!fila) return;
     const data: any = {};
     if (triagem.mensagemBoasVindas && !fila.mensagemBoasVindas) data.mensagemBoasVindas = triagem.mensagemBoasVindas;
@@ -174,7 +181,7 @@ export function buildMessageVars(ctx: TicketContext): Record<string, string> {
 }
 
 export async function getEtapaConfig(slug: string) {
-  return prisma.helpdeskConfig.findUnique({ where: { slug } });
+  return prisma.helpdeskConfig.findFirst({ where: { slug } });
 }
 
 export async function listEtapas() {

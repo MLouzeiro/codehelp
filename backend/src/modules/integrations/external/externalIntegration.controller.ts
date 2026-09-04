@@ -82,7 +82,7 @@ export async function createIntegration(req: Request, res: Response): Promise<vo
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
 
-    const existing = await prisma.externalIntegration.findUnique({ where: { slug } });
+    const existing = await prisma.externalIntegration.findFirst({ where: { slug } });
     if (existing) {
       res.status(409).json({ error: `Ja existe uma integracao com o slug "${slug}"` });
       return;

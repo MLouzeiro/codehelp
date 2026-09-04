@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico Técnico — CodeHelp / CodeMed Hub</title>
+<style>
+  @page { size: A4; margin: 20mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11px; color: #1a1a2e; line-height: 1.5; background: #fff; padding: 30px; }
+  h1 { font-size: 22px; color: #0f3460; border-bottom: 3px solid #0f3460; padding-bottom: 8px; margin-bottom: 6px; }
+  h2 { font-size: 16px; color: #0f3460; border-bottom: 2px solid #e94560; padding-bottom: 4px; margin-top: 28px; margin-bottom: 10px; page-break-after: avoid; }
+  h3 { font-size: 13px; color: #16213e; margin-top: 14px; margin-bottom: 6px; }
+  p, li { font-size: 11px; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #666; margin-bottom: 20px; }
+  .meta { display: flex; gap: 20px; font-size: 11px; color: #555; margin-bottom: 20px; border: 1px solid #ddd; padding: 10px 14px; border-radius: 6px; background: #f8f9fa; }
+  .meta span { font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px 0; font-size: 10.5px; }
+  th { background: #0f3460; color: #fff; padding: 6px 10px; text-align: left; font-weight: 600; }
+  td { padding: 5px 10px; border-bottom: 1px solid #e0e0e0; }
+  tr:nth-child(even) td { background: #f5f7fa; }
+  tr:hover td { background: #eef1f6; }
+  .ok { color: #27ae60; font-weight: 700; }
+  .warn { color: #e67e22; font-weight: 700; }
+  .err { color: #e74c3c; font-weight: 700; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+  .badge-ok { background: #d4edda; color: #155724; }
+  .badge-warn { background: #fff3cd; color: #856404; }
+  .badge-err { background: #f8d7da; color: #721c24; }
+  .badge-info { background: #d1ecf1; color: #0c5460; }
+  code, .mono { font-family: 'Consolas', 'Courier New', monospace; font-size: 10px; background: #f0f0f0; padding: 1px 4px; border-radius: 3px; }
+  pre { background: #1a1a2e; color: #e0e0e0; padding: 12px; border-radius: 6px; font-size: 10px; overflow-x: auto; margin: 8px 0 14px 0; line-height: 1.4; }
+  pre .comment { color: #6a9955; }
+  pre .highlight { color: #e94560; font-weight: 700; }
+  .alert { padding: 10px 14px; border-radius: 6px; margin: 10px 0; font-size: 11px; }
+  .alert-warn { background: #fff3cd; border-left: 4px solid #e67e22; }
+  .alert-err { background: #f8d7da; border-left: 4px solid #e74c3c; }
+  .alert-ok { background: #d4edda; border-left: 4px solid #27ae60; }
+  .alert-info { background: #d1ecf1; border-left: 4px solid #17a2b8; }
+  .arch-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 16px; margin: 10px 0; font-family: 'Consolas', monospace; font-size: 10.5px; line-height: 1.6; white-space: pre; }
+  .section-num { color: #e94560; font-weight: 700; }
+  .page-break { page-break-before: always; }
+  .toc { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 16px 20px; margin: 14px 0; }
+  .toc li { margin-bottom: 3px; }
+  .toc a { color: #0f3460; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  ul, ol { padding-left: 18px; margin-bottom: 6px; }
+  li { margin-bottom: 2px; }
+  .footer { text-align: center; font-size: 9px; color: #999; margin-top: 30px; padding-top: 10px; border-top: 1px solid #ddd; }
+  .verdict-box { background: #0f3460; color: #fff; padding: 16px 20px; border-radius: 8px; margin: 14px 0; }
+  .verdict-box h3 { color: #e94560; margin-bottom: 6px; }
+  .verdict-box p { color: #e0e0e0; }
+  .step-box { background: #f0f4f8; border: 1px solid #c3d4e0; border-radius: 8px; padding: 14px 18px; margin: 10px 0; }
+  .step-box h3 { color: #0f3460; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<h1>DIAGNÓSTICO TÉCNICO COMPLETO</h1>
+<p style="font-size:14px; color:#e94560; font-weight:600;">CodeHelp / CodeMed Hub</p>
+<div class="subtitle">Preparação para migração PostgreSQL → Neon + Deploy Vercel</div>
+
+<div class="meta">
+  <div><span>Data:</span> 03/09/2026</div>
+  <div><span>Tipo:</span> Somente leitura</div>
+  <div><span>Projeto:</span> C:\Users\Louzeiro\Documents\Louzeiro\Projeto\code-help</div>
+</div>
+
+<div class="toc">
+  <strong>Sumário</strong>
+  <ol>
+    <li><a href="#s1">Estrutura do Projeto</a></li>
+    <li><a href="#s2">Banco de Dados Atual</a></li>
+    <li><a href="#s3">Análise dos Arquivos de Configuração</a></li>
+    <li><a href="#s4">Análise do Prisma</a></li>
+    <li><a href="#s5">Análise dos Backups</a></li>
+    <li><a href="#s6">Diagnóstico do Docker</a></li>
+    <li><a href="#s7">De Onde o Sistema Obtém os Dados</a></li>
+    <li><a href="#s8">Análise do Redis</a></li>
+    <li><a href="#s9">Análise do WhatsApp</a></li>
+    <li><a href="#s10">Armazenamento de Arquivos</a></li>
+    <li><a href="#s11">Arquivos de Configuração Web</a></li>
+    <li><a href="#s12">Análise da Vercel</a></li>
+    <li><a href="#s13">Análise do Neon</a></li>
+    <li><a href="#s14">Documentação</a></li>
+    <li><a href="#s15">Compatibilidade do Backup</a></li>
+    <li><a href="#s16">Mapa da Arquitetura</a></li>
+    <li><a href="#s17">Veredito sobre a Migração</a></li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s1"><span class="section-num">1.</span> Estrutura do Projeto</h2>
+
+<table>
+  <tr><th>Diretório</th><th>Descrição</th></tr>
+  <tr><td><code>backend/</code></td><td>API Node.js + Express + TypeScript (porta 3010)</td></tr>
+  <tr><td><code>backend/src/</code></td><td>Código-fonte: config, modules (16 módulos), shared, app.ts, server.ts</td></tr>
+  <tr><td><code>backend/prisma/</code></td><td>Schema Prisma (60+ models), seed, dev.db (SQLite legado)</td></tr>
+  <tr><td><code>backend/storage/</code></td><td>PDFs de OS (34 arquivos), logo.png, layouts/ (vazio), uploads/ (vazio)</td></tr>
+  <tr><td><code>backend/whatsapp-session/</code></td><td>Sessões ativas: baileys/ (2 conexões), whatsapp-webjs/ (1 sessão)</td></tr>
+  <tr><td><code>backend/whatsapp-sessionOld/</code></td><td>Legado arquivado (Chrome profiles + sessões antigas)</td></tr>
+  <tr><td><code>frontend/</code></td><td>React 18 + Vite + Tailwind CSS (porta 5173)</td></tr>
+  <tr><td><code>mobile/</code></td><td>React Native + Expo SDK 51 + Expo Router</td></tr>
+  <tr><td><code>docs/</code></td><td>43 arquivos: 22 .md, 3 .pdf, 5 .html, 1 .pptx</td></tr>
+  <tr><td><code>backups/</code></td><td>2 backups: SQL (27MB) + dump (11MB, corrompido)</td></tr>
+  <tr><td><code>scripts/</code></td><td>Scripts auxiliares</td></tr>
+  <tr><td><code>.vercel/</code></td><td>Configuração Vercel (frontend)</td></tr>
+  <tr><td><code>fly.toml</code></td><td>Configuração Fly.io (backend)</td></tr>
+  <tr><td><code>vercel.json</code></td><td>Rotas Vercel: /api/* → backend, static → frontend</td></tr>
+</table>
+
+<h3>Arquivos de Configuração</h3>
+<table>
+  <tr><th>Arquivo</th><th>Propósito</th></tr>
+  <tr><td><code>backend/.env</code></td><td>DEV local (porta 5434 — ⚠️ aponta para banco errado)</td></tr>
+  <tr><td><code>backend/.env.example</code></td><td>Template documentado com 30+ variáveis</td></tr>
+  <tr><td><code>backend/.env.web</code></td><td>PRODUÇÃO (Neon PostgreSQL, credenciais reais)</td></tr>
+  <tr><td><code>.env</code> (raiz)</td><td>Root legado (porta 5432, sem DIRECT_URL)</td></tr>
+  <tr><td><code>.env.example</code> (raiz)</td><td>Root template (menor, Fly.io references)</td></tr>
+  <tr><td><code>docker-compose.yml</code></td><td>Produção Docker: postgres + redis + backend + frontend</td></tr>
+  <tr><td><code>docker-compose.dev.yml</code></td><td>Dev Docker: postgres + redis (infraestrutura apenas)</td></tr>
+  <tr><td><code>docker-compose.evolution.yml</code></td><td>Evolution API: postgres + redis + api (WhatsApp)</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s2"><span class="section-num">2.</span> Banco de Dados Atual</h2>
+
+<table>
+  <tr><th>Propriedade</th><th>Valor</th></tr>
+  <tr><td>SGBD</td><td>PostgreSQL</td></tr>
+  <tr><td>Versão (Docker)</td><td>16-alpine</td></tr>
+  <tr><td>Versão (backup fonte)</td><td>15.18</td></tr>
+  <tr><td>Nome do banco</td><td><code>codemed_hub</code></td></tr>
+  <tr><td>Usuário (Docker)</td><td><code>codemed</code></td></tr>
+  <tr><td>Usuário (DEV .env)</td><td><code>evolution</code> ⚠️</td></tr>
+  <tr><td>Host (Docker)</td><td><code>localhost:5432</code></td></tr>
+  <tr><td>Host (DEV .env ativo)</td><td><code>127.0.0.1:5434</code> ⚠️</td></tr>
+  <tr><td>Onde está rodando</td><td><strong>LOCALMENTE via Docker</strong></td></tr>
+</table>
+
+<div class="alert alert-err">
+  <strong>⚠️ ALERTA: Porta inconsistente no DEV</strong><br>
+  O <code>backend/.env</code> (ativo) aponta para <strong>porta 5434</strong> com usuário <strong>evolution</strong> — isso é o banco do <strong>Evolution API</strong>, não o banco do CodeHelp.<br>
+  O banco correto do CodeHelp deveria estar na <strong>porta 5432</strong> com usuário <strong>codemed</strong>.
+</div>
+
+<pre>
+backend/.env (ativo):   postgresql://evolution:***@127.0.0.1:5434/codemed_hub  <span class="highlight">← BANCO ERRADO</span>
+.env (root, legado):    postgresql://codemed:***@localhost:5432/codemed_hub    <span class="comment">← BANCO CORRETO</span>
+</pre>
+
+<p><strong>Conexão atual:</strong> <code>postgresql://evolution:***@127.0.0.1:5434/codemed_hub?schema=public</code></p>
+
+<!-- ============================================================ -->
+<h2 id="s3"><span class="section-num">3.</span> Análise dos Arquivos de Configuração</h2>
+
+<h3>Desenvolvimento local (backend/.env)</h3>
+<pre>
+DATABASE_URL=postgresql://evolution:***@127.0.0.1:5434/codemed_hub?schema=public
+DIRECT_URL=postgresql://evolution:***@127.0.0.1:5434/codemed_hub?schema=public
+REDIS_URL=redis://localhost:6379
+PORT=3010
+</pre>
+<p class="warn">⚠️ Conecta no banco do Evolution API (porta 5434), não no banco do CodeHelp (5432).</p>
+
+<h3>Root legado (.env)</h3>
+<pre>
+DATABASE_URL=postgresql://codemed:***@localhost:5432/codemed_hub
+REDIS_URL=redis://localhost:6379
+API_URL=http://localhost:3001
+</pre>
+<p>Configuração mais antiga. Porta correta (5432) mas sem <code>DIRECT_URL</code>.</p>
+
+<h3>Produção (backend/.env.web)</h3>
+<pre>
+DATABASE_URL=postgresql://neondb_owner:***@ep-little-smoke-ayxfbsel-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+DIRECT_URL=postgresql://neondb_owner:***@ep-little-smoke-ayxfbsel.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+REDIS_URL=<span class="comment">(vazio)</span>
+</pre>
+<p class="ok">✅ Neon já configurado. Pooler para app, unpooled para migrations.</p>
+
+<h3>Docker (docker-compose.yml)</h3>
+<p>Backend dentro do Docker usa: <code>postgresql://codemed:***@postgres:5432/codemed_hub</code> (DNS interno).</p>
+
+<h3>Resumo das inconsistências</h3>
+<table>
+  <tr><th>Ambiente</th><th>Host</th><th>Porta</th><th>Usuário</th><th>Status</th></tr>
+  <tr><td><code>backend/.env</code> (ativo)</td><td>127.0.0.1</td><td><strong>5434</strong></td><td><strong>evolution</strong></td><td><span class="err">⚠️ Banco errado</span></td></tr>
+  <tr><td><code>.env</code> root (legado)</td><td>localhost</td><td>5432</td><td>codemed</td><td><span class="ok">✅ Correto</span></td></tr>
+  <tr><td><code>docker-compose.yml</code></td><td>postgres</td><td>5432</td><td>codemed</td><td><span class="ok">✅ Correto</span></td></tr>
+  <tr><td><code>docker-compose.dev.yml</code></td><td>localhost</td><td>5432</td><td>codemed</td><td><span class="ok">✅ Correto</span></td></tr>
+  <tr><td><code>backend/.env.web</code></td><td>Neon</td><td>—</td><td>neondb_owner</td><td><span class="ok">✅ Produção</span></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s4"><span class="section-num">4.</span> Análise do Prisma</h2>
+
+<table>
+  <tr><th>Propriedade</th><th>Valor</th></tr>
+  <tr><td>Schema</td><td><code>backend/prisma/schema.prisma</code></td></tr>
+  <tr><td>Provider</td><td><code>postgresql</code></td></tr>
+  <tr><td>Models</td><td>60+ models</td></tr>
+  <tr><td>Índices</td><td>100+ <code>@@index</code></td></tr>
+  <tr><td>Dir migrations</td><td><strong>NÃO EXISTE</strong></td></tr>
+  <tr><td>Método</td><td><code>prisma db push</code> (não usa migrate)</td></tr>
+  <tr><td>generator</td><td><code>prisma-client-js</code></td></tr>
+  <tr><td>datasource url</td><td>Via <code>DATABASE_URL</code></td></tr>
+  <tr><td>datasource directUrl</td><td>Via <code>DIRECT_URL</code></td></tr>
+</table>
+
+<p><strong>O banco é gerenciado pelo Prisma?</strong> Sim, mas exclusivamente via <code>db push</code>. Não há histórico de migrations. O schema é "empurrado" direto para o banco, sem versionamento de schema.</p>
+<p><strong>Multi-tenancy:</strong> A maioria dos models possui <code>organizationId</code> como FK para isolamento por organização.</p>
+
+<!-- ============================================================ -->
+<h2 id="s5"><span class="section-num">5.</span> Análise dos Backups</h2>
+
+<h3>backup.sql (raiz)</h3>
+<table>
+  <tr><th>Propriedade</th><th>Valor</th></tr>
+  <tr><td>Tamanho</td><td>254 bytes</td></tr>
+  <tr><td>Conteúdo</td><td>Mensagem de erro Docker: <code>OCI runtime exec failed: exec: "pg_dump": executable file not found</code></td></tr>
+  <tr><td>Válido?</td><td><span class="err">NÃO</span> — arquivo inútil</td></tr>
+</table>
+
+<h3>backups/codemed_hub_20260901_170042.sql</h3>
+<table>
+  <tr><th>Propriedade</th><th>Valor</th></tr>
+  <tr><td>Tamanho</td><td><strong>27 MB</strong> (27.167.148 bytes)</td></tr>
+  <tr><td>Data</td><td>01/09/2026 17:00</td></tr>
+  <tr><td>Formato</td><td>PostgreSQL plain-text dump (<code>pg_dump -F p</code>)</td></tr>
+  <tr><td>Versão fonte</td><td>PostgreSQL 15.18</td></tr>
+  <tr><td>Tabelas</td><td><strong>89 CREATE TABLE + 89 COPY</strong></td></tr>
+  <tr><td>Dados</td><td>✅ Sim (INSERT via COPY, bulk)</td></tr>
+  <tr><td><code>_prisma_migrations</code></td><td>❌ Não incluída</td></tr>
+  <tr><td>Válido?</td><td><span class="ok">SIM</span></td></tr>
+</table>
+
+<h3>backups/codemed_hub_20260901_170053.dump</h3>
+<table>
+  <tr><th>Propriedade</th><th>Valor</th></tr>
+  <tr><td>Tamanho</td><td>11 MB</td></tr>
+  <tr><td>Formato</td><td>PostgreSQL custom binary</td></tr>
+  <tr><td>Válido?</td><td><span class="err">NÃO</span> — corrompido por encoding UTF-16 (bytes <code>FF FE</code>)</td></tr>
+</table>
+
+<h3>Comparação</h3>
+<table>
+  <tr><th>Critério</th><th>backup.sql</th><th>codemed_hub_20260901_170042.sql</th><th>.dump</th></tr>
+  <tr><td>Contém dados</td><td>❌</td><td>✅ 89 tabelas</td><td>❌ Corrompido</td></tr>
+  <tr><td>Válido</td><td>❌</td><td>✅</td><td>❌</td></tr>
+  <tr><td><strong>Usar para migração</strong></td><td><strong>NÃO</strong></td><td><strong style="color:#27ae60;">SIM</strong></td><td><strong>NÃO</strong></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s6"><span class="section-num">6.</span> Diagnóstico do Docker</h2>
+
+<h3>Containers CodeHelp — NENHUM RODANDO</h3>
+<table>
+  <tr><th>Container</th><th>Compose</th><th>Status</th></tr>
+  <tr><td>codemed-postgres</td><td>docker-compose.yml</td><td><span class="err">❌ Não existe/parado</span></td></tr>
+  <tr><td>codemed-redis</td><td>docker-compose.yml</td><td><span class="err">❌ Não existe/parado</span></td></tr>
+  <tr><td>codemed-backend</td><td>docker-compose.yml</td><td><span class="err">❌ Não existe/parado</span></td></tr>
+  <tr><td>codemed-frontend</td><td>docker-compose.yml</td><td><span class="err">❌ Não existe/parado</span></td></tr>
+  <tr><td>codemed-postgres-dev</td><td>docker-compose.dev.yml</td><td><span class="err">❌ Não existe/parado</span></td></tr>
+</table>
+
+<h3>Containers de outros projetos (atuais)</h3>
+<table>
+  <tr><th>Container</th><th>Imagem</th><th>Status</th><th>Porta</th><th>Projeto</th></tr>
+  <tr><td>evolution-db</td><td>postgres:15-alpine</td><td><span class="ok">✅ Up 7 days</span></td><td>5434</td><td>Evolution API</td></tr>
+  <tr><td>evolution-api</td><td>evoapicloud/evolution-api</td><td><span class="ok">✅ Up 7 days</span></td><td>8080</td><td>Evolution API</td></tr>
+  <tr><td>evolution-redis</td><td>redis:7-alpine</td><td><span class="ok">✅ Up 7 days</span></td><td>6379</td><td>Evolution API</td></tr>
+  <tr><td>lead-system-db</td><td>postgres:16-alpine</td><td><span class="ok">✅ Up 7 days</span></td><td>15432</td><td>Lead System</td></tr>
+  <tr><td>lead-system-redis</td><td>redis:7-alpine</td><td><span class="ok">✅ Up 7 days</span></td><td>6380</td><td>Lead System</td></tr>
+  <tr><td>ministerio-louvor-db</td><td>postgres:14-alpine</td><td><span class="ok">✅ Up 7 days</span></td><td>5433</td><td>Ministério Louvor</td></tr>
+  <tr><td>keen_tharp</td><td>postgres:14-alpine</td><td><span class="err">❌ Exited 7 weeks</span></td><td>—</td><td>Órfão</td></tr>
+</table>
+
+<div class="alert alert-info">
+  <strong>Conclusão:</strong> O CodeHelp não usa Docker para rodar. O backend roda via <code>tsx watch</code> e o frontend via <code>vite</code> diretamente no Windows.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s7"><span class="section-num">7.</span> De Onde o Sistema Obtém os Dados</h2>
+
+<h3>Evidências</h3>
+<ol>
+  <li><code>backend/.env</code> (ativo para <code>npm run dev:backend</code>):<br>
+    <code>DATABASE_URL=postgresql://evolution:***@127.0.0.1:5434/codemed_hub</code></li>
+  <li>Prisma lê <code>DATABASE_URL</code> de <code>process.env</code> via <code>env.ts</code></li>
+  <li>Container <code>evolution-db</code> está rodando na porta 5434</li>
+  <li>Nenhum container CodeHelp (porta 5432) está rodando</li>
+  <li>O banco <code>codemed_hub</code> existe dentro do container <code>evolution-db</code></li>
+</ol>
+
+<div class="alert alert-warn">
+  <strong>Conclusão:</strong> O CodeHelp está obtendo dados do banco <code>codemed_hub</code> dentro do container Docker <code>evolution-db</code> (porta 5434, usuário <code>evolution</code>).<br>
+  Isso é uma configuração temporária/provisória. O banco correto deveria estar no container dedicado <code>codemed-postgres-dev</code> (porta 5432, usuário <code>codemed</code>).
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s8"><span class="section-num">8.</span> Análise do Redis</h2>
+
+<h3>LOCAL</h3>
+<table>
+  <tr><th>Config</th><th>Valor</th></tr>
+  <tr><td>URL</td><td><code>redis://localhost:6379</code></td></tr>
+  <tr><td>Container</td><td><code>evolution-redis</code> (porta 6379)</td></tr>
+  <tr><td>Uso pelo app</td><td><span class="err">NÃO USADO</span> — <code>redis.ts</code> conecta mas nada consome</td></tr>
+  <tr><td>Rate limiter</td><td>In-memory (<code>Map</code>), não usa Redis</td></tr>
+</table>
+
+<h3>PRODUÇÃO</h3>
+<table>
+  <tr><th>Config</th><th>Valor</th></tr>
+  <tr><td>URL</td><td>(vazio)</td></tr>
+  <tr><td>Uso</td><td>Nenhum</td></tr>
+  <tr><td>Necessário?</td><td>Não — o app funciona sem Redis</td></tr>
+</table>
+
+<p><strong>Conclusão:</strong> Redis é opcional. O app funciona perfeitamente sem ele. Na Vercel, <code>REDIS_URL</code> fica vazio.</p>
+
+<!-- ============================================================ -->
+<h2 id="s9"><span class="section-num">9.</span> Análise do WhatsApp</h2>
+
+<h3>Sessões ativas</h3>
+<table>
+  <tr><th>Provider</th><th>Diretório</th><th>Status</th></tr>
+  <tr><td><strong>Baileys</strong> (primário)</td><td><code>whatsapp-session/baileys/814183df-...</code></td><td><span class="ok">✅ 227 arquivos (ativo)</span></td></tr>
+  <tr><td>Baileys</td><td><code>whatsapp-session/baileys/9b3d7b07-...</code></td><td><span class="ok">✅ Sessão secundária</span></td></tr>
+  <tr><td>whatsapp-web.js (legado)</td><td><code>whatsapp-session/whatsapp-webjs/session-wa-...</code></td><td><span class="warn">⚠️ Requer Chrome</span></td></tr>
+  <tr><td>Evolution API</td><td>Docker <code>evolution-api:8080</code></td><td><span class="ok">✅ Rodando</span></td></tr>
+  <tr><td>Cloud API</td><td>Meta cloud</td><td>Configurável</td></tr>
+</table>
+
+<h3>Funcionará na Vercel?</h3>
+<table>
+  <tr><th>Provider</th><th>Vercel?</th><th>Motivo</th></tr>
+  <tr><td>Baileys</td><td><span class="err">❌</span></td><td>Precisa de WebSocket + filesystem para sessão</td></tr>
+  <tr><td>whatsapp-web.js</td><td><span class="err">❌</span></td><td>Precisa de Chrome/Puppeteer</td></tr>
+  <tr><td>Evolution API</td><td><span class="ok">✅</span></td><td>API HTTP externa (Docker)</td></tr>
+  <tr><td>Cloud API</td><td><span class="ok">✅</span></td><td>API HTTP externa (Meta)</td></tr>
+</table>
+
+<div class="alert alert-info">
+  <strong>Na Vercel, apenas Evolution API e Cloud API funcionarão.</strong>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s10"><span class="section-num">10.</span> Armazenamento de Arquivos</h2>
+
+<table>
+  <tr><th>Tipo</th><th>Localização</th><th>Persistente?</th></tr>
+  <tr><td>PDFs de OS</td><td><code>backend/storage/pdfs/</code> (34 arquivos)</td><td><span class="err">❌ Filesystem local</span></td></tr>
+  <tr><td>Logo</td><td><code>backend/storage/logo.png</code></td><td><span class="err">❌ Filesystem local</span></td></tr>
+  <tr><td>Timbrados</td><td>PostgreSQL (<code>timbradoBlob</code> base64)</td><td><span class="ok">✅ No banco</span></td></tr>
+  <tr><td>Assinaturas</td><td>PostgreSQL (<code>assinaturaBase64</code>)</td><td><span class="ok">✅ No banco</span></td></tr>
+  <tr><td>Uploads</td><td><code>backend/storage/uploads/</code> (vazio)</td><td><span class="err">❌ Filesystem local</span></td></tr>
+  <tr><td>Anexos OS</td><td><code>backend/storage/uploads/</code></td><td><span class="err">❌ Filesystem local</span></td></tr>
+  <tr><td>Sessões WhatsApp</td><td><code>backend/whatsapp-session/</code></td><td><span class="err">❌ Filesystem local</span></td></tr>
+</table>
+
+<div class="alert alert-warn">
+  <strong>Migrar o PostgreSQL para o Neon migrará esses arquivos?</strong><br>
+  <strong>NÃO.</strong> Apenas os dados tabulares serão migrados. Timbrados e assinaturas (base64 no DB) serão migrados junto. PDFs, logo, sessões WhatsApp e anexos precisarão de migração separada (Fly.io Volume).
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s11"><span class="section-num">11.</span> Arquivos de Configuração Web</h2>
+
+<h3>backend/.env.web (produção)</h3>
+<table>
+  <tr><th>Config</th><th>Valor</th></tr>
+  <tr><td>DATABASE_URL</td><td>Neon pooler (<code>ep-little-smoke-ayxfbsel-pooler</code>)</td></tr>
+  <tr><td>DIRECT_URL</td><td>Neon unpooled (<code>ep-little-smoke-ayxfbsel</code>)</td></tr>
+  <tr><td>NODE_ENV</td><td>production</td></tr>
+  <tr><td>APP_URL</td><td><code>https://seu-dominio.vercel.app</code> (placeholder)</td></tr>
+  <tr><td>API_URL</td><td><code>https://seu-dominio.vercel.app</code> (placeholder)</td></tr>
+  <tr><td>REDIS_URL</td><td>(vazio)</td></tr>
+  <tr><td>WHATSAPP_CHROME_PATH</td><td>(vazio — Puppeteer indisponível em serverless)</td></tr>
+</table>
+
+<p class="ok">✅ O projeto já foi preparado para Neon. O <code>.env.web</code> contém credenciais reais do Neon com connection pooling.</p>
+
+<!-- ============================================================ -->
+<h2 id="s12"><span class="section-num">12.</span> Análise da Vercel</h2>
+
+<table>
+  <tr><th>Item</th><th>Status</th></tr>
+  <tr><td><code>.vercel/</code></td><td>✅ Existe (projeto vinculado)</td></tr>
+  <tr><td><code>vercel.json</code></td><td>✅ Existe (routes para /api/* → backend, static → frontend)</td></tr>
+  <tr><td><code>frontend/Dockerfile</code></td><td>✅ Existe (multi-stage nginx)</td></tr>
+  <tr><td>Deploy frontend</td><td>✅ Configurado para Vercel</td></tr>
+  <tr><td>Deploy backend</td><td>Fly.io (<code>fly.toml</code> existe)</td></tr>
+  <tr><td>Domínio</td><td>Placeholder (<code>seu-dominio.vercel.app</code>)</td></tr>
+</table>
+
+<p><strong>O frontend já está configurado para Vercel.</strong> O backend usa Fly.io (separadamente).</p>
+
+<!-- ============================================================ -->
+<h2 id="s13"><span class="section-num">13.</span> Análise do Neon</h2>
+
+<table>
+  <tr><th>Item</th><th>Status</th></tr>
+  <tr><td><code>backend/.env.web</code></td><td>✅ Aponta para Neon</td></tr>
+  <tr><td>Referências a <code>neon.tech</code></td><td>✅ No <code>.env.web</code></td></tr>
+  <tr><td>Arquivo <code>.neon</code></td><td>Existe na raiz</td></tr>
+  <tr><td>Skills Neon</td><td>✅ <code>.agents/skills/neon/</code> e <code>neon-postgres/</code></td></tr>
+  <tr><td><code>docs/MIGRACAO-BANCO.md</code></td><td>✅ Documenta migração já feita para Neon</td></tr>
+  <tr><td><code>docs/DEPLOY-VERCEL-LEIGO.md</code></td><td>✅ Usa Neon como banco de produção</td></tr>
+</table>
+
+<p><strong>O Neon já está configurado.</strong> Segundo <code>docs/MIGRACAO-BANCO.md</code>, uma migração já foi realizada (89 tabelas, ~18.803 registros).</p>
+
+<!-- ============================================================ -->
+<h2 id="s14"><span class="section-num">14.</span> Documentação</h2>
+
+<table>
+  <tr><th>Arquivo</th><th>Conteúdo</th></tr>
+  <tr><td><code>docs/BACKUP-E-RESTAURACAO.md</code></td><td>Guia completo de backup (Git, DB, env vars). Menciona Neon.</td></tr>
+  <tr><td><code>docs/RECUPERACAO-E-BACKUP.md</code></td><td>Status atual: backup 01/09/2026, 27MB SQL. Procedimentos de restore.</td></tr>
+  <tr><td><code>docs/CONTINUIDADE_DESENVOLVIMENTO.md</code></td><td>Checkpoint completo v1.6.0. Funcionalidades, bugs, arquivos críticos.</td></tr>
+  <tr><td><code>docs/MIGRACAO-BANCO.md</code></td><td>Migração já documentada: pg_dump → prisma db push → psql restore.</td></tr>
+  <tr><td><code>docs/DEPLOY-VERCEL-LEIGO.md</code></td><td>Arquitetura Vercel + Fly.io + Neon = R$ 0,00. 10 passos de deploy.</td></tr>
+  <tr><td><code>docs/ARQUITETURA.md</code></td><td>Visão geral: 14 módulos, stack completo.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s15"><span class="section-num">15.</span> Compatibilidade do Backup</h2>
+
+<p>O backup <code>codemed_hub_20260901_170042.sql</code> contém <strong>89 tabelas</strong> que cobrem todas as funcionalidades:</p>
+
+<table>
+  <tr><th>Módulo</th><th>Tabelas no backup</th><th>Status</th></tr>
+  <tr><td>Usuários/Auth</td><td>User, UserDepartamento, RolePermission, Team, TeamMember</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>Clientes/CRM</td><td>Client, ClientBilling, Colaborador, Contact, ContatoIgnorado, Opportunity</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>Helpdesk</td><td>Ticket, TicketActivity, TicketAgentInteraction, TicketAiLog, TicketChecklist, TicketDepartmentTime, TicketEvent, TicketHistory, TicketMetrics, TicketPerformance, TicketSlaLog, TicketStageEvent, TicketTimeline, TicketWaitTime</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>WhatsApp</td><td>WhatsAppConnection, WhatsAppSession, Channel, ChannelMessage, ChannelRiskLog</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>OS</td><td>ServiceOrder, ServiceOrderItem, ServiceOrderStatusEvent, Signature, SignatureAttempt</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>Kanban</td><td>KanbanActivity, KanbanAttachment, KanbanBoard, KanbanColumn, KanbanStageTime, KanbanSubtask, KanbanTag, KanbanTask, KanbanTaskTag, KanbanTemplate, Task, TaskAlert</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>IA</td><td>AIAgentAudit, AIAgentClosureAudit, AIClassification, AICorrection, AICostLog, AIEvaluation, AIMetricas, AIRespostaValidacao</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>Auditoria</td><td>AuditAlert, AuditLog, AuditoriaProfissional</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>Config</td><td>Departamento, Fila, HelpdeskConfig, HelpdeskRule, Assunto, Categoria, NivelSuporte, SLAConfig, AutomationRule</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>OSLayout</td><td>OSLayout (timbradoBlob, configuracao)</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>Billing</td><td>BillingHistory, BillingPendency, ClientBilling</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>KB</td><td>KBArticle, KBArticleVersion</td><td><span class="ok">✅</span></td></tr>
+  <tr><td>Outras</td><td>Aprovacao, Ativo, Attachment, ChecklistTemplate, CSATResposta, Enquete, ExternalIntegration, ExternalIntegrationLog, Feriado, Message, Notificacao, Organization, Robot, RobotRule, SyncLog, TimeEntry, TimeEntryBlock</td><td><span class="ok">✅</span></td></tr>
+</table>
+
+<p class="ok"><strong>O backup é compatível com o sistema atual.</strong></p>
+
+<!-- ============================================================ -->
+<div class="page-break"></div>
+
+<h2 id="s16"><span class="section-num">16.</span> Mapa da Arquitetura</h2>
+
+<h3>ATUAL</h3>
+<div class="arch-box">CODE-HELP ATUAL (Windows Local)
+│
+├── Frontend (React + Vite)
+│   └── http://localhost:5173
+│
+├── Backend (Express + TypeScript)
+│   └── http://localhost:3010
+│       │
+│       ├── PostgreSQL (Docker: evolution-db)
+│       │   └── 127.0.0.1:5434 / codemed_hub / user: evolution
+│       │
+│       ├── Redis (Docker: evolution-redis)  ← NÃO USADO pelo app
+│       │   └── localhost:6379
+│       │
+│       ├── WhatsApp
+│       │   ├── Baileys (WebSocket, sessão em disco)
+│       │   ├── whatsapp-web.js (Chrome/Puppeteer, sessão em disco)
+│       │   ├── Evolution API (Docker: localhost:8080)
+│       │   └── Cloud API (Meta, configurável)
+│       │
+│       ├── Arquivos (filesystem local)
+│       │   ├── storage/pdfs/ (PDFs de OS)
+│       │   ├── storage/logo.png
+│       │   └── whatsapp-session/ (sessões Baileys/Web.js)
+│       │
+│       └── Assinaturas + Timbrados
+│           └── PostgreSQL (base64 em colunas)
+│
+└── Backups
+    └── backups/codemed_hub_20260901_170042.sql (27MB)</div>
+
+<h3>PRODUÇÃO FUTURA</h3>
+<div class="arch-box">PRODUÇÃO FUTURA
+│
+├── Vercel (Frontend)
+│   └── https://seu-dominio.vercel.app
+│       └── Arquivos estáticos React
+│
+├── Fly.io (Backend)
+│   └── https://codehelp-backend.fly.dev
+│       │
+│       ├── Neon PostgreSQL (Serverless)
+│       │   ├── Pooler: ep-little-smoke-ayxfbsel-pooler (app)
+│       │   └── Direct: ep-little-smoke-ayxfbsel (migrations)
+│       │
+│       ├── Redis: NÃO USADO (vazio)
+│       │
+│       ├── WhatsApp
+│       │   ├── Evolution API (Docker externo ou self-hosted)
+│       │   └── Cloud API (Meta)
+│       │   ⚠️  Baileys e Web.js NÃO funcionam em serverless
+│       │
+│       ├── Arquivos
+│       │   └── Fly.io Volume (/app/storage)
+│       │       ├── storage/pdfs/
+│       │       ├── storage/logo.png
+│       │       └── whatsapp-session/
+│       │
+│       └── Assinaturas + Timbrados
+│           └── Neon PostgreSQL (base64)
+│
+└── Backups
+    ├── Neon: snapshots automáticos (7 dias free tier)
+    └── Manual: pg_dump → SQL file</div>
+
+<!-- ============================================================ -->
+<h2 id="s17"><span class="section-num">17.</span> Veredito sobre a Migração</h2>
+
+<h3>Situação Atual</h3>
+<table>
+  <tr><th>Item</th><th>Status</th></tr>
+  <tr><td>Banco atual</td><td><code>codemed_hub</code> PostgreSQL 15/16</td></tr>
+  <tr><td>Onde está</td><td>Docker <code>evolution-db</code>, porta 5434</td></tr>
+  <tr><td>Banco acessível</td><td><span class="ok">✅ Sim</span> (localhost:5434)</td></tr>
+  <tr><td>Backup válido</td><td><span class="ok">✅</span> <code>backups/codemed_hub_20260901_170042.sql</code> (27MB, 89 tabelas)</td></tr>
+  <tr><td>Melhor backup</td><td><code>backups/codemed_hub_20260901_170042.sql</code> (plain-text, compatível)</td></tr>
+  <tr><td>Prisma</td><td><code>db push</code> (sem migrations), provider = postgresql</td></tr>
+  <tr><td>Redis</td><td>Configurado mas não usado pelo app</td></tr>
+  <tr><td>WhatsApp</td><td>Baileys (disco) + Evolution API (Docker) — Vercel: só Evolution/Cloud</td></tr>
+  <tr><td>Arquivos</td><td>Filesystem local — precisam de volume Fly.io</td></tr>
+  <tr><td>Vercel</td><td><span class="ok">✅</span> Frontend configurado</td></tr>
+  <tr><td>Neon</td><td><span class="ok">✅</span> Configurado com credenciais reais</td></tr>
+  <tr><td>Migração anterior</td><td>Segundo docs, migração para Neon já foi feita uma vez</td></tr>
+</table>
+
+<div class="verdict-box">
+  <h3>RISCO: BAIXO</h3>
+  <p>Motivos:</p>
+  <ol style="padding-left:18px;">
+    <li>Backup válido de 27MB com 89 tabelas e dados completos</li>
+    <li>Neon já configurado com credenciais reais em <code>.env.web</code></li>
+    <li>Documentação completa de migração já existe (<code>docs/MIGRACAO-BANCO.md</code>)</li>
+    <li>Prisma <code>db push</code> funciona direto com Neon</li>
+    <li>Timbrados e assinaturas já estão no banco (base64) — migram automaticamente</li>
+    <li>Arquitetura Vercel + Fly.io + Neon já planejada e documentada</li>
+  </ol>
+</div>
+
+<h3>Alertas</h3>
+<div class="alert alert-warn">
+  <ol style="padding-left:18px;">
+    <li><strong><code>backend/.env</code> aponta para porta errada</strong> (5434 em vez de 5432) — precisa ser corrigido antes de qualquer operação</li>
+    <li><strong>O <code>.dump</code> está corrompido</strong> — usar apenas o <code>.sql</code></li>
+    <li><strong>Arquivos filesystem</strong> (PDFs, logo, sessões WhatsApp) não migram com o banco</li>
+    <li><strong>Baileys/whatsapp-web.js</strong> não funcionam na Vercel — precisam de Evolution API ou Cloud API</li>
+  </ol>
+</div>
+
+<h3>Próximo Passo Recomendado</h3>
+
+<div class="step-box">
+  <h3>Passo 1: COPIAR o banco atual para o Neon</h3>
+  <ol style="padding-left:18px;">
+    <li>Corrigir <code>backend/.env</code> para apontar para porta 5432 (banco correto)</li>
+    <li>Criar backup fresco: <code>pg_dump</code> do container <code>codemed-postgres-dev</code> (porta 5432)</li>
+    <li>Conectar no Neon via <code>DIRECT_URL</code> (unpooled)</li>
+    <li>Executar: <code>npx prisma db push</code> (criar schema no Neon)</li>
+    <li>Restaurar dados: <code>psql &lt; backup.sql</code> (no Neon)</li>
+    <li>Verificar: contagem de tabelas e registros</li>
+  </ol>
+</div>
+
+<div class="step-box">
+  <h3>Passo 2: CONECTAR A VERCEL AO NEON</h3>
+  <ol style="padding-left:18px;">
+    <li>No painel Vercel, configurar variáveis de ambiente do frontend</li>
+    <li>Configurar <code>DATABASE_URL</code> no Fly.io (usar <code>.env.web</code> como referência)</li>
+    <li>Deploy do backend no Fly.io</li>
+    <li>Deploy do frontend na Vercel</li>
+    <li>Testar fluxo completo</li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+
+<div class="footer">
+  Relatório gerado automaticamente em 03/09/2026 — CodeHelp / CodeMed Hub — Diagnóstico Técnico<br>
+  Este documento foi produzido SOMENTE LEITURA. Nenhuma alteração foi realizada no projeto.
+</div>
+
+</body>
+</html>

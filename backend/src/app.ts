@@ -10,6 +10,7 @@ import { env } from './config/env';
 import authRoutes from './modules/auth/auth.routes';
 import crmRoutes from './modules/crm/crm.routes';
 import ordersRoutes from './modules/orders/orders.routes';
+import osLayoutRoutes from './modules/orders/os-layout.routes';
 import whatsappRoutes from './modules/integrations/whatsapp/whatsapp.routes';
 import whatsappConnectionsRoutes from './modules/integrations/whatsapp/whatsapp-connections.routes';
 import analyticsRoutes from './modules/analytics/analytics.routes';
@@ -22,6 +23,7 @@ import aiAgentMonitorRoutes from './modules/ai/aiAgentMonitor.routes';
 import auditoriaProfissionalRoutes from './modules/ai/auditoriaProfissional.routes';
 import usersRoutes from './modules/users/users.routes';
 import helpdeskRoutes from './modules/helpdesk/helpdesk.routes';
+import qualidadeRoutes from './modules/helpdesk/qualidade.routes';
 import departamentosRoutes from './modules/helpdesk/departamentos.routes';
 import filasRoutes from './modules/helpdesk/filas.routes';
 import auditRoutes from './modules/audit/audit.routes';
@@ -180,6 +182,7 @@ app.use('/api/auth/refresh', refreshLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/orders/layouts', osLayoutRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/analytics', weeklyReportRoutes);
 app.use('/api/analytics', relatoriosRoutes);
@@ -191,6 +194,7 @@ app.use('/api/ai/agent-monitor', aiAgentMonitorRoutes);
 app.use('/api/auditoria', auditoriaProfissionalRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/helpdesk', helpdeskRoutes);
+app.use('/api/helpdesk', qualidadeRoutes);
 app.use('/api/helpdesk', checklistRoutes);
 app.use('/api/helpdesk', checklistTemplateRoutes);
 app.use('/api/helpdesk', departamentosRoutes);
@@ -216,6 +220,10 @@ app.use('/api/facebook', facebookRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/integrations/external', externalIntegrationRoutes);
 app.use('/api/integration', publicApiRoutes);
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.use('/api', billingRoutes);
 app.use('/api', searchRoutes);
 
@@ -249,10 +257,6 @@ if (!isVercel) {
   app.use('/storage', staticAuth, express.static(path.resolve(__dirname, '../storage')));
   app.use('/uploads', staticAuth, express.static(path.resolve(__dirname, '../uploads')));
 }
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Unhandled error:', err);

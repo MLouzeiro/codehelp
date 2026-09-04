@@ -8,13 +8,38 @@ vi.mock('../config/database', () => ({
       count: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
     },
+    auditLog: { count: vi.fn().mockResolvedValue(0) },
+    message: { count: vi.fn().mockResolvedValue(0) },
+    ticket: { count: vi.fn().mockResolvedValue(0) },
+    serviceOrder: { count: vi.fn().mockResolvedValue(0) },
+    contact: { count: vi.fn().mockResolvedValue(0) },
+    opportunity: { count: vi.fn().mockResolvedValue(0) },
+    task: { count: vi.fn().mockResolvedValue(0) },
+    kanbanTask: { count: vi.fn().mockResolvedValue(0) },
+    kanbanSubtask: { count: vi.fn().mockResolvedValue(0) },
+    kanbanActivity: { count: vi.fn().mockResolvedValue(0) },
+    kanbanAttachment: { count: vi.fn().mockResolvedValue(0) },
+    kanbanBoard: { count: vi.fn().mockResolvedValue(0) },
+    kanbanTemplate: { count: vi.fn().mockResolvedValue(0) },
+    aICorrection: { count: vi.fn().mockResolvedValue(0) },
+    aIAgentAudit: { count: vi.fn().mockResolvedValue(0) },
+    auditoriaProfissional: { count: vi.fn().mockResolvedValue(0) },
+    aprovacao: { count: vi.fn().mockResolvedValue(0) },
+    serviceOrderStatusEvent: { count: vi.fn().mockResolvedValue(0) },
+    timeEntry: { count: vi.fn().mockResolvedValue(0) },
+    notificacao: { count: vi.fn().mockResolvedValue(0) },
+    teamMember: { count: vi.fn().mockResolvedValue(0) },
+    team: { count: vi.fn().mockResolvedValue(0) },
+    contatoIgnorado: { count: vi.fn().mockResolvedValue(0) },
   },
 }));
 
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { listUsers, getUser, createUser, updateUser, deleteUser } from '../modules/users/users.controller';
+import { deleteUserPermanently } from '../modules/auth/auth.controller';
 import prisma from '../config/database';
 import { AuthRequest } from '../shared/middleware/auth';
 
@@ -290,6 +315,63 @@ describe('Users Controller — Task 2.2', () => {
 
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ error: 'Usuário não encontrado' });
+    });
+  });
+
+  describe('deleteUserPermanently', () => {
+    it('deve excluir usuário sem registros vinculados', async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: '1', name: 'Test', email: 'test@test.com', role: 'vendedor', active: false, isMaster: false, phone: null, createdAt: new Date(), updatedAt: new Date() } as any);
+      vi.mocked(prisma.user.delete).mockResolvedValue({} as any);
+
+      const { req, res } = mockReqRes({ params: { id: '1' } });
+      await deleteUserPermanently(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Usuário excluído com sucesso' });
+    });
+
+    it('deve retornar 400 ao tentar excluir a si mesmo', async () => {
+      const { req, res } = mockReqRes({ params: { id: 'admin-id' } });
+      await deleteUserPermanently(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Você não pode excluir o próprio usuário' });
+    });
+
+    it('deve retornar 404 se usuário não encontrado', async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+
+      const { req, res } = mockReqRes({ params: { id: 'inexistente' } });
+      await deleteUserPermanently(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Usuário não encontrado' });
+    });
+
+    it('deve retornar 403 ao tentar excluir usuário master', async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: '1', name: 'Master', email: 'master@test.com', role: 'admin', active: false, isMaster: true, phone: null, createdAt: new Date(), updatedAt: new Date() } as any);
+
+      const { req, res } = mockReqRes({ params: { id: '1' } });
+      await deleteUserPermanently(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ error: 'O usuário master não pode ser excluído' });
+    });
+
+    it('deve retornar 409 quando existem registros vinculados', async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: '1', name: 'Test', email: 'test@test.com', role: 'vendedor', active: false, isMaster: false, phone: null, createdAt: new Date(), updatedAt: new Date() } as any);
+      vi.mocked(prisma.message.count).mockResolvedValue(5);
+
+      const { req, res } = mockReqRes({ params: { id: '1' } });
+      await deleteUserPermanently(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.stringContaining('registros vinculados'),
+          blocking: expect.arrayContaining([expect.stringContaining('mensagem')]),
+        })
+      );
     });
   });
 

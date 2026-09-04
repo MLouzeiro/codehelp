@@ -8,6 +8,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend, CartesianGrid,
 } from 'recharts';
+import { AcronymText } from '../../components/AcronymText';
 import type { DashboardMetrics } from '../../types';
 
 type Periodo = 7 | 30 | 90;
@@ -207,7 +208,7 @@ export default function HelpdeskMetrics() {
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center shadow-md shadow-emerald-200">
               <CheckCircle size={20} className="text-white" />
             </div>
-            <span className="text-[10px] font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider">SLA</span>
+            <span className="text-[10px] font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider"><AcronymText text="SLA" /></span>
           </div>
           <p className="text-4xl font-bold text-navy-900 dark:text-slate-100">
             {data.sla.total > 0 ? `${data.sla.compliancePercentual}%` : '—'}
@@ -222,7 +223,7 @@ export default function HelpdeskMetrics() {
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-md shadow-blue-200">
               <Target size={20} className="text-white" />
             </div>
-            <span className="text-[10px] font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider">FCR</span>
+            <span className="text-[10px] font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider"><AcronymText text="FCR" /></span>
           </div>
           <p className="text-4xl font-bold text-navy-900 dark:text-slate-100">{data.fcr.percentual}%</p>
           <p className="text-xs text-neutral-500 dark:text-slate-400 mt-2">
@@ -257,7 +258,7 @@ export default function HelpdeskMetrics() {
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center shadow-md shadow-yellow-200">
               <Star size={20} className="text-white" />
             </div>
-            <span className="text-[10px] font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider">CSAT</span>
+            <span className="text-[10px] font-semibold text-neutral-500 dark:text-slate-400 uppercase tracking-wider"><AcronymText text="CSAT" /></span>
           </div>
           <p className="text-4xl font-bold text-navy-900 dark:text-slate-100">
             {data.csat.totalRespostas > 0 ? data.csat.mediaNotas.toFixed(1) : '—'}
@@ -274,9 +275,9 @@ export default function HelpdeskMetrics() {
             <AlertTriangle className="text-amber-600" size={24} />
           </div>
           <div>
-            <p className="text-base font-bold text-amber-900">SLA abaixo da meta</p>
+            <p className="text-base font-bold text-amber-900"><AcronymText text="SLA" /> abaixo da meta</p>
             <p className="text-sm text-amber-700">
-              Compliance de {data.sla.compliancePercentual}% no período — {data.sla.violados} ticket(s) violaram o SLA.
+              Compliance de {data.sla.compliancePercentual}% no período — {data.sla.violados} ticket(s) violaram o <AcronymText text="SLA" />.
             </p>
           </div>
         </div>
@@ -311,7 +312,7 @@ export default function HelpdeskMetrics() {
             <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
               <TrendingUp size={16} className="text-emerald-600" />
             </div>
-            SLA no Período
+            <AcronymText text="SLA" /> no Período
           </h3>
           {data.sla.total > 0 ? (
             <>
@@ -330,10 +331,10 @@ export default function HelpdeskMetrics() {
                   style={{ width: `${data.sla.compliancePercentual}%` }}
                 />
               </div>
-              <p className="text-sm text-red-600 mt-3 font-semibold">{data.sla.violados} violaram o SLA</p>
+              <p className="text-sm text-red-600 mt-3 font-semibold">{data.sla.violados} violaram o <AcronymText text="SLA" /></p>
             </>
           ) : (
-            <p className="text-center py-8 text-neutral-400 dark:text-slate-500 text-sm">Sem dados de SLA no período</p>
+            <p className="text-center py-8 text-neutral-400 dark:text-slate-500 text-sm">Sem dados de <AcronymText text="SLA" /> no período</p>
           )}
         </div>
 
@@ -443,7 +444,7 @@ export default function HelpdeskMetrics() {
             <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
               <CheckCircle size={16} className="text-emerald-600" />
             </div>
-            SLA: No Prazo vs Violados
+            <AcronymText text="SLA" />: No Prazo vs Violados
           </h3>
           {dadosSla.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
@@ -458,7 +459,7 @@ export default function HelpdeskMetrics() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-center py-10 text-neutral-400 dark:text-slate-500 text-sm">Sem dados de SLA</p>
+            <p className="text-center py-10 text-neutral-400 dark:text-slate-500 text-sm">Sem dados de <AcronymText text="SLA" /></p>
           )}
         </div>
       </div>
@@ -478,7 +479,7 @@ export default function HelpdeskMetrics() {
                   <th className="text-left py-3 px-4">Agente</th>
                   <th className="text-right py-3 px-4">Tickets</th>
                   <th className="text-right py-3 px-4">MTTR Médio</th>
-                  <th className="text-right py-3 px-4">CSAT</th>
+                  <th className="text-right py-3 px-4"><AcronymText text="CSAT" /></th>
                 </tr>
               </thead>
               <tbody>

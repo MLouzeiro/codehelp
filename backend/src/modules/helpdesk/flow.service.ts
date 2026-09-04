@@ -29,14 +29,14 @@ export {
 export type EvaluationStatus = (typeof EVALUATION_STATES)[number] | null;
 
 export const MENSAGEM_AVALIACAO_OBRIGADO =
-  'Obrigado pela sua avaliação! 💙\n\nSua opinião é muito importante para continuarmos melhorando nosso atendimento. 🙏';
+  'Obrigado pelo retorno! 😊\n\nFicamos felizes em poder ajudar.\n\nSeu atendimento foi encerrado com sucesso.\n\nSempre que precisar, estaremos por aqui. 💙';
 
 export const MENSAGEM_CONFIRMACAO_RESOLUCAO =
   'Olá! 👋\n\nSeu atendimento foi concluído.\n\n*Seu problema foi resolvido?*\n\n' +
-  'Responda:\n1 - Sim ✅\n2 - Não ❌';
+  'Responda:\n1️⃣ Sim ✅\n2️⃣ Não ❌';
 
 export const MENSAGEM_DESCRICAO_SEM_RESOLUCAO =
-  'Entendemos! 🙁\n\nPara que possamos melhorar, descreva rapidamente o que ainda não foi resolvido.';
+  'Entendemos! 🙁\n\nPara que possamos melhorar, descreva rapidamente o que ainda não foi resolvido.\n\nAssim poderemos reabrir seu chamado com as informações corretas.';
 
 export interface TicketCsat {
   csat: any;
@@ -223,8 +223,22 @@ export async function finalizarAtendimento(ticketId: string): Promise<boolean> {
   }
 
   const resultado = await enviarMensagemCsat(csat.id);
-  console.log(`[EVALUATION] ticketId=${ticketId} evaluationId=${csat.id} event=MESSAGE_RESULT enviado=${resultado.enviado}`);
-  return !!resultado.enviado;
+  console.log(`[EVALUATION] ticketId=${ticketId} evaluationId=${csat.id} event=MESSAGE_RESULT enviado=${resultado.enviado} erro=${resultado.erro || '-'}`);
+
+  if (!resultado.enviado) {
+    // CSAT não foi entregue (WhatsApp offline, telefone inválido, etc.).
+    // Reverte o evaluationStatus para que o próximo fluxo possa tentar novamente
+    // e evita que o CSAT fique órfão (enviadoEm=null + evaluationStatus=aguardando
+    // bloqueia futuras tentativas porque buscarCsatPendente exige enviadoEm).
+    await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { evaluationStatus: null },
+    }).catch(() => {});
+    console.log(`[EVALUATION] ticketId=${ticketId} event=EVALUATION_RESET motivo=envio_falhou`);
+    return false;
+  }
+
+  return true;
 }
 
 // ── Confirmação de resolução (fluxo obrigatório pós-encerramento) ──────
@@ -370,6 +384,8 @@ async function finalizarSemResolucao(phone: string, ticket: any, descricao: stri
       entidade: 'Ticket',
       entidadeId: ticket.id,
       detalhes: { motivoStatus: MOTIVO_ENCERRADO_SEM_RESOLUCAO, descricao: descricaoLimpa },
+      severity: 'alta',
+      clienteId: ticket.clientId,
     });
   } catch {}
 

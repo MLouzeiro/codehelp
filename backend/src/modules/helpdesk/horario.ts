@@ -5,26 +5,36 @@ import { ehFeriado } from '../feriados/feriados.service';
 export interface HorarioConfig {
   horarioInicio: string;
   horarioFim: string;
+  horarioSabadoInicio: string | null;
+  horarioSabadoFim: string | null;
   diasAtendimento: number[];
   mensagemForaHorario: string;
 }
 
 const DEFAULTS: HorarioConfig = {
-  horarioInicio: '08:00',
+  horarioInicio: '07:00',
   horarioFim: '18:00',
-  diasAtendimento: [1, 2, 3, 4, 5],
+  horarioSabadoInicio: '07:00',
+  horarioSabadoFim: '12:00',
+  diasAtendimento: [1, 2, 3, 4, 5, 6], // seg-sab
   mensagemForaHorario:
-    'Ola! Nosso horario de atendimento e de segunda a sexta, das 08:00 as 18:00. ' +
-    'Deixamos seu contato registrado e um atendente human o respondera assim que possivel. 🙏',
+    'Olá! 👋\n\nNosso horário de atendimento é:\n' +
+    '• Segunda a sexta: 07:00 às 18:00\n' +
+    '• Sábado: 07:00 às 12:00\n\n' +
+    'No momento estamos fora do expediente, mas deixamos seu contato registrado. ' +
+    'Um atendente humano o responderá assim que o expediente iniciar. 🙏\n\n' +
+    '⚡ *Dica:* Quando o expediente iniciar, enviaremos as opções de departamento para você escolher.',
 };
 
 export async function getHorarioConfig(): Promise<HorarioConfig> {
   try {
-    const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
+    const config = await prisma.helpdeskConfig.findFirst({ where: { slug: 'fila' } });
     if (!config) return DEFAULTS;
     return {
       horarioInicio: config.horarioInicio || DEFAULTS.horarioInicio,
       horarioFim: config.horarioFim || DEFAULTS.horarioFim,
+      horarioSabadoInicio: config.horarioSabadoInicio || DEFAULTS.horarioSabadoInicio,
+      horarioSabadoFim: config.horarioSabadoFim || DEFAULTS.horarioSabadoFim,
       diasAtendimento: (config.diasAtendimento || DEFAULTS.diasAtendimento.join(','))
         .split(',')
         .map((d) => parseInt(d.trim(), 10))
@@ -91,15 +101,29 @@ function parseHHMM(hhmm: string): { h: number; m: number } {
 }
 
 // Verifica horário/dia da semana levando em conta o timezone configurado.
+// Sábado usa horarioSabadoInicio/horarioSabadoFim (se configurado).
 // Não considera feriados — use isAtendimentoAberto para isso.
 export function isHorarioAtendimento(config: HorarioConfig, now: Date = new Date()): boolean {
   const p = getTimeParts(now);
   if (!config.diasAtendimento.includes(p.weekday)) return false;
-  const inicio = parseHHMM(config.horarioInicio);
-  const fim = parseHHMM(config.horarioFim);
+
+  // Sábado: usa horários específicos se configurados
+  const isSabado = p.weekday === 6;
+  let inicio: string;
+  let fim: string;
+  if (isSabado && config.horarioSabadoInicio && config.horarioSabadoFim) {
+    inicio = config.horarioSabadoInicio;
+    fim = config.horarioSabadoFim;
+  } else {
+    inicio = config.horarioInicio;
+    fim = config.horarioFim;
+  }
+
+  const inicioParsed = parseHHMM(inicio);
+  const fimParsed = parseHHMM(fim);
   const minutosAgora = p.hours * 60 + p.minutes;
-  const minutosInicio = inicio.h * 60 + inicio.m;
-  const minutosFim = fim.h * 60 + fim.m;
+  const minutosInicio = inicioParsed.h * 60 + inicioParsed.m;
+  const minutosFim = fimParsed.h * 60 + fimParsed.m;
   return minutosAgora >= minutosInicio && minutosAgora < minutosFim;
 }
 

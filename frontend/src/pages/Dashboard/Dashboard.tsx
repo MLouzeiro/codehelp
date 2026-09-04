@@ -5,6 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { TrendingUp, Clock, FileText, MessageSquare, Users, AlertTriangle, Lightbulb, Target, BarChart3, Activity, Zap, Building2, Star, Bot, BellRing, ShieldAlert, ShieldCheck } from 'lucide-react';
+import AlertDetailDrawer from '../../components/AlertDetailDrawer';
 
 const COLORS = ['#3B82F6', '#60A5FA', '#2563EB', '#93C5FD', '#1D4ED8', '#BFDBFE'];
 
@@ -60,6 +61,9 @@ export default function Dashboard() {
   const [executivo, setExecutivo] = useState<any>(null);
   const [period, setPeriod] = useState('30');
   const [loading, setLoading] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTipo, setDrawerTipo] = useState('');
+  const [drawerDias, setDrawerDias] = useState(30);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -216,8 +220,17 @@ export default function Dashboard() {
                 <a
                   key={`${alerta.tipo}-${idx}`}
                   href={alerta.link || '#'}
-                  onClick={alerta.link ? undefined : (e) => e.preventDefault()}
-                  className={`${nivel.bg} border ${nivel.border} rounded-xl p-3.5 hover:shadow-premium transition-all duration-200 block`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (alerta.link) {
+                      window.location.href = alerta.link;
+                    } else {
+                      setDrawerTipo(alerta.tipo);
+                      setDrawerDias(parseInt(period) || 30);
+                      setDrawerOpen(true);
+                    }
+                  }}
+                  className={`${nivel.bg} border ${nivel.border} rounded-xl p-3.5 hover:shadow-premium transition-all duration-200 block cursor-pointer`}
                 >
                   <div className="flex items-center gap-2 mb-1.5">
                     <Icone size={15} className={nivel.text} />
@@ -634,6 +647,13 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      <AlertDetailDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        tipo={drawerTipo}
+        dias={drawerDias}
+      />
     </div>
   );
 }

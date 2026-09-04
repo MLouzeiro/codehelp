@@ -2,6 +2,34 @@
 
 > Registro cronológico de entregas. Formato: `Data | Escopo | Resumo`.
 
+## v1.6.0 — 2026-08-26
+
+### Qualidade Operacional — Sistema Unificado de Indicadores de Qualidade
+
+**Backend**: novo `qualidadeOperacional.service.ts` — agregador central que consolida reaberturas, recorrência, retrabalho, FCR, alertas e sugestões de melhoria em um único endpoint. `calcularReaberturas()` (tickets com `totalReaberturas > 0`, métricas por analista/cliente/categoria, delta período anterior), `calcularRecorrencia()` (agrupamento por assunto/categoria, clientes afetados, retrabalho associado), `calcularRetrabalho()` (percentual de tickets com ações adicionais, tempo adicional, por analista), `calcularFcr()` (resolução no primeiro contato sem reabertura), `gerarAlertasQualidade()` (4 tipos: reabertura_aumento, retrabalho_acima_meta, fcr_abaixo_meta, problema_recorrente_sistemico), `gerarSugestoesQualidade()` (6 categorias: treinamento, desenvolvimento, base_conhecimento, processo, automação, gestão), `getDiagnosticoIa()` (análise via Claude com fallback local), `getQualidadeCliente()` (qualidade por cliente específico).
+
+**Backend controllers/rotas**: `qualidade.controller.ts` + `qualidade.routes.ts` — 7 endpoints sob `/api/helpdesk/qualidade/*` (resumo, reaberturas, recorrência, retrabalho, diagnóstico IA, qualidade por cliente). Registrados em `app.ts`. Auth `admin/gerente/supervisor`.
+
+**Backend alertas**: 4 novos tipos em `alertasVisaoGeral.service.ts` (`reabertura_aumento`, `retrabalho_acima_meta`, `fcr_abaixo_meta`, `problema_recorrente_sistemico`) + campo `totalPeriodo`.
+
+**Frontend**: `QualidadeOperacionalPage.tsx` (`/app/helpdesk/qualidade`) — 4 cards indicadores (Reaberturas, Recorrência, Retrabalho, FCR) com classificação 🟢🟡🔴 e delta, seção de alertas de qualidade, sugestões de melhoria por categoria/prioridade, tabela de problemas recorrentes, retrabalho por analista, botões de diagnóstico IA. 4 modais de drill-down (Reabertura, Recorrência, Retrabalho, Diagnóstico IA). Presets Hoje/7d/30d/Mês. Menu "Qualidade Operacional" no submenu "Gestão & Indicadores".
+
+**Frontend types**: interfaces `QualidadeOperacional`, `CardQualidade`, `ReaberturaDetalhe`, `ProblemaRecorrente`, `RetrabalhoDetalhe`, `AlertaQualidade`, `SugestaoQualidade`, `DiagnosticoIa`, `ClassificacaoQualidade` em `types/index.ts`.
+
+**Glossário**: termos FQR (Frequência de Reaberturas), FR (Frequência de Recorrência), RR (Taxa de Retrabalho) em `metricGlossary.ts`.
+
+**Testes**: backend tsc 0 erros novos, frontend tsc 0, vitest 5/5.
+
+### Correção — Menu/Sidebar Piscando (Flickering)
+
+**Causa raiz**: o `<Suspense>` no `App.tsx` envolvia todas as rotas incluindo o `Layout`. Quando o usuário navegava para uma página com componente lazy-loaded, o `Suspense` exibia `PageLoader` (tela inteira), substituindo temporariamente o Layout e a sidebar.
+
+**Correção**: adicionado `<Suspense>` dentro do `Layout.tsx`, envolvendo `<Outlet />`. Agora o lazy-loading de páginas filhas é capturado localmente — apenas a área de conteúdo mostra spinner, enquanto a sidebar permanece estável.
+
+**Arquivo alterado**: `frontend/src/components/Layout.tsx` (3 linhas adicionadas).
+
+**Verificação**: frontend tsc 0, vitest 5/5, todas as funcionalidades preservadas.
+
 ## v1.5.0 — 2026-08-21
 
 ### Auditoria de Sistema Profissional + Deploy Prep

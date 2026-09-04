@@ -145,7 +145,7 @@ export async function createRobot(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: 'Nome é obrigatório' });
     }
     const robotSlug = slug || nome.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-    const existing = await prisma.robot.findUnique({ where: { slug: robotSlug } });
+    const existing = await prisma.robot.findFirst({ where: { slug: robotSlug } });
     if (existing) {
       return res.status(409).json({ error: 'Já existe um robô com este slug' });
     }

@@ -198,6 +198,8 @@ export async function triageTicket(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { etapaAnterior: 'triagem', etapaNova: 'fila', departamentoId, filaOrder, prioridade, observacoes },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
+      clienteId: ticket.clientId,
     });
 
     if (ticket.contactPhone) {
@@ -258,6 +260,8 @@ export async function assumeTicket(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { etapaAnterior: 'fila', etapaNova: 'em_atendimento', assigneeId: req.user.id },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
+      clienteId: ticket.clientId,
     });
 
     return res.json(updated);
@@ -379,6 +383,7 @@ export async function updateEtapaConfig(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { campos: Object.keys(data) },
       ip: getIpFromRequest(req),
+      severity: 'media',
     });
 
     await updateClientStatusCounters(id);
@@ -547,6 +552,8 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { etapaAnterior, etapaNova: etapa, atribuirParaMim, autoMessageEnviada: autoMessageResult.sent },
       ip: getIpFromRequest(req),
+      severity: etapa === 'concluido' ? 'baixa' : etapa === 'descartado' ? 'media' : 'baixa',
+      clienteId: ticket.clientId,
     });
 
     return res.json({ ticket: updated, autoMessage: autoMessageResult });
@@ -575,6 +582,8 @@ export async function atribuirTicket(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { assigneeId: usuarioId || null },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
+      clienteId: ticket.clientId,
     });
     return res.json(ticket);
   } catch (error) {
@@ -610,6 +619,8 @@ export async function updateTicketClient(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { clientIdAnterior: ticket.clientId, clientIdNovo: clientId || null },
       ip: getIpFromRequest(req),
+      severity: 'media',
+      clienteId: clientId || ticket.clientId,
     });
 
     return res.json(updated);
@@ -852,7 +863,7 @@ export async function getTicketPosition(req: AuthRequest, res: Response) {
 
     const posicao = await calcularPosicaoFila(ticket.departamentoId || null);
 
-    const slaConfig = await prisma.sLAConfig.findUnique({
+    const slaConfig = await prisma.sLAConfig.findFirst({
       where: { prioridade: ticket.prioridade || 'media' },
     });
 
@@ -1149,6 +1160,7 @@ export async function criarKanbanTaskHandler(req: AuthRequest, res: Response) {
       entidadeId: id,
       detalhes: { kanbanTaskId: kanbanTask.id, departamentoId },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
 
     return res.json(kanbanTask);

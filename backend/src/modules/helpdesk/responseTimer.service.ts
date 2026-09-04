@@ -48,6 +48,8 @@ export async function verificarTicketsAguardandoResposta(): Promise<number> {
           motivo: 'timeout_resposta_agente',
           minutosSemResposta: RESPONSE_TIMEOUT_MIN,
         },
+        severity: 'baixa',
+        clienteId: ticket.clientId,
       });
 
       movidos++;
@@ -107,6 +109,8 @@ export async function verificarTicketsRetornoCliente(): Promise<number> {
           etapaNova: 'em_atendimento',
           motivo: 'retorno_cliente',
         },
+        severity: 'baixa',
+        clienteId: ticket.clientId,
       });
 
       movidos++;

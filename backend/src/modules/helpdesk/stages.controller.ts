@@ -53,6 +53,7 @@ export async function postStage(req: AuthRequest, res: Response) {
       entidadeId: stage.id,
       detalhes: { slug: stage.slug, nome: stage.nome },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.status(201).json(stage);
   } catch (err) {
@@ -71,6 +72,7 @@ export async function putStage(req: AuthRequest, res: Response) {
       entidadeId: stage.id,
       detalhes: { campos: Object.keys(req.body) },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.json(stage);
   } catch (err) {
@@ -88,6 +90,7 @@ export async function patchReorder(req: AuthRequest, res: Response) {
       entidade: 'HelpdeskConfig',
       detalhes: { total: stageIds?.length },
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.json({ ok: true });
   } catch (err) {
@@ -105,6 +108,7 @@ export async function deleteStageHandler(req: AuthRequest, res: Response) {
       entidade: 'HelpdeskConfig',
       entidadeId: req.params.id,
       ip: getIpFromRequest(req),
+      severity: 'media',
     });
     return res.json(result);
   } catch (err) {
@@ -121,6 +125,7 @@ export async function restoreStageHandler(req: AuthRequest, res: Response) {
       entidade: 'HelpdeskConfig',
       entidadeId: req.params.id,
       ip: getIpFromRequest(req),
+      severity: 'baixa',
     });
     return res.json(stage);
   } catch (err) {

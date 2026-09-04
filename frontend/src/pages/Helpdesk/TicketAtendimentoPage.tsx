@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Maximize2, Send, Loader2, ArrowLeft, Calendar, Clock, AlertTriangle, ToggleLeft, ToggleRight, Building2, Timer, MessageSquare, Star, Paperclip, ShieldCheck, ShieldAlert, User, X, Info, BarChart3, ExternalLink, Hash, UserCheck, ClipboardList, Plus, FileText } from 'lucide-react';
+import { Maximize2, Minimize2, Send, Loader2, ArrowLeft, Calendar, Clock, AlertTriangle, ToggleLeft, ToggleRight, Building2, Timer, MessageSquare, Star, Paperclip, ShieldCheck, ShieldAlert, User, X, Info, BarChart3, ExternalLink, Hash, UserCheck, ClipboardList, Plus, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../../services/api';
 import TicketTopo from '../../components/TicketTopo';
 import TicketSidebar from '../../components/TicketSidebar';
 import TicketRodape from '../../components/TicketRodape';
 import TicketChecklist from '../../components/TicketChecklist';
 import ClassificationPanel from '../../components/ClassificationPanel';
+import { AcronymText } from '../../components/AcronymText';
 import type { SlaTicketIndicador } from '../../types';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -48,6 +49,8 @@ export default function TicketAtendimentoPage() {
   const [deptTempos, setDeptTempos] = useState<any[]>([]);
   const [timeBlocks, setTimeBlocks] = useState<any[]>([]);
   const [sidebarAberta, setSidebarAberta] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   const OS_STATUS_LABEL: Record<string, string> = {
     rascunho: 'Rascunho',
@@ -240,6 +243,18 @@ export default function TicketAtendimentoPage() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensagens]);
 
+  // Keyboard shortcut: Ctrl+Shift+F to toggle focus mode
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        setFocusMode((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   const enviarMensagem = async () => {
     if (!novaMsg.trim() || enviando) return;
     setEnviando(true);
@@ -349,7 +364,7 @@ export default function TicketAtendimentoPage() {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 max-w-full overflow-y-auto lg:overflow-hidden">
+    <div className="flex flex-col h-full min-h-0 max-w-full overflow-hidden">
       {/* === BOTAO VOLTAR === */}
       <div className="flex-shrink-0 px-4 pt-3">
         <button
@@ -370,9 +385,9 @@ export default function TicketAtendimentoPage() {
       </div>
 
       {/* === WORKSPACE: CONVERSA | CLIENTE === */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-0 p-4 pb-3">
+      <div className={`flex-1 min-h-0 grid grid-cols-1 gap-0 p-4 pb-3 ${focusMode ? '' : 'lg:grid-cols-[minmax(0,1fr)_320px]'}`}>
         {/* === COLUNA ESQUERDA: CHAT / TIMELINE / CHECKLIST === */}
-        <div className="flex flex-col min-h-0 relative h-[65vh] lg:h-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+        <div className="flex flex-col min-h-0 relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
           {/* Toggle Chat/Timeline/Checklist */}
           <div className="flex-shrink-0 flex border-b border-slate-200 dark:border-slate-700">
             <button
@@ -444,10 +459,11 @@ export default function TicketAtendimentoPage() {
               {/* Messages — scrollavel */}
               <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900 flex flex-col gap-3 relative">
                 <button
+                  onClick={() => setFocusMode((f) => !f)}
                   className="absolute top-2 right-2 w-7 h-7 rounded-md border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 z-10"
-                  title="Expandir"
+                  title={focusMode ? 'Voltar ao layout normal (Ctrl+Shift+F)' : 'Expandir chat (Ctrl+Shift+F)'}
                 >
-                  <Maximize2 className="w-3.5 h-3.5" />
+                  {focusMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
                 </button>
 
                 {mensagens.length === 0 && (
@@ -462,7 +478,7 @@ export default function TicketAtendimentoPage() {
                   const isCliente = !msg.fromMe;
                   return (
                     <div key={msg.id || i} className={`max-w-[78%] ${isCliente ? 'self-start' : 'self-end'}`}>
-                      <div className={`px-3.5 py-2.5 rounded-xl text-sm leading-relaxed ${
+                      <div className={`px-3.5 py-2.5 rounded-xl text-sm leading-relaxed break-words ${
                         isCliente
                           ? 'bg-white border border-slate-200 rounded-bl-sm dark:bg-slate-800 dark:border-slate-600'
                           : isIA
@@ -689,7 +705,7 @@ export default function TicketAtendimentoPage() {
               <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                    <Clock size={15} className="text-blue-600 dark:text-blue-400" /> SLA em tempo real
+                    <Clock size={15} className="text-blue-600 dark:text-blue-400" /> <AcronymText text="SLA em tempo real" />
                   </h3>
                   {slaIndicador?.pausado && (
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
@@ -731,12 +747,12 @@ export default function TicketAtendimentoPage() {
                     </div>
                     {slaIndicador.classificacao.estado === 'atencao' && (
                       <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                        ⚠️ SLA em risco a partir de {slaIndicador.slaRiscoPct}% consumido — priorize este atendimento.
+                        ⚠️ <AcronymText text="SLA" /> em risco a partir de {slaIndicador.slaRiscoPct}% consumido — priorize este atendimento.
                       </p>
                     )}
                     {slaIndicador.classificacao.estado === 'fora' && (
                       <p className="text-[11px] text-red-700 dark:text-red-400">
-                        ⛔ SLA violado. Registre a justificativa do atraso no encerramento.
+                        ⛔ <AcronymText text="SLA" /> violado. Registre a justificativa do atraso no encerramento.
                       </p>
                     )}
                   </div>
@@ -767,7 +783,7 @@ export default function TicketAtendimentoPage() {
 
               {/* TMR esperado vs meta (config) */}
               <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 text-xs text-slate-500 dark:text-slate-400">
-                A avaliação completa de TMR/TME/SLA por período e por analista está disponível na página{' '}
+                A avaliação completa de <AcronymText text="TMR/TME/SLA" /> por período e por analista está disponível na página{' '}
                 <Link to="/app/helpdesk/indicadores" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                   Indicadores de Atendimento
                 </Link>.
@@ -787,7 +803,9 @@ export default function TicketAtendimentoPage() {
         <aside
           className={`fixed top-0 right-0 bottom-0 z-50 w-[86%] max-w-sm bg-white dark:bg-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
             sidebarAberta ? 'translate-x-0' : 'translate-x-full'
-          } lg:static lg:z-auto lg:translate-x-0 lg:shadow-none lg:w-auto lg:max-w-none lg:h-full lg:min-h-0 lg:border-l lg:border-slate-200 lg:dark:border-slate-700 lg:rounded-none`}
+          } lg:static lg:z-auto lg:translate-x-0 lg:shadow-none lg:w-auto lg:max-w-none lg:h-full lg:min-h-0 lg:border-l lg:border-slate-200 lg:dark:border-slate-700 lg:rounded-none ${
+            focusMode ? 'lg:hidden' : ''
+          }`}
         >
           <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700 lg:hidden">
             <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Detalhes do Ticket</span>
@@ -835,7 +853,7 @@ export default function TicketAtendimentoPage() {
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <dt className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                    <ShieldCheck size={12} /> SLA
+                    <ShieldCheck size={12} /> <AcronymText text="SLA" />
                   </dt>
                   <dd className={`font-semibold ${slaInfo && slaInfo.status === 'violado' ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
                     {slaInfo ? (slaInfo.status === 'no_prazo' ? 'Dentro do prazo' : `Violado (${slaInfo.consumido}/${slaInfo.limite}min)`) : '—'}
@@ -957,32 +975,42 @@ export default function TicketAtendimentoPage() {
       </div>
 
       {/* === ACOES DO TICKET === */}
-      <div className="flex-shrink-0 px-4 pb-3">
+      <div className={`flex-shrink-0 px-4 pb-3 ${focusMode ? 'hidden' : ''}`}>
         <TicketRodape ticket={ticket} ticketId={ticketId!} onFinalizar={loadTicket} onMover={loadTicket} />
       </div>
 
       {/* === RESUMO DO TICKET (indicadores rapidos — dados reais) === */}
-      <div className="flex-shrink-0 px-4 pb-4 lg:pb-6">
+      <div className={`flex-shrink-0 px-4 pb-4 lg:pb-6 ${focusMode ? 'hidden' : ''}`}>
         <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+          <button
+            onClick={() => setSummaryExpanded((s) => !s)}
+            className="w-full flex items-center gap-2 px-4 py-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
             <BarChart3 size={14} className="text-blue-500" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex-1 text-left">
               Resumo do Ticket
             </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-slate-100 dark:divide-slate-700">
-            {renderMetric('Tempo total', tempoTotalMin != null ? formatMin(tempoTotalMin) : '—', <Timer size={15} className="text-blue-500" />)}
-            {renderMetric('1ª resposta', primeiraRespostaMin != null ? formatMin(primeiraRespostaMin) : '—', <MessageSquare size={15} className="text-emerald-500" />)}
-            {renderMetric('Última interação', tempoRelativo(ultimaInteracao ?? undefined), <Clock size={15} className="text-amber-500" />)}
-            {renderMetric('Satisfação', csatNota != null ? `${csatNota}/5` : 'Não avaliado', <Star size={15} className={csatNota != null ? 'text-yellow-500 fill-yellow-400' : 'text-slate-400'} />)}
-            {renderMetric(
-              'SLA',
-              slaInfo ? (slaInfo.status === 'no_prazo' ? 'Dentro do prazo' : `${slaInfo.consumido}/${slaInfo.limite}min`) : '—',
-              slaInfo && slaInfo.status === 'violado' ? <ShieldAlert size={15} className="text-red-500" /> : <ShieldCheck size={15} className={slaInfo ? 'text-emerald-500' : 'text-slate-400'} />,
-              slaInfo && slaInfo.status === 'violado' ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'
+            {summaryExpanded ? (
+              <ChevronDown size={14} className="text-slate-400" />
+            ) : (
+              <ChevronUp size={14} className="text-slate-400" />
             )}
-            {renderMetric('Anexos', totalAnexos > 0 ? String(totalAnexos) : '—', <Paperclip size={15} className="text-violet-500" />)}
-          </div>
+          </button>
+          {summaryExpanded && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-slate-100 dark:divide-slate-700">
+              {renderMetric('Tempo total', tempoTotalMin != null ? formatMin(tempoTotalMin) : '—', <Timer size={15} className="text-blue-500" />)}
+              {renderMetric('1ª resposta', primeiraRespostaMin != null ? formatMin(primeiraRespostaMin) : '—', <MessageSquare size={15} className="text-emerald-500" />)}
+              {renderMetric('Última interação', tempoRelativo(ultimaInteracao ?? undefined), <Clock size={15} className="text-amber-500" />)}
+              {renderMetric('Satisfação', csatNota != null ? `${csatNota}/5` : 'Não avaliado', <Star size={15} className={csatNota != null ? 'text-yellow-500 fill-yellow-400' : 'text-slate-400'} />)}
+              {renderMetric(
+                'SLA',
+                slaInfo ? (slaInfo.status === 'no_prazo' ? 'Dentro do prazo' : `${slaInfo.consumido}/${slaInfo.limite}min`) : '—',
+                slaInfo && slaInfo.status === 'violado' ? <ShieldAlert size={15} className="text-red-500" /> : <ShieldCheck size={15} className={slaInfo ? 'text-emerald-500' : 'text-slate-400'} />,
+                slaInfo && slaInfo.status === 'violado' ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'
+              )}
+              {renderMetric('Anexos', totalAnexos > 0 ? String(totalAnexos) : '—', <Paperclip size={15} className="text-violet-500" />)}
+            </div>
+          )}
         </div>
       </div>
     </div>

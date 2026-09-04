@@ -43,12 +43,14 @@ export async function refreshToken(req: Request, res: Response) {
   try {
     const { refreshToken, sessionToken } = req.body;
     if (!refreshToken) return res.status(400).json({ error: 'Refresh token é obrigatório' });
+    if (!sessionToken) return res.status(400).json({ error: 'Session token é obrigatório' });
 
     const decoded = jwt.verify(refreshToken, env.jwtRefreshSecret) as { id: string };
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
     if (!user || !user.active) return res.status(401).json({ error: 'Usuário inválido' });
 
-    if (sessionToken && user.sessionToken !== sessionToken) {
+    // Session token binding: refresh só funciona se o sessionToken bater
+    if (user.sessionToken !== sessionToken) {
       return res.status(401).json({ error: 'Sessão encerrada em outro dispositivo' });
     }
 
@@ -58,6 +60,23 @@ export async function refreshToken(req: Request, res: Response) {
     return res.json({ ...tokens, sessionToken: user.sessionToken });
   } catch {
     return res.status(401).json({ error: 'Refresh token inválido ou expirado' });
+  }
+}
+
+export async function logout(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Não autenticado' });
+
+    // Invalidar sessionToken no banco — qualquer refresh futuro falhará
+    await prisma.user.update({
+      where: { id: userId },
+      data: { sessionToken: null as any },
+    });
+
+    return res.status(204).send();
+  } catch {
+    return res.status(500).json({ error: 'Erro ao fazer logout' });
   }
 }
 
@@ -263,5 +282,191 @@ export async function archiveUser(req: AuthRequest, res: Response) {
     return res.status(204).send();
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao arquivar usuário' });
+  }
+}
+
+export async function bulkArchiveUsers(req: AuthRequest, res: Response) {
+  try {
+    const { ids } = req.body;
+    const requestingUser = req.user;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Nenhum ID fornecido' });
+    }
+
+    if (ids.length > 50) {
+      return res.status(400).json({ error: 'Limite de 50 usuários por operação' });
+    }
+
+    const uniqueIds = [...new Set(ids)];
+    const users = await prisma.user.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true, name: true, isMaster: true, active: true },
+    });
+
+    const userMap = new Map(users.map(u => [u.id, u]));
+
+    const archived: { id: string; name: string }[] = [];
+    const failed: { id: string; name: string; reason: string }[] = [];
+
+    for (const id of uniqueIds) {
+      const user = userMap.get(id);
+      if (!user) {
+        failed.push({ id, name: 'Desconhecido', reason: 'Usuário não encontrado' });
+        continue;
+      }
+      if (id === requestingUser?.id) {
+        failed.push({ id, name: user.name, reason: 'Você não pode arquivar a si mesmo' });
+        continue;
+      }
+      if (user.isMaster) {
+        failed.push({ id, name: user.name, reason: 'Usuário master não pode ser arquivado' });
+        continue;
+      }
+      if (!user.active) {
+        failed.push({ id, name: user.name, reason: 'Usuário já está arquivado' });
+        continue;
+      }
+      archived.push({ id, name: user.name });
+    }
+
+    if (archived.length > 0) {
+      await prisma.user.updateMany({
+        where: { id: { in: archived.map(a => a.id) } },
+        data: { active: false },
+      });
+    }
+
+    return res.json({
+      total: uniqueIds.length,
+      archivedCount: archived.length,
+      failedCount: failed.length,
+      archived,
+      failed,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao arquivar usuários' });
+  }
+}
+
+export async function deleteUserPermanently(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const requestingUser = req.user;
+
+    if (id === requestingUser?.id) {
+      return res.status(400).json({ error: 'Você não pode excluir o próprio usuário' });
+    }
+
+    const existing = await prisma.user.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    if (existing.isMaster) {
+      return res.status(403).json({ error: 'O usuário master não pode ser excluído' });
+    }
+
+    const [
+      auditLogCount,
+      messageCount,
+      ticketCount,
+      ticketAssigneeCount,
+      ticketFirstAgentCount,
+      orderCreatorCount,
+      orderTechCount,
+      contactCount,
+      opportunityCount,
+      taskCount,
+      kanbanTaskCount,
+      kanbanSubtaskCount,
+      kanbanActivityCount,
+      kanbanAttachmentCount,
+      kanbanBoardCount,
+      kanbanTemplateCount,
+      aiCorrectionCount,
+      aiAgentAuditCount,
+      auditoriaProfCount,
+      aprovacaoSolicitadaCount,
+      aprovacaoDecididaCount,
+      serviceOrderEventCount,
+      timeEntryCount,
+      notificacaoCount,
+      teamMemberCount,
+      teamLiderCount,
+      contatosIgnoradosCount,
+    ] = await Promise.all([
+      prisma.auditLog.count({ where: { usuarioId: id } }),
+      prisma.message.count({ where: { usuarioId: id } }),
+      prisma.ticket.count({ where: { usuarioId: id } }),
+      prisma.ticket.count({ where: { assigneeId: id } }),
+      prisma.ticket.count({ where: { primeiroAgenteId: id } }),
+      prisma.serviceOrder.count({ where: { criadoPorId: id } }),
+      prisma.serviceOrder.count({ where: { tecnicoResponsavelId: id } }),
+      prisma.contact.count({ where: { usuarioId: id } }),
+      prisma.opportunity.count({ where: { responsavelId: id } }),
+      prisma.task.count({ where: { responsavelId: id } }),
+      prisma.kanbanTask.count({ where: { responsavelId: id } }),
+      prisma.kanbanSubtask.count({ where: { responsavelId: id } }),
+      prisma.kanbanActivity.count({ where: { usuarioId: id } }),
+      prisma.kanbanAttachment.count({ where: { usuarioId: id } }),
+      prisma.kanbanBoard.count({ where: { criadorId: id } }),
+      prisma.kanbanTemplate.count({ where: { criadorId: id } }),
+      prisma.aICorrection.count({ where: { corrigidoPorId: id } }),
+      prisma.aIAgentAudit.count({ where: { agentId: id } }),
+      prisma.auditoriaProfissional.count({ where: { agenteId: id } }),
+      prisma.aprovacao.count({ where: { solicitadoPorId: id } }),
+      prisma.aprovacao.count({ where: { aprovadoPorId: id } }),
+      prisma.serviceOrderStatusEvent.count({ where: { usuarioId: id } }),
+      prisma.timeEntry.count({ where: { usuarioId: id } }),
+      prisma.notificacao.count({ where: { destinatarioId: id } }),
+      prisma.teamMember.count({ where: { userId: id } }),
+      prisma.team.count({ where: { liderId: id } }),
+      prisma.contatoIgnorado.count({ where: { criadoPorId: id } }),
+    ]);
+
+    const blocking: string[] = [];
+    if (auditLogCount > 0) blocking.push(`${auditLogCount} log(s) de auditoria`);
+    if (messageCount > 0) blocking.push(`${messageCount} mensagem(ns)`);
+    if (ticketCount > 0) blocking.push(`${ticketCount} ticket(s) criado(s)`);
+    if (ticketAssigneeCount > 0) blocking.push(`${ticketAssigneeCount} ticket(s) atribuído(s)`);
+    if (ticketFirstAgentCount > 0) blocking.push(`${ticketFirstAgentCount} ticket(s) como primeiro agente`);
+    if (orderCreatorCount > 0) blocking.push(`${orderCreatorCount} OS(s) criada(s)`);
+    if (orderTechCount > 0) blocking.push(`${orderTechCount} OS(s) como técnico`);
+    if (contactCount > 0) blocking.push(`${contactCount} contato(s) registrado(s)`);
+    if (opportunityCount > 0) blocking.push(`${opportunityCount} oportunidade(s)`);
+    if (taskCount > 0) blocking.push(`${taskCount} tarefa(s)`);
+    if (kanbanTaskCount > 0) blocking.push(`${kanbanTaskCount} tarefa(s) kanban`);
+    if (kanbanSubtaskCount > 0) blocking.push(`${kanbanTaskCount} subtarefa(s) kanban`);
+    if (kanbanActivityCount > 0) blocking.push(`${kanbanActivityCount} atividade(s) kanban`);
+    if (kanbanAttachmentCount > 0) blocking.push(`${kanbanAttachmentCount} anexo(s) kanban`);
+    if (kanbanBoardCount > 0) blocking.push(`${kanbanBoardCount} board(s) criado(s)`);
+    if (kanbanTemplateCount > 0) blocking.push(`${kanbanTemplateCount} template(s) criado(s)`);
+    if (aiCorrectionCount > 0) blocking.push(`${aiCorrectionCount} correção(ões) IA`);
+    if (aiAgentAuditCount > 0) blocking.push(`${aiAgentAuditCount} auditoria(s) de agente IA`);
+    if (auditoriaProfCount > 0) blocking.push(`${auditoriaProfCount} auditoria(s) profissional(is)`);
+    if (aprovacaoSolicitadaCount > 0) blocking.push(`${aprovacaoSolicitadaCount} aprovação(ões) solicitada(s)`);
+    if (aprovacaoDecididaCount > 0) blocking.push(`${aprovacaoDecididaCount} aprovação(ões) decidida(s)`);
+    if (serviceOrderEventCount > 0) blocking.push(`${serviceOrderEventCount} evento(s) de OS`);
+    if (timeEntryCount > 0) blocking.push(`${timeEntryCount} registro(s) de tempo`);
+    if (notificacaoCount > 0) blocking.push(`${notificacaoCount} notificação(ões)`);
+    if (teamMemberCount > 0) blocking.push(`${teamMemberCount} vínculo(s) de equipe`);
+    if (teamLiderCount > 0) blocking.push(`${teamLiderCount} equipe(s) como líder`);
+    if (contatosIgnoradosCount > 0) blocking.push(`${contatosIgnoradosCount} contato(s) ignorado(s)`);
+
+    if (blocking.length > 0) {
+      return res.status(409).json({
+        error: 'Não foi possível excluir o usuário porque existem registros vinculados.',
+        blocking,
+        message: 'O usuário possui registros históricos que impedem a exclusão física. Mantenha-o como arquivado.',
+      });
+    }
+
+    await prisma.user.delete({ where: { id } });
+
+    return res.status(200).json({ message: 'Usuário excluído com sucesso' });
+  } catch (error) {
+    console.error('Delete user permanently error:', error);
+    return res.status(500).json({ error: 'Não foi possível excluir o usuário' });
   }
 }

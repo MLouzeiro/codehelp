@@ -28,11 +28,11 @@ export async function ensureAmbienteHelpdesk() {
 }
 
 export async function criarDepartamentoTeste(slug: string, nome: string) {
-  return prisma.departamento.upsert({
-    where: { slug },
-    create: { slug, nome, ativo: true, ordem: 0 },
-    update: { ativo: true },
-  });
+  const existing = await prisma.departamento.findFirst({ where: { slug } });
+  if (existing) {
+    return prisma.departamento.update({ where: { id: existing.id }, data: { ativo: true } });
+  }
+  return prisma.departamento.create({ data: { slug, nome, ativo: true, ordem: 0 } });
 }
 
 export interface HorarioSnapshot {
@@ -45,28 +45,33 @@ export interface HorarioSnapshot {
 // Garante atendimento aberto 24/7 durante os testes (determinístico,
 // independente de horário do dia). Retorna snapshot para restaurar.
 export async function abrirAtendimentoSempre(): Promise<HorarioSnapshot> {
-  const config = await prisma.helpdeskConfig.findUnique({ where: { slug: 'fila' } });
+  const config = await prisma.helpdeskConfig.findFirst({ where: { slug: 'fila' } });
   const snapshot: HorarioSnapshot = {
     existia: !!config,
     horarioInicio: config?.horarioInicio ?? null,
     horarioFim: config?.horarioFim ?? null,
     diasAtendimento: config?.diasAtendimento ?? null,
   };
-  await prisma.helpdeskConfig.upsert({
-    where: { slug: 'fila' },
-    create: {
-      slug: 'fila',
-      nome: 'Fila',
-      horarioInicio: '00:00',
-      horarioFim: '23:59',
-      diasAtendimento: '0,1,2,3,4,5,6',
-    },
-    update: {
-      horarioInicio: '00:00',
-      horarioFim: '23:59',
-      diasAtendimento: '0,1,2,3,4,5,6',
-    },
-  });
+  if (config) {
+    await prisma.helpdeskConfig.update({
+      where: { id: config.id },
+      data: {
+        horarioInicio: '00:00',
+        horarioFim: '23:59',
+        diasAtendimento: '0,1,2,3,4,5,6',
+      },
+    });
+  } else {
+    await prisma.helpdeskConfig.create({
+      data: {
+        slug: 'fila',
+        nome: 'Fila',
+        horarioInicio: '00:00',
+        horarioFim: '23:59',
+        diasAtendimento: '0,1,2,3,4,5,6',
+      },
+    });
+  }
   return snapshot;
 }
 
@@ -75,14 +80,17 @@ export async function restaurarHorario(snapshot: HorarioSnapshot) {
     await prisma.helpdeskConfig.deleteMany({ where: { slug: 'fila' } });
     return;
   }
-  await prisma.helpdeskConfig.update({
-    where: { slug: 'fila' },
-    data: {
-      horarioInicio: snapshot.horarioInicio,
-      horarioFim: snapshot.horarioFim,
-      diasAtendimento: snapshot.diasAtendimento,
-    },
-  });
+  const config = await prisma.helpdeskConfig.findFirst({ where: { slug: 'fila' } });
+  if (config) {
+    await prisma.helpdeskConfig.update({
+      where: { id: config.id },
+      data: {
+        horarioInicio: snapshot.horarioInicio,
+        horarioFim: snapshot.horarioFim,
+        diasAtendimento: snapshot.diasAtendimento,
+      },
+    });
+  }
 }
 
 export async function criarMensagemBotMenuEnviado(ticketId: string) {

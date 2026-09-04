@@ -1,4 +1,5 @@
 import { LucideIcon } from 'lucide-react';
+import { AcronymText } from '../AcronymText';
 
 interface Props {
   label: string;
@@ -19,7 +20,7 @@ export default function ReportKpiCard({ label, valor, icon: Icon, cor, delta }: 
       </div>
       <div className="mt-3">
         <div className="text-xl font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{valor}</div>
-        <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>{label}</div>
+        <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text={label} /></div>
       </div>
     </div>
   );

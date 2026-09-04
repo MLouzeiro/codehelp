@@ -4,18 +4,18 @@ import { z } from 'zod';
 
 export const loginSchema = z.object({
   email: z.string().email('Email invalido').max(255),
-  password: z.string().min(6, 'Senha deve ter no minimo 6 caracteres').max(128),
+  password: z.string().min(8, 'Senha deve ter no minimo 8 caracteres').max(128),
 });
 
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token obrigatorio'),
-  sessionToken: z.string().uuid().optional(),
+  sessionToken: z.string().uuid('Session token invalido'),
 });
 
 export const createUserSchema = z.object({
   name: z.string().min(1, 'Nome obrigatorio').max(255),
   email: z.string().email('Email invalido').max(255),
-  password: z.string().min(6, 'Senha deve ter no minimo 6 caracteres').max(128),
+  password: z.string().min(8, 'Senha deve ter no minimo 8 caracteres').max(128),
   role: z.enum(['tecnico', 'comercial', 'gerente', 'admin']).optional().default('tecnico'),
   isMaster: z.boolean().optional().default(false),
   phone: z.string().max(20).optional(),
@@ -25,7 +25,7 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   email: z.string().email().max(255).optional(),
-  password: z.string().min(6).max(128).optional(),
+  password: z.string().min(8).max(128).optional(),
   role: z.enum(['tecnico', 'comercial', 'gerente', 'admin']).optional(),
   active: z.boolean().optional(),
   isMaster: z.boolean().optional(),

@@ -57,7 +57,10 @@ export async function sendFacebookMessage(input: SendFacebookMessageInput): Prom
       body: JSON.stringify(requestBody),
     });
 
-    const result = await response.json();
+    const result = await response.json() as {
+      error?: { message?: string };
+      message_id?: string;
+    };
 
     if (!response.ok) {
       throw new Error(result.error?.message || 'Erro ao enviar mensagem Facebook');
@@ -77,7 +80,7 @@ export async function sendFacebookMessage(input: SendFacebookMessageInput): Prom
       },
     });
 
-    return { messageId: result.message_id, success: true };
+    return { messageId: result.message_id!, success: true };
   } catch (error: any) {
     console.error('[Facebook] Erro ao enviar:', error.message);
     throw new Error(`Falha ao enviar mensagem Facebook: ${error.message}`);
@@ -164,7 +167,12 @@ export async function testConnection(channelId: string): Promise<{ success: bool
       `https://graph.facebook.com/v18.0/${config.pageId}?fields=name,fan_count,link&access_token=${config.pageAccessToken}`
     );
 
-    const result = await response.json();
+    const result = await response.json() as {
+      error?: { message?: string };
+      name?: string;
+      fan_count?: number;
+      link?: string;
+    };
 
     if (!response.ok) {
       return { success: false, message: result.error?.message || 'Erro ao conectar' };
@@ -193,7 +201,14 @@ export async function getPageInfo(channelId: string): Promise<any> {
       `https://graph.facebook.com/v18.0/${config.pageId}?fields=name,fan_count,link,cover,picture&access_token=${config.pageAccessToken}`
     );
 
-    const result = await response.json();
+    const result = await response.json() as {
+      error?: { message?: string };
+      name?: string;
+      fan_count?: number;
+      link?: string;
+      cover?: any;
+      picture?: any;
+    };
 
     if (!response.ok) {
       throw new Error(result.error?.message);

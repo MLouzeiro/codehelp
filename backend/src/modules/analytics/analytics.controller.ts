@@ -6,6 +6,7 @@ import { callClaude } from '../../shared/aiClient';
 import { gerarDashboardExecutivo } from './dashboardExecutivo.service';
 import { getDashboardIa } from './dashboardIa.service';
 import { gerarAlertasVisaoGeral } from './alertasVisaoGeral.service';
+import { getAlertDetail } from './alertDetail.service';
 import { STATUS_ABERTO } from '../helpdesk/constants';
 
 // ── Visão Geral — Alertas e Atenção ─────────────────────────────────────
@@ -77,6 +78,24 @@ export async function getDashboardIaHandler(req: AuthRequest, res: Response) {
   } catch (err: any) {
     console.error('Erro no dashboard IA:', err?.message || err);
     res.status(500).json({ error: 'Erro ao carregar dashboard IA' });
+  }
+}
+
+// ── Detalhe de Alerta (análise profunda) ─────────────────────────────
+// Endpoint: GET /api/analytics/alert-detail?tipo=X&dias=7
+export async function getAlertDetailHandler(req: AuthRequest, res: Response) {
+  try {
+    const tipo = String(req.query.tipo || '');
+    const dias = parseInt(String(req.query.dias || '7'), 10) || 7;
+    if (!tipo) {
+      res.status(400).json({ error: 'Parâmetro "tipo" é obrigatório' });
+      return;
+    }
+    const detalhe = await getAlertDetail({ tipo, dias });
+    res.json(detalhe);
+  } catch (err: any) {
+    console.error('Erro no detalhe do alerta:', err?.message || err);
+    res.status(500).json({ error: 'Erro ao carregar detalhe do alerta' });
   }
 }
 
@@ -566,7 +585,7 @@ Dados:
 - Total de categorias: ${JSON.stringify(charts.ticketsByCategory.slice(0, 5))}`;
 
     try {
-      const content = await callClaude(prompt, 500);
+      const content = await callClaude(prompt, 500, 'analytics-insights');
       const insights = content.split('\n').filter((l: string) => l.trim()).slice(0, 3);
 
       return res.json({ insights, generated: true });

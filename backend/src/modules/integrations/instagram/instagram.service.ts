@@ -164,7 +164,12 @@ export async function testConnection(channelId: string): Promise<{ success: bool
       'https://graph.facebook.com/v18.0/' + config.instagramAccountId + '?fields=name,username,followers_count&access_token=' + config.accessToken
     );
 
-    const result = await response.json();
+    const result = await response.json() as {
+      error?: { message?: string };
+      name?: string;
+      username?: string;
+      followers_count?: number;
+    };
 
     if (!response.ok) {
       return { success: false, message: result.error?.message || 'Erro ao conectar' };
@@ -193,7 +198,14 @@ export async function getInstagramProfile(channelId: string): Promise<any> {
       'https://graph.facebook.com/v18.0/' + config.instagramAccountId + '?fields=name,username,profile_picture_url,followers_count,media_count&access_token=' + config.accessToken
     );
 
-    const result = await response.json();
+    const result = await response.json() as {
+      error?: { message?: string };
+      name?: string;
+      username?: string;
+      profile_picture_url?: string;
+      followers_count?: number;
+      media_count?: number;
+    };
 
     if (!response.ok) {
       throw new Error(result.error?.message);

@@ -100,7 +100,7 @@ export default function TomadaDecisaoPage() {
   useEffect(() => { carregar(); }, [carregar]);
 
   useEffect(() => {
-    api.get('/users').then((r) => setAgentes(Array.isArray(r.data) ? r.data : r.data?.users || [])).catch(() => {});
+    api.get('/users', { params: { active: 'true' } }).then((r) => setAgentes(Array.isArray(r.data) ? r.data : r.data?.users || [])).catch(() => {});
     api.get('/kanban/boards').then((r) => setBoards(Array.isArray(r.data) ? r.data : r.data?.boards || [])).catch(() => {});
   }, []);
 

@@ -71,7 +71,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // ignora erro — logout local sempre acontece
+    }
     clearAuthCookies();
     localStorage.removeItem('user');
     setUser(null);

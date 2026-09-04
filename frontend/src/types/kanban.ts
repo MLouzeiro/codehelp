@@ -44,6 +44,8 @@ export interface KanbanTask {
   client?: { id: string; razaoSocial: string; nomeFantasia?: string | null } | null;
   ticketId?: string | null;
   ticket?: { id: string; protocolo?: string | null; assunto?: string | null; status?: string; etapa?: string } | null;
+  orderId?: string | null;
+  order?: { id: string; numeroOs: string; status: string; tipoServico: string } | null;
   departamentoId?: string | null;
   departamento?: { id: string; nome: string; slug?: string } | null;
   equipeId?: string | null;

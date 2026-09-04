@@ -3,8 +3,62 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// Organizacao/Tenant — entidade raiz do multi-tenancy.
+/// Cada organizacao e isolada: seus usuarios, clientes, tickets, configuracoes, etc.
+model Organization {
+  id                 String                @id @default(uuid())
+  nome               String
+  slug               String                @unique
+  cnpjCpf            String?
+  email              String?
+  telefone           String?
+  website            String?
+  logo               String?
+  ativo              Boolean               @default(true)
+  plano              String                @default("free")
+  maxUsuarios        Int                   @default(5)
+  maxClients         Int                   @default(100)
+  config             String                @default("{}")
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @default(now())
+  alertRecipients    AlertRecipient[]
+  aprovacoes         Aprovacao[]
+  assuntos           Assunto[]
+  auditAlerts        AuditAlert[]
+  auditLogs          AuditLog[]
+  automationRules    AutomationRule[]
+  categorias         Categoria[]
+  channels           Channel[]
+  checklistTemplates ChecklistTemplate[]
+  clients            Client[]
+  departamentos      Departamento[]
+  enquetes           Enquete[]
+  integrations       ExternalIntegration[]
+  feriados           Feriado[]
+  filas              Fila[]
+  helpdeskConfigs    HelpdeskConfig[]
+  helpdeskRules      HelpdeskRule[]
+  kbArticles         KBArticle[]
+  kanbanBoards       KanbanBoard[]
+  niveisSuporte      NivelSuporte[]
+  notificacoes       Notificacao[]
+  osLayouts          OSLayout[]
+  robots             Robot[]
+  slaConfigs         SLAConfig[]
+  serviceOrders      ServiceOrder[]
+  tasks              Task[]
+  teams              Team[]
+  tickets            Ticket[]
+  users              User[]
+  whatsappConns      WhatsAppConnection[]
+
+  @@index([ativo])
+  @@index([slug])
 }
 
 model User {
@@ -20,25 +74,31 @@ model User {
   online                      Boolean                   @default(false)
   lastSeenAt                  DateTime?
   sessionToken                String?                   @unique
-  signature                   String?
   createdAt                   DateTime                  @default(now())
   updatedAt                   DateTime                  @default(now())
-  aiCorrections               AICorrection[]
+  signature                   String?
+  organizationId              String?
   aiAgentAudits               AIAgentAudit[]
-  auditoriasAgente            AuditoriaProfissional[]   @relation("AuditoriaAgente")
-  auditoriasRevisadas         AuditoriaProfissional[]   @relation("AuditoriaRevisor")
+  aiCorrections               AICorrection[]
   aprovacoesDecididas         Aprovacao[]               @relation("AprovacaoAprovador")
   aprovacoesSolicitadas       Aprovacao[]               @relation("AprovacaoSolicitante")
   auditLogs                   AuditLog[]
+  auditoriasAgente            AuditoriaProfissional[]   @relation("AuditoriaAgente")
+  auditoriasRevisadas         AuditoriaProfissional[]   @relation("AuditoriaRevisor")
   billingHistory              BillingHistory[]
+  checklistTemplates          ChecklistTemplate[]
   clientTechnician            Client[]                  @relation("ClientTechnician")
   contacts                    Contact[]
+  contatosIgnoradosCriados    ContatoIgnorado[]         @relation("ContatoIgnoradoCriadoPor")
+  contatosIgnoradosReativados ContatoIgnorado[]         @relation("ContatoIgnoradoReativadoPor")
   kbArticlesAutor             KBArticle[]               @relation("KBArticleAutor")
   kbVersionsAutor             KBArticleVersion[]        @relation("KBArticleVersionAutor")
   kanbanActivities            KanbanActivity[]          @relation("KanbanActivityUsuario")
   kanbanAttachments           KanbanAttachment[]        @relation("KanbanAttachmentUsuario")
   kanbanBoardsCreated         KanbanBoard[]             @relation("KanbanBoardCriador")
+  stageTimes                  KanbanStageTime[]
   kanbanSubtasks              KanbanSubtask[]           @relation("KanbanSubtaskResponsavel")
+  kanbanTasksArquivadas       KanbanTask[]              @relation("KanbanTaskArquivador")
   kanbanTasks                 KanbanTask[]              @relation("KanbanTaskResponsavel")
   kanbanTemplates             KanbanTemplate[]          @relation("KanbanTemplateCriador")
   messages                    Message[]
@@ -48,10 +108,15 @@ model User {
   orderTechnician             ServiceOrder[]            @relation("OrderTechnician")
   serviceOrderStatusEvents    ServiceOrderStatusEvent[]
   tasks                       Task[]
+  teamsLider                  Team[]                    @relation("TeamLider")
+  teamMemberships             TeamMember[]
   ticketsAtendidos            Ticket[]                  @relation("TicketAssignee")
   ticketsPrimeiroAgente       Ticket[]                  @relation("TicketPrimeiroAgente")
   tickets                     Ticket[]
   ticketActivities            TicketActivity[]
+  agentInteractions           TicketAgentInteraction[]
+  ticketChecklists            TicketChecklist[]
+  departmentTimes             TicketDepartmentTime[]
   ticketEvents                TicketEvent[]
   ticketPerformance           TicketPerformance[]
   ticketSlaLogs               TicketSlaLog[]
@@ -60,18 +125,9 @@ model User {
   timelineNovo                TicketTimeline[]          @relation("TimelineResponsavelNovo")
   ticketWaitTimes             TicketWaitTime[]
   timeEntries                 TimeEntry[]
-  departamentos               UserDepartamento[]
-  ticketChecklists            TicketChecklist[]
-  checklistTemplates          ChecklistTemplate[]
-  agentInteractions           TicketAgentInteraction[]
-  departmentTimes             TicketDepartmentTime[]
-  contatosIgnoradosCriados    ContatoIgnorado[]         @relation("ContatoIgnoradoCriadoPor")
-  contatosIgnoradosReativados ContatoIgnorado[]         @relation("ContatoIgnoradoReativadoPor")
-  teamsLider                  Team[]                    @relation("TeamLider")
-  teamMemberships             TeamMember[]
-  kanbanTasksArquivadas       KanbanTask[]              @relation("KanbanTaskArquivador")
   timeEntryBlocks             TimeEntryBlock[]
-  stageTimes                  KanbanStageTime[]
+  organization                Organization?             @relation(fields: [organizationId], references: [id])
+  departamentos               UserDepartamento[]
 }
 
 model Client {
@@ -96,9 +152,12 @@ model Client {
   ativo                Boolean           @default(true)
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @default(now())
+  organizationId       String?
   ativos               Ativo[]
+  auditLogs            AuditLog[]
   billingHistory       BillingHistory[]
   billingPendencies    BillingPendency[]
+  organization         Organization?     @relation(fields: [organizationId], references: [id])
   responsavelTecnico   User?             @relation("ClientTechnician", fields: [responsavelTecnicoId], references: [id])
   billings             ClientBilling[]
   colaboradores        Colaborador[]
@@ -108,7 +167,6 @@ model Client {
   serviceOrders        ServiceOrder[]
   tickets              Ticket[]
   timeEntries          TimeEntry[]
-  auditLogs            AuditLog[]
 }
 
 /// Colaborador de um cliente (pessoa que trabalha na empresa cliente)
@@ -189,16 +247,23 @@ model ServiceOrder {
   precoImplantacao      Float?                    @default(0)
   tipoImplantacao       String?
   dataConclusao         DateTime?
+  telefoneManual        String?
+  layoutId              String?
+  organizationId        String?
   attachments           Attachment[]
+  kanbanTasks           KanbanTask[]
   client                Client                    @relation(fields: [clientId], references: [id])
   criadoPor             User                      @relation("OrderCreator", fields: [criadoPorId], references: [id])
+  layout                OSLayout?                 @relation(fields: [layoutId], references: [id])
+  organization          Organization?             @relation(fields: [organizationId], references: [id])
   tecnicoResponsavel    User                      @relation("OrderTechnician", fields: [tecnicoResponsavelId], references: [id])
   ticket                Ticket?                   @relation("OrderTicket", fields: [ticketId], references: [id])
+  items                 ServiceOrderItem[]
+  statusEvents          ServiceOrderStatusEvent[]
   signature             Signature?
   timeEntries           TimeEntry[]
-  statusEvents          ServiceOrderStatusEvent[]
-  kanbanTasks           KanbanTask[]
 
+  @@index([organizationId])
   @@index([status])
   @@index([createdAt])
   @@index([tipoImplantacao])
@@ -213,7 +278,7 @@ model ServiceOrderStatusEvent {
   statusNovo     String
   observacao     String?
   usuarioId      String?
-  origem         String       @default("manual") // manual | sistema | whatsapp | publico
+  origem         String       @default("manual")
   createdAt      DateTime     @default(now())
   order          ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
   usuario        User?        @relation(fields: [usuarioId], references: [id])
@@ -222,37 +287,63 @@ model ServiceOrderStatusEvent {
   @@index([createdAt])
 }
 
-model Signature {
-  id               String       @id @default(uuid())
-  orderId          String       @unique
-  assinanteNome    String
-  assinanteCpf     String
-  assinanteCargo   String
-  assinaturaBase64 String
-  ipAssinante      String?
-  userAgent        String?
-  assinadoEm       DateTime     @default(now())
-  tokenAssinatura  String       @unique
-  tokenExpiresAt   DateTime
-  pdfPath          String?
-  createdAt        DateTime     @default(now())
-  order            ServiceOrder @relation(fields: [orderId], references: [id])
+/// Layout de apresentacao da Ordem de Servico (timbrado, configuracao visual).
+model OSLayout {
+  id             String         @id @default(uuid())
+  organizationId String?
+  nome           String
+  descricao      String?
+  tipo           String         @default("personalizado")
+  ativo          Boolean        @default(true)
+  padrao         Boolean        @default(false)
+  configuracao   String         @default("{}")
+  timbradoPath   String?
+  timbradoApply  String         @default("primeira_pagina")
+  margemTopo     Float          @default(0)
+  margemBaixo    Float          @default(0)
+  margemEsquerda Float          @default(0)
+  margemDireita  Float          @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @default(now())
+  timbradoBlob   String?
+  organization   Organization?  @relation(fields: [organizationId], references: [id])
+  orders         ServiceOrder[]
 
-  // ── Correcao critica: assinatura de OS (envio/rastreio) ─────────────
-  // Status da solicitacao: pendente | enviada | entregue | visualizada |
-  // assinada | recusada | expirada | cancelada | erro_envio
-  status            String             @default("pendente")
-  messageId         String?
-  provider          String?
-  telefone          String?
-  sentAt            DateTime?
-  sentBy            String?
-  attempts          Int                @default(0)
-  lastError         String?
-  viewedAt          DateTime?
-  rejectedAt        DateTime?
-  rejectionReason   String?
-  signatureAttempts SignatureAttempt[]
+  @@index([organizationId])
+  @@index([ativo])
+}
+
+model Signature {
+  id                  String             @id @default(uuid())
+  orderId             String             @unique
+  assinanteNome       String
+  assinanteCpf        String
+  assinanteCargo      String
+  assinaturaBase64    String
+  ipAssinante         String?
+  userAgent           String?
+  assinadoEm          DateTime           @default(now())
+  tokenAssinatura     String             @unique
+  tokenExpiresAt      DateTime
+  pdfPath             String?
+  createdAt           DateTime           @default(now())
+  attempts            Int                @default(0)
+  lastError           String?
+  messageId           String?
+  provider            String?
+  rejectedAt          DateTime?
+  rejectionReason     String?
+  sentAt              DateTime?
+  sentBy              String?
+  status              String             @default("pendente")
+  telefone            String?
+  viewedAt            DateTime?
+  documentHash        String?
+  signatureIdentifier String?            @unique
+  signedAt            DateTime?
+  timezone            String?
+  order               ServiceOrder       @relation(fields: [orderId], references: [id])
+  signatureAttempts   SignatureAttempt[]
 
   @@index([status])
   @@index([tokenExpiresAt])
@@ -268,7 +359,7 @@ model SignatureAttempt {
   provider     String?
   connectionId String?
   messageId    String?
-  resultado    String // enviada | erro
+  resultado    String
   erro         String?
   signature    Signature @relation(fields: [signatureId], references: [id], onDelete: Cascade)
 
@@ -290,6 +381,21 @@ model Attachment {
   @@index([orderId])
 }
 
+model ServiceOrderItem {
+  id            String       @id @default(uuid())
+  orderId       String
+  descricao     String
+  tipo          String       @default("servico")
+  quantidade    Float        @default(1)
+  valorUnitario Float?
+  valorTotal    Float?
+  observacoes   String?
+  createdAt     DateTime     @default(now())
+  order         ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
 model Ticket {
   id                      String                   @id @default(uuid())
   protocolo               String?                  @unique
@@ -297,11 +403,9 @@ model Ticket {
   clientId                String?
   contactName             String?
   contactPhone            String?
-  contactJid              String?
   assunto                 String?
   categoria               String?
   categoriaId             String?
-  assuntoId               String?
   status                  String                   @default("aberto")
   canal                   String                   @default("whatsapp")
   etapa                   String                   @default("fila")
@@ -320,7 +424,6 @@ model Ticket {
   dataConclusao           DateTime?
   dataResolucao           DateTime?
   dataCSAT                DateTime?
-  evaluationStatus        String?
   assumedAt               DateTime?
   slaTotalMinutos         Int?
   slaPausadoEm            DateTime?
@@ -328,7 +431,6 @@ model Ticket {
   motivoStatus            String?
   satisfacao              Int?
   resumoFinal             String?
-  botFluxo                String?
   tipo                    String?
   observacoes             String?
   lastAgentMessageAt      DateTime?
@@ -347,43 +449,53 @@ model Ticket {
   updatedAt               DateTime                 @default(now())
   tags                    String?
   channelId               String?
+  contactJid              String?
+  dataFimImplantacao      DateTime?
+  dataInicioImplantacao   DateTime?
+  horasDesenvolvimento    Float?
   prazoEntrega            DateTime?
   semPrazo                Boolean                  @default(false)
-  horasDesenvolvimento    Float?
-  dataInicioImplantacao   DateTime?
-  dataFimImplantacao      DateTime?
-  resolvidoSemAjuda       Boolean?                 @default(true)
   agentesEnvolvidos       String?                  @default("[]")
-  primeiroAgenteId        String?
-  tempoPrimeiroAgenteMin  Int?
-  kanbanTaskId            String?
   kanbanTaskBoardId       String?
+  kanbanTaskId            String?
+  primeiroAgenteId        String?
+  resolvidoSemAjuda       Boolean?                 @default(true)
+  tempoPrimeiroAgenteMin  Int?
+  evaluationStatus        String?
+  botFluxo                String?
+  assuntoId               String?
+  organizationId          String?
+  aiAgentAudits           AIAgentAudit[]
   aiClassifications       AIClassification[]
   aiCorrections           AICorrection[]
   aiEvaluations           AIEvaluation[]
-  aiAgentAudits           AIAgentAudit[]
-  auditoriasProfissionais AuditoriaProfissional[]
   aiValidacoes            AIRespostaValidacao[]
   aprovacoes              Aprovacao[]
+  auditoriasProfissionais AuditoriaProfissional[]
   csatResposta            CSATResposta?
   channelMessages         ChannelMessage[]
+  kanbanTasksKanban       KanbanTask[]             @relation("KanbanTicketTasks")
   messages                Message[]
   notificacoes            Notificacao[]
   orders                  ServiceOrder[]           @relation("OrderTicket")
   assignee                User?                    @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  assuntoRef              Assunto?                 @relation(fields: [assuntoId], references: [id])
   ativo                   Ativo?                   @relation(fields: [ativoId], references: [id])
   categoriaRef            Categoria?               @relation(fields: [categoriaId], references: [id])
-  assuntoRef              Assunto?                 @relation(fields: [assuntoId], references: [id])
   channel                 Channel?                 @relation(fields: [channelId], references: [id])
   client                  Client?                  @relation(fields: [clientId], references: [id])
   departamento            Departamento?            @relation(fields: [departamentoId], references: [id])
   fila                    Fila?                    @relation(fields: [idFila], references: [id])
   nivelSuporte            NivelSuporte?            @relation(fields: [nivelSuporteId], references: [id])
-  usuario                 User?                    @relation(fields: [usuarioId], references: [id])
+  organization            Organization?            @relation(fields: [organizationId], references: [id])
   primeiroAgente          User?                    @relation("TicketPrimeiroAgente", fields: [primeiroAgenteId], references: [id])
+  usuario                 User?                    @relation(fields: [usuarioId], references: [id])
   whatsappConnection      WhatsAppConnection?      @relation(fields: [whatsappConnectionId], references: [id])
   activities              TicketActivity[]
+  agentInteractions       TicketAgentInteraction[]
   aiLogs                  TicketAiLog[]
+  checklists              TicketChecklist[]
+  departmentTimes         TicketDepartmentTime[]
   events                  TicketEvent[]
   snapshots               TicketHistory[]
   metrics                 TicketMetrics?
@@ -392,14 +504,11 @@ model Ticket {
   timeline                TicketTimeline[]
   waitTimes               TicketWaitTime[]
   timeEntries             TimeEntry[]
-  checklists              TicketChecklist[]
-  departmentTimes         TicketDepartmentTime[]
-  agentInteractions       TicketAgentInteraction[]
-  kanbanTasksKanban       KanbanTask[]             @relation("KanbanTicketTasks")
 
   @@index([status])
   @@index([etapa])
   @@index([createdAt])
+  @@index([organizationId])
   @@index([dataAbertura])
   @@index([dataFechamento])
   @@index([assigneeId])
@@ -413,18 +522,11 @@ model Ticket {
   @@index([channelId])
   @@index([contactPhone])
   @@index([contactJid])
-  // Índices de roteamento de canal e auditoria (aditivos, sem impacto em fluxo).
-  // canal → dashboards/auditoria "tickets por canal"
   @@index([canal])
-  // whatsappConnectionId → filtro por instância/canal de origem do ticket (roteamento)
   @@index([whatsappConnectionId])
-  // motivoStatus → auditoria de encerramento/retrabalho por motivo
   @@index([motivoStatus])
-  // evaluationStatus → fluxo CSAT/confirmação de resolução (busca por pendências)
   @@index([evaluationStatus])
-  // dataResolucao → indicadores TMR/tempo de resolução
   @@index([dataResolucao])
-  // [departamentoId, dataAbertura] → fila/posição e dashboards por departamento+período
   @@index([departamentoId, dataAbertura])
 }
 
@@ -497,29 +599,51 @@ model AIMetricas {
   updatedAt                 DateTime @default(now())
 }
 
+/// Log de custos de uso da API Claude (tokens e USD)
+model AICostLog {
+  id           String   @id @default(uuid())
+  modelo       String
+  inputTokens  Int
+  outputTokens Int
+  custoInput   Float
+  custoOutput  Float
+  custoTotal   Float
+  maxTokens    Int
+  modulo       String?
+  descricao    String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([modelo])
+  @@index([modulo])
+}
+
 /// Auditoria em tempo real do atendimento do agente
 model AIAgentAudit {
-  id                  String   @id @default(uuid())
-  ticketId            String
-  agentId             String
-  mensagemId          String?
-  conteudoMensagem    String
-  notProfissionalismo Int      @default(0)
-  notCordialidade     Int      @default(0)
-  notClareza          Int      @default(0)
-  notEmpatia          Int      @default(0)
-  notaGeral           Float    @default(0)
-  classificacao       String   @default("neutro")
-  sugestaoResposta    String?
-  alertas             String?
-  pontosFortes        String?
-  pontosMelhoria      String?
-  contextoConversa    String?
-  modeloUsado         String?
-  custoTokens         Float?
-  processadoEm        DateTime @default(now())
-  ticket              Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  agent               User     @relation(fields: [agentId], references: [id])
+  id                    String   @id @default(uuid())
+  ticketId              String
+  agentId               String
+  mensagemId            String?
+  conteudoMensagem      String
+  notProfissionalismo   Int      @default(0)
+  notCordialidade       Int      @default(0)
+  notClareza            Int      @default(0)
+  notEmpatia            Int      @default(0)
+  notaGeral             Float    @default(0)
+  classificacao         String   @default("neutro")
+  sugestaoResposta      String?
+  alertas               String?
+  pontosFortes          String?
+  pontosMelhoria        String?
+  contextoConversa      String?
+  modeloUsado           String?
+  custoTokens           Float?
+  processadoEm          DateTime @default(now())
+  treinamentoCategoria  String?
+  treinamentoMotivo     String?
+  treinamentoNecessario Boolean  @default(false)
+  agent                 User     @relation(fields: [agentId], references: [id])
+  ticket                Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
   @@index([agentId])
@@ -530,26 +654,26 @@ model AIAgentAudit {
 /// Detecção de encerramento (prematuro / resolução real / reabertura) por ticket,
 /// persistida automaticamente no fechamento e agregada por agente no monitor.
 model AIAgentClosureAudit {
-  id                         String   @id @default(uuid())
-  ticketId                   String   @unique
-  protocolo                  String?
-  agentId                    String?
-  tipo                       String // encerramento_prematuro | resolucao_real | reabertura | sem_dados
-  riscoReabertura            String  @default("BAIXO") // BAIXO | MÉDIO | ALTO | CRÍTICO
-  nota                       Float   @default(0) // 0-10 (10 = encerramento perfeito)
-  diagnostico                String?
-  detalhes                   String? // JSON array
-  recomendaReabertura        Boolean @default(false)
-  semConfirmacao             Boolean @default(false)
-  motivoStatus               String?
-  clienteVoltou              Boolean @default(false)
-  mensagensAposEncerramento  Int     @default(0)
-  csatNota                   Float?
-  csatRespondido             Boolean @default(false)
-  analiseIa                  Boolean @default(false)
-  ticketReaberturaId         String?
-  dataFechamento             DateTime?
-  processadoEm               DateTime @default(now())
+  id                        String    @id @default(uuid())
+  ticketId                  String    @unique
+  protocolo                 String?
+  agentId                   String?
+  tipo                      String
+  riscoReabertura           String    @default("BAIXO")
+  nota                      Float     @default(0)
+  diagnostico               String?
+  detalhes                  String?
+  recomendaReabertura       Boolean   @default(false)
+  semConfirmacao            Boolean   @default(false)
+  motivoStatus              String?
+  clienteVoltou             Boolean   @default(false)
+  mensagensAposEncerramento Int       @default(0)
+  csatNota                  Float?
+  csatRespondido            Boolean   @default(false)
+  analiseIa                 Boolean   @default(false)
+  ticketReaberturaId        String?
+  dataFechamento            DateTime?
+  processadoEm              DateTime  @default(now())
 
   @@index([agentId])
   @@index([tipo])
@@ -560,73 +684,64 @@ model AIAgentClosureAudit {
 /// Auditoria profissional inteligente de atendimento por ticket
 /// 14 categorias 0-100, evidencias estruturadas, tomada de decisão e revisão humana.
 model AuditoriaProfissional {
-  id             String  @id @default(uuid())
-  ticketId       String
-  protocolo      String?
-  contactName    String?
-  agenteId       String?
-  clienteId      String?
-  departamentoId String?
-  categoria      String?
-  status         String  @default("PENDENTE") // PENDENTE | ANALISANDO | ANALISADO | REVISAR | ERRO
-  versao         Int     @default(1)
-
-  // Notas 0-100 por categoria
-  notaComunicacao         Float @default(0)
-  notaProfissionalismo    Float @default(0)
-  notaEmpatia             Float @default(0)
-  notaClareza             Float @default(0)
-  notaFormalidade         Float @default(0)
-  notaConhecimentoTecnico Float @default(0)
-  notaDiagnostico         Float @default(0)
-  notaResolucao           Float @default(0)
-  notaGestaoTempo         Float @default(0)
-  notaProcesso            Float @default(0)
-  notaEncerramento        Float @default(0)
-  notaSeguranca           Float @default(0)
-  notaResponsabilidade    Float @default(0)
-  notaSatisfacaoCliente   Float @default(0)
-  notaGeral               Float @default(0)
-
-  classificacao             String  @default("ATENCAO") // EXCELENTE | MUITO_BOM | BOM | ATENCAO | ABAIXO_DA_MEDIA | CRITICO
-  classificacaoResolucao    String  @default("SEM_CONFIRMACAO") // RESOLVIDO | PROVAVELMENTE_RESOLVIDO | PARCIALMENTE_RESOLVIDO | NAO_RESOLVIDO | SEM_CONFIRMACAO | REABERTO | TRANSFERIDO | PRECISOU_DE_DESENVOLVIMENTO | IMPLANTACAO | OUTRO_SETOR
-  classificacaoEncerramento String  @default("SEM_ENCERRAMENTO") // ADEQUADO | PARCIAL | INADEQUADO | SEM_ENCERRAMENTO
-  padrao                    String  @default("EVENTO_ISOLADO") // EVENTO_ISOLADO | PADRAO_RECORRENTE | PROBLEMA_FREQUENTE | PROBLEMA_CRITICO | PROBLEMA_SISTEMICO
-  confiancaMedia            Float   @default(0) // 0-100
-  analiseInconclusiva       Boolean @default(false)
-
-  // Análises qualitativas
-  resumoExecutivo     String?
-  analiseQualitativa  String?
-  explicacaoLeiga     String?
-  evidenciaProblemas  String? // JSON: [{descricao, trecho, autor, data, gravidade, impacto, confianca, categoria}]
-  pontosFortes        String? // JSON: [{descricao, trecho, confianca}]
-  riscos              String? // JSON: [{tipo, descricao, gravidade, confianca}]
-  recomendacoes       String? // JSON: [{descricao, prioridade, meta, acao}]
-  planoMelhoria       String? // JSON: [{descricao, prazo, acompanhamento}]
-  alertas             String? // JSON: [{tipo, mensagem, gravidade}]
-  riscoInsatisfacao   String  @default("BAIXO") // BAIXO | MEDIO | ALTO | CRITICO
-  retrabalho          Boolean @default(false)
-  custoOperacionalMin Float? // minutos estimados de retrabalho/custo
-  reaberto            Boolean @default(false)
-  numeroReaberturas   Int     @default(0)
-
-  // Revisão humana
-  revisaoStatus        String? // CONFIRMADO | DISCORDO | REVISAR | NAO_SE_APLICA
-  revisaoJustificativa String?
-  revisadoPorId        String?
-  revisadoEm           DateTime?
-
-  modeloUsado String?
-  custoTokens Float?
-  auditadoEm  DateTime  @default(now())
-  analisadoEm DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @default(now())
-
-  ticket      Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  agente      User?  @relation("AuditoriaAgente", fields: [agenteId], references: [id])
-  revisadoPor User?  @relation("AuditoriaRevisor", fields: [revisadoPorId], references: [id])
+  id                        String    @id @default(uuid())
+  ticketId                  String
+  protocolo                 String?
+  agenteId                  String?
+  clienteId                 String?
+  departamentoId            String?
+  categoria                 String?
+  status                    String    @default("PENDENTE")
+  versao                    Int       @default(1)
+  notaComunicacao           Float     @default(0)
+  notaProfissionalismo      Float     @default(0)
+  notaEmpatia               Float     @default(0)
+  notaClareza               Float     @default(0)
+  notaFormalidade           Float     @default(0)
+  notaConhecimentoTecnico   Float     @default(0)
+  notaDiagnostico           Float     @default(0)
+  notaResolucao             Float     @default(0)
+  notaGestaoTempo           Float     @default(0)
+  notaProcesso              Float     @default(0)
+  notaEncerramento          Float     @default(0)
+  notaSeguranca             Float     @default(0)
+  notaResponsabilidade      Float     @default(0)
+  notaSatisfacaoCliente     Float     @default(0)
+  notaGeral                 Float     @default(0)
+  classificacao             String    @default("ATENCAO")
+  classificacaoResolucao    String    @default("SEM_CONFIRMACAO")
+  classificacaoEncerramento String    @default("SEM_ENCERRAMENTO")
+  padrao                    String    @default("EVENTO_ISOLADO")
+  confiancaMedia            Float     @default(0)
+  analiseInconclusiva       Boolean   @default(false)
+  resumoExecutivo           String?
+  analiseQualitativa        String?
+  explicacaoLeiga           String?
+  evidenciaProblemas        String?
+  pontosFortes              String?
+  riscos                    String?
+  recomendacoes             String?
+  planoMelhoria             String?
+  alertas                   String?
+  riscoInsatisfacao         String    @default("BAIXO")
+  retrabalho                Boolean   @default(false)
+  custoOperacionalMin       Float?
+  reaberto                  Boolean   @default(false)
+  numeroReaberturas         Int       @default(0)
+  revisaoStatus             String?
+  revisaoJustificativa      String?
+  revisadoPorId             String?
+  revisadoEm                DateTime?
+  modeloUsado               String?
+  custoTokens               Float?
+  auditadoEm                DateTime  @default(now())
+  analisadoEm               DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @default(now())
+  contactName               String?
+  agente                    User?     @relation("AuditoriaAgente", fields: [agenteId], references: [id])
+  revisadoPor               User?     @relation("AuditoriaRevisor", fields: [revisadoPorId], references: [id])
+  ticket                    Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
   @@index([agenteId])
@@ -662,42 +777,50 @@ model Message {
 }
 
 model Task {
-  id             String    @id @default(uuid())
+  id             String        @id @default(uuid())
   titulo         String
   descricao      String?
-  status         String    @default("aberta")
-  prioridade     String    @default("media")
+  status         String        @default("aberta")
+  prioridade     String        @default("media")
   responsavelId  String?
   projeto        String?
   sprint         String?
   dataVencimento DateTime?
   dataConclusao  DateTime?
   ordem          Int?
-  ativo          Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @default(now())
-  responsavel    User?     @relation(fields: [responsavelId], references: [id])
+  ativo          Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  responsavel    User?         @relation(fields: [responsavelId], references: [id])
 
+  @@index([organizationId])
   @@index([responsavelId])
   @@index([status])
 }
 
 model KanbanBoard {
-  id         String         @id @default(uuid())
-  nome       String         @unique
-  descricao  String?
-  icone      String?        @default("layout")
-  cor        String?        @default("#3b82f6")
-  criadorId  String?
-  ativo      Boolean        @default(true)
-  ordem      Int            @default(0)
-  templateId String?
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @default(now())
-  criador    User?          @relation("KanbanBoardCriador", fields: [criadorId], references: [id])
-  columns    KanbanColumn[]
-  tags       KanbanTag[]
-  tasks      KanbanTask[]
+  id             String         @id @default(uuid())
+  nome           String
+  descricao      String?
+  icone          String?        @default("layout")
+  cor            String?        @default("#3b82f6")
+  criadorId      String?
+  ativo          Boolean        @default(true)
+  ordem          Int            @default(0)
+  templateId     String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @default(now())
+  organizationId String?
+  criador        User?          @relation("KanbanBoardCriador", fields: [criadorId], references: [id])
+  organization   Organization?  @relation(fields: [organizationId], references: [id])
+  columns        KanbanColumn[]
+  tags           KanbanTag[]
+  tasks          KanbanTask[]
+
+  @@unique([organizationId, nome])
+  @@index([organizationId])
 }
 
 model KanbanColumn {
@@ -712,8 +835,8 @@ model KanbanColumn {
   updatedAt  DateTime          @default(now())
   hidden     Boolean           @default(false)
   board      KanbanBoard       @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  tasks      KanbanTask[]
   stageTimes KanbanStageTime[]
+  tasks      KanbanTask[]
 
   @@index([boardId])
 }
@@ -728,14 +851,9 @@ model KanbanTask {
   responsavelId    String?
   clientId         String?
   ticketId         String?
-  orderId          String?
-  departamentoId   String?
-  equipeId         String?
   prioridade       String             @default("media")
   categoria        String?
   classificacao    String?
-  tipoTarefa       String             @default("outro") // dev | implantacao | atendimento | outro
-  statusPrazo      String? // no_prazo | proxima | atencao | atrasada | concluida
   dataInicio       DateTime?
   prazoEntrega     DateTime?
   dataConclusao    DateTime?
@@ -743,33 +861,38 @@ model KanbanTask {
   horasTrabalhadas Float?             @default(0)
   ordem            Int                @default(0)
   ativo            Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @default(now())
   arquivado        Boolean            @default(false)
   arquivadoEm      DateTime?
   arquivadoPorId   String?
-  restauradoEm     DateTime?
-  reabertoEm       DateTime?
-  reabertoMotivo   String?
+  deleteReason     String?
   deletedAt        DateTime?
   deletedBy        String?
-  deleteReason     String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @default(now())
+  departamentoId   String?
+  equipeId         String?
+  reabertoEm       DateTime?
+  reabertoMotivo   String?
+  restauradoEm     DateTime?
+  statusPrazo      String?
+  tipoTarefa       String             @default("outro")
+  orderId          String?
   activities       KanbanActivity[]
   attachments      KanbanAttachment[]
+  stageTimes       KanbanStageTime[]
   subtasks         KanbanSubtask[]
+  arquivadoPor     User?              @relation("KanbanTaskArquivador", fields: [arquivadoPorId], references: [id])
   board            KanbanBoard        @relation(fields: [boardId], references: [id], onDelete: Cascade)
   client           Client?            @relation(fields: [clientId], references: [id])
   column           KanbanColumn       @relation(fields: [columnId], references: [id], onDelete: Cascade)
   departamento     Departamento?      @relation(fields: [departamentoId], references: [id])
   equipe           Team?              @relation(fields: [equipeId], references: [id])
-  ticket           Ticket?            @relation("KanbanTicketTasks", fields: [ticketId], references: [id])
-  order            ServiceOrder?      @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  order            ServiceOrder?      @relation(fields: [orderId], references: [id])
   responsavel      User?              @relation("KanbanTaskResponsavel", fields: [responsavelId], references: [id])
-  arquivadoPor     User?              @relation("KanbanTaskArquivador", fields: [arquivadoPorId], references: [id])
+  ticket           Ticket?            @relation("KanbanTicketTasks", fields: [ticketId], references: [id])
   tags             KanbanTaskTag[]
-  timeEntries      TimeEntry[]
-  stageTimes       KanbanStageTime[]
   alerts           TaskAlert[]
+  timeEntries      TimeEntry[]
 
   @@index([boardId])
   @@index([columnId])
@@ -826,13 +949,13 @@ model KanbanActivity {
   deColuna       String?
   paraColuna     String?
   dados          String?
-  valorAnterior  String?
-  valorNovo      String?
-  origem         String? // manual | sistema | whatsapp | ia | mobile
-  motivo         String?
-  metadata       String?
   visivelCliente Boolean    @default(false)
   createdAt      DateTime   @default(now())
+  metadata       String?
+  motivo         String?
+  origem         String?
+  valorAnterior  String?
+  valorNovo      String?
   task           KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
   usuario        User?      @relation("KanbanActivityUsuario", fields: [usuarioId], references: [id])
 
@@ -872,12 +995,16 @@ model KanbanTemplate {
 }
 
 model AlertRecipient {
-  id        String   @id @default(uuid())
-  nome      String
-  whatsapp  String
-  cargo     String?
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id             String        @id @default(uuid())
+  nome           String
+  whatsapp       String
+  cargo          String?
+  ativo          Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
 }
 
 model AlertHistory {
@@ -892,23 +1019,28 @@ model AlertHistory {
 }
 
 model Robot {
-  id           String      @id @default(uuid())
-  slug         String      @unique
-  nome         String
-  descricao    String
-  icone        String      @default("bot")
-  ativo        Boolean     @default(true)
-  inteligente  Boolean     @default(false)
-  ordem        Int         @default(0)
-  horarioAtivo Boolean     @default(false)
-  diasSemana   String      @default("1,2,3,4,5")
-  horaInicio   String      @default("08:00")
-  horaFim      String      @default("18:00")
-  fusoHorario  String      @default("America/Fortaleza")
-  config       String      @default("{}")
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @default(now())
-  rules        RobotRule[]
+  id             String        @id @default(uuid())
+  slug           String
+  nome           String
+  descricao      String
+  icone          String        @default("bot")
+  ativo          Boolean       @default(true)
+  inteligente    Boolean       @default(false)
+  ordem          Int           @default(0)
+  horarioAtivo   Boolean       @default(false)
+  diasSemana     String        @default("1,2,3,4,5")
+  horaInicio     String        @default("08:00")
+  horaFim        String        @default("18:00")
+  fusoHorario    String        @default("America/Fortaleza")
+  config         String        @default("{}")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  rules          RobotRule[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
 }
 
 model RobotRule {
@@ -930,32 +1062,35 @@ model RobotRule {
 }
 
 model AuditLog {
-  id            String   @id @default(uuid())
-  usuarioId     String?
-  acao          String
-  entidade      String
-  entidadeId    String?
-  detalhes      String?
-  modulo        String?
-  valorAnterior String?
-  novoValor     String?
-  userAgent     String?
-  origem        String?
-  resultado     String?
-  metadata      String?
-  ip            String?
-  severity      String?  @default("baixa")
-  clienteId     String?
-  success       Boolean?
-  errorMessage  String?
-  requestId     String?
-  fonte         String?  @default("manual")
+  id                    String        @id @default(uuid())
+  usuarioId             String?
+  acao                  String
+  entidade              String
+  entidadeId            String?
+  detalhes              String?
+  ip                    String?
+  createdAt             DateTime      @default(now())
+  metadata              String?
+  modulo                String?
+  novoValor             String?
+  origem                String?
+  resultado             String?
+  userAgent             String?
+  valorAnterior         String?
+  clienteId             String?
   entidadeRelacionada   String?
   entidadeRelacionadaId String?
-  createdAt     DateTime @default(now())
-  usuario       User?    @relation(fields: [usuarioId], references: [id])
-  cliente       Client?  @relation(fields: [clienteId], references: [id])
+  errorMessage          String?
+  fonte                 String?       @default("manual")
+  requestId             String?
+  severity              String?       @default("baixa")
+  success               Boolean?
+  organizationId        String?
+  cliente               Client?       @relation(fields: [clienteId], references: [id])
+  organization          Organization? @relation(fields: [organizationId], references: [id])
+  usuario               User?         @relation(fields: [usuarioId], references: [id])
 
+  @@index([organizationId])
   @@index([usuarioId])
   @@index([entidade])
   @@index([createdAt])
@@ -969,24 +1104,27 @@ model AuditLog {
 }
 
 model AuditAlert {
-  id            String   @id @default(uuid())
-  tipo          String
-  titulo        String
-  descricao     String
-  severidade    String   @default("media")
-  modulo        String?
-  usuarioId     String?
-  clienteId     String?
-  entidade      String?
-  entidadeId    String?
-  metadata      String?
-  status        String   @default("pendente")
-  analisadoPor  String?
-  analisadoEm   DateTime?
-  justificativa String?
-  arquivadoEm   DateTime?
-  createdAt     DateTime @default(now())
+  id             String        @id @default(uuid())
+  tipo           String
+  titulo         String
+  descricao      String
+  severidade     String        @default("media")
+  modulo         String?
+  usuarioId      String?
+  clienteId      String?
+  entidade       String?
+  entidadeId     String?
+  metadata       String?
+  status         String        @default("pendente")
+  analisadoPor   String?
+  analisadoEm    DateTime?
+  justificativa  String?
+  arquivadoEm    DateTime?
+  createdAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
+  @@index([organizationId])
   @@index([tipo])
   @@index([severidade])
   @@index([status])
@@ -1013,17 +1151,17 @@ model WhatsAppSession {
 }
 
 model HelpdeskConfig {
-  id                          String   @id @default(uuid())
-  slug                        String   @unique
+  id                          String        @id @default(uuid())
+  slug                        String
   nome                        String
   descricao                   String?
-  cor                         String   @default("#3b82f6")
-  icone                       String   @default("inbox")
-  ordem                       Int      @default(0)
-  etapaInicial                Boolean  @default(false)
+  cor                         String        @default("#3b82f6")
+  icone                       String        @default("inbox")
+  ordem                       Int           @default(0)
+  etapaInicial                Boolean       @default(false)
   autoMessage                 String?
-  enviarAuto                  Boolean  @default(false)
-  notificarEquipe             Boolean  @default(false)
+  enviarAuto                  Boolean       @default(false)
+  notificarEquipe             Boolean       @default(false)
   tempoInatividadeMin         Int?
   mensagemTriagem             String?
   mensagemEmAtendimento       String?
@@ -1042,45 +1180,56 @@ model HelpdeskConfig {
   horarioSabadoInicio         String?
   horarioSabadoFim            String?
   diasAtendimento             String?
-  ordenacaoFila               String   @default("updatedAt_desc")
-  ativo                       Boolean  @default(true)
-  createdAt                   DateTime @default(now())
-  updatedAt                   DateTime @default(now())
-  autoAtendimentoAtivo        Boolean  @default(false)
-  maxInteracoesIa             Int      @default(5)
+  ordenacaoFila               String        @default("updatedAt_desc")
+  ativo                       Boolean       @default(true)
+  createdAt                   DateTime      @default(now())
+  updatedAt                   DateTime      @default(now())
+  autoAtendimentoAtivo        Boolean       @default(false)
+  maxInteracoesIa             Int           @default(5)
   mensagemDescricaoProblema   String?
   mensagemEmpresaDetectada    String?
   mensagemEmpresaNaoDetectada String?
-  thresholdValidacoes         Int      @default(3)
+  thresholdValidacoes         Int           @default(3)
+  organizationId              String?
+  organization                Organization? @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
 }
 
 model Enquete {
-  id         String   @id @default(uuid())
-  nome       String
-  descricao  String?
-  tipo       String   @default("lista") // "lista" ou "enquete"
-  mensagem   String? // Mensagem de apresentação
-  opcoes     Json // Array de opções [{id, titulo, descricao}]
-  enviarComo String   @default("texto") // "lista" ou "texto"
-  ativo      Boolean  @default(true)
-  usoCount   Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now())
+  id             String        @id @default(uuid())
+  nome           String
+  descricao      String?
+  tipo           String        @default("lista")
+  mensagem       String?
+  opcoes         Json
+  enviarComo     String        @default("texto")
+  ativo          Boolean       @default(true)
+  usoCount       Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
+  @@index([organizationId])
   @@index([ativo])
 }
 
 model HelpdeskRule {
-  id            String   @id @default(uuid())
-  nome          String
-  categoria     String
-  prioridade    Int      @default(100)
-  palavrasChave String
-  ativo         Boolean  @default(true)
-  ordem         Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now())
+  id             String        @id @default(uuid())
+  nome           String
+  categoria      String
+  prioridade     Int           @default(100)
+  palavrasChave  String
+  ativo          Boolean       @default(true)
+  ordem          Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
+  @@index([organizationId])
   @@index([categoria])
   @@index([ativo])
 }
@@ -1118,7 +1267,7 @@ model TicketHistory {
 /// Fila de atendimento (escalonamento multinivel: N1, N2, N3)
 model Fila {
   id              String        @id @default(uuid())
-  slug            String        @unique
+  slug            String
   nome            String
   descricao       String?
   nivel           String        @default("N1")
@@ -1132,18 +1281,23 @@ model Fila {
   proximaFilaId   String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @default(now())
+  organizationId  String?
+  assuntos        Assunto[]     @relation("AssuntoFila")
   departamento    Departamento? @relation(fields: [departamentoId], references: [id])
   nivelSuporte    NivelSuporte? @relation(fields: [nivelSuporteId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
   proximaFila     Fila?         @relation("EscalacaoFila", fields: [proximaFilaId], references: [id])
   filasAnteriores Fila[]        @relation("EscalacaoFila")
   tickets         Ticket[]
-  assuntos        Assunto[]     @relation("AssuntoFila")
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
 }
 
 /// Departamento / Setor da empresa
 model Departamento {
   id                  String                 @id @default(uuid())
-  slug                String                 @unique
+  slug                String
   nome                String
   descricao           String?
   cor                 String                 @default("#3b82f6")
@@ -1153,34 +1307,44 @@ model Departamento {
   ativo               Boolean                @default(true)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @default(now())
+  organizationId      String?
+  assuntos            Assunto[]              @relation("AssuntoDepartamento")
+  categorias          Categoria[]            @relation("CategoriaDepartamento")
   channels            Channel[]
+  organization        Organization?          @relation(fields: [organizationId], references: [id])
   filas               Fila[]
+  kanbanTasks         KanbanTask[]
+  teams               Team[]
   tickets             Ticket[]
-  usuarios            UserDepartamento[]
-  whatsappConnections WhatsAppConnection[]
   departmentTimes     TicketDepartmentTime[]
   timeEntries         TimeEntry[]
-  teams               Team[]
-  kanbanTasks         KanbanTask[]
-  categorias          Categoria[]            @relation("CategoriaDepartamento")
-  assuntos            Assunto[]              @relation("AssuntoDepartamento")
+  usuarios            UserDepartamento[]
+  whatsappConnections WhatsAppConnection[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
 }
 
 /// Nivel de suporte (customizavel: N1, N2, N3, N4, Supervisor, etc.)
 model NivelSuporte {
-  id         String   @id @default(uuid())
-  slug       String   @unique
-  nome       String
-  descricao  String?
-  cor        String   @default("#3b82f6")
-  icone      String   @default("layers")
-  ordem      Int      @default(0)
-  slaMinutos Int?
-  ativo      Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now())
-  filas      Fila[]
-  tickets    Ticket[]
+  id             String        @id @default(uuid())
+  slug           String
+  nome           String
+  descricao      String?
+  cor            String        @default("#3b82f6")
+  icone          String        @default("layers")
+  ordem          Int           @default(0)
+  slaMinutos     Int?
+  ativo          Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
+  organizationId String?
+  filas          Fila[]
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  tickets        Ticket[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
 }
 
 /// Conexao WhatsApp (multi-numero)
@@ -1188,14 +1352,19 @@ model WhatsAppConnection {
   id             String        @id @default(uuid())
   nome           String
   numero         String
-  slug           String        @unique
+  slug           String
   departamentoId String?
   ativo          Boolean       @default(true)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @default(now())
   provider       String        @default("baileys")
+  organizationId String?
   tickets        Ticket[]
   departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
 }
 
 /// Canal de atendimento unificado (WhatsApp, Email, Instagram, Facebook, Telegram, etc.)
@@ -1203,7 +1372,7 @@ model Channel {
   id              String           @id @default(uuid())
   nome            String
   tipo            String
-  slug            String           @unique
+  slug            String
   provider        String?
   config          String?
   departamentoId  String?
@@ -1214,10 +1383,15 @@ model Channel {
   lastSyncAt      DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+  organizationId  String?
   departamento    Departamento?    @relation(fields: [departamentoId], references: [id])
+  organization    Organization?    @relation(fields: [organizationId], references: [id])
   channelMessages ChannelMessage[]
   riskLogs        ChannelRiskLog[]
   tickets         Ticket[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
 }
 
 /// Mensagens unificadas de qualquer canal
@@ -1264,32 +1438,37 @@ model ChannelRiskLog {
 /// Campos sensiveis (apiKey/token) sao criptografados em repouso (AES-256-GCM)
 /// e nunca retornados por completo nas respostas da API.
 model ExternalIntegration {
-  id              String    @id @default(uuid())
-  nome            String
-  slug            String    @unique
-  tipo            String    @default("crm")
-  baseUrl         String
-  authType        String    @default("api_key") // api_key | bearer_token | oauth2
-  apiKeyEnc       String?
-  tokenEnc        String?
-  headersJson     String    @default("{}")
-  timeoutMs       Int       @default(15000)
-  ativo           Boolean   @default(true)
-  webhookPath     String?
-  webhookSecret   String?
-  lastTestAt      DateTime?
-  lastTestStatus  String?
-  lastTestError   String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  logs            ExternalIntegrationLog[]
+  id             String                   @id @default(uuid())
+  nome           String
+  slug           String
+  tipo           String                   @default("crm")
+  baseUrl        String
+  authType       String                   @default("api_key")
+  apiKeyEnc      String?
+  tokenEnc       String?
+  headersJson    String                   @default("{}")
+  timeoutMs      Int                      @default(15000)
+  ativo          Boolean                  @default(true)
+  webhookPath    String?
+  webhookSecret  String?
+  lastTestAt     DateTime?
+  lastTestStatus String?
+  lastTestError  String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  organizationId String?
+  organization   Organization?            @relation(fields: [organizationId], references: [id])
+  logs           ExternalIntegrationLog[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
 }
 
 /// Log de auditoria das chamadas de integracao (inbound/outbound)
 model ExternalIntegrationLog {
-  id            String    @id @default(uuid())
+  id            String               @id @default(uuid())
   integrationId String?
-  direction     String    @default("outbound") // outbound | inbound
+  direction     String               @default("outbound")
   endpoint      String?
   method        String?
   status        Int?
@@ -1297,7 +1476,7 @@ model ExternalIntegrationLog {
   responseBody  String?
   error         String?
   durationMs    Int?
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime             @default(now())
   integration   ExternalIntegration? @relation(fields: [integrationId], references: [id])
 
   @@index([integrationId])
@@ -1306,40 +1485,50 @@ model ExternalIntegrationLog {
 
 /// Configuracao de SLA por prioridade
 model SLAConfig {
-  id                         String   @id @default(uuid())
-  prioridade                 String   @unique
-  slaMinutosPrimeiraResposta Int      @default(60)
-  slaMinutosResolucao        Int      @default(240)
-  alerta75Porcento           Boolean  @default(true)
-  alerta90Porcento           Boolean  @default(true)
-  ativo                      Boolean  @default(true)
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @default(now())
+  id                         String        @id @default(uuid())
+  prioridade                 String
+  slaMinutosPrimeiraResposta Int           @default(60)
+  slaMinutosResolucao        Int           @default(240)
+  alerta75Porcento           Boolean       @default(true)
+  alerta90Porcento           Boolean       @default(true)
+  ativo                      Boolean       @default(true)
+  createdAt                  DateTime      @default(now())
+  updatedAt                  DateTime      @default(now())
+  organizationId             String?
+  organization               Organization? @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, prioridade])
+  @@index([organizationId])
 }
 
 /// Categoria de ticket (formalizacao das categorias existentes)
 model Categoria {
   id             String        @id @default(uuid())
-  slug           String        @unique
+  slug           String
   nome           String
   descricao      String?
   cor            String        @default("#3b82f6")
   icone          String        @default("tag")
   ordem          Int           @default(0)
   ativo          Boolean       @default(true)
-  departamentoId String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @default(now())
+  departamentoId String?
+  organizationId String?
+  assuntos       Assunto[]
   departamento   Departamento? @relation("CategoriaDepartamento", fields: [departamentoId], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   articles       KBArticle[]
   tickets        Ticket[]
-  assuntos       Assunto[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
 }
 
 /// Assunto de ticket (hierarquia Categoria -> Assunto)
 model Assunto {
   id               String        @id @default(uuid())
-  slug             String        @unique
+  slug             String
   nome             String
   descricao        String?
   categoriaId      String
@@ -1353,11 +1542,15 @@ model Assunto {
   ativo            Boolean       @default(true)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @default(now())
+  organizationId   String?
   categoria        Categoria     @relation(fields: [categoriaId], references: [id])
   departamento     Departamento? @relation("AssuntoDepartamento", fields: [departamentoId], references: [id])
   fila             Fila?         @relation("AssuntoFila", fields: [idFila], references: [id])
+  organization     Organization? @relation(fields: [organizationId], references: [id])
   tickets          Ticket[]
 
+  @@unique([organizationId, slug])
+  @@index([organizationId])
   @@index([categoriaId])
   @@index([departamentoId])
   @@index([idFila])
@@ -1382,29 +1575,33 @@ model Ativo {
 
 /// Artigo da Base de Conhecimento
 model KBArticle {
-  id            String             @id @default(uuid())
-  slug          String             @unique
-  titulo        String
-  conteudo      String
-  resumo        String?
-  categoriaId   String?
-  tags          String             @default("")
-  autorId       String?
-  passos        String?
-  imagens       String?
-  versaoAtual   Int                @default(1)
-  visualizacoes Int                @default(0)
-  util          Int                @default(0)
-  inutil        Int                @default(0)
-  publicado     Boolean            @default(false)
-  ordem         Int                @default(0)
-  ativo         Boolean            @default(true)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @default(now())
-  autor         User?              @relation("KBArticleAutor", fields: [autorId], references: [id])
-  categoria     Categoria?         @relation(fields: [categoriaId], references: [id])
-  versoes       KBArticleVersion[]
+  id             String             @id @default(uuid())
+  slug           String
+  titulo         String
+  conteudo       String
+  resumo         String?
+  categoriaId    String?
+  tags           String             @default("")
+  autorId        String?
+  passos         String?
+  imagens        String?
+  versaoAtual    Int                @default(1)
+  visualizacoes  Int                @default(0)
+  util           Int                @default(0)
+  inutil         Int                @default(0)
+  publicado      Boolean            @default(false)
+  ordem          Int                @default(0)
+  ativo          Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @default(now())
+  organizationId String?
+  autor          User?              @relation("KBArticleAutor", fields: [autorId], references: [id])
+  categoria      Categoria?         @relation(fields: [categoriaId], references: [id])
+  organization   Organization?      @relation(fields: [organizationId], references: [id])
+  versoes        KBArticleVersion[]
 
+  @@unique([organizationId, slug])
+  @@index([organizationId])
   @@index([categoriaId])
   @@index([autorId])
   @@index([publicado])
@@ -1446,17 +1643,20 @@ model CSATResposta {
 
 /// Notificacao interna para usuario
 model Notificacao {
-  id             String   @id @default(uuid())
+  id             String        @id @default(uuid())
   tipo           String
   mensagem       String
   destinatarioId String
   ticketId       String?
   dados          String?
-  lida           Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  destinatario   User     @relation(fields: [destinatarioId], references: [id])
-  ticket         Ticket?  @relation(fields: [ticketId], references: [id])
+  lida           Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  organizationId String?
+  destinatario   User          @relation(fields: [destinatarioId], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  ticket         Ticket?       @relation(fields: [ticketId], references: [id])
 
+  @@index([organizationId])
   @@index([destinatarioId])
   @@index([ticketId])
   @@index([lida])
@@ -1464,42 +1664,50 @@ model Notificacao {
 
 /// Fluxo de autorização formal para ações que exigem aprovação
 model Aprovacao {
-  id                String    @id @default(uuid())
+  id                String        @id @default(uuid())
   ticketId          String
   solicitadoPorId   String
   aprovadoPorId     String?
-  tipo              String    @default("geral")
+  tipo              String        @default("geral")
   motivo            String
   observacao        String?
-  status            String    @default("pendente")
+  status            String        @default("pendente")
   valorAprovado     Float?
-  canal             String    @default("interno")
-  telefoneAprovador String?
-  token             String?   @unique
-  expiraEm          DateTime?
-  dataSolicitacao   DateTime  @default(now())
+  dataSolicitacao   DateTime      @default(now())
   dataDecisao       DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @default(now())
-  aprovadoPor       User?     @relation("AprovacaoAprovador", fields: [aprovadoPorId], references: [id])
-  solicitadoPor     User      @relation("AprovacaoSolicitante", fields: [solicitadoPorId], references: [id])
-  ticket            Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @default(now())
+  canal             String        @default("interno")
+  expiraEm          DateTime?
+  telefoneAprovador String?
+  token             String?       @unique
+  organizationId    String?
+  aprovadoPor       User?         @relation("AprovacaoAprovador", fields: [aprovadoPorId], references: [id])
+  organization      Organization? @relation(fields: [organizationId], references: [id])
+  solicitadoPor     User          @relation("AprovacaoSolicitante", fields: [solicitadoPorId], references: [id])
+  ticket            Ticket        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 /// Regra de automacao WHEN/IF/THEN
 model AutomationRule {
-  id            String   @id @default(uuid())
-  nome          String
-  descricao     String?
-  trigger       String
-  condicoes     String   @default("[]")
-  acoes         String   @default("[]")
-  logicOperator String   @default("all")
-  ativo         Boolean  @default(true)
-  ordem         Int      @default(0)
-  autorId       String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now())
+  id             String        @id @default(uuid())
+  nome           String
+  descricao      String?
+  trigger        String
+  condicoes      String        @default("[]")
+  acoes          String        @default("[]")
+  logicOperator  String        @default("all")
+  ativo          Boolean       @default(true)
+  ordem          Int           @default(0)
+  autorId        String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
 }
 
 /// Permissao por role (override da matriz padrao)
@@ -1520,15 +1728,18 @@ model RolePermission {
 /// Feriado nacional/estadual/municipal para bloqueio do horario comercial
 /// data: se recorrente=true, considera apenas mes/dia; senao considera data completa
 model Feriado {
-  id         String   @id @default(uuid())
-  data       DateTime
-  nome       String
-  tipo       String   @default("nacional")
-  recorrente Boolean  @default(false)
-  ativo      Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now())
+  id             String        @id @default(uuid())
+  data           DateTime
+  nome           String
+  tipo           String        @default("nacional")
+  recorrente     Boolean       @default(false)
+  ativo          Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
+  @@index([organizationId])
   @@index([data])
 }
 
@@ -1859,9 +2070,6 @@ model TimeEntry {
   ticketId        String?
   orderId         String?
   projectId       String?
-  clienteId       String?
-  tarefaId        String?
-  setorId         String?
   tipo            String           @default("suporte")
   descricao       String?
   dataInicio      DateTime         @default(now())
@@ -1870,16 +2078,19 @@ model TimeEntry {
   billable        Boolean          @default(true)
   faturado        Boolean          @default(false)
   tags            String[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  clienteId       String?
+  setorId         String?
+  tarefaId        String?
   pausado         Boolean          @default(false)
   pausadoEm       DateTime?
   pausadoTotalMin Int              @default(0)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  order           ServiceOrder?    @relation(fields: [orderId], references: [id])
-  ticket          Ticket?          @relation(fields: [ticketId], references: [id])
   cliente         Client?          @relation(fields: [clienteId], references: [id])
-  tarefa          KanbanTask?      @relation(fields: [tarefaId], references: [id])
+  order           ServiceOrder?    @relation(fields: [orderId], references: [id])
   setor           Departamento?    @relation(fields: [setorId], references: [id])
+  tarefa          KanbanTask?      @relation(fields: [tarefaId], references: [id])
+  ticket          Ticket?          @relation(fields: [ticketId], references: [id])
   usuario         User             @relation(fields: [usuarioId], references: [id])
   blocos          TimeEntryBlock[]
 
@@ -1898,7 +2109,7 @@ model TimeEntry {
 model TimeEntryBlock {
   id          String    @id @default(uuid())
   timeEntryId String
-  tipo        String // inicio | pausa | retomada | fim
+  tipo        String
   data        DateTime  @default(now())
   usuarioId   String?
   observacao  String?
@@ -1922,8 +2133,8 @@ model KanbanStageTime {
   duracaoMin  Int?
   usuarioId   String?
   createdAt   DateTime      @default(now())
+  column      KanbanColumn? @relation(fields: [columnId], references: [id])
   task        KanbanTask    @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  column      KanbanColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
   usuario     User?         @relation(fields: [usuarioId], references: [id])
 
   @@index([taskId])
@@ -1934,18 +2145,21 @@ model KanbanStageTime {
 /// Equipe de trabalho (agrupamento opcional alem do departamento).
 model Team {
   id             String        @id @default(uuid())
-  nome           String        @unique
+  nome           String
   descricao      String?
   departamentoId String?
   liderId        String?
   ativo          Boolean       @default(true)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @default(now())
+  organizationId String?
+  kanbanTasks    KanbanTask[]
   departamento   Departamento? @relation(fields: [departamentoId], references: [id])
   lider          User?         @relation("TeamLider", fields: [liderId], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   membros        TeamMember[]
-  kanbanTasks    KanbanTask[]
 
+  @@index([organizationId])
   @@index([departamentoId])
   @@index([ativo])
 }
@@ -1966,7 +2180,7 @@ model TeamMember {
 model TaskAlert {
   id        String     @id @default(uuid())
   taskId    String
-  tipo      String // proxima_prazo | atrasada | sem_movimentacao | reaberta | excesso_tarefas | prazo_alterado | divergencia_prazo
+  tipo      String
   mensagem  String
   lida      Boolean    @default(false)
   createdAt DateTime   @default(now())
@@ -1988,8 +2202,8 @@ model TicketChecklist {
   responsavelId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @default(now())
-  ticket        Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   responsavel   User?    @relation(fields: [responsavelId], references: [id])
+  ticket        Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
   @@index([concluida])
@@ -1997,17 +2211,20 @@ model TicketChecklist {
 
 /// Template de checklist reutilizável (pode ser usado em tickets e kanban)
 model ChecklistTemplate {
-  id        String   @id @default(uuid())
-  nome      String
-  descricao String?
-  categoria String?  @default("geral")
-  items     String   @default("[]") // JSON array of { titulo: string, ordem: number }
-  publico   Boolean  @default(false)
-  criadorId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-  criador   User?    @relation(fields: [criadorId], references: [id])
+  id             String        @id @default(uuid())
+  nome           String
+  descricao      String?
+  categoria      String?       @default("geral")
+  items          String        @default("[]")
+  publico        Boolean       @default(false)
+  criadorId      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now())
+  organizationId String?
+  criador        User?         @relation(fields: [criadorId], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
+  @@index([organizationId])
   @@index([criadorId])
   @@index([categoria])
 }
@@ -2023,8 +2240,8 @@ model TicketDepartmentTime {
   duracaoMin     Int?
   kanbanTaskId   String?
   createdAt      DateTime     @default(now())
-  ticket         Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   departamento   Departamento @relation(fields: [departamentoId], references: [id])
+  ticket         Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   user           User?        @relation(fields: [userId], references: [id])
 
   @@index([ticketId])
@@ -2052,17 +2269,17 @@ model TicketAgentInteraction {
 /// A mensagem continua chegando no WhatsApp, mas NÃO inicia atendimento.
 model ContatoIgnorado {
   id             String    @id @default(uuid())
-  tipo           String    @default("contato") // contato | grupo
-  chave          String    @unique // telefone normalizado (contato) ou jid (grupo)
+  tipo           String    @default("contato")
+  chave          String    @unique
   nome           String
   motivo         String?
-  regra          String    @default("ignorar_helpdesk") // ignorar_helpdesk | bloquear
-  ignorado       Boolean   @default(true) // true = ignorado (regra ativa); false = reativado
+  regra          String    @default("ignorar_helpdesk")
+  ignorado       Boolean   @default(true)
   criadoPorId    String?
   reativadoPorId String?
   criadoEm       DateTime  @default(now())
   reativadoEm    DateTime?
-  historico      String? // JSON: [{data, usuario, acao, motivo}]
+  historico      String?
   criadoPor      User?     @relation("ContatoIgnoradoCriadoPor", fields: [criadoPorId], references: [id])
   reativadoPor   User?     @relation("ContatoIgnoradoReativadoPor", fields: [reativadoPorId], references: [id])
 

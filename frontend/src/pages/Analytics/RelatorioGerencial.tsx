@@ -8,6 +8,7 @@ import {
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, PieChart, Pie, Cell, Legend,
 } from 'recharts';
+import { AcronymText } from '../../components/AcronymText';
 
 interface Resumo {
   totalTickets: number;
@@ -258,7 +259,7 @@ export default function RelatorioGerencial() {
               </div>
               <div className="mt-3">
                 <div className="text-xl font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{c.valor}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>{c.label}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text={c.label} /></div>
               </div>
             </div>
           );
@@ -367,7 +368,7 @@ export default function RelatorioGerencial() {
                   <div className="text-sm font-semibold text-slate-700 dark:text-slate-200" style={{ fontFamily: 'Lexend, sans-serif' }}>
                     {a.csatMedio ? `${a.csatMedio}/5` : '—'}
                   </div>
-                  <div className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}>CSAT</div>
+                   <div className="text-xs text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text="CSAT" /></div>
                 </div>
               </div>
             ))}

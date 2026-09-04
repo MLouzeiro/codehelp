@@ -46,7 +46,7 @@ function dentroDoHorario(hours: BusinessHours): boolean {
 
 export async function robotPodeExecutar(slug: string): Promise<boolean> {
   try {
-    const robot = await prisma.robot.findUnique({ where: { slug } });
+    const robot = await prisma.robot.findFirst({ where: { slug } });
     if (!robot) return true;
     if (!robot.ativo) return false;
 
@@ -67,7 +67,7 @@ export async function robotPodeExecutar(slug: string): Promise<boolean> {
 
 async function getConfig(slug: string): Promise<Record<string, any>> {
   try {
-    const robot = await prisma.robot.findUnique({ where: { slug } });
+    const robot = await prisma.robot.findFirst({ where: { slug } });
     if (!robot) return {};
     return JSON.parse(robot.config || '{}');
   } catch {
@@ -155,7 +155,7 @@ export async function gerarSugestoesVendas(): Promise<{
 
 Sugestões: ${JSON.stringify(sugestoes.slice(0, 10))}`;
 
-      const text = await callClaude(prompt, 800);
+      const text = await callClaude(prompt, 800, 'vendas-sugestoes');
       try {
         const parsed = JSON.parse(text);
         return { sugestoes: parsed.slice(0, 10), generated: true };
@@ -205,7 +205,7 @@ export async function classificarTicketsPendentes(): Promise<{
 
 Assunto: ${ticket.assunto || 'Sem assunto'}
 Mensagem: ${texto.slice(0, 300)}`;
-        const result = await callClaude(prompt, 800);
+        const result = await callClaude(prompt, 800, 'classificador-tickets');
         const categoria = result.trim().toLowerCase();
         if (categorias.includes(categoria)) {
           await prisma.ticket.update({ where: { id: ticket.id }, data: { categoria } });

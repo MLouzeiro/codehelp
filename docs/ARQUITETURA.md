@@ -1,194 +1,94 @@
-# Arquitetura do Sistema — CodeHelp CRM/Helpdesk
+# Arquitetura do Sistema
 
 ## Visão Geral
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    USUÁRIO                              │
-│              (Navegador / Celular)                      │
-└─────────────────────┬───────────────────────────────────┘
-                      │ HTTPS
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│                 VERCEL (Grátis)                         │
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │           Frontend React (Estático)              │   │
-│  │  • React 18 + Vite + TypeScript + Tailwind       │   │
-│  │  • Build: vite build → dist/                     │   │
-│  │  • Rotas: React Router v6                        │   │
-│  │  • Estado: React Query + Zustand                 │   │
-│  │  • Ícones: Lucide React                          │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │           API Serverless (Node.js)               │   │
-│  │  • api/index.ts → Express handler                │   │
-│  │  • Prisma client connection                      │   │
-│  │  • Roteamento para Backend externo               │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────┬───────────────────────────────────┘
-                      │ /api/*
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│               FLY.IO (Grátis)                           │
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │           Backend Express (Docker)                │   │
-│  │  • Node.js + Express + TypeScript                │   │
-│  │  • 24 módulos                                    │   │
-│  │  • JWT Auth (access + refresh)                   │   │
-│  │  • RBAC (admin/gerente/supervisor/analista)      │   │
-│  │  • Webhook WhatsApp (Cloud API)                  │   │
-│  │  • 7 schedulers (cron jobs)                      │   │
-│  │  • File uploads (multer)                         │   │
-│  │  • PDF generation (pdfkit)                       │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │           WhatsApp (Baileys)                      │   │
-│  │  • WebSocket persistente                         │   │
-│  │  • Conexão com WhatsApp                          │   │
-│  │  • Bot de atendimento                            │   │
-│  │  • Triagem automática                            │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │           Storage (Volume persistente)            │   │
-│  │  • /storage/uploads/ — Arquivos enviados         │   │
-│  │  • /storage/pdfs/ — PDFs gerados                 │   │
-│  │  • /whatsapp-session/ — Sessões Baileys          │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────┬───────────────────────────────────┘
-                      │ Prisma
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│               NEON PostgreSQL (Grátis)                   │
-│                                                         │
-│  • 500MB de armazenamento                              │
-│  • Backups automáticos diários                         │
-│  • Connection pooling (PgBouncer)                       │
-│  • Branching para dev/testes                           │
-└─────────────────────────────────────────────────────────┘
+Usuário (Browser/Mobile)
+    ↓
+Frontend (React + Vite)
+    ↓ HTTP/HTTPS
+Backend (Express + TypeScript)
+    ↓ Prisma ORM
+Banco de Dados (PostgreSQL)
+    ↓
+Serviços Externos (WhatsApp, IA, Email)
 ```
 
-## Módulos do Sistema
+## Componentes
 
-### Core
-- **Auth** — JWT (access 15min + refresh 7d) + bcryptjs
-- **Users** — Gestão de usuários
-- **Permissions** — RBAC avançado
-- **Teams** — Equipes
+### Frontend (React + Vite)
 
-### Helpdesk
-- **Helpdesk** — Kanban de tickets (6 etapas)
-- **SLA** — Monitoramento e auto-escalation
-- **CSAT** — Pesquisa de satisfação
-- **Categories** — Categorias e assuntos
-- **Indicators** — TMR/TME/PR/SLA
+- **Porta**: 5173 (dev) / Estático (produção)
+- **Stack**: React 18, TypeScript, Tailwind CSS, Recharts, ReactFlow
+- **Estado**: React Query + hooks locais
+- **Rotas**: React Router v6 (file-based no mobile)
+- **Build**: Vite 5.4
 
-### CRM
-- **CRM** — Gestão de clientes
-- **Billing** — Cobranças
+### Backend (Express + TypeScript)
 
-### Comunicação
-- **WhatsApp** — Baileys + Evolution + Cloud API
-- **Notifications** — Notificações internas
+- **Porta**: 3010
+- **Stack**: Express 4.21, TypeScript 5.6, Prisma 5.22
+- **Auth**: JWT (15min access + 7d refresh) + bcryptjs
+- **Segurança**: Helmet, CORS, Rate Limiting, CSRF
+- **Logs**: Pino
+- **Testes**: Vitest
 
-### Inteligência
-- **AI** — Triagem, validação, auditoria profissional
-- **Analytics** — Dashboard, relatórios, indicadores
+### Banco de Dados
 
-### Operações
-- **Kanban** — Tarefas internas
-- **Orders** — Ordens de serviço
-- **TimeTracking** — Controle de tempo
+- **Local**: PostgreSQL 15 (Docker `evolution-db`, porta 5434)
+- **Web**: PostgreSQL 18 (Neon, serverless)
+- **ORM**: Prisma (schema-first, `db push`)
+- **Tabelas**: 89
+- **Registros**: ~18.400
 
-### Auditoria
-- **Audit** — Log imutável de ações
-- **AuditSecurity** — Segurança e anomalias
-- **AuditAlerts** — Sistema de alertas
+### WhatsApp (3 providers)
 
-## Fluxo de Autenticação
+| Provider | Tipo | Status |
+|----------|------|--------|
+| Baileys | WebSocket (primário) | ✅ Ativo |
+| Evolution API | Self-hosted Docker | ✅ Ativo |
+| Cloud API | Meta Official | ⚙️ Configurável |
+| WhatsApp Web.js | Puppeteer (legado) | ❌ Desativado |
 
-```
-Login
-  ↓
-Backend valida email/senha
-  ↓
-Gera access token (15min) + refresh token (7d)
-  ↓
-Frontend salva em cookies
-  ↓
-Cada requisição envia access token no header
-  ↓
-Se 401 → Backend gera novos tokens usando refresh token
-  ↓
-Se refresh falhar → Redirect para login
-```
+### IA
 
-## Fluxo do WhatsApp
+- **Provedor**: Anthropic Claude (opcional)
+- **Fallback**: Regex local determinístico
+- **Uso**: Triagem, auto-categorização, auditoria
 
-```
-Cliente envia mensagem
-  ↓
-Baileys recebe (WebSocket)
-  ↓
-Handler processa (verifica duplicatas, filtros)
-  ↓
-Verifica se é bot/fluxo ativo
-  ↓
-Se nouveau → Cria ticket + triagem
-  ↓
-Se continuação → Processa resposta
-  ↓
-Resposta enviada ao cliente
-```
+### Mobile (React Native + Expo)
 
-## Fluxo de Auditoria
+- **SDK**: Expo 51
+- **Rotas**: Expo Router (file-based)
+- **Estado**: Zustand
+- **Offline**: AsyncStorage + sync
 
-```
-Ação do usuário
-  ↓
-Controller chama logAudit()
-  ↓
-Grava no AuditLog (imutável)
-  ↓
-Se ação crítica → Gera AuditAlert
-  ↓
-Dashboard mostra indicadores
-```
+## Módulos
+
+| Módulo | Descrição |
+|--------|-----------|
+| Auth | Login, JWT, RBAC, sessão |
+| Helpdesk | Tickets, kanban, SLA, CSAT |
+| CRM | Clientes, oportunidades, pipeline |
+| Orders | Ordens de serviço, assinatura digital |
+| Kanban | Tarefas internas, boards, checklist |
+| WhatsApp | 3 providers, bot, triagem |
+| IA | Triage, auto-categorize, auditoria |
+| Analytics | Dashboards, métricas, relatórios |
+| Billing | Cobranças, pendências |
+| Audit | Logs, alertas, segurança |
+| KB | Base de conhecimento |
+| Automations | Regras WHEN/IF/THEN |
+| Teams | Equipes, membros |
+| Time Tracking | Tempo por ticket |
 
 ## Segurança
 
-- **Auth**: JWT com refresh automático
-- **RBAC**: 4 níveis (admin, gerente, supervisor, analista)
-- **Rate limiting**: Express rate limit
-- **Helmet**: Headers de segurança
-- **CORS**: Configurável por origem
-- **Audit**: Log imutável de todas as ações
-- **Encryption**: AES-256-GCM para dados sensíveis
-
-## Variáveis de Ambiente
-
-| Variável | Obrigatória | Descrição |
-|----------|-------------|-----------|
-| `DATABASE_URL` | Sim | PostgreSQL connection string |
-| `JWT_SECRET` | Sim | Chave JWT access token |
-| `JWT_REFRESH_SECRET` | Sim | Chave JWT refresh token |
-| `APP_URL` | Sim | URL do frontend |
-| `API_URL` | Sim | URL do backend |
-| `CORS_ORIGINS` | Sim | Origens permitidas |
-| `ANTHROPIC_API_KEY` | Não | Para IA |
-| `WHATSAPP_CLOUD_*` | Não | Para WhatsApp Cloud API |
-| `EVOLUTION_API_*` | Não | Para Evolution API |
-
-## Custos Mensais
-
-| Serviço | Plano | Custo |
-|---------|-------|-------|
-| Vercel | Hobby | R$ 0 |
-| Fly.io | Free | R$ 0 |
-| Neon | Free | R$ 0 |
-| GitHub | Free | R$ 0 |
-| **Total** | | **R$ 0** |
+- JWT com session token binding
+- RBAC com hierarquia (solicitante < agente < supervisor < admin)
+- Rate limiting em endpoints sensíveis
+- CSRF protection
+- Helmet headers
+- Validação Zod em todos os inputs
+- Soft delete (campo `active`)
+- Auditoria imutável (AuditLog)

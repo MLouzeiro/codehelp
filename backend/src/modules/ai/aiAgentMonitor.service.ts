@@ -15,6 +15,9 @@ export interface AvaliacaoMensagem {
   alertas: string[];
   pontosFortes: string[];
   pontosMelhoria: string[];
+  treinamentoNecessario: boolean;
+  treinamentoCategoria: string | null;
+  treinamentoMotivo: string | null;
 }
 
 export interface MetricasAgente {
@@ -143,10 +146,20 @@ Retorne APENAS um JSON valido (sem markdown, sem code block) com esta estrutura:
   "notaGeral": <0-10 media das anteriores>,
   "classificacao": "<excelente|bom|neutro|atencao|critico>",
   "sugestaoResposta": "<se notaGeral < 7, sugira uma versão melhorada da mensagem; senão null>",
-  "alertas": [<array de strings com problemas encontrados, ex: ["linguagem muito informal", "faltou saudação"]>],
+  "alertas": [<array de strings com problemas encontrados>],
   "pontosFortes": [<array de strings com pontos positivos>],
-  "pontosMelhoria": [<array de strings com sugestões de melhoria>]
+  "pontosMelhoria": [<array de strings com sugestões de melhoria>],
+  "treinamentoNecessario": <true se notaGeral < 6 ou se há problemas graves em qualquer dimensão>,
+  "treinamentoCategoria": "<Conhecimento Técnico|Processo/Procedimento|Comunicação|Comportamento/Profissionalismo|Uso do Sistema|null>",
+  "treinamentoMotivo": "<justificativa concisa do porquê o treinamento é necessário, citando evidências da mensagem; null se treinamentoNecessario=false>"
 }
+
+Categorias de treinamento:
+- Conhecimento Técnico: Falta de conhecimento sobre o produto/serviço, respostas tecnicamente incorretas
+- Processo/Procedimento: Não seguiu o fluxo correto, pulou etapas, documentação incorreta
+- Comunicação: Tom inapropiado, falta de empatia, mensagem confusa, ausência de saudação/despedida
+- Comportamento/Profissionalismo: Grosseria, impaciência, descaso com o cliente
+- Uso do Sistema: Não soube usar ferramentas, erros de digitação em dados, cadastro incorreto
 
 Classificações:
 - excelente (8-10): Atendimento exemplar
@@ -215,7 +228,7 @@ export async function avaliarMensagemAgente(
 
     if (hasClaude()) {
       const prompt = buildAvaliacaoPrompt(conteudoMensagem, contextoConversa, nomeContato);
-      const response = await callClaude(prompt, 1200);
+      const response = await callClaude(prompt, 1200, 'avaliacao-agente');
 
       let avaliacao: AvaliacaoMensagem;
       try {
@@ -253,6 +266,9 @@ export async function avaliarMensagemAgente(
           pontosMelhoria: JSON.stringify(avaliacao.pontosMelhoria),
           contextoConversa,
           modeloUsado: 'claude-sonnet-4-20250514',
+          treinamentoNecessario: avaliacao.treinamentoNecessario ?? false,
+          treinamentoCategoria: avaliacao.treinamentoCategoria ?? null,
+          treinamentoMotivo: avaliacao.treinamentoMotivo ?? null,
         },
       });
 
@@ -279,6 +295,9 @@ export async function avaliarMensagemAgente(
         pontosMelhoria: JSON.stringify(avaliacao.pontosMelhoria),
         contextoConversa,
         modeloUsado: 'fallback-local',
+        treinamentoNecessario: avaliacao.treinamentoNecessario,
+        treinamentoCategoria: avaliacao.treinamentoCategoria,
+        treinamentoMotivo: avaliacao.treinamentoMotivo,
       },
     });
 
@@ -317,7 +336,7 @@ export async function gerarSugestaoResposta(
     const problema = ultimoProblema || mensagens.find((m) => !m.fromMe)?.content || 'Problema não especificado';
 
     const prompt = buildSugestaoPrompt(contextoConversa, ticket.contactName || 'Cliente', problema);
-    const sugestao = await callClaude(prompt, 600);
+    const sugestao = await callClaude(prompt, 600, 'sugestao-resposta');
 
     return sugestao.trim() || null;
   } catch (err: any) {
@@ -785,5 +804,801 @@ function buildFallbackAvaliacao(mensagem: string): AvaliacaoMensagem {
     alertas,
     pontosFortes: Object.values(pontosFortes).filter(Boolean),
     pontosMelhoria: Object.values(pontosMelhoria).filter(Boolean),
+    treinamentoNecessario: notaGeral < 6,
+    treinamentoCategoria: notaGeral < 6 ? inferirCategoriaTreinamento(alertas, pontosMelhoria) : null,
+    treinamentoMotivo: notaGeral < 6 ? `Nota geral ${notaGeral}/10. ${alertas.join('; ') || 'Atendimento abaixo do esperado.'}` : null,
   };
+}
+
+function inferirCategoriaTreinamento(alertas: string[], pontosMelhoria: string[]): string {
+  const todos = [...alertas, ...pontosMelhoria].join(' ').toLowerCase();
+  if (/técnico|conhecimento|produto|funcion/.test(todos)) return 'Conhecimento Técnico';
+  if (/fluxo|etapa|processo|procedimento|document/.test(todos)) return 'Processo/Procedimento';
+  if (/comunicação|tom|idioma|gíria|informal|saudação|objetiv/.test(todos)) return 'Comunicação';
+  if (/comportamento|profissionalismo|grosseria|impaciência|descaso/.test(todos)) return 'Comportamento/Profissionalismo';
+  if (/sistema|ferramenta|cadastro|digitação/.test(todos)) return 'Uso do Sistema';
+  return 'Comunicação';
+}
+
+// ── Diagnóstico de Treinamento de Analistas ──────────────────────────────
+// Agrega dados de 4 fontes (AIAgentAudit, AIAgentClosureAudit, AuditoriaProfissional,
+// Ticket+CSAT) e gera um diagnóstico consolidado via Claude (ou fallback local).
+
+export interface DiagnosticoTreinamento {
+  agentId: string;
+  agentName: string;
+  periodo: { inicio: string; fim: string; dias: number };
+  resumo: {
+    totalTickets: number;
+    totalAvaliacoes: number;
+    ticketsComTreinamento: number;
+    csatMedio: number | null;
+    notaIaMedia: number;
+    classificacaoGeral: string;
+    fcr: number | null;
+    taxaResolucao: number | null;
+    reaberturas: number;
+    transferencias: number;
+  };
+  diagnosticoIa: string;
+  diagnosticoConsolidado: string;
+  necessidadePrincipal: {
+    area: string;
+    prioridade: 'alta' | 'media' | 'baixa';
+    confianca: number;
+    motivo: string;
+    detalhe: string;
+  } | null;
+  classificacaoNecessidade: {
+    categoria: string;
+    icone: string;
+    descricao: string;
+  } | null;
+  necessidades: NecessidadeTreinamento[];
+  assuntoTreinamento: {
+    assunto: string;
+    totalTickets: number;
+    ticketsComDificuldade: number;
+    transferencias: number;
+    reaberturas: number;
+    csatMedio: number | null;
+    fcr: number | null;
+  } | null;
+  raciocinioIa: string[];
+  naoProblema: Array<{ area: string; icone: string; texto: string }>;
+  causaProbavel: {
+    tipo: 'analista' | 'sistema' | 'desenvolvimento' | 'base_conhecimento' | 'processo' | 'cliente';
+    label: string;
+    descricao: string;
+    recomendacao: string;
+  };
+  competencias: CompetenciaAvaliada[];
+  ticketsAnalisados: TicketDiagnostico[];
+  ondeEstaDificuldade: DificuldadePorAssunto[];
+  evidencias: EvidenciaDiagnostico[];
+  separacao: { fatos: string[]; interpretacaoIa: string[]; recomendacao: string[] };
+  planoTreinamento: PlanoTreinamentoItem[];
+  treinamentoRecomendado: {
+    titulo: string;
+    prioridade: 'alta' | 'media' | 'baixa';
+    objetivo: string;
+    motivo: string;
+    evidencias: string;
+  } | null;
+  confianca: number;
+  confiancaExplicacao: string;
+  problemaNaoEhDoAnalista: string | null;
+  evolucao: {
+    antes: { csat: number | null; fcr: number | null; resolucao: number | null; reaberturas: number } | null;
+    depois: { csat: number | null; fcr: number | null; resolucao: number | null; reaberturas: number } | null;
+    temHistorico: boolean;
+  };
+}
+
+export interface NecessidadeTreinamento {
+  categoria: string;
+  icone: string;
+  prioridade: 'alta' | 'media' | 'baixa';
+  evidencias: string[];
+  conclusao: string;
+  treinamentoRecomendado: string;
+  Assunto?: string;
+  areaPrincipal?: string;
+  subCategoria?: string;
+}
+
+export interface CompetenciaAvaliada {
+  nome: string;
+  percentual: number;
+  situacao: 'otimo' | 'bom' | 'atencao' | 'critico';
+}
+
+export interface TicketDiagnostico {
+  ticketId: string;
+  protocolo: string | null;
+  cliente: string | null;
+  assunto: string | null;
+  csat: number | null;
+  resultado: string;
+  evidencia: string;
+  transferido: boolean;
+  reaberto: boolean;
+  intervecaoAnalista: boolean;
+}
+
+export interface DificuldadePorAssunto {
+  assunto: string;
+  totalTickets: number;
+  resolvidos: number;
+  reabertos: number;
+  transferidos: number;
+  csatMedio: number | null;
+  resolucaoPercentual: number;
+}
+
+export interface EvidenciaDiagnostico {
+  padrao: string;
+  ocorrencias: number;
+  impacto: string;
+  conclusaoIa: string;
+}
+
+export interface PlanoTreinamentoItem {
+  tema: string;
+  prioridade: 'alta' | 'media' | 'baixa';
+  motivo: string;
+  evidencias: string;
+}
+
+export async function gerarDiagnosticoTreinamento(
+  agentId: string,
+  dias: number = 30
+): Promise<DiagnosticoTreinamento | null> {
+  const agent = await prisma.user.findUnique({
+    where: { id: agentId },
+    select: { id: true, name: true },
+  });
+  if (!agent) return null;
+
+  const dataInicio = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+  const agora = new Date();
+
+  // ── 1) Avaliações IA (por mensagem) ──────────────────────────────────
+  const audits = await prisma.aIAgentAudit.findMany({
+    where: { agentId, processadoEm: { gte: dataInicio } },
+    select: {
+      ticketId: true, notaGeral: true, classificacao: true,
+      alertas: true, pontosMelhoria: true, pontosFortes: true,
+      treinamentoNecessario: true, treinamentoCategoria: true, treinamentoMotivo: true,
+      notProfissionalismo: true, notCordialidade: true, notClareza: true, notEmpatia: true,
+    },
+    orderBy: { processadoEm: 'desc' },
+  });
+
+  const ticketIdsUnicos = [...new Set(audits.map((a) => a.ticketId))];
+  const totalAvaliacoes = audits.length;
+  const ticketsComTreinamento = audits.filter((a) => a.treinamentoNecessario).length;
+
+  // ── 2) Encerramentos ─────────────────────────────────────────────────
+  const encerramentos = await prisma.aIAgentClosureAudit.findMany({
+    where: { agentId, processadoEm: { gte: dataInicio } },
+    select: {
+      ticketId: true, tipo: true, riscoReabertura: true, nota: true,
+      diagnostico: true, semConfirmacao: true, clienteVoltou: true,
+    },
+  });
+
+  // ── 3) Tickets com CSAT ──────────────────────────────────────────────
+  const tickets = await prisma.ticket.findMany({
+    where: {
+      assigneeId: agentId,
+      createdAt: { gte: dataInicio },
+    },
+    include: {
+      csatResposta: { select: { nota: true, respondidoEm: true } },
+      _count: { select: { messages: true } },
+      client: { select: { razaoSocial: true } },
+      metrics: { select: { totalReaberturas: true, slaStatus: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const ticketsComCsat = tickets.filter((t) => t.csatResposta?.nota != null);
+  const csatMedio = ticketsComCsat.length > 0
+    ? Math.round(ticketsComCsat.reduce((s, t) => s + (t.csatResposta?.nota || 0), 0) / ticketsComCsat.length * 10) / 10
+    : null;
+
+  // ── 3b) FCR e métricas derivadas ───────────────────────────────────
+  const ticketsComMetricas = tickets.filter((t) => t.metrics);
+  const totalComMetricas = ticketsComMetricas.length;
+  const fcr = totalComMetricas > 0
+    ? Math.round(ticketsComMetricas.filter((t) => (t.metrics?.totalReaberturas || 0) === 0).length / totalComMetricas * 100)
+    : null;
+  const totalResolvidos = tickets.filter((t) => t.etapa === 'concluido' || t.status === 'fechado').length;
+  const taxaResolucao = tickets.length > 0 ? Math.round(totalResolvidos / tickets.length * 100) : null;
+  const totalReaberturas = ticketsComMetricas.reduce((s, t) => s + (t.metrics?.totalReaberturas || 0), 0);
+
+  // ── 3c) Transferências (encerramentos prematuros sem confirmação) ──
+  // ── 4) Auditoria Profissional ────────────────────────────────────────
+  const auditoriasProfissionais = await prisma.auditoriaProfissional.findMany({
+    where: { agenteId: agentId, auditadoEm: { gte: dataInicio } },
+    select: {
+      ticketId: true, notaGeral: true, classificacao: true,
+      notaComunicacao: true, notaProfissionalismo: true, notaEmpatia: true,
+      notaClareza: true, notaConhecimentoTecnico: true, notaDiagnostico: true,
+      notaResolucao: true, notaProcesso: true, notaEncerramento: true,
+      evidenciaProblemas: true, recomendacoes: true,
+    },
+  });
+
+  // ── 5) Nota IA média ─────────────────────────────────────────────────
+  const notaIaMedia = totalAvaliacoes > 0
+    ? Math.round(audits.reduce((s, a) => s + a.notaGeral, 0) / totalAvaliacoes * 10) / 10
+    : 0;
+
+  let classificacaoGeral = 'sem_dados';
+  if (notaIaMedia >= 8) classificacaoGeral = 'excelente';
+  else if (notaIaMedia >= 6) classificacaoGeral = 'bom';
+  else if (notaIaMedia >= 4) classificacaoGeral = 'neutro';
+  else if (notaIaMedia >= 2) classificacaoGeral = 'atencao';
+  else if (notaIaMedia > 0) classificacaoGeral = 'critico';
+
+  // ── 6) Agregar necessidades de treinamento ───────────────────────────
+  const necessidadesMap = new Map<string, { count: number; motivos: Set<string>; categorias: Set<string> }>();
+  for (const a of audits) {
+    if (!a.treinamentoNecessario || !a.treinamentoCategoria) continue;
+    const cat = a.treinamentoCategoria;
+    if (!necessidadesMap.has(cat)) {
+      necessidadesMap.set(cat, { count: 0, motivos: new Set(), categorias: new Set() });
+    }
+    const entry = necessidadesMap.get(cat)!;
+    entry.count++;
+    if (a.treinamentoMotivo) entry.motivos.add(a.treinamentoMotivo);
+    entry.categorias.add(a.classificacao);
+  }
+
+  const necessidades: NecessidadeTreinamento[] = [];
+  const ICONES: Record<string, string> = {
+    'Conhecimento Técnico': '📚',
+    'Funcionalidade': '⚙️',
+    'Processo/Procedimento': '📋',
+    'Comunicação': '💬',
+    'Comportamento/Profissionalismo': '🤝',
+    'Uso do Sistema': '🖥️',
+  };
+  for (const [cat, data] of necessidadesMap) {
+    const prioridade = data.count >= 5 ? 'alta' : data.count >= 3 ? 'media' : 'baixa';
+    necessidades.push({
+      categoria: cat,
+      icone: ICONES[cat] || '📌',
+      prioridade,
+      evidencias: [...data.motivos].slice(0, 3),
+      conclusao: `${data.count} ocorrência(s) identificada(s) na categoria "${cat}".`,
+      treinamentoRecomendado: `Treinamento em ${cat.toLowerCase()}.`,
+    });
+  }
+  necessidades.sort((a, b) => {
+    const ord = { alta: 0, media: 1, baixa: 2 };
+    return ord[a.prioridade] - ord[b.prioridade];
+  });
+
+  // ── 7) Competências avaliadas ────────────────────────────────────────
+  const medias = (field: string) => {
+    const vals = auditoriasProfissionais.map((a) => (a as any)[field] as number).filter((v) => v > 0);
+    return vals.length > 0 ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length) : 0;
+  };
+  const competencias: CompetenciaAvaliada[] = [
+    { nome: 'Conhecimento Técnico', percentual: medias('notaConhecimentoTecnico'), situacao: classifyPercent(medias('notaConhecimentoTecnico')) },
+    { nome: 'Diagnóstico', percentual: medias('notaDiagnostico'), situacao: classifyPercent(medias('notaDiagnostico')) },
+    { nome: 'Resolução', percentual: medias('notaResolucao'), situacao: classifyPercent(medias('notaResolucao')) },
+    { nome: 'Comunicação', percentual: medias('notaComunicacao'), situacao: classifyPercent(medias('notaComunicacao')) },
+    { nome: 'Processo', percentual: medias('notaProcesso'), situacao: classifyPercent(medias('notaProcesso')) },
+    { nome: 'Profissionalismo', percentual: medias('notaProfissionalismo'), situacao: classifyPercent(medias('notaProfissionalismo')) },
+    { nome: 'Empatia', percentual: medias('notaEmpatia'), situacao: classifyPercent(medias('notaEmpatia')) },
+    { nome: 'Encerramento', percentual: medias('notaEncerramento'), situacao: classifyPercent(medias('notaEncerramento')) },
+  ];
+
+  // ── 8) Tickets analisados ────────────────────────────────────────────
+  const ticketsDiag: TicketDiagnostico[] = tickets.slice(0, 30).map((t) => {
+    const enc = encerramentos.find((e) => e.ticketId === t.id);
+    const audAudit = auditoriasProfissionais.find((a) => a.ticketId === t.id);
+    const evidencias = audAudit?.evidenciaProblemas ? safeJsonParse(audAudit.evidenciaProblemas) : [];
+    const isReaberto = enc?.tipo === 'reabertura';
+    const isTransferido = enc?.tipo === 'encerramento_prematuro' && enc.semConfirmacao;
+    return {
+      ticketId: t.id,
+      protocolo: t.protocolo,
+      cliente: t.contactName || t.client?.razaoSocial || null,
+      assunto: (t as any).categoria || (t as any).assunto || null,
+      csat: t.csatResposta?.nota ?? null,
+      resultado: enc?.tipo || t.etapa || t.status,
+      evidencia: evidencias[0]?.descricao || enc?.diagnostico || null,
+      transferido: !!isTransferido,
+      reaberto: !!isReaberto,
+      intervecaoAnalista: !!isTransferido || !!isReaberto,
+    };
+  });
+
+  // ── 9) Dificuldade por assunto ───────────────────────────────────────
+  const assuntoMap = new Map<string, { total: number; resolvidos: number; reabertos: number; transferidos: number; csats: number[] }>();
+  for (const t of tickets) {
+    const assunto = (t as any).categoria || (t as any).assunto || 'Geral';
+    if (!assuntoMap.has(assunto)) assuntoMap.set(assunto, { total: 0, resolvidos: 0, reabertos: 0, transferidos: 0, csats: [] });
+    const entry = assuntoMap.get(assunto)!;
+    entry.total++;
+    if (t.etapa === 'concluido' || t.status === 'fechado') entry.resolvidos++;
+    const enc = encerramentos.find((e) => e.ticketId === t.id);
+    if (enc?.tipo === 'reabertura') entry.reabertos++;
+    if (enc?.tipo === 'encerramento_prematuro' && enc.semConfirmacao) entry.transferidos++;
+    if (t.csatResposta?.nota != null) entry.csats.push(t.csatResposta.nota);
+  }
+  const ondeEstaDificuldade: DificuldadePorAssunto[] = [];
+  for (const [assunto, data] of assuntoMap) {
+    ondeEstaDificuldade.push({
+      assunto,
+      totalTickets: data.total,
+      resolvidos: data.resolvidos,
+      reabertos: data.reabertos,
+      transferidos: data.transferidos,
+      csatMedio: data.csats.length > 0 ? Math.round(data.csats.reduce((a, b) => a + b, 0) / data.csats.length * 10) / 10 : null,
+      resolucaoPercentual: data.total > 0 ? Math.round(data.resolvidos / data.total * 100) : 0,
+    });
+  }
+  ondeEstaDificuldade.sort((a, b) => a.resolucaoPercentual - b.resolucaoPercentual);
+
+  // ── 10) Evidências da IA ─────────────────────────────────────────────
+  const evidencias: EvidenciaDiagnostico[] = [];
+  const padroesMap = new Map<string, { ocorrencias: number; tickets: Set<string> }>();
+  for (const a of audits) {
+    if (!a.alertas) continue;
+    const alertas = safeJsonParse(a.alertas);
+    for (const alerta of alertas) {
+      if (!padroesMap.has(alerta)) padroesMap.set(alerta, { ocorrencias: 0, tickets: new Set() });
+      const p = padroesMap.get(alerta)!;
+      p.ocorrencias++;
+      p.tickets.add(a.ticketId);
+    }
+  }
+  for (const [padrao, data] of padroesMap) {
+    if (data.ocorrencias < 2) continue;
+    evidencias.push({
+      padrao,
+      ocorrencias: data.ocorrencias,
+      impacto: `${data.ocorrencias} ocorrência(s) em ${data.tickets.size} ticket(s)`,
+      conclusaoIa: `Padrão identificado: ${padrao.toLowerCase()}`,
+    });
+  }
+  evidencias.sort((a, b) => b.ocorrencias - a.ocorrencias);
+
+  // ── 11) Calcular confiança ───────────────────────────────────────────
+  const fatoresConfianca: string[] = [];
+  let confianca = 50;
+  if (totalAvaliacoes >= 20) { confianca += 20; fatoresConfianca.push(`${totalAvaliacoes} avaliações`); }
+  else if (totalAvaliacoes >= 10) { confianca += 10; fatoresConfianca.push(`${totalAvaliacoes} avaliações`); }
+  if (tickets.length >= 15) { confianca += 15; fatoresConfianca.push(`${tickets.length} tickets`); }
+  else if (tickets.length >= 8) { confianca += 8; fatoresConfianca.push(`${tickets.length} tickets`); }
+  if (auditoriasProfissionais.length >= 5) { confianca += 10; fatoresConfianca.push(`${auditoriasProfissionais.length} auditorias profissionais`); }
+  if (evidencias.length >= 3) { confianca += 5; fatoresConfianca.push(`${evidencias.length} padrões recorrentes`); }
+  confianca = Math.min(confianca, 95);
+  if (totalAvaliacoes < 5 && tickets.length < 5) confianca = 0;
+
+  const confiancaExplicacao = confianca === 0
+    ? 'Dados insuficientes para um diagnóstico confiável.'
+    : `Baseado em ${fatoresConfianca.join(', ')}.`;
+
+  // ── 12) Verificar se problema NÃO é do analista ──────────────────────
+  let problemaNaoEhDoAnalista: string | null = null;
+  const encPrematuros = encerramentos.filter((e) => e.tipo === 'encerramento_prematuro');
+  if (encPrematuros.length > 0 && encPrematuros.every((e) => e.diagnostico?.includes('sistema') || e.diagnostico?.includes('bug'))) {
+    problemaNaoEhDoAnalista = 'Os encerramentos prematuros parecem estar relacionados a problemas do sistema, não do analista.';
+  }
+
+  // ── 13) Gerar diagnóstico via Claude (ou fallback) ────────────────────
+  let diagnosticoIa = '';
+  let separacao = { fatos: [] as string[], interpretacaoIa: [] as string[], recomendacao: [] as string[] };
+  let planoTreinamento: PlanoTreinamentoItem[] = [];
+
+  if (hasClaude()) {
+    try {
+      const prompt = buildDiagnosticoPrompt({
+        agentName: agent.name, totalTickets: tickets.length, totalAvaliacoes,
+        csatMedio, notaIaMedia, classificacaoGeral,
+        necessidades, competencias, ondeEstaDificuldade, evidencias,
+        encerramentos: encerramentos.length,
+        prematuros: encPrematuros.length,
+        reaberturas: encerramentos.filter((e) => e.tipo === 'reabertura').length,
+      });
+      const response = await callClaude(prompt, 2000, 'diagnostico-treinamento');
+      const parsed = safeJsonParse(response);
+      if (parsed) {
+        diagnosticoIa = parsed.diagnostico || '';
+        separacao = {
+          fatos: parsed.fatos || [],
+          interpretacaoIa: parsed.interpretacao || [],
+          recomendacao: parsed.recomendacao || [],
+        };
+        planoTreinamento = (parsed.planoTreinamento || []).map((p: any) => ({
+          tema: p.tema || '',
+          prioridade: p.prioridade || 'media',
+          motivo: p.motivo || '',
+          evidencias: p.evidencias || '',
+        }));
+      }
+    } catch (err: any) {
+      console.warn('[DIAGNOSTICO] Claude falhou, usando fallback local:', err?.message);
+    }
+  }
+
+  if (!diagnosticoIa) {
+    const fallback = buildDiagnosticoFallback({
+      agentName: agent.name, totalTickets: tickets.length, totalAvaliacoes,
+      csatMedio, notaIaMedia, classificacaoGeral,
+      necessidades, ondeEstaDificuldade, evidencias,
+      prematuros: encPrematuros.length,
+      reaberturas: encerramentos.filter((e) => e.tipo === 'reabertura').length,
+    });
+    diagnosticoIa = fallback.diagnostico;
+    separacao = fallback.separacao;
+    planoTreinamento = fallback.planoTreinamento;
+  }
+
+  // ── 14) Necessidade principal ─────────────────────────────────────
+  const necessidadePrincipal = necessidades.length > 0
+    ? {
+        area: necessidades[0].categoria,
+        prioridade: necessidades[0].prioridade,
+        confianca: confianca,
+        motivo: necessidades[0].conclusao,
+        detalhe: necessidades[0].treinamentoRecomendado,
+      }
+    : null;
+
+  // ── 15) Classificação da necessidade ──────────────────────────────
+  const classificacaoNecessidade = necessidadePrincipal
+    ? {
+        categoria: necessidadePrincipal.area,
+        icone: necessidades[0].icone,
+        descricao: necessidades[0].conclusao,
+      }
+    : null;
+
+  // ── 16) Assunto que necessita treinamento ─────────────────────────
+  const assuntoComDificuldade = ondeEstaDificuldade.find((a) => a.resolucaoPercentual < 70 || (a.csatMedio != null && a.csatMedio < 3));
+  const assuntoTreinamento = assuntoComDificuldade
+    ? {
+        assunto: assuntoComDificuldade.assunto,
+        totalTickets: assuntoComDificuldade.totalTickets,
+        ticketsComDificuldade: assuntoComDificuldade.totalTickets - assuntoComDificuldade.resolvidos,
+        transferencias: assuntoComDificuldade.transferidos,
+        reaberturas: assuntoComDificuldade.reabertos,
+        csatMedio: assuntoComDificuldade.csatMedio,
+        fcr: assuntoComDificuldade.totalTickets > 0
+          ? Math.round((assuntoComDificuldade.totalTickets - assuntoComDificuldade.reabertos) / assuntoComDificuldade.totalTickets * 100)
+          : null,
+      }
+    : null;
+
+  // ── 17) Diagnóstico consolidado do analista ────────────────────────
+  const diagnosticoConsolidado = gerarDiagnosticoConsolidado({
+    agentName: agent.name, necessidades, competencias, ondeEstaDificuldade,
+    csatMedio, fcr, taxaResolucao, totalReaberturas,
+    totalTickets: tickets.length, totalAvaliacoes, assuntoTreinamento,
+  });
+
+  // ── 18) O que NÃO é problema ─────────────────────────────────────
+  const naoProblema: Array<{ area: string; icone: string; texto: string }> = [];
+  const compMap = new Map(competencias.map((c) => [c.nome, c]));
+  const areasOk = ['Comunicação', 'Profissionalismo', 'Processo', 'Empatia'];
+  for (const area of areasOk) {
+    const c = compMap.get(area);
+    if (!c || c.percentual >= 70) {
+      naoProblema.push({
+        area,
+        icone: '✅',
+        texto: `Não foram identificadas evidências suficientes de necessidade de treinamento em ${area.toLowerCase()}.`,
+      });
+    }
+  }
+
+  // ── 19) Causa provável ────────────────────────────────────────────
+  const causaProbavel = determinarCausaProbavel({
+    encerramentos, ondeEstaDificuldade, competencias, evidencias,
+    necessidades, totalReaberturas,
+  });
+
+  // ── 20) Treinamento recomendado ───────────────────────────────────
+  const treinamentoRecomendado = necessidadePrincipal
+    ? {
+        titulo: `Treinamento em ${necessidadePrincipal.area}` + (assuntoTreinamento ? ` — ${assuntoTreinamento.assunto}` : ''),
+        prioridade: necessidadePrincipal.prioridade,
+        objetivo: `Capacitar o analista para ${necessidadePrincipal.area.toLowerCase()}${assuntoTreinamento ? ' em ' + assuntoTreinamento.assunto.toLowerCase() : ''}.`,
+        motivo: necessidadePrincipal.motivo,
+        evidencias: assuntoTreinamento
+          ? `${assuntoTreinamento.ticketsComDificuldade} ticket(s) com dificuldade.`
+          : `${ticketsComTreinamento} avaliação(ões) com necessidade de treinamento.`,
+      }
+    : null;
+
+  // ── 21) Evolução (comparar primeiro vs segundo半do do período) ─────
+  const evolucao = await calcularEvolucaoTreinamento(agentId, dataInicio, agora);
+
+  return {
+    agentId,
+    agentName: agent.name,
+    periodo: {
+      inicio: dataInicio.toISOString(),
+      fim: agora.toISOString(),
+      dias,
+    },
+    resumo: {
+      totalTickets: tickets.length,
+      totalAvaliacoes,
+      ticketsComTreinamento,
+      csatMedio,
+      notaIaMedia,
+      classificacaoGeral,
+      fcr,
+      taxaResolucao,
+      reaberturas: totalReaberturas,
+      transferencias: encPrematuros.length,
+    },
+    diagnosticoIa,
+    diagnosticoConsolidado,
+    necessidadePrincipal,
+    classificacaoNecessidade,
+    necessidades,
+    assuntoTreinamento,
+    raciocinioIa: separacao.interpretacaoIa,
+    naoProblema,
+    causaProbavel,
+    competencias,
+    ticketsAnalisados: ticketsDiag,
+    ondeEstaDificuldade,
+    evidencias,
+    separacao,
+    planoTreinamento,
+    treinamentoRecomendado,
+    confianca,
+    confiancaExplicacao,
+    problemaNaoEhDoAnalista,
+    evolucao,
+  };
+}
+
+// ── Helpers de Diagnóstico de Treinamento ──────────────────────────────
+
+function gerarDiagnosticoConsolidado(d: {
+  agentName: string; necessidades: NecessidadeTreinamento[];
+  competencias: CompetenciaAvaliada[]; ondeEstaDificuldade: DificuldadePorAssunto[];
+  csatMedio: number | null; fcr: number | null; taxaResolucao: number | null;
+  totalReaberturas: number; totalTickets: number; totalAvaliacoes: number;
+  assuntoTreinamento?: { assunto: string } | null;
+}): string {
+  const parts: string[] = [];
+  parts.push(`O principal ponto de desenvolvimento de ${d.agentName} está relacionado a ${d.necessidades.length > 0 ? d.necessidades[0].categoria.toLowerCase() : 'áreas não identificadas'}.`);
+
+  if (d.assuntoTreinamento) {
+    parts.push(`A análise identificou dificuldade recorrente em chamados de ${d.assuntoTreinamento.assunto}.`);
+  }
+
+  const areasOk = d.competencias.filter((c) => c.percentual >= 70).map((c) => c.nome);
+  if (areasOk.length > 0) {
+    parts.push(`A análise não encontrou evidências suficientes de problemas relacionados a ${areasOk.join(', ')}.`);
+  }
+
+  const impactos: string[] = [];
+  if (d.fcr != null && d.fcr < 60) impactos.push(`taxa FCR de ${d.fcr}%`);
+  if (d.csatMedio != null && d.csatMedio < 3.5) impactos.push(`CSAT de ${d.csatMedio}`);
+  if (d.totalReaberturas > 3) impactos.push(`${d.totalReaberturas} reaberturas`);
+  if (impactos.length > 0) {
+    parts.push(`O impacto está principalmente na ${impactos.join(', ')}.`);
+  }
+
+  return parts.join(' ');
+}
+
+function determinarCausaProbavel(d: {
+  encerramentos: Array<{ tipo: string; diagnostico: string | null; semConfirmacao: boolean }>;
+  ondeEstaDificuldade: DificuldadePorAssunto[];
+  competencias: CompetenciaAvaliada[];
+  evidencias: EvidenciaDiagnostico[];
+  necessidades: NecessidadeTreinamento[];
+  totalReaberturas: number;
+}): { tipo: 'analista' | 'sistema' | 'desenvolvimento' | 'base_conhecimento' | 'processo' | 'cliente'; label: string; descricao: string; recomendacao: string } {
+  const encPrematuros = d.encerramentos.filter((e) => e.tipo === 'encerramento_prematuro');
+  const diags = encPrematuros.map((e) => (e.diagnostico || '').toLowerCase());
+  const temSistema = diags.some((d) => d.includes('sistema') || d.includes('bug') || d.includes('comportamento incorreto'));
+
+  if (temSistema && encPrematuros.length >= 2) {
+    return {
+      tipo: 'sistema',
+      label: 'Sistema',
+      descricao: 'Os tickets apresentam comportamento inconsistente da aplicação. Não foram encontradas evidências suficientes de falta de conhecimento do analista.',
+      recomendacao: 'Encaminhar para Desenvolvimento.',
+    };
+  }
+
+  const compDiagnostico = d.competencias.find((c) => c.nome === 'Diagnóstico');
+  const compConhecimento = d.competencias.find((c) => c.nome === 'Conhecimento Técnico');
+  if (compDiagnostico && compDiagnostico.percentual < 50) {
+    return {
+      tipo: 'analista',
+      label: 'Analista — Diagnóstico',
+      descricao: 'A análise identificou dificuldade recorrente na identificação da causa do problema.',
+      recomendacao: 'Treinamento em diagnóstico técnico e resolução de problemas.',
+    };
+  }
+  if (compConhecimento && compConhecimento.percentual < 50) {
+    return {
+      tipo: 'analista',
+      label: 'Analista — Conhecimento',
+      descricao: 'O analista não demonstra domínio suficiente do assunto técnico.',
+      recomendacao: 'Treinamento técnico específico sobre os assuntos com maior demanda.',
+    };
+  }
+
+  if (d.totalReaberturas > 5) {
+    return {
+      tipo: 'processo',
+      label: 'Processo',
+      descricao: 'Alta taxa de reaberturas indica possível problema no processo de resolução.',
+      recomendacao: 'Revisar o fluxo de resolução e criar checklists de verificação.',
+    };
+  }
+
+  return {
+    tipo: 'analista',
+    label: 'Analista',
+    descricao: 'Foram identificadas dificuldades recorrentes que indicam necessidade de aprimoramento.',
+    recomendacao: 'Treinamento direcionado para as áreas identificadas.',
+  };
+}
+
+async function calcularEvolucaoTreinamento(
+  agentId: string,
+  dataInicio: Date,
+  dataFim: Date,
+): Promise<{ antes: { csat: number | null; fcr: number | null; resolucao: number | null; reaberturas: number } | null; depois: { csat: number | null; fcr: number | null; resolucao: number | null; reaberturas: number } | null; temHistorico: boolean }> {
+  const meio = new Date(dataInicio.getTime() + (dataFim.getTime() - dataInicio.getTime()) / 2);
+
+  const metricasPeriodo = async (ini: Date, fim: Date) => {
+    const ticks = await prisma.ticket.findMany({
+      where: { assigneeId: agentId, createdAt: { gte: ini, lt: fim } },
+      include: { csatResposta: { select: { nota: true } }, metrics: { select: { totalReaberturas: true } } },
+    });
+    if (ticks.length === 0) return null;
+    const comCsat = ticks.filter((t) => t.csatResposta?.nota != null);
+    const csat = comCsat.length > 0 ? Math.round(comCsat.reduce((s, t) => s + (t.csatResposta!.nota || 0), 0) / comCsat.length * 10) / 10 : null;
+    const comMetricas = ticks.filter((t) => t.metrics);
+    const fcr = comMetricas.length > 0 ? Math.round(comMetricas.filter((t) => (t.metrics!.totalReaberturas || 0) === 0).length / comMetricas.length * 100) : null;
+    const resolvidos = ticks.filter((t) => t.etapa === 'concluido' || t.status === 'fechado').length;
+    const resolucao = Math.round(resolvidos / ticks.length * 100);
+    const reaberturas = comMetricas.reduce((s, t) => s + (t.metrics!.totalReaberturas || 0), 0);
+    return { csat, fcr, resolucao, reaberturas };
+  };
+
+  const antes = await metricasPeriodo(dataInicio, meio);
+  const depois = await metricasPeriodo(meio, dataFim);
+
+  return {
+    antes,
+    depois,
+    temHistorico: antes != null && depois != null,
+  };
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────
+
+function classifyPercent(v: number): 'otimo' | 'bom' | 'atencao' | 'critico' {
+  if (v >= 80) return 'otimo';
+  if (v >= 60) return 'bom';
+  if (v >= 40) return 'atencao';
+  return 'critico';
+}
+
+function safeJsonParse(s: string | null): any {
+  if (!s) return [];
+  try { return JSON.parse(s); } catch { return []; }
+}
+
+function buildDiagnosticoPrompt(d: {
+  agentName: string; totalTickets: number; totalAvaliacoes: number;
+  csatMedio: number | null; notaIaMedia: number; classificacaoGeral: string;
+  necessidades: NecessidadeTreinamento[]; competencias: CompetenciaAvaliada[];
+  ondeEstaDificuldade: DificuldadePorAssunto[]; evidencias: EvidenciaDiagnostico[];
+  encerramentos: number; prematuros: number; reaberturas: number;
+}): string {
+  return `Você é um especialista em gestão de pessoas e qualidade de atendimento. Gere um diagnóstico consolidado de treinamento para o analista.
+
+DADOS DO ANALISTA:
+- Nome: ${d.agentName}
+- Período: últimos ${d.necessidades.length > 0 ? '30' : '30'} dias
+- Tickets atendidos: ${d.totalTickets}
+- Avaliações IA: ${d.totalAvaliacoes}
+- CSAT médio: ${d.csatMedio ?? 'sem dados'}/5
+- Nota IA média: ${d.notaIaMedia}/10
+- Classificação geral: ${d.classificacaoGeral}
+- Encerramentos auditados: ${d.encerramentos}
+- Encerramentos prematuros: ${d.prematuros}
+- Reaberturas: ${d.reaberturas}
+
+NECESSIDADES IDENTIFICADAS:
+${d.necessidades.map((n) => `- ${n.categoria}: ${n.evidencias.join('; ')}`).join('\n') || 'Nenhuma necessidade específica identificada.'}
+
+COMPETÊNCIAS (0-100):
+${d.competencias.map((c) => `- ${c.nome}: ${c.percentual}% (${c.situacao})`).join('\n')}
+
+DIFICULDADE POR ASSUNTO:
+${d.ondeEstaDificuldade.map((a) => `- ${a.assunto}: ${a.totalTickets} tickets, ${a.resolucaoPercentual}% resolução, CSAT ${a.csatMedio ?? 'N/A'}`).join('\n')}
+
+PADRÕES IDENTIFICADOS:
+${d.evidencias.map((e) => `- ${e.padrao}: ${e.ocorrencias} ocorrências`).join('\n') || 'Nenhum padrão recorrente identificado.'}
+
+Retorne APENAS um JSON válido (sem markdown) com esta estrutura:
+{
+  "diagnostico": "<parágrafo explicando em linguagem natural por que o alerta foi gerado, com números reais>",
+  "fatos": [<array de fatos observados, ex: "9 chamados não resolvidos no primeiro contato", "5 transferências">],
+  "interpretacao": [<array de interpretações da IA, ex: "O principal padrão está relacionado à dificuldade de diagnóstico">],
+  "recomendacao": [<array de recomendações acionáveis>],
+  "planoTreinamento": [
+    {
+      "tema": "<tema específico>",
+      "prioridade": "alta|media|baixa",
+      "motivo": "<por que esse treinamento é necessário>",
+      "evidencias": "<dados que sustentam>"
+    }
+  ]
+}
+
+REGRAS:
+1. Cada frase deve citar números reais dos dados.
+2. Não inventar dados não fornecidos.
+3. Se não houver evidência suficiente, diga "Dados insuficientes".
+4. Separar fatos de interpretação de recomendação.
+5. Plano de treinamento deve ser específico (não "treinar em tudo").`;
+}
+
+function buildDiagnosticoFallback(d: {
+  agentName: string; totalTickets: number; totalAvaliacoes: number;
+  csatMedio: number | null; notaIaMedia: number; classificacaoGeral: string;
+  necessidades: NecessidadeTreinamento[]; ondeEstaDificuldade: DificuldadePorAssunto[];
+  evidencias: EvidenciaDiagnostico[]; prematuros: number; reaberturas: number;
+}): { diagnostico: string; separacao: { fatos: string[]; interpretacaoIa: string[]; recomendacao: string[] }; planoTreinamento: PlanoTreinamentoItem[] } {
+  const fatos: string[] = [];
+  const interpretacaoIa: string[] = [];
+  const recomendacao: string[] = [];
+  const planoTreinamento: PlanoTreinamentoItem[] = [];
+
+  fatos.push(`${d.totalTickets} tickets atendidos no período.`);
+  if (d.csatMedio != null) fatos.push(`CSAT médio: ${d.csatMedio}/5.`);
+  fatos.push(`Nota IA média: ${d.notaIaMedia}/10.`);
+  if (d.prematuros > 0) fatos.push(`${d.prematuros} encerramento(s) prematuro(s).`);
+  if (d.reaberturas > 0) fatos.push(`${d.reaberturas} reabertura(s).`);
+
+  if (d.necessidades.length > 0) {
+    interpretacaoIa.push(`Foram identificadas ${d.necessidades.length} necessidade(s) de treinamento.`);
+    for (const n of d.necessidades) {
+      planoTreinamento.push({
+        tema: n.categoria,
+        prioridade: n.prioridade,
+        motivo: n.conclusao,
+        evidencias: n.evidencias.join('; '),
+      });
+    }
+  } else {
+    interpretacaoIa.push('Não foram identificadas necessidades específicas de treinamento com os dados disponíveis.');
+  }
+
+  if (d.ondeEstaDificuldade.length > 0) {
+    const pior = d.ondeEstaDificuldade[0];
+    if (pior.resolucaoPercentual < 60) {
+      interpretacaoIa.push(`Maior dificuldade em "${pior.assunto}" com ${pior.resolucaoPercentual}% de resolução.`);
+    }
+  }
+
+  recomendacao.push(d.necessidades.length > 0 ? 'Recomenda-se treinamento focado nas categorias identificadas.' : 'Coletar mais dados para um diagnóstico confiável.');
+
+  const diagnostico = `O analista ${d.agentName} atendeu ${d.totalTickets} tickets no período. ${d.csatMedio != null ? `CSAT médio: ${d.csatMedio}/5.` : ''} Nota IA: ${d.notaIaMedia}/10. ${d.necessidades.length > 0 ? `Foram identificadas ${d.necessidades.length} necessidade(s) de treinamento.` : 'Não foram identificadas necessidades específicas de treinamento.'}`;
+
+  return { diagnostico, separacao: { fatos, interpretacaoIa, recomendacao }, planoTreinamento };
 }

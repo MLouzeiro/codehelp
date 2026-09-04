@@ -130,7 +130,7 @@ export async function updateAutoMessage(slug: string, novaMensagem: string): Pro
   const msg = AUTO_MESSAGES.find(m => m.slug === slug);
   if (!msg) throw new Error('Mensagem não encontrada');
 
-  const existing = await prisma.helpdeskConfig.findUnique({ where: { slug } });
+  const existing = await prisma.helpdeskConfig.findFirst({ where: { slug } });
 
   const field = getFieldForSlug(slug);
   const updateData: any = {};

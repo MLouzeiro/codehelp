@@ -9,7 +9,7 @@ export async function pausarSLA(ticketId: string, motivo?: string, usuarioId?: s
   if (!ticket) return false;
   if (ticket.slaPausadoEm) return false;
   if (!ticket.slaTotalMinutos) {
-    const slaConfig = await prisma.sLAConfig.findUnique({ where: { prioridade: ticket.prioridade || 'media' } });
+    const slaConfig = await prisma.sLAConfig.findFirst({ where: { prioridade: ticket.prioridade || 'media' } });
     if (slaConfig) {
       await prisma.ticket.update({ where: { id: ticketId }, data: { slaTotalMinutos: slaConfig.slaMinutosResolucao } });
     }
@@ -28,6 +28,8 @@ export async function pausarSLA(ticketId: string, motivo?: string, usuarioId?: s
     entidadeId: ticketId,
     detalhes: { motivo, etapa: ticket.etapa },
     ip: ip || null,
+    severity: 'media',
+    clienteId: ticket.clientId,
   });
   return true;
 }
@@ -53,6 +55,8 @@ export async function retomarSLA(ticketId: string, usuarioId?: string | null, ip
     entidadeId: ticketId,
     detalhes: { minutosPausaAcumulados: minutosPausa },
     ip: ip || null,
+    severity: 'media',
+    clienteId: ticket.clientId,
   });
   return true;
 }
