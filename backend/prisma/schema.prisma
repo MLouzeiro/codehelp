@@ -57,7 +57,9 @@ model Organization {
   users              User[]
    whatsappConns      WhatsAppConnection[]
    clientAlerts       ClientAlert[]
-   analystOccurrences AnalystOccurrence[]
+    analystOccurrences AnalystOccurrence[]
+    decisionAudits     DecisionAudit[]
+
 
    @@index([ativo])
    @@index([slug])
@@ -133,6 +135,8 @@ model User {
    clientAlertsCreated         ClientAlert[]             @relation("ClientAlertCreator")
    analystOccurrences          AnalystOccurrence[]       @relation("AnalystOccurrenceUser")
    analystOccurrencesCreated   AnalystOccurrence[]       @relation("AnalystOccurrenceCreator")
+   decisionAuditsCriados       DecisionAudit[]           @relation("DecisionAuditCriadoPor")
+   decisionAuditsRevisados     DecisionAudit[]           @relation("DecisionAuditRevisadoPor")
 }
 
 model Client {
@@ -2345,4 +2349,59 @@ model ContatoIgnorado {
   @@index([tipo])
   @@index([ignorado])
   @@index([criadoEm])
+}
+
+/// Decisão gerencial estruturada com cadeia de evidências completa.
+/// Cada registro representa uma conclusão/decisão da auditoria com:
+/// dados analisados, evidências, cálculos, hipóteses, confiança,
+/// recomendação, responsável, prazo e resultado posterior.
+model DecisionAudit {
+  id                String    @id @default(uuid())
+  tipo              String                         // reabertura, sla, csat, retrabalho, ociosidade, produtividade, fila, transferencia, csat_baixo, qualidade
+  severidade        String    @default("media")    // critica, alta, media, baixa, info
+  titulo            String
+  problema          String                         // Descrição objetiva do problema
+  evidencias        String    @default("[]")       // JSON: [{tipo, dado, valor, comparacao?, fonte?, ticketIds?}]
+  comoChegamos      String                         // Fórmula, comparação e critérios utilizados
+  oQueDadosMostram  String                         // Interpretação dos dados
+  hipotese          String                         // Possível causa (sempre identificada como hipótese)
+  impacto           String                         // Consequência operacional
+  confianca         String    @default("media")    // alta, media, baixa
+  confiancaMotivo   String?                        // Por que esse nível de confiança
+  recomendacao      String                         // Ação prática recomendada
+  responsavelAcao   String?                        // Quem deve agir
+  prazoAcao         String?                        // Quando revisar/executar
+  comoVerificar     String?                        // Indicador que deverá melhorar
+  resultado         String?                        // Preenchido após a ação
+  resultadoData     DateTime?                      // Quando o resultado foi verificado
+  status            String    @default("pendente") // pendente, em_acao, concluido, revertido, ignorado
+  periodoInicio     DateTime?                      // Início do período analisado
+  periodoFim        DateTime?                      // Fim do período analisado
+  dadosAnalisados   String    @default("{}")       // JSON: {totalTickets, ticketsFechados, etc.}
+  calculos          String    @default("{}")       // JSON: {formula, resultado, comparacao}
+  comparacoes       String    @default("[]")       // JSON: [{indicador, valorAtual, valorAnterior, variacao}]
+  ticketsEnvolvidos String    @default("[]")       // JSON: [ticketId, ...] - tickets que sustentam a conclusão
+  rankingAnalistas  String    @default("[]")       // JSON: [{agenteId, nome, valor, classificacao}]
+  padroesDetectados String    @default("[]")       // JSON: [{tipo, descricao, frequencia, confianca}]
+  modeloIa          String?                        // Modelo de IA utilizado (se houver)
+  dadosIa           String?                        // JSON: dados brutos da IA
+  criadoPorId       String?
+  revisadoPorId     String?
+  revisaoStatus     String    @default("pendente") // pendente, aprovado, rejeitado, reavaliar
+  revisaoJustificativa String?
+  revisaoEm         DateTime?
+  criadoEm          DateTime  @default(now())
+  atualizadoEm      DateTime  @updatedAt
+  organizationId    String?
+  criadoPor         User?     @relation("DecisionAuditCriadoPor", fields: [criadoPorId], references: [id])
+  revisadoPor       User?     @relation("DecisionAuditRevisadoPor", fields: [revisadoPorId], references: [id])
+  organization      Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([tipo])
+  @@index([severidade])
+  @@index([status])
+  @@index([confianca])
+  @@index([criadoEm])
+  @@index([periodoInicio, periodoFim])
+  @@index([revisaoStatus])
 }

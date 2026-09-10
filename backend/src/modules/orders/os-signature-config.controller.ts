@@ -13,6 +13,11 @@ export async function getSignatureConfigHandler(req: AuthRequest, res: Response)
 
 export async function updateSignatureConfigHandler(req: AuthRequest, res: Response) {
   try {
+    const userRole = req.user?.role;
+    if (userRole !== 'admin' && userRole !== 'gerente') {
+      return res.status(403).json({ error: 'Apenas administradores e gerentes podem alterar esta configuracao.' });
+    }
+
     const { baseUrl, tipo } = req.body;
 
     if (!baseUrl || typeof baseUrl !== 'string') {

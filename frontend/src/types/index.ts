@@ -1075,3 +1075,84 @@ export interface QualidadeOperacional {
   alertas: AlertaQualidade[];
   sugestoes: SugestaoQualidade[];
 }
+
+// ── Decision Audit Types ──────────────────────────────────────────────
+
+export interface EvidenciaDecisao {
+  tipo: string;
+  dado: string;
+  valor: number | string;
+  comparacao?: string;
+  fonte?: string;
+  ticketIds?: string[];
+}
+
+export interface CalculoDecisao {
+  formula: string;
+  resultado: string | number;
+  comparacao?: string;
+}
+
+export interface ComparacaoDecisao {
+  indicador: string;
+  valorAtual: number | string;
+  valorAnterior: number | string;
+  variacao: string;
+}
+
+export interface RankingAnalistaDecisao {
+  agenteId: string;
+  nome: string;
+  valor: number;
+  classificacao: string;
+  contexto?: string;
+}
+
+export interface PadraoDecisao {
+  tipo: string;
+  descricao: string;
+  frequencia: number;
+  confianca: string;
+}
+
+export interface DecisionAudit {
+  id: string;
+  tipo: string;
+  severidade: string;
+  titulo: string;
+  problema: string;
+  evidencias: EvidenciaDecisao[];
+  comoChegamos: string;
+  oQueDadosMostram: string;
+  hipotese: string;
+  impacto: string;
+  confianca: string;
+  confiancaMotivo: string | null;
+  recomendacao: string;
+  responsavelAcao: string | null;
+  prazoAcao: string | null;
+  comoVerificar: string | null;
+  resultado: string | null;
+  resultadoData: string | null;
+  status: string;
+  periodoInicio: string | null;
+  periodoFim: string | null;
+  dadosAnalisados: Record<string, any>;
+  calculos: CalculoDecisao;
+  comparacoes: ComparacaoDecisao[];
+  ticketsEnvolvidos: string[];
+  rankingAnalistas: RankingAnalistaDecisao[];
+  padroesDetectados: PadraoDecisao[];
+  modeloIa: string | null;
+  revisaoStatus: string;
+  revisaoJustificativa: string | null;
+  criadoEm: string;
+}
+
+export interface ResumoDecisoes {
+  total: number;
+  porSeveridade: Array<{ severidade: string; count: number }>;
+  porStatus: Array<{ status: string; count: number }>;
+  porTipo: Array<{ tipo: string; count: number }>;
+  porConfianca: Array<{ confianca: string; count: number }>;
+}

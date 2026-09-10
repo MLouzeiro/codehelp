@@ -76,6 +76,7 @@ const OsSignatureConfigPage = lazy(() => import('./pages/Settings/OsSignatureCon
 const OSLayoutsPage = lazy(() => import('./pages/Settings/OSLayoutsPage'));
 const TimeTrackingPage = lazy(() => import('./pages/TimeTracking/TimeTrackingPage'));
 const CentralOperacaoPage = lazy(() => import('./pages/Helpdesk/CentralOperacaoPage'));
+const DecisaoAuditPage = lazy(() => import('./pages/Helpdesk/DecisaoAuditPage'));
 
 function PageLoader() {
   return (
@@ -145,6 +146,7 @@ export default function App() {
             <Route path="helpdesk/indicadores" element={<IndicadoresAtendimentoPage />} />
             <Route path="helpdesk/qualidade" element={<QualidadeOperacionalPage />} />
             <Route path="helpdesk/tomada-decisao" element={<TomadaDecisaoPage />} />
+            <Route path="helpdesk/decisao-audit" element={<DecisaoAuditPage />} />
             <Route path="helpdesk/aprovacoes" element={<Aprovacoes />} />
             <Route path="relatorios/gerencial" element={<RelatorioGerencial />} />
             <Route path="relatorios/executivo" element={<DashboardExecutivo />} />

@@ -32,7 +32,7 @@ export async function generatePdf(orderId: string, layoutId?: string): Promise<s
       layout: true,
     },
   });
-  if (!order || !order.signature) throw new Error('OS ou assinatura não encontrada');
+  if (!order) throw new Error('OS não encontrada');
 
   const layout = layoutId
     ? await prisma.oSLayout.findUnique({ where: { id: layoutId } })
@@ -273,7 +273,7 @@ async function buildPdfWithLayout(
   if (secCfg.tecnicoValor?.visivel !== false) {
     sectionNum++;
     drawSectionTitle(doc, `${sectionNum}. TÉCNICO RESPONSÁVEL E VALOR`, colors);
-    drawField(doc, 'Técnico', order.tecnicoResponsavel.name, colors);
+    drawField(doc, 'Técnico', order.tecnicoResponsavel?.name || 'Não atribuído', colors);
     if (order.valorServico) drawField(doc, 'Valor do Serviço', `R$ ${order.valorServico.toFixed(2)}`, colors);
     drawSeparator(doc, colors);
   }
@@ -443,7 +443,7 @@ function drawContentOnly(doc: PDFKit.PDFDocument, order: any, colors: typeof DEF
   }
 
   drawSectionTitle(doc, '4. TÉCNICO RESPONSÁVEL E VALOR', colors);
-  drawField(doc, 'Técnico', order.tecnicoResponsavel.name, colors);
+  drawField(doc, 'Técnico', order.tecnicoResponsavel?.name || 'Não atribuído', colors);
   if (order.valorServico) drawField(doc, 'Valor do Serviço', `R$ ${order.valorServico.toFixed(2)}`, colors);
   drawSeparator(doc, colors);
 

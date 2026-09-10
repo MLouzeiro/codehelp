@@ -26,7 +26,7 @@ function makeSendFn(opts?: { fail?: boolean; messageId?: string }) {
   return { fn, calls };
 }
 
-async function criarOrderTeste(opts?: { telefoneCliente?: string | null; comTicket?: boolean; contactPhone?: string }) {
+async function criarOrderTeste(opts?: { telefoneCliente?: string | null; comTicket?: boolean; contactPhone?: string; telefoneManual?: string }) {
   const telefoneCliente = opts?.telefoneCliente !== undefined ? opts.telefoneCliente : '5585999998888';
   const client = await prisma.client.create({
     data: { razaoSocial: `Cliente Assinatura ${Date.now()}`, status: 'ativo', telefone: telefoneCliente },
@@ -62,6 +62,7 @@ async function criarOrderTeste(opts?: { telefoneCliente?: string | null; comTick
       criadoPorId: usuarioId,
       status: 'rascunho',
       ticketId: ticketId || null,
+      telefoneManual: opts?.telefoneManual !== undefined ? opts.telefoneManual : (!ticketId ? '5585999998888' : null),
     },
   });
   idsParaLimpar.orderId = order.id;
@@ -154,8 +155,8 @@ describe('Assinatura de OS - envio do link (correcao critica)', () => {
     expect(signature?.tokenAssinatura).toMatch(UUID_REGEX);
   });
 
-  it('TESTE 4 - cliente sem telefone retorna SEM_TELEFONE e nao cria solicitacao', async () => {
-    const order = await criarOrderTeste({ telefoneCliente: null });
+  it('TESTE 4 - sem telefoneManual retorna SEM_TELEFONE e nao cria solicitacao', async () => {
+    const order = await criarOrderTeste({ telefoneCliente: null, telefoneManual: '' });
     const { fn, calls } = makeSendFn();
     const result = await enviarLinkAssinatura(order.id, usuarioId, fn);
     expect(result.ok).toBe(false);
@@ -254,7 +255,7 @@ describe('Assinatura de OS - envio do link (correcao critica)', () => {
 
     const assina = await registrarAssinatura(
       envio.token!,
-      { assinanteNome: 'Cliente Teste', assinanteCpf: '11122233344', assinanteCargo: 'Diretor', assinaturaBase64: 'data:image/png;base64,AAA' },
+      { assinanteNome: 'Cliente Teste', assinanteCpf: '52998224725', assinanteCargo: 'Diretor', assinaturaBase64: 'data:image/png;base64,AAA' },
       '200.1.2.3',
       'vitest',
     );
@@ -308,7 +309,7 @@ describe('Assinatura de OS - envio do link (correcao critica)', () => {
 
     const assinaDepois = await registrarAssinatura(
       envio.token!,
-      { assinanteNome: 'Cliente', assinanteCpf: '11122233344', assinanteCargo: 'Diretor', assinaturaBase64: 'data:image/png;base64,BBB' },
+      { assinanteNome: 'Cliente', assinanteCpf: '52998224725', assinanteCargo: 'Diretor', assinaturaBase64: 'data:image/png;base64,BBB' },
       '200.1.2.4',
       'vitest',
     );
@@ -336,15 +337,15 @@ describe('Assinatura de OS - envio do link (correcao critica)', () => {
     expect(timeline.length).toBeGreaterThan(0);
   });
 
-  it('resolverTelefoneParaAssinatura usa fallback cliente depois colaborador', async () => {
-    const order = await criarOrderTeste({ telefoneCliente: null });
+  it('resolverTelefoneParaAssinatura retorna null para OS sem ticket e sem telefoneManual', async () => {
+    const order = await criarOrderTeste({ telefoneManual: '' });
     await prisma.colaborador.create({
       data: { clientId: order.clientId, nome: 'Contato Principal', telefone: '5585999996666', principal: true },
     });
     const resolvido = await resolverTelefoneParaAssinatura(
       await prisma.serviceOrder.findUnique({ where: { id: order.id }, include: { client: { include: { colaboradores: true } }, ticket: true } }),
     );
-    expect(resolvido.telefone).toBe('5585999996666');
-    expect(resolvido.origem).toBe('colaborador');
+    expect(resolvido.telefone).toBeNull();
+    expect(resolvido.hasTicket).toBe(false);
   });
 });

@@ -52,6 +52,7 @@ import telegramRoutes from './modules/integrations/telegram/telegram.routes';
 import externalIntegrationRoutes from './modules/integrations/external/externalIntegration.routes';
 import publicApiRoutes from './modules/integrations/public/publicApi.routes';
 import operacaoRoutes from './modules/helpdesk/operacao/operacao.routes';
+import decisaoAuditRoutes from './modules/helpdesk/decisao/decisaoAudit.routes';
 
 const isVercel = !!process.env.VERCEL;
 
@@ -234,6 +235,7 @@ app.use('/api/telegram', telegramRoutes);
 app.use('/api/integrations/external', externalIntegrationRoutes);
 app.use('/api/integration', publicApiRoutes);
 app.use('/api/helpdesk/operacao', operacaoRoutes);
+app.use('/api/helpdesk/decisao', decisaoAuditRoutes);
 app.get('/api/health', async (_req, res) => {
   const result: Record<string, string> = {
     status: 'ok',
