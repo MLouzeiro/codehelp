@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import {
   FileText, Upload, Plus, Edit3, Copy, Trash2, Star, Eye,
-  Loader2, X, ChevronDown, Settings, Palette, Layout,
+  Loader2, X, ChevronDown, Settings, Palette, Layout, Image,
 } from 'lucide-react';
 
 interface OSLayout {
@@ -16,6 +16,7 @@ interface OSLayout {
   configuracao: string;
   timbradoPath?: string | null;
   hasTimbrado?: boolean;
+  hasLogo?: boolean;
   timbradoApply: string;
   margemTopo: number;
   margemBaixo: number;
@@ -31,6 +32,7 @@ interface LayoutConfig {
   cabecalho?: { mostrarLogo?: boolean; logoLargura?: number; logoAltura?: number; tituloOs?: string; mostrarCnpj?: boolean; mostrarTelefone?: boolean; mostrarEmail?: boolean; mostrarWebsite?: boolean };
   rodape?: { mostrarEmpresa?: boolean; mostrarContato?: boolean; textoPersonalizado?: string; mostrarPagina?: boolean; mostrarDisclaimer?: boolean };
   secoes?: { cliente?: { visivel?: boolean }; servico?: { visivel?: boolean }; itens?: { visivel?: boolean }; tecnicoValor?: { visivel?: boolean }; observacoes?: { visivel?: boolean }; assinatura?: { visivel?: boolean } };
+  logo?: { base64?: string; mimeType?: string; nome?: string };
 }
 
 const DEFAULT_CONFIG: LayoutConfig = {
@@ -53,6 +55,8 @@ export default function OSLayoutsPage() {
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<LayoutConfig>(DEFAULT_CONFIG);
   const [form, setForm] = useState({ nome: '', descricao: '', tipo: 'personalizado', margemTopo: 0, margemBaixo: 0, margemEsquerda: 0, margemDireita: 0, timbradoApply: 'primeira_pagina' });
+  const [uploadType, setUploadType] = useState<'logo' | 'timbrado'>('logo');
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { loadLayouts(); }, []);
@@ -70,6 +74,7 @@ export default function OSLayoutsPage() {
     setEditingLayout(null);
     setForm({ nome: '', descricao: '', tipo: 'personalizado', margemTopo: 0, margemBaixo: 0, margemEsquerda: 0, margemDireita: 0, timbradoApply: 'primeira_pagina' });
     setConfig(DEFAULT_CONFIG);
+    setLogoPreview(null);
     setShowEditor(true);
   };
 
@@ -85,7 +90,15 @@ export default function OSLayoutsPage() {
       margemDireita: layout.margemDireita,
       timbradoApply: layout.timbradoApply,
     });
-    try { setConfig(JSON.parse(layout.configuracao || '{}')); } catch { setConfig(DEFAULT_CONFIG); }
+    try {
+      const parsedConfig = JSON.parse(layout.configuracao || '{}');
+      setConfig(parsedConfig);
+      if (parsedConfig.logo?.base64) {
+        setLogoPreview(`data:${parsedConfig.logo.mimeType};base64,${parsedConfig.logo.base64}`);
+      } else {
+        setLogoPreview(null);
+      }
+    } catch { setConfig(DEFAULT_CONFIG); setLogoPreview(null); }
     setShowEditor(true);
   };
 
@@ -139,18 +152,16 @@ export default function OSLayoutsPage() {
     if (!uploadFile || !uploadNome.trim()) return alert('Preencha o nome e selecione um arquivo');
     setUploading(true);
     try {
-      // Passo 1: Criar o registro do layout
-      const { data: newLayout } = await api.post('/orders/layouts', { nome: uploadNome, tipo: 'pdf_importado' });
+      const { data: newLayout } = await api.post('/orders/layouts', { nome: uploadNome, tipo: uploadType === 'logo' ? 'personalizado' : 'pdf_importado' });
 
-      // Passo 2: Enviar o PDF para o layout recém-criado
+      const endpoint = uploadType === 'logo' ? 'logo' : 'timbrado';
       const fd = new FormData();
       fd.append('file', uploadFile);
       try {
-        await api.post(`/orders/layouts/${newLayout.id}/timbrado`, fd, {
+        await api.post(`/orders/layouts/${newLayout.id}/${endpoint}`, fd, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       } catch (uploadErr: any) {
-        // Limpar layout órfão se o upload falhar
         await api.delete(`/orders/layouts/${newLayout.id}`).catch(() => {});
         throw uploadErr;
       }
@@ -189,6 +200,42 @@ export default function OSLayoutsPage() {
     input.click();
   };
 
+  const handleUploadLogo = async (layoutId: string) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/jpg,image/webp';
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.type)) {
+        return alert('Use PNG, JPEG ou WebP');
+      }
+      if (file.size > 5 * 1024 * 1024) return alert('Arquivo muito grande (max 5MB)');
+      const fd = new FormData();
+      fd.append('file', file);
+      try {
+        await api.post(`/orders/layouts/${layoutId}/logo`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        alert('Logo importado com sucesso!');
+        loadLayouts();
+      } catch (err: any) {
+        alert(err?.response?.data?.error || 'Erro ao importar logo');
+      }
+    };
+    input.click();
+  };
+
+  const handleDeleteLogo = async (layoutId: string) => {
+    if (!confirm('Remover o logo deste layout?')) return;
+    try {
+      await api.delete(`/orders/layouts/${layoutId}/logo`);
+      loadLayouts();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao remover logo');
+    }
+  };
+
   const updateConfig = (path: string, value: any) => {
     setConfig(prev => {
       const next = JSON.parse(JSON.stringify(prev));
@@ -203,6 +250,28 @@ export default function OSLayoutsPage() {
     });
   };
 
+  const handleLogoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.type)) {
+      return alert('Use PNG, JPEG ou WebP');
+    }
+    if (file.size > 5 * 1024 * 1024) return alert('Arquivo muito grande (max 5MB)');
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = (ev.target?.result as string).split(',')[1];
+      updateConfig('logo', { base64, mimeType: file.type, nome: file.name });
+      setLogoPreview(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    updateConfig('logo', null);
+    setLogoPreview(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -211,7 +280,10 @@ export default function OSLayoutsPage() {
           <p className="text-gray-500 dark:text-slate-400">Gerencie layouts e timbrados para as OS</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowUpload(true)} className="btn-secondary flex items-center gap-2">
+          <button onClick={() => { setUploadType('logo'); setShowUpload(true); }} className="btn-secondary flex items-center gap-2">
+            <Image size={16} /> Importar Logo
+          </button>
+          <button onClick={() => { setUploadType('timbrado'); setShowUpload(true); }} className="btn-secondary flex items-center gap-2">
             <Upload size={16} /> Importar Timbrado
           </button>
           <button onClick={handleCreate} className="btn-primary flex items-center gap-2">
@@ -240,12 +312,13 @@ export default function OSLayoutsPage() {
                   <h3 className="font-semibold text-gray-900 dark:text-slate-100">{layout.nome}</h3>
                   {layout.padrao && <span className="px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium">Padrão</span>}
                   {layout.tipo === 'pdf_importado' && layout.hasTimbrado && <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs">PDF</span>}
+                  {layout.hasLogo && <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs">Logo</span>}
                   {!layout.ativo && <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 text-xs">Inativo</span>}
                 </div>
                 <p className="text-sm text-gray-500 dark:text-slate-400">
                   {layout.tipo === 'pdf_importado'
                     ? (layout.hasTimbrado ? 'PDF importado' : 'PDF importado (sem arquivo)')
-                    : 'Layout personalizado'}
+                    : (layout.hasLogo ? 'Layout com logo' : 'Layout personalizado')}
                   {layout._count?.orders ? ` · ${layout._count.orders} OS vinculada(s)` : ''}
                 </p>
               </div>
@@ -253,9 +326,16 @@ export default function OSLayoutsPage() {
                 <button onClick={() => handleEdit(layout)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-slate-400" title="Editar">
                   <Edit3 size={16} />
                 </button>
-                <button onClick={() => handleImportTimbrado(layout.id)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-slate-400" title="Importar timbrado">
-                  <Upload size={16} />
-                </button>
+                {layout.tipo === 'pdf_importado' && (
+                  <button onClick={() => handleImportTimbrado(layout.id)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-slate-400" title="Importar timbrado">
+                    <Upload size={16} />
+                  </button>
+                )}
+                {layout.tipo === 'personalizado' && (
+                  <button onClick={() => handleUploadLogo(layout.id)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-slate-400" title="Importar logo">
+                    <Image size={16} />
+                  </button>
+                )}
                 <button onClick={() => handleDuplicate(layout.id)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-slate-400" title="Duplicar">
                   <Copy size={16} />
                 </button>
@@ -280,18 +360,24 @@ export default function OSLayoutsPage() {
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowUpload(false)} />
           <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">Importar Timbrado PDF</h2>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">
+                {uploadType === 'logo' ? 'Importar Logo' : 'Importar Timbrado PDF'}
+              </h2>
               <button onClick={() => setShowUpload(false)}><X size={20} /></button>
             </div>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome do layout</label>
-                <input value={uploadNome} onChange={e => setUploadNome(e.target.value)} className="input w-full" placeholder="Ex: Timbrado Empresa" />
+                <input value={uploadNome} onChange={e => setUploadNome(e.target.value)} className="input w-full" placeholder={uploadType === 'logo' ? 'Ex: Logo Empresa' : 'Ex: Timbrado Empresa'} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Arquivo PDF</label>
-                <input ref={fileInputRef} type="file" accept=".pdf" onChange={e => setUploadFile(e.target.files?.[0] || null)} className="input w-full" />
-                <p className="text-xs text-gray-400 mt-1">Max 10MB. Apenas PDF.</p>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                  {uploadType === 'logo' ? 'Arquivo de imagem' : 'Arquivo PDF'}
+                </label>
+                <input ref={fileInputRef} type="file" accept={uploadType === 'logo' ? 'image/png,image/jpeg,image/jpg,image/webp' : '.pdf'} onChange={e => setUploadFile(e.target.files?.[0] || null)} className="input w-full" />
+                <p className="text-xs text-gray-400 mt-1">
+                  {uploadType === 'logo' ? 'Max 5MB. PNG, JPEG ou WebP.' : 'Max 10MB. Apenas PDF.'}
+                </p>
               </div>
               <div className="flex gap-3 justify-end">
                 <button onClick={() => setShowUpload(false)} className="btn-secondary">Cancelar</button>
@@ -325,14 +411,84 @@ export default function OSLayoutsPage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Descrição</label>
                   <textarea value={form.descricao} onChange={e => setForm({ ...form, descricao: e.target.value })} className="input w-full" rows={2} />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Tipo de Layout</label>
-                  <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} className="input w-full">
-                    <option value="personalizado">Layout visual (editor)</option>
-                    <option value="pdf_importado">PDF importado (timbrado)</option>
-                  </select>
+              </div>
+
+              {/* Radio buttons: Logo vs PDF Timbrado */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                  <Image size={16} /> Tipo de Identidade Visual
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${form.tipo === 'personalizado' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400' : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500'}`}>
+                    <input
+                      type="radio"
+                      name="tipoLayout"
+                      value="personalizado"
+                      checked={form.tipo === 'personalizado'}
+                      onChange={e => setForm({ ...form, tipo: e.target.value })}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Image size={20} className={form.tipo === 'personalizado' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-slate-500'} />
+                      <div>
+                        <span className="font-medium text-gray-900 dark:text-slate-100">Logo personalizado</span>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">Upload de imagem (PNG, JPEG)</p>
+                      </div>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${form.tipo === 'pdf_importado' ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-400' : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500'}`}>
+                    <input
+                      type="radio"
+                      name="tipoLayout"
+                      value="pdf_importado"
+                      checked={form.tipo === 'pdf_importado'}
+                      onChange={e => setForm({ ...form, tipo: e.target.value })}
+                      className="w-4 h-4 text-amber-600"
+                    />
+                    <div className="flex items-center gap-2">
+                      <FileText size={20} className={form.tipo === 'pdf_importado' ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-slate-500'} />
+                      <div>
+                        <span className="font-medium text-gray-900 dark:text-slate-100">PDF Timbrado</span>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">Upload de PDF como fundo</p>
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
+
+              {/* Logo upload (apenas para tipo personalizado) */}
+              {form.tipo === 'personalizado' && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3">Logo</h3>
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1">
+                      {logoPreview ? (
+                        <div className="relative inline-block">
+                          <img src={logoPreview} alt="Logo" className="max-h-24 rounded-lg border border-gray-200 dark:border-slate-600" />
+                          <button
+                            onClick={handleRemoveLogo}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center w-48 h-24 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
+                          <Image size={24} className="text-gray-400 dark:text-slate-500 mb-2" />
+                          <span className="text-xs text-gray-500 dark:text-slate-400">Clique para enviar logo</span>
+                          <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleLogoFileSelect} className="hidden" />
+                        </label>
+                      )}
+                    </div>
+                    {logoPreview && (
+                      <div className="text-xs text-gray-500 dark:text-slate-400">
+                        <p>Logo configurado neste layout</p>
+                        <p className="mt-1">Será usado no cabeçalho da OS</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3 flex items-center gap-2">

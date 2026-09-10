@@ -5,16 +5,17 @@ import path from 'path';
 import prisma from '../../config/database';
 import { env } from '../../config/env';
 import { formatDateBR } from '../../shared/utils/helpers';
-import { getConfig, getTimbradoBytes } from './os-layout.service';
+import { getConfig, getTimbradoBytes, getLogoBuffer } from './os-layout.service';
 
 // ── Cores do timbrado (default) ──────────────────────────────────────
 const DEFAULT_COLORS = {
-  primary: '#1a56db',
+  primary: '#1B2A4A',
   primaryLight: '#e8eefb',
   text: '#1f2937',
   textLight: '#6b7280',
   border: '#d1d5db',
   white: '#ffffff',
+  accent: '#84cc16',
 };
 
 // ── Public API ────────────────────────────────────────────────────────
@@ -111,6 +112,7 @@ function getColors(layout: any) {
     textLight: c.textoClaro || DEFAULT_COLORS.textLight,
     border: c.borda || DEFAULT_COLORS.border,
     white: DEFAULT_COLORS.white,
+    accent: DEFAULT_COLORS.accent,
   };
 }
 
@@ -144,7 +146,11 @@ async function buildOrderPdf(order: any, layout: any): Promise<string> {
   const filepath = path.join(dir, filename);
 
   const org = await getOrganizationData();
-  const logoBuffer = resolveLogo();
+  const defaultLogoBuffer = resolveLogo();
+
+  // Logo do layout tem precedência sobre o logo padrão
+  const layoutLogoBuffer = layout ? getLogoBuffer(layout) : null;
+  const logoBuffer = layoutLogoBuffer || defaultLogoBuffer;
 
   if (layout?.tipo === 'pdf_importado' && layout.id) {
     const timbradoBytes = await getTimbradoBytes(layout.id);
@@ -158,6 +164,42 @@ async function buildOrderPdf(order: any, layout: any): Promise<string> {
 }
 
 // ── PDF with custom layout (personalizado) ───────────────────────────
+
+async function removeTrailingBlankPages(filepath: string): Promise<void> {
+  try {
+    const bytes = fs.readFileSync(filepath);
+    const pdf = await PDFLibDocument.load(bytes);
+    const pageCount = pdf.getPageCount();
+
+    if (pageCount <= 1) return;
+
+    // Verificar últimas páginas: se tiverem pouca ou nenhuma conteúdo, remover
+    let lastContentPage = pageCount - 1;
+    for (let i = pageCount - 1; i >= 1; i--) {
+      const page = pdf.getPage(i);
+      // Verificar se a página tem conteúdo significativo
+      // Se a página foi criada apenas para o footer, ela terá pouco conteúdo
+      const contentStream = page.node.Contents();
+      if (contentStream && contentStream.toString().length > 100) {
+        lastContentPage = i;
+        break;
+      }
+      lastContentPage = i - 1;
+    }
+
+    // Remover páginas vazias do final
+    const pagesToRemove = pageCount - 1 - lastContentPage;
+    if (pagesToRemove > 0) {
+      for (let i = pageCount - 1; i >= pageCount - pagesToRemove; i--) {
+        pdf.removePage(i);
+      }
+      const newBytes = await pdf.save();
+      fs.writeFileSync(filepath, Buffer.from(newBytes));
+    }
+  } catch (err) {
+    console.warn('[PDF] removeTrailingBlankPages falhou, mantendo original:', err);
+  }
+}
 
 async function buildPdfWithLayout(
   order: any, layout: any, org: any, logoBuffer: Buffer | null, filepath: string,
@@ -267,10 +309,15 @@ async function buildPdfWithLayout(
 
   doc.end();
 
-  return new Promise((resolve, reject) => {
-    stream.on('finish', () => resolve(filepath));
+  await new Promise<void>((resolve, reject) => {
+    stream.on('finish', () => resolve());
     stream.on('error', reject);
   });
+
+  // Pós-processamento: remover páginas em branco no final
+  await removeTrailingBlankPages(filepath);
+
+  return filepath;
 }
 
 // ── PDF with imported timbrado ────────────────────────────────────────
@@ -422,8 +469,13 @@ function drawMinimalFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages:
   const contentW = doc.page.width - margin * 2;
   const footerY = doc.page.height - 30;
 
+  // Linha fina verde-limão
+  doc.save();
+  doc.rect(margin, footerY - 2, contentW, 1).fill(colors.accent);
+  doc.restore();
+
   doc.fontSize(6).font('Helvetica').fillColor(colors.textLight);
-  doc.text(`Página ${pageNum} de ${totalPages}`, margin, footerY, { width: contentW, align: 'center' });
+  doc.text(`Página ${pageNum} de ${totalPages}`, margin, footerY + 2, { width: contentW, align: 'center' });
 }
 
 // ── Drawing Helpers (with colors param) ──────────────────────────────
@@ -439,54 +491,60 @@ function drawFirstPageHeader(
 
   const showLogo = headerCfg.mostrarLogo !== false;
   const showCompany = headerCfg.mostrarEmpresa !== false;
-  const logoW = headerCfg.logoLargura || 140;
-  const logoH = headerCfg.logoAltura || 70;
+  const logoW = headerCfg.logoLargura || 90;
+  const logoH = headerCfg.logoAltura || 45;
 
+  // ── Faixa azul-marinho escura (identidade visual Codemed) ────────
   doc.save();
-  doc.rect(0, 0, pageW, 120).fill(colors.primary);
+  doc.rect(0, 0, pageW, 90).fill(colors.primary);
   doc.restore();
 
+  // ── Logo Codemed (alinhado à esquerda, dimensão controlada) ─────
   let hasLogo = false;
   if (showLogo && logoBuffer) {
     try {
-      doc.image(logoBuffer, margin, 20, { fit: [logoW, logoH], valign: 'center' });
+      doc.image(logoBuffer, margin, 15, { fit: [logoW, logoH], valign: 'center' });
       hasLogo = true;
     } catch {}
   }
 
-  const companyX = hasLogo ? margin + logoW + 15 : margin;
-  if (showCompany && org?.nome) {
-    doc.fontSize(18).font('Helvetica-Bold').fillColor(colors.white);
-    doc.text(org.nome, companyX, 25, { width: contentW - (hasLogo ? logoW + 15 : 0) });
+  // ── Nome + Tagline (à direita do logo) ──────────────────────────
+  const textX = hasLogo ? margin + logoW + 15 : margin;
+  const textMaxW = contentW - (hasLogo ? logoW + 15 : 0);
+
+  if (showCompany) {
+    doc.fontSize(20).font('Helvetica-Bold').fillColor(colors.white);
+    doc.text('codemed', textX, 18, { width: textMaxW });
+
+    doc.fontSize(8).font('Helvetica').fillColor(colors.accent);
+    doc.text('Tecnologia que Impulsiona', textX, 42, { width: textMaxW });
   }
 
+  // ── Detalhes da organização (CNPJ, telefone, email) ─────────────
   const orgDetails: string[] = [];
   if (headerCfg.mostrarCnpj !== false && org?.cnpjCpf) orgDetails.push(`CNPJ: ${org.cnpjCpf}`);
   if (headerCfg.mostrarTelefone !== false && org?.telefone) orgDetails.push(`Tel: ${org.telefone}`);
   if (headerCfg.mostrarEmail !== false && org?.email) orgDetails.push(org.email);
+  if (headerCfg.mostrarWebsite !== false && org?.website) orgDetails.push(org.website);
   if (orgDetails.length > 0) {
-    doc.fontSize(8).font('Helvetica').fillColor(colors.border);
-    doc.text(orgDetails.join('  •  '), companyX, 48, { width: contentW - (hasLogo ? logoW + 15 : 0) });
+    doc.fontSize(7).font('Helvetica').fillColor('#94a3b8');
+    doc.text(orgDetails.join('  |  '), textX, 56, { width: textMaxW });
   }
 
-  if (headerCfg.mostrarWebsite !== false && org?.website) {
-    doc.fontSize(8).font('Helvetica').fillColor(colors.border);
-    doc.text(org.website, companyX, 60, { width: contentW - (hasLogo ? logoW + 15 : 0) });
-  }
-
+  // ── Faixa clara "ORDEM DE SERVIÇO" + Nº + Data ──────────────────
   doc.save();
-  doc.rect(0, 90, pageW, 30).fill(colors.primaryLight);
+  doc.rect(0, 90, pageW, 28).fill(colors.primaryLight);
   doc.restore();
 
   const titulo = headerCfg.tituloOs || 'ORDEM DE SERVIÇO';
-  doc.fontSize(13).font('Helvetica-Bold').fillColor(colors.primary);
-  doc.text(titulo, margin, 95, { width: contentW * 0.6 });
+  doc.fontSize(12).font('Helvetica-Bold').fillColor(colors.primary);
+  doc.text(titulo, margin, 96, { width: contentW * 0.55 });
 
-  doc.fontSize(10).font('Helvetica').fillColor(colors.textLight);
-  doc.text(`Nº ${numeroOs}`, margin + contentW * 0.6, 95, { width: contentW * 0.4, align: 'right' });
-  doc.text(`Emissão: ${formatDateBR(dataEmissao)}`, margin + contentW * 0.6, 108, { width: contentW * 0.4, align: 'right' });
+  doc.fontSize(9).font('Helvetica').fillColor(colors.textLight);
+  doc.text(`Nº ${numeroOs}`, margin + contentW * 0.55, 96, { width: contentW * 0.45, align: 'right' });
+  doc.text(`Emissão: ${formatDateBR(dataEmissao)}`, margin + contentW * 0.55, 108, { width: contentW * 0.45, align: 'right' });
 
-  doc.y = 130;
+  doc.y = 128;
   doc.x = margin;
 }
 
@@ -624,42 +682,54 @@ function drawFooter(
   const pageW = doc.page.width;
   const margin = doc.page.margins.left;
   const contentW = pageW - margin * 2;
-  const footerY = doc.page.height - 50;
 
+  // ── Posições do rodapé ──────────────────────────────────────────
+  const greenStripeH = 2;
+  const footerH = 44;
+  const footerTop = doc.page.height - footerH - greenStripeH;
+  const greenTop = footerTop;
+  const blueTop = footerTop + greenStripeH;
+
+  // ── Faixa verde-limão (acento) ──────────────────────────────────
   doc.save();
-  doc.strokeColor(colors.border).lineWidth(0.5);
-  doc.moveTo(margin, footerY).lineTo(margin + contentW, footerY).stroke();
+  doc.rect(0, greenTop, pageW, greenStripeH).fill(colors.accent);
   doc.restore();
 
-  if (footerCfg.mostrarEmpresa !== false) {
-    doc.fontSize(7).font('Helvetica-Bold').fillColor(colors.text);
-    const footerParts: string[] = [];
-    if (org?.nome) footerParts.push(org.nome);
-    if (org?.cnpjCpf) footerParts.push(`CNPJ: ${org.cnpjCpf}`);
-    doc.text(footerParts.join('  •  '), margin, footerY + 5, { width: contentW, align: 'center' });
-  }
+  // ── Faixa azul-marinho (rodapé principal) ───────────────────────
+  doc.save();
+  doc.rect(0, blueTop, pageW, footerH).fill(colors.primary);
+  doc.restore();
 
-  if (footerCfg.mostrarContato !== false) {
-    const footerContact: string[] = [];
-    if (org?.telefone) footerContact.push(`Tel: ${org.telefone}`);
-    if (org?.email) footerContact.push(org.email);
-    if (org?.website) footerContact.push(org.website);
-    if (footerContact.length > 0) {
-      doc.fontSize(6).font('Helvetica').fillColor(colors.textLight);
-      doc.text(footerContact.join('  •  '), margin, footerY + 15, { width: contentW, align: 'center' });
-    }
-  }
+  // ── Contatos Codemed (topo do rodapé azul) ─────────────────────
+  const textY = blueTop + 4;
 
-  if (footerCfg.mostrarPagina !== false) {
-    doc.fontSize(6).font('Helvetica').fillColor(colors.textLight);
-    doc.text(`Página ${pageNum} de ${totalPages}`, margin, footerY + 27, { width: contentW, align: 'center' });
-  }
+  // Usar save/restore para evitar que text cause page break
+  doc.save();
+  doc.fontSize(5.5).font('Helvetica').fillColor(colors.white);
+  doc.text('Telefone/WhatsApp: (98) 9 8927-3854   |   Fixo: (98) 3384-2086   |   Instagram: @codemed_ti   |   Site: www.codemed.com.br', margin + 5, textY, { width: contentW * 0.7, align: 'left', lineBreak: false });
+  doc.text('Av. Melo Povoas, 30, Cohab Anil I – 65051-550 – São Luís (MA)', margin + 5, textY + 10, { width: contentW * 0.7, align: 'left', lineBreak: false });
+  doc.restore();
 
+  // ── "ASE software" (lado direito, centralizado verticalmente) ───
+  doc.save();
+  doc.fontSize(6).font('Helvetica-Bold').fillColor(colors.white);
+  doc.text('ASE software', margin + contentW - 75, textY + 5, { width: 75, align: 'right', lineBreak: false });
+  doc.restore();
+
+  // ── Página (dentro da faixa azul, abaixo dos contatos) ──────────
+  doc.save();
+  doc.fontSize(5).font('Helvetica').fillColor('#94a3b8');
+  doc.text(`Página ${pageNum} de ${totalPages}`, margin, textY + 22, { width: contentW, align: 'center', lineBreak: false });
+  doc.restore();
+
+  // ── Disclaimer (se habilitado, dentro da faixa) ─────────────────
+  doc.save();
   if (footerCfg.textoPersonalizado) {
-    doc.fontSize(6).font('Helvetica').fillColor(colors.textLight);
-    doc.text(footerCfg.textoPersonalizado, margin, footerY + 37, { width: contentW, align: 'center' });
+    doc.fontSize(4.5).fillColor('#94a3b8');
+    doc.text(footerCfg.textoPersonalizado, margin, textY + 30, { width: contentW, align: 'center', lineBreak: false });
   } else if (footerCfg.mostrarDisclaimer !== false) {
-    doc.fontSize(5).fillColor(colors.textLight);
-    doc.text('Documento gerado pelo sistema CodeHelp CRM/Helpdesk', margin, footerY + 37, { width: contentW, align: 'center' });
+    doc.fontSize(4.5).fillColor('#94a3b8');
+    doc.text('Documento gerado pelo sistema CodeHelp CRM/Helpdesk', margin, textY + 30, { width: contentW, align: 'center', lineBreak: false });
   }
+  doc.restore();
 }

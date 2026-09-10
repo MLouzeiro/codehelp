@@ -42,6 +42,7 @@ export interface LayoutConfig {
   };
   margens?: { topo?: number; baixo?: number; esquerda?: number; direita?: number };
   espacamento?: { entreSecoes?: number; tituloSecao?: number };
+  logo?: { base64?: string; mimeType?: string; nome?: string };
 }
 
 export interface CreateLayoutInput {
@@ -325,4 +326,66 @@ export async function getDefaultLayout(organizationId?: string) {
 
 export function getConfig(layout: any): LayoutConfig {
   return safeJsonParse(layout.configuracao || '{}');
+}
+
+// ── Upload de Logo ────────────────────────────────────────────────────
+
+export async function uploadLogo(id: string, file: Express.Multer.File) {
+  const existing = await prisma.oSLayout.findUnique({ where: { id } });
+  if (!existing) throw new Error('Layout não encontrado');
+
+  const allowedMimes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+  if (!allowedMimes.includes(file.mimetype)) {
+    throw new Error('Formato inválido. Use PNG, JPEG ou WebP.');
+  }
+
+  const maxSize = 5 * 1024 * 1024; // 5MB
+  if (file.size > maxSize) {
+    throw new Error('O arquivo excede o tamanho permitido (5MB).');
+  }
+
+  if (!file.buffer || file.buffer.length === 0) {
+    throw new Error('Arquivo não recebido. Tente novamente.');
+  }
+
+  const logoBase64 = file.buffer.toString('base64');
+  const config = getConfig(existing);
+  config.logo = {
+    base64: logoBase64,
+    mimeType: file.mimetype,
+    nome: file.originalname,
+  };
+
+  console.log(`[LOGO] Upload concluído: id=${id}, size=${file.size}, mimetype=${file.mimetype}`);
+
+  return prisma.oSLayout.update({
+    where: { id },
+    data: { configuracao: JSON.stringify(config) },
+  });
+}
+
+export async function deleteLogo(id: string) {
+  const existing = await prisma.oSLayout.findUnique({ where: { id } });
+  if (!existing) throw new Error('Layout não encontrado');
+
+  const config = getConfig(existing);
+  delete (config as any).logo;
+
+  return prisma.oSLayout.update({
+    where: { id },
+    data: { configuracao: JSON.stringify(config) },
+  });
+}
+
+export function getLogoBuffer(layout: any): Buffer | null {
+  const config = getConfig(layout);
+  const logo = (config as any).logo;
+  if (!logo?.base64) return null;
+
+  try {
+    const buffer = Buffer.from(logo.base64, 'base64');
+    return buffer.length > 0 ? buffer : null;
+  } catch {
+    return null;
+  }
 }

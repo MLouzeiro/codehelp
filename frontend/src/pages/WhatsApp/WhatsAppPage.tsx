@@ -52,6 +52,7 @@ export default function WhatsAppPage() {
     departamentoId: '',
   });
   const [abrirSaving, setAbrirSaving] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [departamentos, setDepartamentos] = useState<any[]>([]);
   const [transferirPara, setTransferirPara] = useState('');
   const [transferirMotivo, setTransferirMotivo] = useState('');
@@ -1158,7 +1159,7 @@ export default function WhatsAppPage() {
                   const isImage = msg.mimeType?.startsWith('image/');
                   const isVideo = msg.mimeType?.startsWith('video/');
                   const mediaSrc = msg.mediaUrl && msg.mimeType
-                    ? `data:${msg.mimeType};base64,${msg.mediaUrl}`
+                    ? (msg.mediaUrl.startsWith('data:') ? msg.mediaUrl : `data:${msg.mimeType};base64,${msg.mediaUrl}`)
                     : null;
                   const isBot = msg.source === 'bot';
                   const isSystem = msg.tipo === 'system' || isBot;
@@ -1193,7 +1194,7 @@ export default function WhatsAppPage() {
                         )}
                         {isImage && mediaSrc && (
                           <div className="mb-1">
-                            <img src={mediaSrc} alt="Imagem" className="max-w-[220px] max-h-[160px] rounded-lg cursor-pointer" onClick={() => window.open(mediaSrc, '_blank')} />
+                            <img src={mediaSrc} alt="Imagem" className="max-w-[220px] max-h-[160px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setPreviewImage(mediaSrc)} />
                           </div>
                         )}
                         {isVideo && mediaSrc && (
@@ -1482,6 +1483,15 @@ export default function WhatsAppPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {previewImage && (
+        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
+          <img src={previewImage} alt="Preview" className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl object-contain" />
+          <button className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors" onClick={() => setPreviewImage(null)}>
+            <X size={24} />
+          </button>
         </div>
       )}
     </div>

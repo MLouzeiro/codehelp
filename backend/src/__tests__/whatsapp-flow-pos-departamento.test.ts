@@ -170,7 +170,7 @@ describe('Fluxo pós-departamento (correção fluxo parado)', () => {
     expect(msgAssunto).not.toBeNull();
   });
 
-  it('empresa não encontrada: NÃO cria vínculo e mantém o fluxo aguardando a empresa', async () => {
+  it('empresa não encontrada: NÃO cria vínculo, NÃO envia erro ao cliente, registra nota interna', async () => {
     const { fn } = makeSendMessageMock();
     const antes = await prisma.client.count();
 
@@ -193,10 +193,23 @@ describe('Fluxo pós-departamento (correção fluxo parado)', () => {
     expect(apos?.botFluxo).toBe('awaiting_company');
     expect(await prisma.client.count()).toBe(antes);
 
-    const msgNaoEncontrado = await prisma.message.findFirst({
-      where: { ticketId: ticket.id, fromMe: true, content: { contains: 'Não localizamos a empresa' } },
+    // Nota interna criada para o analista (NÃO enviada ao cliente)
+    const notaInterna = await prisma.message.findFirst({
+      where: { ticketId: ticket.id, fromMe: true, content: { contains: 'Identificação não localizada' }, tipo: 'internal_note' },
     });
-    expect(msgNaoEncontrado).not.toBeNull();
+    expect(notaInterna).not.toBeNull();
+
+    // Cliente recebe apenas a re-pergunta sem revelar que a busca falhou
+    const msgRePergunta = await prisma.message.findFirst({
+      where: { ticketId: ticket.id, fromMe: true, content: { contains: 'confira o' }, tipo: 'system' },
+    });
+    expect(msgRePergunta).not.toBeNull();
+
+    // NÃO deve existir mensagem "Não localizamos" enviada ao cliente
+    const msgNaoLocalizamos = await prisma.message.findFirst({
+      where: { ticketId: ticket.id, fromMe: true, content: { contains: 'Não localizamos' }, tipo: 'system' },
+    });
+    expect(msgNaoLocalizamos).toBeNull();
   });
 
   it('cliente com empresa já vinculada por telefone: pula a pergunta de empresa e pede descrição', async () => {

@@ -66,7 +66,7 @@ export default function UsersPage() {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<{ id: string; name: string } | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
-  const [bulkResult, setBulkResult] = useState<{ archivedCount: number; failedCount: number; failed: { name: string; reason: string }[] } | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ archivedCount: number; failedCount: number; failed: { name: string; reason: string; blocking?: string[] }[] } | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -444,20 +444,37 @@ export default function UsersPage() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             {bulkResult ? (
               <>
-                <h3 className="font-semibold text-lg text-codemed-700">Operação concluída</h3>
-                <div className="space-y-2 text-sm">
-                  <p className="text-green-600">{bulkResult.archivedCount} usuário(s) arquivado(s) com sucesso.</p>
+                <h3 className="font-semibold text-lg text-codemed-700">Resultado da exclusão</h3>
+                <div className="space-y-3 text-sm">
+                  {bulkResult.archivedCount > 0 && (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <span className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                        <span className="text-green-600 text-xs font-bold">{bulkResult.archivedCount}</span>
+                      </span>
+                      {bulkResult.archivedCount} usuário{bulkResult.archivedCount > 1 ? 's' : ''} excluído{bulkResult.archivedCount > 1 ? 's' : ''} com sucesso
+                    </div>
+                  )}
                   {bulkResult.failedCount > 0 && (
-                    <>
-                      <p className="text-amber-600">{bulkResult.failedCount} usuário(s) não pôde(m) ser arquivado(s):</p>
-                      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 space-y-1 max-h-40 overflow-y-auto">
+                    <div className="space-y-2">
+                      <p className="text-amber-600 font-medium">
+                        {bulkResult.failedCount} usuário{bulkResult.failedCount > 1 ? 's' : ''} não pôde{bulkResult.failedCount > 1 ? 'ram' : ''} ser excluído{bulkResult.failedCount > 1 ? 's' : ''}
+                      </p>
+                      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 space-y-3 max-h-60 overflow-y-auto">
                         {bulkResult.failed.map((f, i) => (
-                          <p key={i} className="text-xs text-amber-700 dark:text-amber-300">
-                            <strong>{f.name}</strong>: {f.reason}
-                          </p>
+                          <div key={i} className="border-b border-amber-200 dark:border-amber-800 last:border-0 pb-2 last:pb-0">
+                            <p className="font-medium text-amber-700 dark:text-amber-300">{f.name}</p>
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">{f.reason}</p>
+                            {f.blocking && f.blocking.length > 0 && (
+                              <ul className="text-xs text-amber-500 dark:text-amber-400 mt-1 list-disc list-inside">
+                                {f.blocking.map((item, j) => (
+                                  <li key={j}>{item}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
                 <div className="flex justify-end pt-2">
@@ -467,15 +484,21 @@ export default function UsersPage() {
             ) : bulkMode ? (
               <>
                 <h3 className="font-semibold text-lg text-codemed-700">
-                  Excluir {selectedIds.length} usuário{selectedIds.length > 1 ? 's' : ''}?
+                  Excluir usuários selecionados?
                 </h3>
-                <p className="text-sm text-neutral-600 dark:text-slate-300">
-                  Os {selectedIds.length} usuário(s) selecionado(s) perderão o acesso ao sistema e serão ocultados da lista de funcionários.
-                </p>
+                <div className="text-sm text-neutral-600 dark:text-slate-300 space-y-2">
+                  <p>
+                    Você selecionou <strong>{selectedIds.length} usuário{selectedIds.length > 1 ? 's' : ''}</strong>.
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-slate-400">
+                    Alguns usuários podem possuir chamados, tarefas ou outros registros vinculados.
+                    O sistema irá analisar cada usuário individualmente.
+                  </p>
+                </div>
                 <div className="flex gap-3 pt-2">
                   <button onClick={closeArchiveModal} className="btn-secondary text-sm flex-1" disabled={archiving}>Cancelar</button>
                   <button onClick={confirmBulkArchive} disabled={archiving} className="btn-primary text-sm flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50">
-                    {archiving ? 'Arquivando...' : `Excluir ${selectedIds.length} usuário${selectedIds.length > 1 ? 's' : ''}`}
+                    {archiving ? 'Verificando...' : 'Continuar'}
                   </button>
                 </div>
               </>

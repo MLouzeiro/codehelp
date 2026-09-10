@@ -849,6 +849,8 @@ export interface MetasIndicadores {
   primeiraRespostaMetaMin: number;
   slaMetaPct: number;
   slaRiscoPct: number;
+  retrabalhoMetaPct: number;
+  fcrMetaPct: number;
 }
 
 export interface CardIndicador {
@@ -915,6 +917,14 @@ export interface IndicadoresAtendimento {
     primeiraResposta: { anterior: number; atual: number; deltaPct: number };
     sla: { anterior: number; atual: number; deltaPct: number };
     totalTickets: { anterior: number; atual: number; deltaPct: number };
+  };
+  rework: {
+    reaberturas: number;
+    retrabalho: number;
+    taxaReabertura: number;
+    taxaRetrabalho: number;
+    classificacaoReabertura: ClassificacaoIndicador;
+    classificacaoRetrabalho: ClassificacaoIndicador;
   };
 }
 

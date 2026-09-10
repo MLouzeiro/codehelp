@@ -12,9 +12,11 @@
     "dependencies": {
         "@hapi/boom": "^10.0.1",
         "@prisma/client": "^5.22.0",
+        "@types/compression": "^1.8.1",
         "@types/multer": "^2.1.0",
         "@whiskeysockets/baileys": "^6.7.23",
         "bcryptjs": "^2.4.3",
+        "compression": "^1.8.1",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
         "csurf": "^1.11.0",

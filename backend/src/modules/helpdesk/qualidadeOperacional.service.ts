@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { buildWhere, RelatorioFiltros } from '../analytics/relatorios.service';
 import { STATUS_ABERTO, STATUS_ENCERRADO, ETAPAS_ENCERRADAS } from './constants';
+import { getMetasIndicadores } from './indicadores.service';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -175,7 +176,7 @@ export async function getQualidadeOperacional(
   const anterior = rangeAnterior(dias, fim);
   const agora = new Date();
 
-  const [reaberturas, recorrencia, retrabalho, fcr, alertas, sugestoes, reaberturasAnterior] = await Promise.all([
+  const [reaberturas, recorrencia, retrabalho, fcr, alertas, sugestoes, reaberturasAnterior, retrabalhoAnterior] = await Promise.all([
     calcularReaberturas(inicio, fim, filtros),
     calcularRecorrencia(inicio, fim, filtros),
     calcularRetrabalho(inicio, fim, filtros),
@@ -183,10 +184,15 @@ export async function getQualidadeOperacional(
     gerarAlertasQualidade(inicio, fim),
     gerarSugestoesQualidade(inicio, fim),
     calcularReaberturas(anterior.inicio, anterior.fim, filtros),
+    calcularRetrabalho(anterior.inicio, anterior.fim, filtros),
   ]);
 
   const deltaReabertura = reaberturasAnterior.total > 0
     ? Math.round(((reaberturas.total - reaberturasAnterior.total) / reaberturasAnterior.total) * 100)
+    : null;
+
+  const deltaRetrabalho = retrabalhoAnterior.total > 0
+    ? Math.round(((retrabalho.total - retrabalhoAnterior.total) / retrabalhoAnterior.total) * 100)
     : null;
 
   return {
@@ -197,7 +203,10 @@ export async function getQualidadeOperacional(
       delta: deltaReabertura,
     },
     recorrencia,
-    retrabalho,
+    retrabalho: {
+      ...retrabalho,
+      delta: deltaRetrabalho,
+    },
     fcr,
     alertas,
     sugestoes,
@@ -508,7 +517,6 @@ async function calcularRetrabalho(
   return {
     total: reworkCount,
     percentual,
-    delta: null,
     tempoAdicionalMin: Math.round(tempoAdicionalMin),
     porAnalista,
     porDepartamento,
@@ -550,7 +558,10 @@ async function calcularFcr(inicio: Date, fim: Date) {
 
 async function gerarAlertasQualidade(inicio: Date, fim: Date): Promise<AlertaQualidade[]> {
   const alertas: AlertaQualidade[] = [];
-  const agora = new Date();
+  const metas = await getMetasIndicadores();
+  const reaberturaMetaPct = 15;
+  const retrabalhoMetaPct = metas.retrabalhoMetaPct;
+  const fcrMetaPct = metas.fcrMetaPct;
 
   // Reaberturas elevadas
   const reabertos = await prisma.aIAgentClosureAudit.count({
@@ -561,12 +572,12 @@ async function gerarAlertasQualidade(inicio: Date, fim: Date): Promise<AlertaQua
   });
   if (totalPeriodo > 0) {
     const taxa = (reabertos / totalPeriodo) * 100;
-    if (taxa > 15) {
+    if (taxa > reaberturaMetaPct) {
       alertas.push({
         nivel: 'critico',
         tipo: 'reabertura_aumento',
         titulo: 'Aumento significativo de reaberturas',
-        mensagem: `${reabertos} chamado(s) reaberto(s) (${taxa.toFixed(1)}% do total). Taxa acima de 15%.`,
+        mensagem: `${reabertos} chamado(s) reaberto(s) (${taxa.toFixed(1)}% do total). Taxa acima de ${reaberturaMetaPct}%.`,
         contagem: reabertos,
         icone: 'RotateCcw',
       });
@@ -582,12 +593,12 @@ async function gerarAlertasQualidade(inicio: Date, fim: Date): Promise<AlertaQua
   });
   if (totalPeriodo > 0) {
     const taxa = (rework / totalPeriodo) * 100;
-    if (taxa > 10) {
+    if (taxa > retrabalhoMetaPct) {
       alertas.push({
         nivel: 'atencao',
         tipo: 'retrabalho_acima_meta',
         titulo: 'Retrabalho acima da meta',
-        mensagem: `${rework} caso(s) classificado(s) como retrabalho (${taxa.toFixed(1)}%). Meta: ≤10%.`,
+        mensagem: `${rework} caso(s) classificado(s) como retrabalho (${taxa.toFixed(1)}%). Meta: ≤${retrabalhoMetaPct}%.`,
         contagem: rework,
         icone: 'RefreshCw',
       });
@@ -605,12 +616,12 @@ async function gerarAlertasQualidade(inicio: Date, fim: Date): Promise<AlertaQua
   const fcrTotal = fcrTickets.length;
   const fcrCount = fcrTickets.filter(t => t.resolvidoSemAjuda !== false && (t.metrics?.totalReaberturas || 0) === 0).length;
   const fcrPct = fcrTotal > 0 ? (fcrCount / fcrTotal) * 100 : 0;
-  if (fcrTotal > 0 && fcrPct < 60) {
+  if (fcrTotal > 0 && fcrPct < fcrMetaPct) {
     alertas.push({
       nivel: 'atencao',
       tipo: 'fcr_abaixo_meta',
       titulo: 'FCR abaixo da meta',
-      mensagem: `First Contact Resolution em ${fcrPct.toFixed(0)}% (${fcrCount}/${fcrTotal}). Meta: 60%.`,
+      mensagem: `First Contact Resolution em ${fcrPct.toFixed(0)}% (${fcrCount}/${fcrTotal}). Meta: ${fcrMetaPct}%.`,
       contagem: fcrTotal - fcrCount,
       icone: 'Target',
     });

@@ -6,6 +6,7 @@ import { playSound, initAudioContext } from '../../services/soundAlerts';
 import { isAlertSoundEnabled } from '../Settings/AlertSettings';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal, ConfirmModal } from '../../components/Modal';
+import ErrorBoundary from '../../components/ErrorBoundary';
 import { matchSearchMultiple } from '../../utils/text';
 import {
   RefreshCw, MessageSquare, User, Clock, FileText, Inbox, Bot,
@@ -335,7 +336,7 @@ const KanbanCard = memo(function KanbanCard({
   );
 });
 
-export default function HelpdeskKanban() {
+function HelpdeskKanban() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { modal, alert: showAlert, confirm: showConfirm, close: closeModal } = useModal();
@@ -387,20 +388,37 @@ export default function HelpdeskKanban() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const detailPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const waPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const kanbanAbortRef = useRef<AbortController | null>(null);
+  const detailAbortRef = useRef<AbortController | null>(null);
+  const waAbortRef = useRef<AbortController | null>(null);
   const firstKanbanLoadRef = useRef(false);
   const prevTicketCountRef = useRef(0);
   const prevMessagesCountRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (kanbanAbortRef.current) kanbanAbortRef.current.abort();
+      if (detailAbortRef.current) detailAbortRef.current.abort();
+      if (waAbortRef.current) waAbortRef.current.abort();
+    };
+  }, []);
 
   useEffect(() => { initAudioContext(); }, []);
 
   const canManage = user?.role === 'admin' || user?.role === 'gerente';
 
   const loadKanban = useCallback(async () => {
+    if (kanbanAbortRef.current) kanbanAbortRef.current.abort();
+    kanbanAbortRef.current = new AbortController();
+    const signal = kanbanAbortRef.current.signal;
     try {
-      const { data: res } = await api.get('/helpdesk/kanban', { params: { orderBy } });
+      const { data: res } = await api.get('/helpdesk/kanban', { params: { orderBy }, signal });
       setData(res);
-    } catch (err) {
-      console.error('Erro ao carregar kanban helpdesk:', err);
+    } catch (err: any) {
+      if (err?.name !== 'CanceledError' && err?.code !== 'ERR_CANCELED') {
+        console.error('Erro ao carregar kanban helpdesk:', err);
+      }
     } finally {
       setLoading(false);
     }
@@ -423,11 +441,16 @@ export default function HelpdeskKanban() {
   }, [user?.role]);
 
   const loadTicketDetail = useCallback(async (id: string) => {
+    if (detailAbortRef.current) detailAbortRef.current.abort();
+    detailAbortRef.current = new AbortController();
+    const signal = detailAbortRef.current.signal;
     try {
-      const { data } = await api.get(`/helpdesk/tickets/${id}/history`);
+      const { data } = await api.get(`/helpdesk/tickets/${id}/history`, { signal });
       setTicketDetail(data);
-    } catch (err) {
-      console.error('Erro ao carregar detalhe:', err);
+    } catch (err: any) {
+      if (err?.name !== 'CanceledError' && err?.code !== 'ERR_CANCELED') {
+        console.error('Erro ao carregar detalhe:', err);
+      }
     } finally {
       setDetailLoading(false);
     }
@@ -545,14 +568,21 @@ export default function HelpdeskKanban() {
 
   useEffect(() => {
     const checkWa = async () => {
+      if (waAbortRef.current) waAbortRef.current.abort();
+      waAbortRef.current = new AbortController();
       try {
-        const { data } = await api.get('/whatsapp/status');
+        const { data } = await api.get('/whatsapp/status', { signal: waAbortRef.current.signal });
         setWaConnected(data.connected);
-      } catch { setWaConnected(null); }
+      } catch {
+        setWaConnected(null);
+      }
     };
     checkWa();
-    const t = setInterval(checkWa, 15000);
-    return () => clearInterval(t);
+    waPollRef.current = setInterval(checkWa, 30000);
+    return () => {
+      if (waPollRef.current) clearInterval(waPollRef.current);
+      if (waAbortRef.current) waAbortRef.current.abort();
+    };
   }, []);
 
   const handleDragStart = useCallback((e: React.DragEvent, ticketId: string, etapaOrigem: EtapaSlug) => {
@@ -1490,3 +1520,13 @@ export default function HelpdeskKanban() {
     </div>
   );
 }
+
+function HelpdeskKanbanWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <HelpdeskKanban />
+    </ErrorBoundary>
+  );
+}
+
+export default HelpdeskKanbanWithErrorBoundary;

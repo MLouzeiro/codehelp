@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import csrf from 'csurf';
 import cookieParser from 'cookie-parser';
@@ -67,6 +68,16 @@ app.use(helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
+}));
+
+// ── Compression (gzip) ─────────────────────────────────────────────
+app.use(compression({
+  threshold: 1024,
+  level: 6,
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  },
 }));
 
 // ── CORS — Whitelist de origens (nao usar wildcard em producao) ─────
@@ -220,8 +231,26 @@ app.use('/api/facebook', facebookRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/integrations/external', externalIntegrationRoutes);
 app.use('/api/integration', publicApiRoutes);
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (_req, res) => {
+  const result: Record<string, string> = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development',
+  };
+
+  // Check Prisma / database connectivity (never expose secrets)
+  try {
+    const { default: prisma } = await import('./config/database');
+    await prisma.$queryRaw`SELECT 1`;
+    result.database = 'connected';
+  } catch (err: any) {
+    result.status = 'degraded';
+    result.database = 'disconnected';
+    result.databaseError = err?.message?.substring(0, 120) || 'unknown';
+  }
+
+  const statusCode = result.status === 'ok' ? 200 : 503;
+  return res.status(statusCode).json(result);
 });
 
 app.use('/api', billingRoutes);

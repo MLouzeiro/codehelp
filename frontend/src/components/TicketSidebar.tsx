@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Phone, Mail, MapPin, AlertTriangle, Bot, Tag, History, X, Plus, ExternalLink } from 'lucide-react';
+import { User, Phone, Mail, MapPin, AlertTriangle, Bot, Tag, History, X, Plus, ExternalLink, Building2 } from 'lucide-react';
 import api from '../services/api';
 import TicketHistoricoModal from './TicketHistoricoModal';
 
@@ -11,9 +11,10 @@ interface TicketSidebarProps {
   lastEvents?: any[];
   historicoContato?: any[];
   onTagsChange?: (tags: string[]) => void;
+  onOpenLinkModal?: () => void;
 }
 
-export default function TicketSidebar({ ticket, cliente, lastEvents = [], historicoContato = [], onTagsChange }: TicketSidebarProps) {
+export default function TicketSidebar({ ticket, cliente, lastEvents = [], historicoContato = [], onTagsChange, onOpenLinkModal }: TicketSidebarProps) {
   const [ticketTags, setTicketTags] = useState<string[]>(ticket?.tags ? ticket.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : []);
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTag, setNewTag] = useState('');
@@ -77,6 +78,8 @@ export default function TicketSidebar({ ticket, cliente, lastEvents = [], histor
     descartado: 'Descartado',
   };
 
+  const showLinkButton = !cliente && !ticket?.clientId && onOpenLinkModal;
+
   return (
     <div className="space-y-4 text-sm">
       {/* Info do Cliente */}
@@ -102,6 +105,25 @@ export default function TicketSidebar({ ticket, cliente, lastEvents = [], histor
             </div>
           )}
         </div>
+
+        {/* Laboratório não vinculado */}
+        {showLinkButton && (
+          <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-xs font-medium mb-1.5">
+              <AlertTriangle className="w-4 h-4" />
+              Laboratório não vinculado
+            </div>
+            <p className="text-[11px] text-amber-600 dark:text-amber-500 mb-2">
+              Este ticket não possui laboratório associado.
+            </p>
+            <button
+              onClick={onOpenLinkModal}
+              className="w-full text-xs bg-amber-600 text-white py-1.5 rounded-lg hover:bg-amber-700 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Building2 className="w-3.5 h-3.5" /> Vincular Laboratório
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tickets Stats */}

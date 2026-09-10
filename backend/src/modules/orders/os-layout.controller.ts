@@ -128,3 +128,29 @@ export async function getDefaultLayoutHandler(req: AuthRequest, res: Response) {
     return res.status(500).json({ error: 'Erro ao buscar layout padrão' });
   }
 }
+
+export async function uploadLogo(req: AuthRequest, res: Response) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+    const layout = await layoutService.uploadLogo(req.params.id, req.file);
+    return res.json(layout);
+  } catch (error: any) {
+    console.error('Erro ao fazer upload do logo:', error);
+    return res.status(400).json({ error: error.message || 'Erro ao fazer upload do logo' });
+  }
+}
+
+export async function deleteLogo(req: AuthRequest, res: Response) {
+  try {
+    const layout = await layoutService.deleteLogo(req.params.id);
+    return res.json(layout);
+  } catch (error: any) {
+    if (error.message.includes('não encontrado')) {
+      return res.status(404).json({ error: error.message });
+    }
+    console.error('Erro ao remover logo:', error);
+    return res.status(500).json({ error: 'Erro ao remover logo' });
+  }
+}

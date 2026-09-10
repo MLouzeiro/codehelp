@@ -295,21 +295,28 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
   }, [moveTask, onRefresh]);
 
   const handleAddTask = (columnId: string) => { setNewTaskColumnId(columnId); setNewTaskForm({ titulo: '', descricao: '', prioridade: 'media', categoria: '', classificacao: '', responsavelId: '', dataInicio: '', prazoEntrega: '', tags: [] }); setShowNewTask(true); };
+  const [taskError, setTaskError] = useState<string | null>(null);
   const handleSubmitTask = async () => {
     if (!newTaskForm.titulo.trim()) return;
-    await createTask(board.id, {
-      titulo: newTaskForm.titulo,
-      columnId: newTaskColumnId,
-      descricao: newTaskForm.descricao || undefined,
-      prioridade: newTaskForm.prioridade,
-      categoria: newTaskForm.categoria || undefined,
-      classificacao: newTaskForm.classificacao || undefined,
-      responsavelId: newTaskForm.responsavelId || undefined,
-      dataInicio: newTaskForm.dataInicio || undefined,
-      prazoEntrega: newTaskForm.prazoEntrega || undefined,
-      tags: newTaskForm.tags.length > 0 ? newTaskForm.tags : undefined,
-    });
-    setShowNewTask(false); onRefresh?.();
+    setTaskError(null);
+    try {
+      await createTask(board.id, {
+        titulo: newTaskForm.titulo,
+        columnId: newTaskColumnId,
+        descricao: newTaskForm.descricao || undefined,
+        prioridade: newTaskForm.prioridade,
+        categoria: newTaskForm.categoria || undefined,
+        classificacao: newTaskForm.classificacao || undefined,
+        responsavelId: newTaskForm.responsavelId || undefined,
+        dataInicio: newTaskForm.dataInicio || undefined,
+        prazoEntrega: newTaskForm.prazoEntrega || undefined,
+        tags: newTaskForm.tags.length > 0 ? newTaskForm.tags : undefined,
+      });
+      setShowNewTask(false); onRefresh?.();
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Erro ao criar tarefa';
+      setTaskError(msg);
+    }
   };
   const handleSubmitColumn = async () => {
     if (!newColumnForm.nome.trim()) return;
@@ -454,6 +461,7 @@ export default function KanbanBoard({ board, onTaskClick, onRefresh, onBackToGal
                 </div>
               )}
               <button onClick={handleSubmitTask} className="btn-primary w-full" disabled={!newTaskForm.titulo.trim()}>Criar Tarefa</button>
+              {taskError && <p className="text-xs text-red-500 dark:text-red-400 mt-2 text-center">{taskError}</p>}
             </div>
           </div>
         </div>

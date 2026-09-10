@@ -17,7 +17,7 @@
     "db:studio": "cd backend && npx prisma studio",
     "reset": "powershell -ExecutionPolicy Bypass -File ./reset-dev.ps1",
     "reset:keep-session": "powershell -ExecutionPolicy Bypass -File ./reset-dev.ps1 -KeepSession -NoStart -Force",
-    "postinstall": "cd backend && npm install && cd ../frontend && npm install"
+    "postinstall": "cd backend && npm install && npx prisma generate && cd ../frontend && npm install"
   },
   "dependencies": {
     "concurrently": "^9.0.1",

@@ -5,6 +5,7 @@ import api from '../../services/api';
 import TicketTopo from '../../components/TicketTopo';
 import TicketSidebar from '../../components/TicketSidebar';
 import TicketRodape from '../../components/TicketRodape';
+import ClientLinkModal from '../../components/ClientLinkModal';
 import TicketChecklist from '../../components/TicketChecklist';
 import ClassificationPanel from '../../components/ClassificationPanel';
 import { AcronymText } from '../../components/AcronymText';
@@ -41,6 +42,8 @@ export default function TicketAtendimentoPage() {
   const [novaMsg, setNovaMsg] = useState('');
   const [enviando, setEnviando] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [prazoEntrega, setPrazoEntrega] = useState('');
   const [semPrazo, setSemPrazo] = useState(false);
   const [salvandoPrazo, setSalvandoPrazo] = useState(false);
@@ -51,6 +54,7 @@ export default function TicketAtendimentoPage() {
   const [sidebarAberta, setSidebarAberta] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
 
   const OS_STATUS_LABEL: Record<string, string> = {
     rascunho: 'Rascunho',
@@ -272,6 +276,9 @@ export default function TicketAtendimentoPage() {
       console.error('Erro ao enviar mensagem:', err);
     } finally {
       setEnviando(false);
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
     }
   };
 
@@ -485,26 +492,36 @@ export default function TicketAtendimentoPage() {
                             ? 'bg-blue-50 border border-blue-200 rounded-br-sm dark:bg-blue-900/30 dark:border-blue-600'
                             : 'bg-emerald-50 border border-emerald-200 rounded-br-sm dark:bg-emerald-900/30 dark:border-emerald-600'
                       }`}>
-                        {msg.mediaUrl && msg.mimeType?.startsWith('image/') && (
-                          <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="block mb-2">
-                            <img
-                              src={msg.mediaUrl}
-                              alt="Imagem"
-                              className="max-w-[280px] max-h-[200px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity border border-slate-200 dark:border-slate-600"
-                              loading="lazy"
+                        {msg.mediaUrl && msg.mimeType?.startsWith('image/') && (() => {
+                          const imgSrc = msg.mediaUrl.startsWith('data:') ? msg.mediaUrl : `data:${msg.mimeType};base64,${msg.mediaUrl}`;
+                          return (
+                            <div className="block mb-2">
+                              <img
+                                src={imgSrc}
+                                alt="Imagem"
+                                className="max-w-[280px] max-h-[200px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity border border-slate-200 dark:border-slate-600"
+                                loading="lazy"
+                                onClick={() => setPreviewImage(imgSrc)}
+                              />
+                            </div>
+                          );
+                        })()}
+                        {msg.mediaUrl && msg.mimeType?.startsWith('video/') && (() => {
+                          const vidSrc = msg.mediaUrl.startsWith('data:') ? msg.mediaUrl : `data:${msg.mimeType};base64,${msg.mediaUrl}`;
+                          return (
+                            <video
+                              src={vidSrc}
+                              controls
+                              className="max-w-[280px] max-h-[200px] rounded-lg mb-2"
                             />
-                          </a>
-                        )}
-                        {msg.mediaUrl && msg.mimeType?.startsWith('video/') && (
-                          <video
-                            src={msg.mediaUrl}
-                            controls
-                            className="max-w-[280px] max-h-[200px] rounded-lg mb-2"
-                          />
-                        )}
-                        {msg.mediaUrl && msg.mimeType?.startsWith('audio/') && (
-                          <audio src={msg.mediaUrl} controls className="w-full mb-2" />
-                        )}
+                          );
+                        })()}
+                        {msg.mediaUrl && msg.mimeType?.startsWith('audio/') && (() => {
+                          const audioSrc = msg.mediaUrl.startsWith('data:') ? msg.mediaUrl : `data:${msg.mimeType};base64,${msg.mediaUrl}`;
+                          return (
+                            <audio src={audioSrc} controls className="w-full mb-2" />
+                          );
+                        })()}
                         {msg.mediaUrl && !msg.mimeType?.startsWith('image/') && !msg.mimeType?.startsWith('video/') && !msg.mimeType?.startsWith('audio/') && (
                           <a
                             href={msg.mediaUrl}
@@ -529,14 +546,21 @@ export default function TicketAtendimentoPage() {
               </div>
 
               {/* Input de mensagem — fixo abaixo do chat */}
-              <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-700 p-2 bg-white dark:bg-slate-800 flex gap-2 items-center">
-                <input
-                  type="text"
+              <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-700 p-2 bg-white dark:bg-slate-800 flex gap-2 items-end">
+                <textarea
+                  ref={inputRef}
                   value={novaMsg}
                   onChange={(e) => setNovaMsg(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Digite sua mensagem..."
-                  className="flex-1 text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 outline-none bg-transparent px-2"
+                  placeholder="Digite sua mensagem... (Shift+Enter para nova linha)"
+                  rows={1}
+                  className="flex-1 text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 outline-none bg-transparent px-2 py-1.5 resize-none leading-relaxed"
+                  style={{ minHeight: '38px', maxHeight: '120px' }}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+                  }}
                   disabled={enviando}
                 />
                 <button
@@ -957,7 +981,7 @@ export default function TicketAtendimentoPage() {
               </div>
             )}
 
-            <TicketSidebar ticket={ticket} cliente={cliente} lastEvents={timelineEvents} historicoContato={historicoContato} onTagsChange={() => loadTicket()} />
+            <TicketSidebar ticket={ticket} cliente={cliente} lastEvents={timelineEvents} historicoContato={historicoContato} onTagsChange={() => loadTicket()} onOpenLinkModal={() => setShowLinkModal(true)} />
 
             {/* Link para o CRM */}
             {cliente?.id && (
@@ -1013,6 +1037,24 @@ export default function TicketAtendimentoPage() {
           )}
         </div>
       </div>
+
+      {previewImage && (
+        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
+          <img src={previewImage} alt="Preview" className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl object-contain" />
+          <button className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors" onClick={() => setPreviewImage(null)}>
+            <X size={24} />
+          </button>
+        </div>
+      )}
+
+      <ClientLinkModal
+        open={showLinkModal}
+        onClose={() => setShowLinkModal(false)}
+        onLinked={() => loadTicket()}
+        ticketId={ticketId || ''}
+        ticketContactName={ticket?.contactName}
+        ticketContactPhone={ticket?.contactPhone}
+      />
     </div>
   );
 }

@@ -107,17 +107,22 @@ export async function getKanban(req: AuthRequest, res: Response) {
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     };
 
-    if (orderBy === 'lastMessageCliente_desc') {
-      await Promise.all(
-        tickets.map(async (t) => {
-          const last = await prisma.message.findFirst({
-            where: { ticketId: t.id, fromMe: false },
-            orderBy: { createdAt: 'desc' },
-            select: { createdAt: true },
-          });
-          (t as any).lastClienteAt = last?.createdAt ? new Date(last.createdAt).getTime() : 0;
-        })
-      );
+    if (orderBy === 'lastMessageCliente_desc' && tickets.length > 0) {
+      const ticketIds = tickets.map((t) => t.id);
+      const lastClienteMessages = await prisma.message.groupBy({
+        by: ['ticketId'],
+        where: { ticketId: { in: ticketIds }, fromMe: false },
+        _max: { createdAt: true },
+      });
+      const clienteAtMap = new Map<string, number>();
+      for (const m of lastClienteMessages) {
+        if (m._max.createdAt) {
+          clienteAtMap.set(m.ticketId, new Date(m._max.createdAt).getTime());
+        }
+      }
+      for (const t of tickets) {
+        (t as any).lastClienteAt = clienteAtMap.get(t.id) || 0;
+      }
     }
 
     const board: Record<string, any> = {};

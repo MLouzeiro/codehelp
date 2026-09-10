@@ -480,6 +480,39 @@ export default function IndicadoresAtendimentoPage() {
             </div>
           </div>
 
+          {/* Retrabalho */}
+          {data.rework && (
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+              <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2 mb-3" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                <RefreshCw size={15} className="text-blue-600 dark:text-blue-400" /> Retrabalho
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Reaberturas</div>
+                  <div className="text-2xl font-bold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{data.rework.reaberturas}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500">{data.rework.taxaReabertura}% do total</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Retrabalho</div>
+                  <div className="text-2xl font-bold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>{data.rework.retrabalho}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500">{data.rework.taxaRetrabalho}% do total</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Classificação Reabertura</div>
+                  <div className={`text-sm font-bold ${data.rework.classificacaoReabertura.estado === 'dentro' ? 'text-emerald-600 dark:text-emerald-400' : data.rework.classificacaoReabertura.estado === 'atencao' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {data.rework.classificacaoReabertura.icone} {data.rework.classificacaoReabertura.texto}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Classificação Retrabalho</div>
+                  <div className={`text-sm font-bold ${data.rework.classificacaoRetrabalho.estado === 'dentro' ? 'text-emerald-600 dark:text-emerald-400' : data.rework.classificacaoRetrabalho.estado === 'atencao' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {data.rework.classificacaoRetrabalho.icone} {data.rework.classificacaoRetrabalho.texto}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Alertas operacionais */}
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
             <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2 mb-3" style={{ fontFamily: 'Lexend, sans-serif' }}>

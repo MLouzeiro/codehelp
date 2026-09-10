@@ -21,6 +21,8 @@ export interface MetasIndicadores {
   primeiraRespostaMetaMin: number;
   slaMetaPct: number;
   slaRiscoPct: number;
+  retrabalhoMetaPct: number;
+  fcrMetaPct: number;
 }
 
 export interface CardIndicador {
@@ -128,6 +130,8 @@ export const METAS_INDICADORES_DEFAULT: MetasIndicadores = {
   primeiraRespostaMetaMin: 15,
   slaMetaPct: 95,
   slaRiscoPct: 80,
+  retrabalhoMetaPct: 10,
+  fcrMetaPct: 60,
 };
 
 const CONFIG_SLUG = 'metas_indicadores';
@@ -151,12 +155,16 @@ export async function setMetasIndicadores(metas: Partial<MetasIndicadores>): Pro
     primeiraRespostaMetaMin: metas.primeiraRespostaMetaMin ?? atual.primeiraRespostaMetaMin,
     slaMetaPct: metas.slaMetaPct ?? atual.slaMetaPct,
     slaRiscoPct: metas.slaRiscoPct ?? atual.slaRiscoPct,
+    retrabalhoMetaPct: metas.retrabalhoMetaPct ?? atual.retrabalhoMetaPct,
+    fcrMetaPct: metas.fcrMetaPct ?? atual.fcrMetaPct,
   };
   novo.tmrMetaMin = Math.max(1, Math.round(novo.tmrMetaMin));
   novo.tmeMetaMin = Math.max(1, Math.round(novo.tmeMetaMin));
   novo.primeiraRespostaMetaMin = Math.max(1, Math.round(novo.primeiraRespostaMetaMin));
   novo.slaMetaPct = Math.min(100, Math.max(1, Math.round(novo.slaMetaPct)));
   novo.slaRiscoPct = Math.min(100, Math.max(1, Math.round(novo.slaRiscoPct)));
+  novo.retrabalhoMetaPct = Math.min(100, Math.max(0, Math.round(novo.retrabalhoMetaPct)));
+  novo.fcrMetaPct = Math.min(100, Math.max(0, Math.round(novo.fcrMetaPct)));
 
   const existing = await prisma.helpdeskConfig.findFirst({ where: { slug: CONFIG_SLUG } });
   if (existing) {

@@ -307,7 +307,7 @@ export async function bulkArchiveUsers(req: AuthRequest, res: Response) {
     const userMap = new Map(users.map(u => [u.id, u]));
 
     const archived: { id: string; name: string }[] = [];
-    const failed: { id: string; name: string; reason: string }[] = [];
+    const failed: { id: string; name: string; reason: string; blocking?: string[] }[] = [];
 
     for (const id of uniqueIds) {
       const user = userMap.get(id);
@@ -327,6 +327,38 @@ export async function bulkArchiveUsers(req: AuthRequest, res: Response) {
         failed.push({ id, name: user.name, reason: 'Usuário já está arquivado' });
         continue;
       }
+
+      const [
+        ticketCount,
+        ticketAssigneeCount,
+        kanbanTaskCount,
+        orderCreatorCount,
+        orderTechCount,
+      ] = await Promise.all([
+        prisma.ticket.count({ where: { usuarioId: id } }),
+        prisma.ticket.count({ where: { assigneeId: id } }),
+        prisma.kanbanTask.count({ where: { responsavelId: id } }),
+        prisma.serviceOrder.count({ where: { criadoPorId: id } }),
+        prisma.serviceOrder.count({ where: { tecnicoResponsavelId: id } }),
+      ]);
+
+      const blocking: string[] = [];
+      if (ticketCount > 0) blocking.push(`${ticketCount} chamado(s) criado(s)`);
+      if (ticketAssigneeCount > 0) blocking.push(`${ticketAssigneeCount} chamado(s) atribuído(s)`);
+      if (kanbanTaskCount > 0) blocking.push(`${kanbanTaskCount} tarefa(s) kanban`);
+      if (orderCreatorCount > 0) blocking.push(`${orderCreatorCount} OS(s) criada(s)`);
+      if (orderTechCount > 0) blocking.push(`${orderTechCount} OS(s) como técnico`);
+
+      if (blocking.length > 0) {
+        failed.push({
+          id,
+          name: user.name,
+          reason: 'Usuário possui registros vinculados',
+          blocking,
+        });
+        continue;
+      }
+
       archived.push({ id, name: user.name });
     }
 

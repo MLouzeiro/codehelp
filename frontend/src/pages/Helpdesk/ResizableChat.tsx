@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Keyboard,
   Info,
+  Volume2,
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -322,27 +323,47 @@ export default function ResizableChat({
                         {msg.content}
                       </div>
                     )}
-                    {msg.mediaUrl && (
-                      <div className="mt-1">
-                        {msg.mimeType?.startsWith('image/') ? (
-                          <img
-                            src={msg.mediaUrl}
-                            alt="Anexo"
-                            className="max-w-full rounded"
-                          />
-                        ) : (
-                          <a
-                            href={msg.mediaUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs underline"
-                          >
-                            <FileText className="w-3 h-3" />
-                            Anexo
-                          </a>
-                        )}
-                      </div>
-                    )}
+                    {msg.mediaUrl && (() => {
+                      const mediaSrc = msg.mediaUrl.startsWith('data:')
+                        ? msg.mediaUrl
+                        : msg.mimeType
+                          ? `data:${msg.mimeType};base64,${msg.mediaUrl}`
+                          : msg.mediaUrl;
+                      return (
+                        <div className="mt-1">
+                          {msg.mimeType?.startsWith('image/') ? (
+                            <img
+                              src={mediaSrc}
+                              alt="Anexo"
+                              className="max-w-full rounded"
+                            />
+                          ) : msg.mimeType?.startsWith('audio/') ? (
+                            <div className="flex items-center gap-2">
+                              <Volume2 className="w-4 h-4 text-gray-500 dark:text-slate-400 flex-shrink-0" />
+                              <audio controls preload="none" className="h-8 max-w-[220px]">
+                                <source src={mediaSrc} type={msg.mimeType} />
+                              </audio>
+                            </div>
+                          ) : msg.mimeType?.startsWith('video/') ? (
+                            <video
+                              src={mediaSrc}
+                              controls
+                              className="max-w-full rounded max-h-[200px]"
+                            />
+                          ) : (
+                            <a
+                              href={mediaSrc}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-xs underline"
+                            >
+                              <FileText className="w-3 h-3" />
+                              Anexo
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div
                       className={`text-[10px] mt-1 ${
                         msg.fromMe ? 'text-blue-100' : 'text-gray-400 dark:text-slate-500'

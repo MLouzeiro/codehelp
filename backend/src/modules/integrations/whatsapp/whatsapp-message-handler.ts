@@ -269,11 +269,24 @@ async function processarNomeEmpresaBot(
   // Nenhuma empresa encontrada → NÃO cria vínculo automático nem inventa dados
   pendingCompanyCandidates.delete(key);
   pendingCompanyTimestamps.delete(key);
-  const msg = `Não localizamos a empresa *"${nomeEmpresa}"* em nosso sistema.\n\n${rePerguntaEmpresa()}`;
-  const result = await sendMessage(chatId, msg);
+
+  // Registrar internamente para o analista (NÃO enviar ao cliente)
+  await prisma.message.create({
+    data: {
+      ticketId: ticket.id,
+      fromMe: true,
+      content: `⚠️ Identificação não localizada\n\nO cliente informou: *"${nomeEmpresa}"*\n\nNenhum laboratório/empresa correspondente foi localizado no cadastro.\n\nAção recomendada: Verificar o cadastro ou confirmar com o cliente.`,
+      source: 'bot',
+      tipo: 'internal_note',
+    },
+  });
+
+  // Re-perguntar ao cliente sem revelar que a busca falhou
+  const msgReAsk = rePerguntaEmpresa();
+  const result = await sendMessage(chatId, msgReAsk);
   if (result?.success) {
     await prisma.message.create({
-      data: { ticketId: ticket.id, fromMe: true, content: msg, source: 'bot', tipo: 'system' },
+      data: { ticketId: ticket.id, fromMe: true, content: msgReAsk, source: 'bot', tipo: 'system' },
     });
   }
 }

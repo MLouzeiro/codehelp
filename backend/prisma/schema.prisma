@@ -55,10 +55,12 @@ model Organization {
   teams              Team[]
   tickets            Ticket[]
   users              User[]
-  whatsappConns      WhatsAppConnection[]
+   whatsappConns      WhatsAppConnection[]
+   clientAlerts       ClientAlert[]
+   analystOccurrences AnalystOccurrence[]
 
-  @@index([ativo])
-  @@index([slug])
+   @@index([ativo])
+   @@index([slug])
 }
 
 model User {
@@ -126,8 +128,11 @@ model User {
   ticketWaitTimes             TicketWaitTime[]
   timeEntries                 TimeEntry[]
   timeEntryBlocks             TimeEntryBlock[]
-  organization                Organization?             @relation(fields: [organizationId], references: [id])
-  departamentos               UserDepartamento[]
+   organization                Organization?             @relation(fields: [organizationId], references: [id])
+   departamentos               UserDepartamento[]
+   clientAlertsCreated         ClientAlert[]             @relation("ClientAlertCreator")
+   analystOccurrences          AnalystOccurrence[]       @relation("AnalystOccurrenceUser")
+   analystOccurrencesCreated   AnalystOccurrence[]       @relation("AnalystOccurrenceCreator")
 }
 
 model Client {
@@ -164,9 +169,10 @@ model Client {
   contacts             Contact[]
   kanbanTasks          KanbanTask[]
   opportunities        Opportunity[]
-  serviceOrders        ServiceOrder[]
-  tickets              Ticket[]
-  timeEntries          TimeEntry[]
+   serviceOrders        ServiceOrder[]
+   tickets              Ticket[]
+   timeEntries          TimeEntry[]
+   clientAlerts         ClientAlert[]
 }
 
 /// Colaborador de um cliente (pessoa que trabalha na empresa cliente)
@@ -202,6 +208,8 @@ model Contact {
   createdAt      DateTime @default(now())
   client         Client   @relation(fields: [clientId], references: [id])
   usuario        User     @relation(fields: [usuarioId], references: [id])
+
+  @@index([clientId])
 }
 
 model Opportunity {
@@ -219,6 +227,7 @@ model Opportunity {
   responsavel            User      @relation(fields: [responsavelId], references: [id])
 
   @@index([etapa])
+  @@index([clientId])
 }
 
 model ServiceOrder {
@@ -311,6 +320,54 @@ model OSLayout {
 
   @@index([organizationId])
   @@index([ativo])
+}
+
+/// Alertas internos sobre clientes (visível somente para equipe interna).
+model ClientAlert {
+  id             String   @id @default(uuid())
+  clientId       String
+  titulo         String
+  descricao      String?
+  tipo           String   @default("outro")  // suspensao, atencao, financeiro, contrato, comportamento, suporte, administrativo, outro
+  prioridade     String   @default("informativo")  // informativo, atencao, importante, critico
+  ativo          Boolean  @default(true)
+  criadoPorId    String
+  organizationId String?
+  dataInicio     DateTime @default(now())
+  dataFim        DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  client       Client       @relation(fields: [clientId], references: [id])
+  criadoPor    User         @relation("ClientAlertCreator", fields: [criadoPorId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([clientId])
+  @@index([organizationId])
+  @@index([ativo])
+}
+
+/// Ocorrências operacionais dos analistas (faltas, atrasos, etc.).
+model AnalystOccurrence {
+  id             String   @id @default(uuid())
+  usuarioId      String
+  data           DateTime
+  tipo           String   // falta, atraso, saida_antecipada, folga, atestado, treinamento, ocorrencia, reconhecimento, observacao, outro
+  horas          Float?
+  justificativa  String?
+  observacao     String?
+  criadoPorId    String
+  organizationId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  usuario      User         @relation("AnalystOccurrenceUser", fields: [usuarioId], references: [id])
+  criadoPor    User         @relation("AnalystOccurrenceCreator", fields: [criadoPorId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([usuarioId])
+  @@index([organizationId])
+  @@index([data])
 }
 
 model Signature {
@@ -1660,6 +1717,7 @@ model Notificacao {
   @@index([destinatarioId])
   @@index([ticketId])
   @@index([lida])
+  @@index([destinatarioId, lida])
 }
 
 /// Fluxo de autorização formal para ações que exigem aprovação
@@ -1688,6 +1746,7 @@ model Aprovacao {
   ticket            Ticket        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
+  @@index([status])
 }
 
 /// Regra de automacao WHEN/IF/THEN

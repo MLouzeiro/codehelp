@@ -57,10 +57,19 @@ export async function getVisaoGeral(req: AuthRequest, res: Response) {
 
 // ── Dashboard Executivo Consolidado ─────────────────────────────────────
 // Endpoint: GET /api/analytics/executivo?dias=30
+const dashboardCache = new Map<string, { data: any; expiresAt: number }>();
+const DASHBOARD_CACHE_TTL = 60_000; // 60 seconds
+
 export async function getDashboardExecutivo(req: AuthRequest, res: Response) {
   try {
     const dias = Math.min(Math.max(parseInt(String(req.query.dias || '30'), 10) || 30, 1), 90);
+    const cacheKey = `executivo_${dias}`;
+    const cached = dashboardCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return res.json(cached.data);
+    }
     const data = await gerarDashboardExecutivo(dias);
+    dashboardCache.set(cacheKey, { data, expiresAt: Date.now() + DASHBOARD_CACHE_TTL });
     res.json(data);
   } catch (err: any) {
     console.error('Erro no dashboard executivo:', err?.message || err);

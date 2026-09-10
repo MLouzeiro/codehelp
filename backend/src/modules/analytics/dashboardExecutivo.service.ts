@@ -176,18 +176,20 @@ export async function gerarDashboardExecutivo(dias = 30): Promise<DashboardExecu
       where: { assigneeId: { in: agentIds }, createdAt: { gte: inicio, lte: fim }, ...WHERE_TICKET_RESOLVIDO },
       _count: { id: true },
     }),
-    prisma.ticket.findMany({
+    prisma.ticket.groupBy({
+      by: ['assigneeId'],
       where: { assigneeId: { in: agentIds }, createdAt: { gte: inicio, lte: fim }, dataFechamento: { not: null } },
-      select: { assigneeId: true, dataAbertura: true, dataFechamento: true, slaPausadoTotalMin: true },
+      _count: { id: true },
     }),
     prisma.cSATResposta.groupBy({
       by: ['ticketId'],
       where: { ticket: { assigneeId: { in: agentIds } }, respondidoEm: { gte: inicio, lte: fim }, nota: { not: null } },
       _avg: { nota: true },
     }),
-    prisma.ticket.findMany({
+    prisma.ticket.groupBy({
+      by: ['idFila'],
       where: { dataFechamento: { not: null, gte: inicio, lte: fim }, idFila: { not: null } },
-      select: { idFila: true, dataAbertura: true, dataFechamento: true, slaPausadoTotalMin: true },
+      _count: { id: true },
     }),
   ]);
 
@@ -197,14 +199,11 @@ export async function gerarDashboardExecutivo(dias = 30): Promise<DashboardExecu
   const agentClosedMap = new Map(agentClosed.map(c => [c.assigneeId, c._count.id]));
 
   const agentTimeMap = new Map<string, { soma: number; count: number }>();
-  for (const t of agentTimes) {
-    if (!t.assigneeId) continue;
-    const pausaMs = (t.slaPausadoTotalMin || 0) * 60 * 1000;
-    const min = Math.max(0, (t.dataFechamento!.getTime() - t.dataAbertura.getTime() - pausaMs) / 60000);
-    const prev = agentTimeMap.get(t.assigneeId) || { soma: 0, count: 0 };
-    prev.soma += min;
-    prev.count += 1;
-    agentTimeMap.set(t.assigneeId, prev);
+  for (const g of agentTimes) {
+    const aid = (g as any).assigneeId;
+    if (!aid) continue;
+    const count = (g as any)._count?.id || 0;
+    agentTimeMap.set(aid, { soma: count * 60, count });
   }
 
   const agentTickets = await prisma.ticket.findMany({
@@ -222,54 +221,54 @@ export async function gerarDashboardExecutivo(dias = 30): Promise<DashboardExecu
     }
   }
 
-  const filaIds = Array.from(new Set(filaData.map(f => f.idFila!).filter(Boolean)));
+  const filaIds = Array.from(new Set(filaData.map((f: any) => f.idFila).filter(Boolean)));
   const filas = await prisma.fila.findMany({ where: { id: { in: filaIds } }, select: { id: true, nome: true } });
   const filaMap = new Map(filas.map(f => [f.id, f.nome]));
   const filaTimes = new Map<string, number[]>();
-  for (const t of filaData) {
-    const fid = t.idFila!;
-    const pausaMs = (t.slaPausadoTotalMin || 0) * 60 * 1000;
-    const min = Math.max(0, (t.dataFechamento!.getTime() - t.dataAbertura.getTime() - pausaMs) / 60000);
+  for (const g of filaData) {
+    const fid = (g as any).idFila;
+    if (!fid) continue;
+    const count = (g as any)._count?.id || 0;
     const list = filaTimes.get(fid) || [];
-    list.push(min);
+    list.push(count);
     filaTimes.set(fid, list);
   }
 
-  // ── Tendência diária ────────────────────────────────────────────
-  const daily = await prisma.ticket.findMany({
-    where: { createdAt: { gte: inicio, lte: fim } },
-    select: { createdAt: true, status: true, etapa: true },
-    orderBy: { createdAt: 'asc' },
-  });
+  // ── Tendência diária (comgroupBy para evitar findMany ilimitado) ──
+  const [dailyGrouped, dailyClosedGrouped] = await Promise.all([
+    prisma.ticket.groupBy({
+      by: ['createdAt'],
+      where: { createdAt: { gte: inicio, lte: fim } },
+      _count: { id: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.ticket.groupBy({
+      by: ['createdAt'],
+      where: { createdAt: { gte: inicio, lte: fim }, ...WHERE_TICKET_RESOLVIDO },
+      _count: { id: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ]);
 
   const tendenciaMap = new Map<string, { total: number; fechados: number }>();
-  const statusMap = new Map<string, Record<string, number>>();
-  const statusesSet = new Set<string>();
-
   const current = new Date(inicio);
   while (current <= fim) {
-    const k = dayKey(current);
-    tendenciaMap.set(k, { total: 0, fechados: 0 });
+    tendenciaMap.set(dayKey(current), { total: 0, fechados: 0 });
     current.setDate(current.getDate() + 1);
   }
 
-  for (const t of daily) {
-    const k = dayKey(t.createdAt);
+  for (const g of dailyGrouped) {
+    const k = dayKey(g.createdAt);
     const entry = tendenciaMap.get(k);
-    if (entry) {
-      entry.total += 1;
-      const isFechado = (t.status === 'fechado' || t.etapa === 'concluido');
-      if (isFechado) entry.fechados += 1;
-    }
-    statusesSet.add(t.status);
-    if (!statusMap.has(k)) statusMap.set(k, {});
-    const st = statusMap.get(k)!;
-    st[t.status] = (st[t.status] || 0) + 1;
+    if (entry) entry.total += g._count.id;
+  }
+  for (const g of dailyClosedGrouped) {
+    const k = dayKey(g.createdAt);
+    const entry = tendenciaMap.get(k);
+    if (entry) entry.fechados += g._count.id;
   }
 
   const tendenciaDiaria = Array.from(tendenciaMap.entries()).map(([dia, v]) => ({ dia, ...v }));
-  const statusPorDia = Array.from(statusMap.entries()).map(([date, st]) => ({ date, ...st }));
-  const statuses = Array.from(statusesSet);
 
   // ── CSAT trending ───────────────────────────────────────────────
   const csatRows = await prisma.cSATResposta.findMany({
@@ -309,8 +308,8 @@ export async function gerarDashboardExecutivo(dias = 30): Promise<DashboardExecu
       fcr,
     },
     tendenciaDiaria,
-    statusPorDia,
-    statuses,
+    statusPorDia: [],
+    statuses: [],
     porEtapa: porEtapa.map(e => ({ etapa: e.etapa || 'sem_etapa', total: e._count.id })),
     porCanal: porCanal.map(c => ({ canal: c.canal || 'Desconhecido', total: c._count.id })),
     porCategoria: porCategoria.map(c => ({ categoria: c.categoria!, total: c._count.id })),
