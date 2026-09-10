@@ -51,6 +51,7 @@ import facebookRoutes from './modules/integrations/facebook/facebook.routes';
 import telegramRoutes from './modules/integrations/telegram/telegram.routes';
 import externalIntegrationRoutes from './modules/integrations/external/externalIntegration.routes';
 import publicApiRoutes from './modules/integrations/public/publicApi.routes';
+import operacaoRoutes from './modules/helpdesk/operacao/operacao.routes';
 
 const isVercel = !!process.env.VERCEL;
 
@@ -137,6 +138,7 @@ const csrfExcludedPaths = [
   '/api/orders/sign',
   '/api/integrations/external/webhook',
   '/api/integration',
+  '/api/helpdesk/operacao/sse',
 ];
 
 // ── CSRF: so aplicar em rotas que NAO tem autenticacao JWT ───────────
@@ -231,6 +233,7 @@ app.use('/api/facebook', facebookRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/integrations/external', externalIntegrationRoutes);
 app.use('/api/integration', publicApiRoutes);
+app.use('/api/helpdesk/operacao', operacaoRoutes);
 app.get('/api/health', async (_req, res) => {
   const result: Record<string, string> = {
     status: 'ok',

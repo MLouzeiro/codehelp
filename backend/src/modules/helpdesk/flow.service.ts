@@ -158,7 +158,9 @@ async function resetBotState(phone?: string | null): Promise<void> {
   try {
     const { setWhatsAppConversationState } = await import('../integrations/whatsapp/whatsapp-message-handler');
     setWhatsAppConversationState(phone, 'IDLE');
-  } catch {}
+  } catch (err) {
+    console.warn('[FLOW] Falha ao resetar estado do bot:', err instanceof Error ? err.message : err);
+  }
 }
 
 export async function finalizarAtendimento(ticketId: string): Promise<boolean> {

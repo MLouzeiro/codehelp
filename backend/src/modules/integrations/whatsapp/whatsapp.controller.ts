@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../../../config/database';
 import { env } from '../../../config/env';
 import { AuthRequest } from '../../../shared/middleware/auth';
+import { operationalBus } from '../../helpdesk/operacao/eventBus';
 import {
   isClientConnected, getQrCodeData, getConnectionError,
   initializeClient, disconnectClient, clearSession,
@@ -244,6 +245,11 @@ export async function getTicket(req: AuthRequest, res: Response) {
     });
     if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
 
+    // Ownership: technicians can only see their own tickets
+    if (req.user?.role === 'tecnico' && ticket.usuarioId !== req.user?.id) {
+      return res.status(403).json({ error: 'Acesso negado: voce nao e o responsavel por este ticket' });
+    }
+
     const serviceOrders = await prisma.serviceOrder.findMany({
       where: { ticketId: ticket.id },
       select: { id: true, numeroOs: true, status: true },
@@ -343,6 +349,11 @@ export async function closeTicket(req: AuthRequest, res: Response) {
     if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
     if (ticket.status === 'fechado') return res.status(400).json({ error: 'Ticket já está fechado' });
 
+    // Ownership: technicians can only close their own tickets
+    if (req.user?.role === 'tecnico' && ticket.usuarioId !== req.user?.id) {
+      return res.status(403).json({ error: 'Acesso negado: voce nao e o responsavel por este ticket' });
+    }
+
     const { encerrarTicket } = await import('../../helpdesk/flow.service');
     const result = await encerrarTicket(id, {
       status: 'fechado',
@@ -371,6 +382,11 @@ export async function updateTicket(req: AuthRequest, res: Response) {
     const { assunto, categoria, usuarioId, status } = req.body;
     const ticket = await prisma.ticket.findUnique({ where: { id } });
     if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
+
+    // Ownership: technicians can only update their own tickets
+    if (req.user?.role === 'tecnico' && ticket.usuarioId !== req.user?.id) {
+      return res.status(403).json({ error: 'Acesso negado: voce nao e o responsavel por este ticket' });
+    }
 
     const data: any = {};
     if (assunto !== undefined) data.assunto = assunto;
@@ -549,6 +565,14 @@ export async function sendMessage(req: AuthRequest, res: Response) {
       });
       if (req.user?.id) await autoMoveTicketOnAgentReply(ticketId, req.user.id);
       if (req.user?.id && ticketId) triggerAgentAIAudit(ticketId, req.user.id, msgDb.id, rawMessage);
+      operationalBus.emitEvent({
+        type: 'ticket_message_sent',
+        userId: req.user?.id || 'sistema',
+        organizationId: req.user?.organizationId,
+        ticketId,
+        data: { preview: rawMessage.slice(0, 100) },
+        timestamp: new Date(),
+      });
     }
 
     return res.json({ success: true, message: 'Mensagem enviada com sucesso', provider: 'whatsapp', connectionId: resolvedConnectionId });

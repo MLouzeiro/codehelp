@@ -71,7 +71,9 @@ async function runBackgroundInit() {
 
 async function start() {
   // Start DB connection in background (non-blocking)
-  connectToDatabaseWithRetry().catch(() => {});
+  connectToDatabaseWithRetry().catch((err) => {
+    console.error('[Startup] Falha na conexao com banco de dados:', err?.message || err);
+  });
 
   // Start server immediately — don't wait for DB
   const server = app.listen(env.port, '0.0.0.0', () => {

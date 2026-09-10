@@ -87,10 +87,14 @@ export async function avaliarRegras(trigger: TriggerValido, contexto: Record<str
     let acoes: RegraAcao[] = [];
     try {
       condicoes = JSON.parse(regra.condicoes);
-    } catch {}
+    } catch (err) {
+      console.warn(`[AUTOMATIONS] Falha ao parsear condicoes da regra ${regra.id}:`, err instanceof Error ? err.message : err);
+    }
     try {
       acoes = JSON.parse(regra.acoes);
-    } catch {}
+    } catch (err) {
+      console.warn(`[AUTOMATIONS] Falha ao parsear acoes da regra ${regra.id}:`, err instanceof Error ? err.message : err);
+    }
     const passa = avaliarCondicoes(condicoes, contexto, (regra.logicOperator as 'all' | 'any') || 'all');
     if (!passa) continue;
     const acoesExecutadas: ExecucaoResultado['acoesExecutadas'] = [];

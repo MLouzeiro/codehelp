@@ -75,6 +75,7 @@ const IntegracoesExternasPage = lazy(() => import('./pages/Settings/IntegracoesE
 const OsSignatureConfigPage = lazy(() => import('./pages/Settings/OsSignatureConfigPage'));
 const OSLayoutsPage = lazy(() => import('./pages/Settings/OSLayoutsPage'));
 const TimeTrackingPage = lazy(() => import('./pages/TimeTracking/TimeTrackingPage'));
+const CentralOperacaoPage = lazy(() => import('./pages/Helpdesk/CentralOperacaoPage'));
 
 function PageLoader() {
   return (
@@ -128,6 +129,7 @@ export default function App() {
             <Route path="helpdesk" element={<HelpdeskKanban />} />
             <Route path="helpdesk/painel" element={<HelpdeskDashboard />} />
             <Route path="helpdesk/painel-ia" element={<DashboardHelpdeskV2 />} />
+            <Route path="helpdesk/operacao" element={<CentralOperacaoPage />} />
             <Route path="helpdesk/metrics" element={<HelpdeskMetrics />} />
             <Route path="helpdesk/business-metrics" element={<HelpdeskBusinessMetrics />} />
             <Route path="helpdesk/board" element={<HelpdeskStatusBoard />} />

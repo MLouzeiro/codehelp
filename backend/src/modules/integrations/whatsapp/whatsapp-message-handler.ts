@@ -28,6 +28,7 @@ import {
   extrairNotaAvaliacao,
   enviarMensagemObrigadoAvaliacao,
 } from '../../helpdesk/flow.service';
+import { operationalBus } from '../../helpdesk/operacao/eventBus';
 
 // ── Shared WhatsApp Message Handler ────────────────────────────────────
 // Provider-agnostic bot/triage logic used by all WhatsApp backends.
@@ -48,6 +49,14 @@ const PROCESSING_LOCK_TIMEOUT_MS = 30_000; // 30 segundos
 // Dedupe de webhooks/eventos repetidos (idempotência de cliques)
 const recentMessageIds = new Map<string, number>();
 const MESSAGE_ID_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+// Cleanup periódico para evitar memory leak no recentMessageIds
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, ts] of recentMessageIds) {
+    if (now - ts > MESSAGE_ID_TTL_MS) recentMessageIds.delete(key);
+  }
+}, 60_000); // a cada 60 segundos
 
 // ── Conversation State Machine (auxiliar, em memória) ─────────────────
 type ConversationState = 'IDLE' | 'AWAITING_CSAT' | 'AWAITING_DEPARTMENT' | 'AWAITING_COMPANY' | 'AWAITING_DESCRIPTION';
@@ -603,6 +612,14 @@ export async function processIncomingMessageHandler(
         },
       });
       ticket = created;
+      operationalBus.emitEvent({
+        type: 'ticket_created',
+        userId: 'sistema',
+        organizationId: client?.organizationId || null,
+        ticketId: created.id,
+        data: { phone: phoneSemSufixo, etapa: etapaInicial, canal: `whatsapp_${provider}` },
+        timestamp: new Date(),
+      });
       console.log(`[NEW_TICKET] ticketId=${created.id} customerPhone=${phoneSemSufixo} event=CREATED etapa=${etapaInicial}`);
 
       await prisma.ticketStageEvent.create({
@@ -634,6 +651,14 @@ export async function processIncomingMessageHandler(
       await prisma.ticket.update({
         where: { id: ticket!.id },
         data: { updatedAt: new Date() },
+      });
+      operationalBus.emitEvent({
+        type: 'ticket_message_received',
+        userId: ticket!.assigneeId || 'sistema',
+        organizationId: ticket!.organizationId,
+        ticketId: ticket!.id,
+        data: { phone: phoneSemSufixo, preview: (text || '').slice(0, 100) },
+        timestamp: new Date(),
       });
     }
 

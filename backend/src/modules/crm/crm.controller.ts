@@ -2,6 +2,11 @@ import { Response, Request } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../shared/middleware/auth';
 
+// Helper: check if user is admin (can see all organizations)
+function isAdmin(user: AuthRequest['user']): boolean {
+  return user?.role === 'admin' || user?.isMaster === true;
+}
+
 export async function listClients(req: AuthRequest, res: Response) {
   try {
     const { status, segmento, cidade, responsavel, search, page = '1', limit = '20', includeInativos } = req.query;
@@ -20,6 +25,11 @@ export async function listClients(req: AuthRequest, res: Response) {
         { email: { contains: search as string, mode: 'insensitive' } },
         { telefone: { contains: search as string } },
       ];
+    }
+
+    // Multi-tenant: non-admin users only see clients from their organization
+    if (!isAdmin(req.user) && req.user?.organizationId) {
+      where.organizationId = req.user.organizationId;
     }
 
     // Filtro por responsavel so aplica quando explicitamente solicitado
@@ -58,6 +68,11 @@ export async function getClient(req: AuthRequest, res: Response) {
       },
     });
     if (!client) return res.status(404).json({ error: 'Cliente não encontrado' });
+
+    // Multi-tenant: non-admin users can only see clients from their organization
+    if (!isAdmin(req.user) && req.user?.organizationId && client.organizationId !== req.user.organizationId) {
+      return res.status(404).json({ error: 'Cliente não encontrado' });
+    }
     return res.json(client);
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao buscar cliente' });
@@ -83,6 +98,7 @@ export async function createClient(req: AuthRequest, res: Response) {
         telefone, email, cidade, estado,
         status: status || 'ativo',
         origem: origem || 'manual',
+        organizationId: req.user?.organizationId || null,
       },
     });
     return res.status(201).json(client);

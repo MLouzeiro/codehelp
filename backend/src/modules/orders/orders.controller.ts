@@ -29,6 +29,11 @@ import {
 import { generateOrderPdf } from './pdf.service';
 import { sendWhatsAppDocument } from '../integrations/whatsapp/whatsapp.service';
 
+// Helper: check if user is admin (can see all organizations)
+function isAdmin(user: AuthRequest['user']): boolean {
+  return user?.role === 'admin' || user?.isMaster === true;
+}
+
 export async function listOrders(req: AuthRequest, res: Response) {
   try {
     const { status, clientId, page = '1', limit = '20' } = req.query;
@@ -36,6 +41,11 @@ export async function listOrders(req: AuthRequest, res: Response) {
     if (status) where.status = status;
     if (clientId) where.clientId = clientId;
     if (req.user?.role === 'tecnico') where.tecnicoResponsavelId = req.user.id;
+
+    // Multi-tenant: non-admin users only see orders from their organization
+    if (!isAdmin(req.user) && req.user?.organizationId) {
+      where.client = { organizationId: req.user.organizationId };
+    }
 
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
     const [orders, total] = await Promise.all([
@@ -75,6 +85,12 @@ export async function getOrder(req: AuthRequest, res: Response) {
       },
     });
     if (!order) return res.status(404).json({ error: 'OS não encontrada' });
+
+    // Multi-tenant: non-admin users can only see orders from their organization
+    if (!isAdmin(req.user) && req.user?.organizationId && order.client?.organizationId !== req.user.organizationId) {
+      return res.status(404).json({ error: 'OS não encontrada' });
+    }
+
     return res.json({ ...order, sistemasEnvolvidos: JSON.parse(order.sistemasEnvolvidos || '[]') });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao buscar OS' });
@@ -167,7 +183,17 @@ export async function updateOrder(req: AuthRequest, res: Response) {
     if (existing.signature) return res.status(400).json({ error: 'OS já assinada não pode ser editada' });
     if (existing.status === 'cancelada') return res.status(400).json({ error: 'OS cancelada não pode ser editada' });
 
-    const updateData = { ...req.body };
+    const raw = req.body;
+    const allowedFields = [
+      'titulo', 'descricao', 'clientId', 'tipoServico', 'status',
+      'sistemasEnvolvidos', 'valorServico', 'dataPrevistaEntrega',
+      'contatoId', 'telefonePreview', 'tipoImplantacao', 'precoImplantacao',
+      'horasDev', 'horasSuporte', 'dataInicioImplantacao', 'dataFimImplantacao',
+    ];
+    const updateData: Record<string, any> = {};
+    for (const field of allowedFields) {
+      if (raw[field] !== undefined) updateData[field] = raw[field];
+    }
     if (updateData.sistemasEnvolvidos && Array.isArray(updateData.sistemasEnvolvidos)) {
       updateData.sistemasEnvolvidos = JSON.stringify(updateData.sistemasEnvolvidos);
     }

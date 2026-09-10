@@ -148,11 +148,14 @@ export async function getTask(req: AuthRequest, res: Response) {
 
 export async function updateTask(req: AuthRequest, res: Response) {
   try {
-    const task = await service.updateTask(req.params.taskId, req.body, req.user?.id ?? null);
+    const task = await service.updateTask(req.params.taskId, req.body, req.user?.id ?? null, req.user?.role ?? null);
     return res.json(task);
   } catch (error: any) {
     if (error.message?.includes('não encontrada')) {
       return res.status(404).json({ error: error.message });
+    }
+    if (error.message?.includes('Acesso negado')) {
+      return res.status(403).json({ error: error.message });
     }
     console.error('Erro ao atualizar tarefa:', error);
     return res.status(500).json({ error: 'Erro ao atualizar tarefa' });
@@ -174,11 +177,14 @@ export async function deleteTask(req: AuthRequest, res: Response) {
 
 export async function moveTask(req: AuthRequest, res: Response) {
   try {
-    const task = await service.moveTask(req.params.taskId, req.body.targetColumnId, req.body.targetOrdem, req.user?.id ?? null, req.body.motivo);
+    const task = await service.moveTask(req.params.taskId, req.body.targetColumnId, req.body.targetOrdem, req.user?.id ?? null, req.body.motivo, req.user?.role ?? null);
     return res.json(task);
   } catch (error: any) {
     if (error.message?.includes('obrigatório') || error.message?.includes('não encontrad')) {
       return res.status(400).json({ error: error.message });
+    }
+    if (error.message?.includes('Acesso negado')) {
+      return res.status(403).json({ error: error.message });
     }
     console.error('Erro ao mover tarefa:', error);
     return res.status(500).json({ error: 'Erro ao mover tarefa' });

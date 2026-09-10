@@ -602,7 +602,7 @@ export async function getTask(taskId: string) {
   }
 }
 
-export async function updateTask(taskId: string, data: TaskUpdateInput, usuarioId?: string | null) {
+export async function updateTask(taskId: string, data: TaskUpdateInput, usuarioId?: string | null, usuarioRole?: string | null) {
   try {
     const existing = await prisma.kanbanTask.findUnique({
       where: { id: taskId },
@@ -615,6 +615,13 @@ export async function updateTask(taskId: string, data: TaskUpdateInput, usuarioI
       },
     });
     if (!existing) throw new Error('Tarefa nao encontrada');
+
+    // Ownership: only assignee, admin, or gerente can update
+    const isAdminOrGerente = usuarioRole === 'admin' || usuarioRole === 'gerente';
+    const isAssignee = existing.responsavelId === usuarioId;
+    if (!isAdminOrGerente && !isAssignee) {
+      throw new Error('Acesso negado: voce nao e o responsavel por esta tarefa');
+    }
 
     const antes: Record<string, any> = {
       titulo: existing.titulo,
@@ -780,13 +787,20 @@ export async function deleteTask(taskId: string, usuarioId?: string | null, moti
   }
 }
 
-export async function moveTask(taskId: string, targetColumnId: string, targetOrdem?: number, usuarioId?: string | null, motivo?: string) {
+export async function moveTask(taskId: string, targetColumnId: string, targetOrdem?: number, usuarioId?: string | null, motivo?: string, usuarioRole?: string | null) {
   try {
     const task = await prisma.kanbanTask.findUnique({
       where: { id: taskId },
-      select: { id: true, columnId: true, ordem: true, boardId: true, numero: true, horasTrabalhadas: true, dataInicio: true },
+      select: { id: true, columnId: true, ordem: true, boardId: true, numero: true, horasTrabalhadas: true, dataInicio: true, responsavelId: true },
     });
     if (!task) throw new Error('Tarefa nao encontrada');
+
+    // Ownership: only assignee, admin, or gerente can move
+    const isAdminOrGerente = usuarioRole === 'admin' || usuarioRole === 'gerente';
+    const isAssignee = task.responsavelId === usuarioId;
+    if (!isAdminOrGerente && !isAssignee) {
+      throw new Error('Acesso negado: voce nao e o responsavel por esta tarefa');
+    }
 
     const targetColumn = await prisma.kanbanColumn.findUnique({
       where: { id: targetColumnId },

@@ -47,6 +47,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/app/helpdesk', label: 'Chamados', icon: Stethoscope },
       { path: '/app/helpdesk/painel', label: 'Atendimento ao Vivo', icon: Activity, roles: ['admin', 'gerente'] },
       { path: '/app/helpdesk/board', label: 'Quadro de Atendimento', icon: ArrowUpDown, roles: ['admin', 'gerente'] },
+      { path: '/app/helpdesk/operacao', label: 'Central de Operação', icon: Activity, roles: ['admin', 'gerente', 'supervisor'] },
     ],
   },
   {

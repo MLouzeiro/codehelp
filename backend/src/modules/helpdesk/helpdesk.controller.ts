@@ -22,6 +22,7 @@ import { notificarAtendentesFila } from '../alerts/alerts.service';
 import { calcularFCR, metricasFCR } from './fcr.service';
 import { criarKanbanTaskDeTicket, tempoPorDepartamento } from './department-integration.service';
 import { validarClassificacaoObrigatoria } from './categorias.service';
+import { operationalBus } from './operacao/eventBus';
 
 const PRIORIDADE_ORDEM: Record<string, number> = {
   urgente: 0,
@@ -491,6 +492,15 @@ export async function moveTicketEtapa(req: AuthRequest, res: Response) {
 
     await gerenciarPausaSlaPorEtapa(id, etapa, etapaAnterior, req.user?.id, getIpFromRequest(req));
 
+    operationalBus.emitEvent({
+      type: 'ticket_stage_changed',
+      userId: req.user?.id || 'sistema',
+      organizationId: req.user?.organizationId || ticket.organizationId,
+      ticketId: id,
+      data: { etapaAnterior, etapaNova: etapa, assigneeId: updateData.assigneeId || ticket.assigneeId },
+      timestamp: new Date(),
+    });
+
     await prisma.ticketStageEvent.create({
       data: {
         ticketId: id,
@@ -580,6 +590,14 @@ export async function atribuirTicket(req: AuthRequest, res: Response) {
       },
     });
     await updateClientStatusCounters(id);
+    operationalBus.emitEvent({
+      type: 'ticket_assigned',
+      userId: usuarioId || req.user?.id || 'sistema',
+      organizationId: req.user?.organizationId,
+      ticketId: id,
+      data: { previousAssignee: ticket.assigneeId, newAssignee: usuarioId || null },
+      timestamp: new Date(),
+    });
     await logAction({
       usuarioId: req.user?.id,
       acao: 'atribuir',
@@ -828,6 +846,13 @@ export async function setAgentPresence(req: AuthRequest, res: Response) {
         online: !!online,
         lastSeenAt: new Date(),
       },
+    });
+    operationalBus.emitEvent({
+      type: 'presence_changed',
+      userId: req.user.id,
+      organizationId: req.user.organizationId,
+      data: { online: !!online },
+      timestamp: new Date(),
     });
     return res.json({ success: true, online: !!online });
   } catch (error) {
