@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
+import { formatDuration } from '../../lib/formatDuration';
 import { useAuth } from '../../services/auth';
 import {
   RefreshCw, Send, TrendingUp, TrendingDown, Clock, CheckCircle,
@@ -42,13 +43,7 @@ interface Relatorio {
 const CANAL_CORES = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4'];
 
 function formatarTempo(minutos: number): string {
-  if (minutos < 1) return `${minutos}min`;
-  if (minutos < 60) return `${minutos}min`;
-  const horas = Math.floor(minutos / 60);
-  const mins = minutos % 60;
-  if (horas < 24) return mins === 0 ? `${horas}h` : `${horas}h${mins}m`;
-  const dias = Math.floor(horas / 24);
-  return `${dias}d ${horas % 24}h`;
+  return formatDuration(minutos);
 }
 
 function DeltaPill({ valor, sufixo, invertido }: { valor: number; sufixo?: string; invertido?: boolean }) {

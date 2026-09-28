@@ -1,7 +1,7 @@
 ﻿import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../shared/middleware/auth';
-import { generateOsNumber } from '../../shared/utils/helpers';
+import { generateOsNumber, getAtomicOsNumber } from '../../shared/utils/helpers';
 import {
   registrarStatusEvent,
   listOrderTimeline,
@@ -101,34 +101,63 @@ export async function createOrder(req: AuthRequest, res: Response) {
   try {
     const { clientId, tipoServico, descricaoServico, sistemasEnvolvidos, equipamentos, tecnicoResponsavelId, valorServico, dataPrevistaEntrega, ticketId, observacoes, tipoImplantacao, precoImplantacao, horasDev, horasSuporte, layoutId } = req.body;
 
-    if (!clientId || !tipoServico) {
-      return res.status(400).json({ error: 'Cliente e tipo de serviço são obrigatórios' });
+    // ── Validação campos obrigatórios ─────────────────────────────────
+    const missingFields: string[] = [];
+    if (!clientId) missingFields.push('clientId (Cliente)');
+    if (!tipoServico) missingFields.push('tipoServico (Tipo de Serviço)');
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        error: 'Campos obrigatórios não informados',
+        details: `Ausente: ${missingFields.join(', ')}`,
+      });
     }
 
-    const tecnicoId = tecnicoResponsavelId || req.user!.id;
-    const [clienteExiste, tecnicoExiste] = await Promise.all([
-      prisma.client.findUnique({ where: { id: clientId }, select: { id: true } }),
-      prisma.user.findUnique({ where: { id: tecnicoId }, select: { id: true } }),
-    ]);
-    if (!clienteExiste) {
-      return res.status(400).json({ error: 'Cliente não encontrado. Recarregue a lista e selecione novamente.' });
-    }
-    if (!tecnicoExiste) {
-      return res.status(400).json({ error: 'Técnico responsável não encontrado.' });
+    // ── Resolver técnico (fallback para o usuário logado) ─────────────
+    const tecnicoId = tecnicoResponsavelId || req.user?.id;
+    if (!tecnicoId) {
+      return res.status(400).json({ error: 'Não foi possível identificar o técnico responsável. Faça login novamente.' });
     }
 
-    const year = new Date().getFullYear();
+    // ── Validar existência de relacionamentos ─────────────────────────
+    const validations = [
+      prisma.client.findUnique({ where: { id: clientId }, select: { id: true } })
+        .then(c => ({ field: 'clientId', exists: !!c, label: 'Cliente' })),
+      prisma.user.findUnique({ where: { id: tecnicoId }, select: { id: true } })
+        .then(t => ({ field: 'tecnicoResponsavelId', exists: !!t, label: 'Técnico' })),
+    ];
+    if (ticketId) {
+      validations.push(
+        prisma.ticket.findUnique({ where: { id: ticketId }, select: { id: true, clientId: true } })
+          .then(t => ({ field: 'ticketId', exists: !!t, label: 'Ticket', clientId: t?.clientId }))
+      );
+    }
+    if (layoutId) {
+      validations.push(
+        prisma.oSLayout.findUnique({ where: { id: layoutId }, select: { id: true } })
+          .then(l => ({ field: 'layoutId', exists: !!l, label: 'Layout' }))
+      );
+    }
+
+    const results = await Promise.all(validations);
+    const failures = results.filter(r => !r.exists);
+    if (failures.length > 0) {
+      const msgs = failures.map(f => `${f.label} não encontrado (campo: ${f.field})`);
+      return res.status(400).json({ error: 'Dados inválidos', details: msgs.join('. ') });
+    }
+
+    // ── Gerar número da OS ───────────────────────────────────────────
     let numeroOs = '';
     for (let attempt = 0; attempt < 5; attempt++) {
-      const count = await prisma.serviceOrder.count({
-        where: { numeroOs: { startsWith: `OS-${year}-` } },
-      });
-      numeroOs = generateOsNumber(year, count + 1);
-      const existing = await prisma.serviceOrder.findUnique({ where: { numeroOs } });
-      if (!existing) break;
-      await new Promise(r => setTimeout(r, 50));
+      try {
+        numeroOs = await getAtomicOsNumber(prisma);
+        break;
+      } catch (e: any) {
+        if (attempt === 4) throw e;
+        await new Promise(r => setTimeout(r, 50));
+      }
     }
 
+    // ── Criar OS ─────────────────────────────────────────────────────
     const order = await prisma.serviceOrder.create({
       data: {
         numeroOs,
@@ -140,7 +169,7 @@ export async function createOrder(req: AuthRequest, res: Response) {
         tecnicoResponsavelId: tecnicoId,
         valorServico: valorServico ? parseFloat(valorServico) : null,
         dataPrevistaEntrega: dataPrevistaEntrega ? new Date(dataPrevistaEntrega) : null,
-        ticketId,
+        ticketId: ticketId || null,
         observacoes,
         criadoPorId: req.user!.id,
         status: 'rascunho',
@@ -166,13 +195,20 @@ export async function createOrder(req: AuthRequest, res: Response) {
   } catch (error: any) {
     if (error?.code === 'P2003') {
       const field = error?.meta?.field_name || 'referência';
-      return res.status(400).json({ error: `Referência inválida em ${field}. Recarregue os dados e tente novamente.` });
+      const hint = field.includes('clientId') ? ' Verifique se o cliente selecionado ainda existe.'
+        : field.includes('tecnico') ? ' Verifique se o técnico responsável ainda está ativo.'
+        : field.includes('ticket') ? ' Verifique se o ticket ainda existe.'
+        : '';
+      return res.status(400).json({ error: `Referência inválida: ${field}.${hint}` });
     }
     if (error?.code === 'P2025') {
       return res.status(404).json({ error: 'Registro relacionado não encontrado.' });
     }
+    if (error?.code === 'P2002') {
+      return res.status(400).json({ error: 'Número de OS duplicado. Tente novamente.' });
+    }
     console.error('Erro ao criar OS:', error);
-    return res.status(500).json({ error: 'Erro ao criar OS' });
+    return res.status(500).json({ error: 'Erro interno ao criar OS' });
   }
 }
 
@@ -189,6 +225,7 @@ export async function updateOrder(req: AuthRequest, res: Response) {
       'sistemasEnvolvidos', 'valorServico', 'dataPrevistaEntrega',
       'contatoId', 'telefonePreview', 'tipoImplantacao', 'precoImplantacao',
       'horasDev', 'horasSuporte', 'dataInicioImplantacao', 'dataFimImplantacao',
+      'layoutId',
     ];
     const updateData: Record<string, any> = {};
     for (const field of allowedFields) {
@@ -533,9 +570,31 @@ export async function listOrdersByTicket(req: AuthRequest, res: Response) {
 export async function createOrderFromTicket(req: AuthRequest, res: Response) {
   try {
     if (!req.user?.id) return res.status(401).json({ error: 'Não autenticado' });
+    if (!req.params.ticketId) {
+      return res.status(400).json({ error: 'ID do ticket não informado' });
+    }
+
+    // Validar que o ticket existe antes de chamar o service
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: req.params.ticketId },
+      select: { id: true, protocolo: true, clientId: true, client: { select: { id: true, razaoSocial: true } } },
+    });
+    if (!ticket) {
+      return res.status(404).json({ error: `Ticket #${req.params.ticketId.slice(0, 8)} não encontrado` });
+    }
+    if (!ticket.clientId || !ticket.client) {
+      return res.status(400).json({
+        error: 'Ticket sem cliente vinculado',
+        details: `O ticket ${ticket.protocolo || req.params.ticketId.slice(0, 8)} não possui cliente associado. Vincule um cliente ao ticket antes de criar a OS.`,
+        ticketId: ticket.id,
+        protocolo: ticket.protocolo,
+      });
+    }
+
     const order = await createOrderFromTicketService(req.params.ticketId, req.user.id);
     return res.status(201).json(order);
   } catch (error: any) {
+    console.error('Erro ao criar OS a partir do ticket:', error);
     return res.status(400).json({ error: error.message || 'Erro ao criar OS a partir do ticket' });
   }
 }
@@ -692,6 +751,7 @@ export async function sendOsToClient(req: AuthRequest, res: Response) {
       include: {
         client: true,
         ticket: { select: { id: true, protocolo: true, contactPhone: true, contactName: true, whatsappConnectionId: true } },
+        layout: true,
       },
     });
     if (!order) return res.status(404).json({ error: 'OS não encontrada' });

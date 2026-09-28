@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import prisma from '../../config/database';
 
 export type SlaStatus = 'ok' | 'alerta_75' | 'alerta_90' | 'violado' | 'concluido';
@@ -80,7 +81,7 @@ export function getSlaInfoFromTicket(ticket: any, agora?: Date): SlaInfo {
     slaTotalMinutos: slaTotal,
     slaPausadoEm: ticket.slaPausadoEm,
     slaPausadoTotalMin: ticket.slaPausadoTotalMin || 0,
-    agora,
+    agora: agora || (finalizado && ticket.dataFechamento ? ticket.dataFechamento : undefined),
   });
   return {
     totalMinutos: slaTotal,
@@ -92,6 +93,67 @@ export function getSlaInfoFromTicket(ticket: any, agora?: Date): SlaInfo {
     pausadoTotalMin: ticket.slaPausadoTotalMin || 0,
     dentroJanelaComercial: true,
     fonte: ticket.idFila ? 'fila' : (ticket.prioridade ? 'prioridade' : 'default'),
+  };
+}
+
+export interface ResultadoSlaPeriodo {
+  total: number;
+  cumprido: number;
+  emRisco: number;
+  violado: number;
+  percentual: number;
+}
+
+export async function calcularSlaDoPeriodo(
+  where: Prisma.TicketWhereInput,
+  riscoPct = 80,
+): Promise<ResultadoSlaPeriodo> {
+  const tickets = await prisma.ticket.findMany({
+    where: { ...where, slaTotalMinutos: { not: null } },
+    select: {
+      dataAbertura: true,
+      slaTotalMinutos: true,
+      slaPausadoEm: true,
+      slaPausadoTotalMin: true,
+      status: true,
+      etapa: true,
+      dataFechamento: true,
+    },
+  });
+
+  let cumprido = 0;
+  let emRisco = 0;
+  let violado = 0;
+
+  for (const t of tickets) {
+    const finalizado = ['fechado', 'cancelado', 'concluido'].includes(t.status) ||
+      ['concluido', 'descartado'].includes(t.etapa);
+    const calc = calcularSlaRestanteMinutos({
+      dataAbertura: t.dataAbertura,
+      slaTotalMinutos: t.slaTotalMinutos!,
+      slaPausadoEm: t.slaPausadoEm,
+      slaPausadoTotalMin: t.slaPausadoTotalMin || 0,
+      agora: finalizado && t.dataFechamento ? t.dataFechamento : undefined,
+    });
+    if (finalizado) {
+      if (calc.percentual <= 100) cumprido++;
+      else violado++;
+    } else if (calc.percentual >= 100) {
+      violado++;
+    } else if (calc.percentual >= riscoPct) {
+      emRisco++;
+    } else {
+      cumprido++;
+    }
+  }
+
+  const total = tickets.length;
+  return {
+    total,
+    cumprido,
+    emRisco,
+    violado,
+    percentual: total > 0 ? Math.round((cumprido / total) * 100) : 0,
   };
 }
 

@@ -167,7 +167,7 @@ export default function TicketDetailScreen() {
   const history = selectedTicket?.history || [];
   const orders = ticket?.orders || [];
 
-  if (!ticket) return <EmptyState icon="🎫" title="Chamado nao encontrado" />;
+  if (!ticket) return <EmptyState icon="🎫" title="Chamado não encontrado" />;
 
   const etapaInfo = ETAPAS.find((e) => e.slug === ticket.etapa);
   const etapaColor = etapaInfo?.color || '#64748b';

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
+import { formatDuration } from '../../lib/formatDuration';
 import {
   RefreshCw, Download, FileText, FileSpreadsheet, Printer, TrendingUp, TrendingDown, Clock,
   CheckCircle, Star, Zap, Users, Building2, FolderOpen, Layers, Loader2, Timer, Cpu, Rocket, Calendar,
@@ -76,12 +77,7 @@ const TIPO_LABEL: Record<string, string> = {
 };
 
 function formatarTempo(minutos: number): string {
-  if (minutos < 60) return `${minutos}min`;
-  const horas = Math.floor(minutos / 60);
-  const mins = minutos % 60;
-  if (horas < 24) return mins === 0 ? `${horas}h` : `${horas}h${mins}m`;
-  const dias = Math.floor(horas / 24);
-  return `${dias}d ${horas % 24}h`;
+  return formatDuration(minutos);
 }
 
 function DeltaPill({ valor, sufixo, invertido }: { valor: number; sufixo?: string; invertido?: boolean }) {

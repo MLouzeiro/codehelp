@@ -1,37 +1,25 @@
 {
   "version": 2,
-  "installCommand": "npm install",
-  "builds": [
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.ts"
-    },
-    {
-      "src": "/storage/(.*)",
-      "dest": "/api/index.ts"
-    },
-    {
-      "src": "/(.*\\.(js|css|json|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp))",
-      "dest": "/frontend/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/index.html"
-    }
-  ],
+  "installCommand": "cd frontend && rm -rf node_modules && npm ci",
+  "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
-  "framework": null
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://codehelp-backend.koyeb.app/api/:path*"
+    },
+    {
+      "source": "/storage/:path*",
+      "destination": "https://codehelp-backend.koyeb.app/storage/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://codehelp-backend.koyeb.app/uploads/:path*"
+    },
+    {
+      "source": "/((?!assets/|.*\\.).*)",
+      "destination": "/index.html"
+    }
+  ]
 }

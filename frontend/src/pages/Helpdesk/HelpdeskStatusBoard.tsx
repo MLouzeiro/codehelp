@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import { matchSearchMultiple } from '../../utils/text';
+import { formatDuration } from '../../lib/formatDuration';
 import {
   RefreshCw, Inbox, Headphones, Clock, ArrowUpCircle, CheckCircle,
   Archive, XCircle, MessageSquare, User, AlertTriangle, Search, X, Loader2, ExternalLink,
@@ -27,10 +28,7 @@ const PRIORIDADE_COR: Record<string, string> = {
 
 function formatarTempo(minutos: number): string {
   if (minutos < 1) return 'agora';
-  if (minutos < 60) return `${minutos}min`;
-  const horas = Math.floor(minutos / 60);
-  if (horas < 24) return `${horas}h`;
-  return `${Math.floor(horas / 24)}d`;
+  return formatDuration(minutos);
 }
 
 function tempoDesdeAtualizacao(d: string | undefined): number {

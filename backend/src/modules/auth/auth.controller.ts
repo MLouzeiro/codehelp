@@ -116,7 +116,7 @@ export async function listUsers(req: Request, res: Response) {
 
 export async function createUser(req: Request, res: Response) {
   try {
-    const { name, email, password, role, isMaster, departamentoIds } = req.body;
+    const { name, email, password, role, isMaster, departamentoIds, phone, signature } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Nome, email e senha sao obrigatorios' });
     }
@@ -157,7 +157,8 @@ export async function createUser(req: Request, res: Response) {
         email,
         password: hashedPassword,
         role: role || 'tecnico',
-        phone: req.body.phone || null,
+        phone: phone || null,
+        signature: signature || null,
         isMaster: finalIsMaster,
         ...(departamentoIds && departamentoIds.length > 0
           ? {
@@ -168,7 +169,7 @@ export async function createUser(req: Request, res: Response) {
           : {}),
       },
       select: {
-        id: true, name: true, email: true, role: true, active: true, isMaster: true, phone: true,
+        id: true, name: true, email: true, role: true, active: true, isMaster: true, phone: true, signature: true,
         departamentos: { select: { departamento: { select: { id: true, slug: true, nome: true, cor: true } } } },
       },
     });

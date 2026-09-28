@@ -5,6 +5,7 @@ import {
   WHERE_TICKET_RESOLVIDO,
   STATUS_ABERTO,
 } from '../helpdesk/constants';
+import { calcularSlaDoPeriodo } from '../helpdesk/sla.service';
 
 // ── Interfaces ─────────────────────────────────────────────────
 
@@ -74,7 +75,7 @@ function formatPeriod(inicio: Date, fim: Date): string {
 // ── Coleta de Dados ────────────────────────────────────────────
 
 async function coletarResumo(inicio: Date, fim: Date) {
-  const [totalTickets, ticketsFechados, ticketsAbertos, slaData, csatData, fcrData, tempoResposta, tempoResolucao] = await Promise.all([
+  const [totalTickets, ticketsFechados, ticketsAbertos, slaPeriodo, csatData, fcrData, tempoResposta, tempoResolucao] = await Promise.all([
     prisma.ticket.count({
       where: { createdAt: { gte: inicio, lte: fim } },
     }),
@@ -89,14 +90,7 @@ async function coletarResumo(inicio: Date, fim: Date) {
         status: { in: [...STATUS_ABERTO] },
       },
     }),
-    prisma.ticket.aggregate({
-      where: {
-        createdAt: { gte: inicio, lte: fim },
-        slaTotalMinutos: { not: null },
-      },
-      _avg: { slaTotalMinutos: true },
-      _count: { id: true },
-    }),
+    calcularSlaDoPeriodo({ createdAt: { gte: inicio, lte: fim } }),
     prisma.cSATResposta.aggregate({
       where: {
         enviadoEm: { gte: inicio, lte: fim },
@@ -109,8 +103,10 @@ async function coletarResumo(inicio: Date, fim: Date) {
     prisma.ticket.count({
       where: {
         createdAt: { gte: inicio, lte: fim },
-        ...WHERE_TICKET_RESOLVIDO,
-        dataPrimeiraResposta: { not: null },
+        AND: [
+          WHERE_TICKET_RESOLVIDO,
+          { OR: [{ resolvidoSemAjuda: true }, { resolvidoSemAjuda: null }] },
+        ],
       },
     }),
     // Tempo médio de primeira resposta (dataPrimeiraResposta - dataAbertura)
@@ -144,15 +140,8 @@ async function coletarResumo(inicio: Date, fim: Date) {
   }, 0);
   const tempoMedioResolucao = tempoResolucao.length > 0 ? Math.round(tempoResolucaoTotalMin / tempoResolucao.length) : 0;
 
-  const slaViolado = await prisma.ticket.count({
-    where: {
-      createdAt: { gte: inicio, lte: fim },
-      slaTotalMinutos: { gt: 60 }, // Mais de 1 hora = possível violação
-    },
-  });
-
   const taxaResolucao = totalTickets > 0 ? Math.round((ticketsFechados / totalTickets) * 100) : 0;
-  const taxaSla = slaData._count.id > 0 ? Math.round(((slaData._count.id - slaViolado) / slaData._count.id) * 100) : 0;
+  const taxaSla = slaPeriodo.percentual;
 
   return {
     totalTickets,
@@ -161,12 +150,12 @@ async function coletarResumo(inicio: Date, fim: Date) {
     taxaResolucao,
     tempoMedioResposta,
     tempoMedioResolucao,
-    slaCumprido: slaData._count.id - slaViolado,
-    slaTotal: slaData._count.id,
+    slaCumprido: slaPeriodo.cumprido,
+    slaTotal: slaPeriodo.total,
     taxaSla,
     csatMedio: csatData._avg.nota ? Math.round(csatData._avg.nota * 100) / 100 : 0,
     csatTotalRespostas: csatData._count.id,
-    fcr: totalTickets > 0 ? Math.round((fcrData / totalTickets) * 100) : 0,
+    fcr: ticketsFechados > 0 ? Math.round((fcrData / ticketsFechados) * 100) : 0,
   };
 }
 

@@ -6,6 +6,8 @@ import {
   WHERE_TICKET_RESOLVIDO,
   STATUS_ABERTO,
 } from '../helpdesk/constants';
+import { calcularSlaDoPeriodo } from '../helpdesk/sla.service';
+import { formatDuration } from '../../shared/utils/duration';
 
 // ── Filtros combinados de relatório ─────────────────────────────────────
 // Relatório analítico genérico: todos os filtros são opcionais e combináveis.
@@ -70,6 +72,28 @@ export interface RelatorioAnalitico {
     mediaHorasDev: number;
     horasSuporteTotal: number;
   };
+  // ── Indicadores novos (ETAPA 4-17) ──
+  porNivel: { nivel: string; total: number; custoUnitario: number; custoTotal: number }[];
+  custoEstimado: { total: number; porChamado: number; porNivel: { nivel: string; total: number }[] };
+  retrabalho: {
+    reaberturas: number;
+    chamadosRecorrentes: number;
+    taxaReabertura: number;
+    taxaRecorrencia: number;
+  };
+  transferencias: {
+    total: number;
+    chamadosComTransferencia: number;
+    taxaTransferencia: number;
+  };
+  comparePeriodoAnterior: {
+    totalTickets: number;
+    ticketsFechados: number;
+    taxaResolucao: number;
+    tempoMedioRespostaMin: number;
+    tempoMedioResolucaoH: number;
+    csatMedio: number;
+  } | null;
 }
 
 // ── Helpers de período ──────────────────────────────────────────────────
@@ -103,6 +127,42 @@ function fmtPeriod(inicio: Date, fim: Date): string {
   return `${f(inicio)} a ${f(fim)}`;
 }
 
+// ── Classificação N1/N2/N3 (ETAPA 8-9) ──────────────────────────────────
+
+const N3_KEYWORDS = [
+  'calibração', 'calibra', 'banco de dados', 'integração', 'integra',
+  'desenvolvimento', 'crítico', 'critico', 'servidor', 'infraestrutura',
+  'migração', 'migracao', 'virtualização', 'virtualizacao', 'replicação',
+  'replicacao', 'cluster', 'failover', 'backup avançado', 'segurança',
+  'seguranca', 'firewall', 'certificado', 'digital', 'api', 'webservice',
+  'customização', 'customizacao', 'automação', 'automacao', 'workflow',
+];
+
+const N2_KEYWORDS = [
+  'host-link', 'hostlink', 'interface', 'interfaceamento', 'impressora',
+  'laudo', 'procedimento', 'rede', 'tcp', 'ip', 'porta', 'configuração',
+  'configuracao', 'ajuste', 'cadastro', 'relatório', 'relatorio',
+  'importação', 'importacao', 'exportação', 'exportacao', 'layout',
+  'modelo', 'template', 'banco de clientes', 'atualização', 'atualizacao',
+  'versão', 'versao', 'patch', 'manutenção', 'manutencao', 'lentidão',
+  'lentidao', 'timeout', 'conexão', 'conexao', 'login', 'senha',
+  'usuário', 'usuario', 'permissão', 'permissao', 'perfil',
+];
+
+export function classificarNivel(texto: string): 'N1' | 'N2' | 'N3' {
+  const lower = texto.toLowerCase();
+  for (const kw of N3_KEYWORDS) {
+    if (lower.includes(kw)) return 'N3';
+  }
+  for (const kw of N2_KEYWORDS) {
+    if (lower.includes(kw)) return 'N2';
+  }
+  return 'N1';
+}
+
+// ── Configuração de custos (ETAPA 17) ────────────────────────────────────
+export const CUSTO_POR_NIVEL = { N1: 25, N2: 75, N3: 150 };
+
 // ── Construção do WHERE combinado ───────────────────────────────────────
 
 export function buildWhere(filtros: RelatorioFiltros): Prisma.TicketWhereInput {
@@ -130,18 +190,24 @@ export function buildWhere(filtros: RelatorioFiltros): Prisma.TicketWhereInput {
 // ── Resumo ──────────────────────────────────────────────────────────────
 
 async function coletarResumo(where: Prisma.TicketWhereInput) {
-  const [totalTickets, ticketsFechados, ticketsAbertos, slaData, csatData, fcrData, respostas, resolucoes] = await Promise.all([
+  const [totalTickets, ticketsFechados, ticketsAbertos, slaPeriodo, csatData, fcrData, respostas, resolucoes] = await Promise.all([
     prisma.ticket.count({ where }),
     prisma.ticket.count({ where: { ...where, ...WHERE_TICKET_RESOLVIDO } }),
     prisma.ticket.count({ where: { ...where, status: { in: [...STATUS_ABERTO] } } }),
-    prisma.ticket.aggregate({ where: { ...where, slaTotalMinutos: { not: null } }, _count: { id: true } }),
+    calcularSlaDoPeriodo(where),
     prisma.cSATResposta.aggregate({
       where: { respondidoEm: { not: null }, nota: { not: null }, ticket: where },
       _avg: { nota: true },
       _count: { id: true },
     }),
     prisma.ticket.count({
-      where: { ...where, ...WHERE_TICKET_RESOLVIDO, dataPrimeiraResposta: { not: null } },
+      where: {
+        ...where,
+        AND: [
+          WHERE_TICKET_RESOLVIDO,
+          { OR: [{ resolvidoSemAjuda: true }, { resolvidoSemAjuda: null }] },
+        ],
+      },
     }),
     prisma.ticket.findMany({
       where: { ...where, dataPrimeiraResposta: { not: null } },
@@ -162,11 +228,9 @@ async function coletarResumo(where: Prisma.TicketWhereInput) {
   }, 0);
   const tempoMedioResolucaoH = resolucoes.length > 0 ? Math.round((somaRes / resolucoes.length) * 10) / 10 : 0;
 
-  const slaViolado = await prisma.ticket.count({ where: { ...where, slaTotalMinutos: { gt: 60 } } });
-
   const taxaResolucao = totalTickets > 0 ? Math.round((ticketsFechados / totalTickets) * 100) : 0;
-  const taxaSla = slaData._count.id > 0 ? Math.round(((slaData._count.id - slaViolado) / slaData._count.id) * 100) : 0;
-  const fcr = totalTickets > 0 ? Math.round((fcrData / totalTickets) * 100) : 0;
+  const taxaSla = slaPeriodo.percentual;
+  const fcr = ticketsFechados > 0 ? Math.round((fcrData / ticketsFechados) * 100) : 0;
 
   return {
     totalTickets,
@@ -175,8 +239,8 @@ async function coletarResumo(where: Prisma.TicketWhereInput) {
     taxaResolucao,
     tempoMedioRespostaMin,
     tempoMedioResolucaoH,
-    slaCumprido: slaData._count.id - slaViolado,
-    slaTotal: slaData._count.id,
+    slaCumprido: slaPeriodo.cumprido,
+    slaTotal: slaPeriodo.total,
     taxaSla,
     csatMedio: csatData._avg.nota ? Math.round(csatData._avg.nota * 100) / 100 : 0,
     csatTotal: csatData._count.id,
@@ -444,6 +508,89 @@ async function coletarImplantacoes(inicio: Date, fim: Date) {
   };
 }
 
+// ── Indicadores novos (ETAPA 8-17) ──────────────────────────────────────
+
+async function coletarPorNivel(where: Prisma.TicketWhereInput) {
+  const rows = await prisma.ticket.findMany({
+    where,
+    select: { assunto: true, categoria: true, tags: true },
+  });
+  const contagem = { N1: 0, N2: 0, N3: 0 };
+  for (const t of rows) {
+    const texto = [t.assunto, t.categoria, t.tags].filter(Boolean).join(' ');
+    const nivel = classificarNivel(texto);
+    contagem[nivel]++;
+  }
+  return [
+    { nivel: 'N1', total: contagem.N1, custoUnitario: CUSTO_POR_NIVEL.N1, custoTotal: contagem.N1 * CUSTO_POR_NIVEL.N1 },
+    { nivel: 'N2', total: contagem.N2, custoUnitario: CUSTO_POR_NIVEL.N2, custoTotal: contagem.N2 * CUSTO_POR_NIVEL.N2 },
+    { nivel: 'N3', total: contagem.N3, custoUnitario: CUSTO_POR_NIVEL.N3, custoTotal: contagem.N3 * CUSTO_POR_NIVEL.N3 },
+  ];
+}
+
+async function coletarRetrabalho(where: Prisma.TicketWhereInput, inicio: Date) {
+  const reaberturas = await prisma.ticket.count({
+    where: {
+      ...where,
+      etapa: { in: ['fila', 'triagem', 'em_atendimento'] },
+      createdAt: { lt: inicio },
+    },
+  });
+
+  const ticketsPeriodo = await prisma.ticket.findMany({
+    where,
+    select: { id: true, clientId: true, contactPhone: true, createdAt: true },
+  });
+
+  const phoneMap = new Map<string, Date[]>();
+  for (const t of ticketsPeriodo) {
+    const key = t.contactPhone || t.clientId || '';
+    if (!key) continue;
+    const list = phoneMap.get(key) || [];
+    list.push(t.createdAt);
+    phoneMap.set(key, list);
+  }
+
+  let recorrentes = 0;
+  for (const dates of phoneMap.values()) {
+    if (dates.length > 1) recorrentes += dates.length - 1;
+  }
+
+  const totalTickets = ticketsPeriodo.length;
+  return {
+    reaberturas,
+    chamadosRecorrentes: recorrentes,
+    taxaReabertura: totalTickets > 0 ? Math.round((reaberturas / totalTickets) * 100 * 10) / 10 : 0,
+    taxaRecorrencia: totalTickets > 0 ? Math.round((recorrentes / totalTickets) * 100 * 10) / 10 : 0,
+  };
+}
+
+async function coletarTransferencias(where: Prisma.TicketWhereInput) {
+  const total = await prisma.ticket.count({ where });
+  const comTransferencia = await prisma.ticket.count({
+    where: { ...where, agentesEnvolvidos: { not: null } },
+  });
+
+  const ticketsComAgentes = await prisma.ticket.findMany({
+    where: { ...where, agentesEnvolvidos: { not: null } },
+    select: { agentesEnvolvidos: true },
+  });
+
+  let multiplas = 0;
+  for (const t of ticketsComAgentes) {
+    try {
+      const arr = JSON.parse(t.agentesEnvolvidos || '[]');
+      if (Array.isArray(arr) && arr.length > 2) multiplas++;
+    } catch { /* skip */ }
+  }
+
+  return {
+    total: comTransferencia,
+    chamadosComTransferencia: comTransferencia,
+    taxaTransferencia: total > 0 ? Math.round((comTransferencia / total) * 100 * 10) / 10 : 0,
+  };
+}
+
 // ── Geração principal ───────────────────────────────────────────────────
 
 export async function gerarRelatorioAnalitico(filtros: RelatorioFiltros = {}): Promise<RelatorioAnalitico> {
@@ -470,11 +617,14 @@ export async function gerarRelatorioAnalitico(filtros: RelatorioFiltros = {}): P
     coletarPorGrupo(where, 'assunto'),
   ]);
 
-  const [tempoPorTipo, tempoPorDepartamento, horasDev, implantacoes] = await Promise.all([
+  const [tempoPorTipo, tempoPorDepartamento, horasDev, implantacoes, porNivel, retrabalho, transferencias] = await Promise.all([
     coletarTempoPorTipo(inicio, fim),
     coletarTempoPorDepartamento(inicio, fim),
     coletarHorasDev(inicio, fim),
     coletarImplantacoes(inicio, fim),
+    coletarPorNivel(where),
+    coletarRetrabalho(where, inicio),
+    coletarTransferencias(where),
   ]);
 
   const fechados = await Promise.all([
@@ -515,6 +665,22 @@ export async function gerarRelatorioAnalitico(filtros: RelatorioFiltros = {}): P
     tempoPorDepartamento,
     horasDev,
     implantacoes,
+    porNivel,
+    custoEstimado: {
+      total: porNivel.reduce((s, n) => s + n.custoTotal, 0),
+      porChamado: resumo.totalTickets > 0 ? Math.round((porNivel.reduce((s, n) => s + n.custoTotal, 0) / resumo.totalTickets) * 100) / 100 : 0,
+      porNivel: porNivel.map(n => ({ nivel: n.nivel, total: n.custoTotal })),
+    },
+    retrabalho,
+    transferencias,
+    comparePeriodoAnterior: {
+      totalTickets: resumoPrev.totalTickets,
+      ticketsFechados: resumoPrev.ticketsFechados,
+      taxaResolucao: resumoPrev.totalTickets > 0 ? Math.round((resumoPrev.ticketsFechados / resumoPrev.totalTickets) * 100) : 0,
+      tempoMedioRespostaMin: resumoPrev.tempoMedioRespostaMin,
+      tempoMedioResolucaoH: resumoPrev.tempoMedioResolucaoH,
+      csatMedio: resumoPrev.csatMedio,
+    },
   };
 }
 
@@ -677,7 +843,7 @@ export function gerarPdfRelatorio(dados: RelatorioAnalitico): Promise<Buffer> {
     tabela('Por categoria', ['valor', 'total', 'fechados'], dados.porCategoria);
     tabela('Por analista', ['valor', 'atendidos', 'fechados', 'tempoMedioMin', 'csatMedio'], dados.porAnalista);
     tabela('Por cliente', ['valor', 'total', 'fechados'], dados.porCliente);
-    tabela('Tempo por tipo', ['valor', 'totalMin', 'qtd'], dados.tempoPorTipo);
+    tabela('Tempo por tipo', ['valor', 'duracao', 'qtd'], dados.tempoPorTipo.map(t => ({ ...t, duracao: formatDuration(Math.round(t.totalMin)) })));
 
     doc.end();
   });

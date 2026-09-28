@@ -7,6 +7,14 @@ import {
   AlertTriangle, XCircle, Info, Users,
 } from 'lucide-react';
 import { AcronymText } from '../../components/AcronymText';
+import {
+  formatDuration,
+  formatDurationLong,
+  formatDurationCompact,
+  formatMinutesOriginal,
+  formatDecimalHours,
+  buildDuracaoTooltip,
+} from '../../lib/formatDuration';
 import type {
   IndicadoresAtendimento,
   MetasIndicadores,
@@ -63,18 +71,35 @@ function DeltaPill({ delta, invertido }: { delta: number | null; invertido?: boo
 
 function CardIndicadorView({ card, invertido }: { card: CardIndicador; invertido?: boolean }) {
   const Icon = card.label.includes('TMR') || card.label.includes('Tempo') ? Timer : card.label.includes('TME') ? Clock : card.label.includes('SLA') ? Gauge : FileText;
+  // Duração somada (ex.: Tempo Total de Atendimento) → valor humano em destaque + minutos originais
+  const isDuracao = card.formato === 'duracao' || card.label.includes('Tempo Total');
+  const tooltipDuracao = isDuracao ? buildDuracaoTooltip(card.label, card.valor) : undefined;
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow">
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow" title={tooltipDuracao}>
       <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={{ fontFamily: 'Lexend, sans-serif' }}>
         <Icon size={14} className="text-blue-600 dark:text-blue-400" />
         <AcronymText text={card.label} />
+        {tooltipDuracao && <Info size={13} className="text-slate-300 dark:text-slate-500 ml-auto" aria-label="Saiba mais" />}
       </div>
       <div className="flex items-end justify-between gap-2">
-        <div>
-          <span className="text-2xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Khand, sans-serif' }}>
-            {card.valor}
-          </span>
-          <span className="ml-1 text-sm font-medium text-slate-400 dark:text-slate-500">{card.unidade}</span>
+        <div className="min-w-0">
+          {isDuracao ? (
+            <>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white leading-tight" style={{ fontFamily: 'Khand, sans-serif' }}>
+                {formatDurationLong(card.valor)}
+              </div>
+              <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                {formatMinutesOriginal(card.valor)} · {formatDecimalHours(card.valor)}
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="text-2xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Khand, sans-serif' }}>
+                {card.valor}
+              </span>
+              <span className="ml-1 text-sm font-medium text-slate-400 dark:text-slate-500">{card.unidade}</span>
+            </>
+          )}
         </div>
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${classPill(card.classificacao)}`} style={{ fontFamily: 'Lexend, sans-serif' }}>
           {card.classificacao.icone} {card.classificacao.texto}
@@ -566,11 +591,12 @@ export default function IndicadoresAtendimentoPage() {
                   <thead>
                     <tr className="text-xs text-slate-400 dark:text-slate-500 uppercase">
                       <th className="text-left py-1.5 pr-2 font-semibold">Analista</th>
-                      <th className="text-center py-1.5 px-2 font-semibold">Tickets</th>
-                      <th className="text-center py-1.5 px-2 font-semibold">Resolvidos</th>
-                      <th className="text-center py-1.5 px-2 font-semibold"><AcronymText text="TMR" /></th>
-                      <th className="text-center py-1.5 px-2 font-semibold"><AcronymText text="TME" /></th>
-                      <th className="text-center py-1.5 px-2 font-semibold">1ª Resp.</th>
+                      <th className="text-center py-1.5 px-2 font-semibold" title="Chamados atendidos no período">Atendidos</th>
+                      <th className="text-center py-1.5 px-2 font-semibold" title="Chamados resolvidos no período">Resolvidos</th>
+                      <th className="text-center py-1.5 px-2 font-semibold" title="Soma do tempo de atendimento de todos os chamados do analista (valor convertido para dias/horas; minutos originais ao passar o mouse)">Tempo total</th>
+                      <th className="text-center py-1.5 px-2 font-semibold" title="Tempo médio de resolução por chamado (TMR) — média, não é o tempo total"><AcronymText text="TMR" /></th>
+                      <th className="text-center py-1.5 px-2 font-semibold" title="Tempo médio de espera do cliente (TME)"><AcronymText text="TME" /></th>
+                      <th className="text-center py-1.5 px-2 font-semibold" title="Tempo médio até a primeira resposta"><AcronymText text="1ª Resp." /></th>
                       <th className="text-center py-1.5 px-2 font-semibold"><AcronymText text="SLA" /></th>
                       <th className="text-center py-1.5 px-2 font-semibold"><AcronymText text="CSAT" /></th>
                       <th className="text-center py-1.5 px-2 font-semibold"><AcronymText text="FCR" /></th>
@@ -584,9 +610,15 @@ export default function IndicadoresAtendimentoPage() {
                         <td className="py-2 pr-2 font-semibold">{a.agenteNome}</td>
                         <td className="text-center py-2 px-2">{a.tickets}</td>
                         <td className="text-center py-2 px-2">{a.resolvidos}</td>
-                        <td className="text-center py-2 px-2">{a.tmrMin > 0 ? `${a.tmrMin}min` : '—'}</td>
-                        <td className="text-center py-2 px-2">{a.tmeMin > 0 ? `${a.tmeMin}min` : '—'}</td>
-                        <td className="text-center py-2 px-2">{a.primeiraRespostaMin > 0 ? `${a.primeiraRespostaMin}min` : '—'}</td>
+                        <td
+                          className="text-center py-2 px-2 font-semibold text-slate-800 dark:text-slate-100"
+                          title={a.tempoTotalMin != null ? `Valor original: ${formatMinutesOriginal(a.tempoTotalMin)} · Tempo médio por chamado: ${a.tmrMin > 0 ? formatDuration(a.tmrMin) : '—'}` : undefined}
+                        >
+                          {a.tempoTotalMin != null && a.tempoTotalMin > 0 ? formatDurationCompact(a.tempoTotalMin) : '—'}
+                        </td>
+                        <td className="text-center py-2 px-2">{a.tmrMin > 0 ? formatDuration(a.tmrMin) : '—'}</td>
+                        <td className="text-center py-2 px-2">{a.tmeMin > 0 ? formatDuration(a.tmeMin) : '—'}</td>
+                        <td className="text-center py-2 px-2">{a.primeiraRespostaMin > 0 ? formatDuration(a.primeiraRespostaMin) : '—'}</td>
                         <td className="text-center py-2 px-2">
                           {a.slaTotal > 0 ? (
                             <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold ${a.taxaSla >= data.metas.slaMetaPct

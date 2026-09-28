@@ -53,6 +53,7 @@ import externalIntegrationRoutes from './modules/integrations/external/externalI
 import publicApiRoutes from './modules/integrations/public/publicApi.routes';
 import operacaoRoutes from './modules/helpdesk/operacao/operacao.routes';
 import decisaoAuditRoutes from './modules/helpdesk/decisao/decisaoAudit.routes';
+import inteligenciaOperacionalRoutes from './modules/helpdesk/inteligencia-operacional.routes';
 
 const isVercel = !!process.env.VERCEL;
 
@@ -236,6 +237,7 @@ app.use('/api/integrations/external', externalIntegrationRoutes);
 app.use('/api/integration', publicApiRoutes);
 app.use('/api/helpdesk/operacao', operacaoRoutes);
 app.use('/api/helpdesk/decisao', decisaoAuditRoutes);
+app.use('/api/helpdesk/inteligencia', inteligenciaOperacionalRoutes);
 app.get('/api/health', async (_req, res) => {
   const result: Record<string, string> = {
     status: 'ok',

@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://codehelp-backend.koyeb.app/api/:path*"
+    },
+    {
+      "source": "/storage/:path*",
+      "destination": "https://codehelp-backend.koyeb.app/storage/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://codehelp-backend.koyeb.app/uploads/:path*"
+    },
+    {
+      "source": "/((?!assets/|.*\\.).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

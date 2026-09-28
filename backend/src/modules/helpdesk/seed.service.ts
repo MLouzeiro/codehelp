@@ -13,8 +13,8 @@ export const FILAS_PADRAO = [
   },
   {
     slug: 'n2',
-    nome: 'N2 - Suporte Tecnico',
-    descricao: 'Suporte tecnico avancado - problemas nao resolvidos pelo N1',
+    nome: 'N2 - Suporte Técnico',
+    descricao: 'Suporte técnico avançado - problemas não resolvidos pelo N1',
     nivel: 'N2',
     slaMinutos: 180,
     cor: '#f59e0b',
@@ -65,17 +65,17 @@ export const SLA_PADRAO = [
 ];
 
 export const CATEGORIAS_PADRAO = [
-  { slug: 'suporte_tecnico', nome: 'Suporte Tecnico', descricao: 'Problemas tecnicos, erros, falhas', cor: '#0ea5e9', icone: 'wrench', ordem: 0 },
-  { slug: 'financeiro', nome: 'Financeiro', descricao: 'Boletos, faturas, cobrancas, pagamentos', cor: '#22c55e', icone: 'dollar-sign', ordem: 1 },
-  { slug: 'comercial', nome: 'Comercial', descricao: 'Orcamentos, propostas, contratacoes', cor: '#a855f7', icone: 'briefcase', ordem: 2 },
-  { slug: 'cancelamento', nome: 'Cancelamento', descricao: 'Cancelamentos, rescisoes, reembolsos', cor: '#ef4444', icone: 'x-circle', ordem: 3 },
-  { slug: 'impressoras', nome: 'Impressoras', descricao: 'Impressoras, etiquetas, calibracao, ribbon', cor: '#f97316', icone: 'printer', ordem: 4 },
-  { slug: 'banco_de_dados', nome: 'Banco de Dados', descricao: 'Conexao, lentidao, backup, restauracao, permissoes', cor: '#06b6d4', icone: 'database', ordem: 5 },
-  { slug: 'integracoes', nome: 'Integracoes', descricao: 'HL7, ASTM, XML, API, Webhook, interfaceamento', cor: '#8b5cf6', icone: 'plug', ordem: 6 },
+  { slug: 'suporte_tecnico', nome: 'Suporte Técnico', descricao: 'Problemas técnicos, erros, falhas', cor: '#0ea5e9', icone: 'wrench', ordem: 0 },
+  { slug: 'financeiro', nome: 'Financeiro', descricao: 'Boletos, faturas, cobranças, pagamentos', cor: '#22c55e', icone: 'dollar-sign', ordem: 1 },
+  { slug: 'comercial', nome: 'Comercial', descricao: 'Orçamentos, propostas, contratações', cor: '#a855f7', icone: 'briefcase', ordem: 2 },
+  { slug: 'cancelamento', nome: 'Cancelamento', descricao: 'Cancelamentos, rescisões, reembolsos', cor: '#ef4444', icone: 'x-circle', ordem: 3 },
+  { slug: 'impressoras', nome: 'Impressoras', descricao: 'Impressoras, etiquetas, calibração, ribbon', cor: '#f97316', icone: 'printer', ordem: 4 },
+  { slug: 'banco_de_dados', nome: 'Banco de Dados', descricao: 'Conexão, lentidão, backup, restauração, permissões', cor: '#06b6d4', icone: 'database', ordem: 5 },
+  { slug: 'integracoes', nome: 'Integrações', descricao: 'HL7, ASTM, XML, API, Webhook, interfaceamento', cor: '#8b5cf6', icone: 'plug', ordem: 6 },
   { slug: 'procedimentos', nome: 'Procedimentos', descricao: 'Procedimentos operacionais e de rotina', cor: '#14b8a6', icone: 'clipboard-list', ordem: 7 },
-  { slug: 'desenvolvimento', nome: 'Desenvolvimento', descricao: 'Demandas de desenvolvimento e correcoes de sistema', cor: '#3b82f6', icone: 'code', ordem: 8 },
-  { slug: 'implantacao', nome: 'Implantacao', descricao: 'Implantacao de sistemas e novos clientes', cor: '#84cc16', icone: 'rocket', ordem: 9 },
-  { slug: 'outros', nome: 'Outros', descricao: 'Assuntos gerais que nao se encaixam nas demais categorias', cor: '#64748b', icone: 'help-circle', ordem: 10 },
+  { slug: 'desenvolvimento', nome: 'Desenvolvimento', descricao: 'Demandas de desenvolvimento e correções de sistema', cor: '#3b82f6', icone: 'code', ordem: 8 },
+  { slug: 'implantacao', nome: 'Implantação', descricao: 'Implantação de sistemas e novos clientes', cor: '#84cc16', icone: 'rocket', ordem: 9 },
+  { slug: 'outros', nome: 'Outros', descricao: 'Assuntos gerais que não se encaixam nas demais categorias', cor: '#64748b', icone: 'help-circle', ordem: 10 },
 ];
 
 export const ASSUNTOS_PADRAO: Array<{
@@ -116,12 +116,12 @@ export const ASSUNTOS_PADRAO: Array<{
   { slug: 'procedimentos__novo_procedimento', nome: 'Novo procedimento', descricao: 'Criacao de procedimento', categoriaSlug: 'procedimentos', slaPadraoMin: 1440, ordem: 0 },
   { slug: 'procedimentos__ajuste_procedimento', nome: 'Ajuste de procedimento', descricao: 'Alteracao de procedimento', categoriaSlug: 'procedimentos', slaPadraoMin: 1440, ordem: 1 },
   // Desenvolvimento
-  { slug: 'desenvolvimento__bug_sistema', nome: 'Bug no sistema', descricao: 'Correcao de bug', categoriaSlug: 'desenvolvimento', prioridadePadrao: 'alta', slaPadraoMin: 1440, ordem: 0 },
+  { slug: 'desenvolvimento__bug_sistema', nome: 'Bug no sistema', descricao: 'Correção de bug', categoriaSlug: 'desenvolvimento', prioridadePadrao: 'alta', slaPadraoMin: 1440, ordem: 0 },
   { slug: 'desenvolvimento__melhoria', nome: 'Melhoria', descricao: 'Melhoria no sistema', categoriaSlug: 'desenvolvimento', slaPadraoMin: 2880, ordem: 1 },
   { slug: 'desenvolvimento__relatorio_financeiro', nome: 'Erro no relatório financeiro', descricao: 'Falha em relatorio financeiro', categoriaSlug: 'desenvolvimento', prioridadePadrao: 'alta', slaPadraoMin: 1440, ordem: 2 },
   // Implantacao
   { slug: 'implantacao__implantacao_sistema', nome: 'Implantação de sistema', descricao: 'Implantacao de novo sistema', categoriaSlug: 'implantacao', slaPadraoMin: 4320, ordem: 0 },
-  { slug: 'implantacao__correcao_implantacao', nome: 'Correção em implantação', descricao: 'Correcao durante implantacao', categoriaSlug: 'implantacao', slaPadraoMin: 1440, ordem: 1 },
+  { slug: 'implantacao__correcao_implantacao', nome: 'Correção em implantação', descricao: 'Correção durante implantação', categoriaSlug: 'implantacao', slaPadraoMin: 1440, ordem: 1 },
   // Outros
   { slug: 'outros__nao_classificado', nome: 'Não classificado', descricao: 'Aguardando classificacao', categoriaSlug: 'outros', slaPadraoMin: null, ordem: 0 },
 ];

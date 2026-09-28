@@ -263,7 +263,7 @@ export default function ConnectionsTab({ onConnectionsChange }: Props) {
       if (qrPollingRef.current === connId) {
         stopQrPolling();
         setQrStatus('error');
-        setQrError('Tempo esgotado. O QR Code nao foi gerado em 120s.');
+        setQrError('Tempo esgotado. O QR Code não foi gerado em 120s.');
       }
     }, 120_000);
 

@@ -245,8 +245,10 @@ export default function OrderDetail() {
       a.download = `${order.numeroOs?.replace(/\//g, '-') || 'OS'}.pdf`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 150);
     } catch (err: any) {
       console.error('[OS PDF] Erro ao baixar PDF:', err);
       let msg = 'Não foi possível baixar a Ordem de Serviço. Sua sessão pode ter expirado.';

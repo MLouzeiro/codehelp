@@ -32,6 +32,7 @@ export default function OrderForm() {
     layoutId: '',
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadSelects();
@@ -79,6 +80,7 @@ export default function OrderForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
       const payload = {
         ...form,
@@ -87,6 +89,8 @@ export default function OrderForm() {
         precoImplantacao: form.precoImplantacao ? parseFloat(form.precoImplantacao) : 0,
         horasDev: form.horasDev ? parseFloat(form.horasDev) : 0,
         horasSuporte: form.horasSuporte ? parseFloat(form.horasSuporte) : 0,
+        ticketId: form.ticketId || null,
+        layoutId: form.layoutId || null,
       };
 
       let createdOrderId = id;
@@ -111,7 +115,9 @@ export default function OrderForm() {
       } else {
         navigate('/app/orders');
       }
-    } catch (err) {
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Erro ao salvar OS. Tente novamente.';
+      setError(msg);
       console.error(err);
     } finally {
       setLoading(false);
@@ -128,6 +134,11 @@ export default function OrderForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="card space-y-4 dark:bg-slate-800 dark:border-slate-700">
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-slate-300">Cliente *</label>

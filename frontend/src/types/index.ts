@@ -862,6 +862,8 @@ export interface CardIndicador {
   delta: number | null;
   deltaLabel: string;
   evolucao: 'melhorou' | 'piorou' | 'estavel';
+  /** 'duracao' = soma de minutos (ex.: tempo total) → exibir valor humano + original */
+  formato?: string;
 }
 
 export interface AnalistaIndicador {
@@ -879,6 +881,8 @@ export interface AnalistaIndicador {
   fcr: number;
   reaberturas: number;
   retrabalho: number;
+  /** Soma do tempo de atendimento do analista no período (minutos) */
+  tempoTotalMin?: number;
 }
 
 export interface IndicadoresAtendimento {
@@ -1155,4 +1159,160 @@ export interface ResumoDecisoes {
   porStatus: Array<{ status: string; count: number }>;
   porTipo: Array<{ tipo: string; count: number }>;
   porConfianca: Array<{ confianca: string; count: number }>;
+}
+
+// ── Inteligência Operacional ────────────────────────────────────────────
+
+export interface RecomendacaoAssunto {
+  tipo: 'automacao' | 'base_conhecimento' | 'procedimento_n1' | 'roteiro_diagnostico' | 'problema_sistemico' | 'plano_correcao';
+  titulo: string;
+  descricao: string;
+  prioridade: 'urgente' | 'alta' | 'media' | 'baixa';
+  evidencias: string[];
+  confianca: 'alta' | 'media' | 'baixa';
+  impactoEstimado: string;
+}
+
+export interface AnaliseAssunto {
+  assuntoId: string;
+  assuntoNome: string;
+  categoriaNome: string | null;
+  total: number;
+  percentual: number;
+  tendencia: {
+    atual: number;
+    anterior: number;
+    variacaoPct: number;
+    direcao: 'crescendo' | 'diminuindo' | 'estavel';
+  };
+  porNivel: { N1: number; N2: number; N3: number };
+  resolvidos: number;
+  abertos: number;
+  reabertos: number;
+  emAtraso: number;
+  sla: { total: number; cumprido: number; percentual: number };
+  csatMedio: number | null;
+  csatTotal: number;
+  tempoMedioMin: number;
+  tempoMedianoMin: number;
+  primeiraRespostaMin: number;
+  transferencias: number;
+  retrabalho: number;
+  clientesAfetados: number;
+  prioridadeOperacional: number;
+  recomendacoes: RecomendacaoAssunto[];
+}
+
+export interface FatorRisco {
+  tipo: string;
+  descricao: string;
+  peso: number;
+  valor: number;
+}
+
+export interface RecomendacaoCliente {
+  titulo: string;
+  descricao: string;
+  prioridade: 'urgente' | 'alta' | 'media' | 'baixa';
+}
+
+export interface AnaliseCliente {
+  clienteId: string;
+  clienteNome: string;
+  risco: 'baixo' | 'atencao' | 'alto' | 'critico';
+  scoreRisco: number;
+  fatores: FatorRisco[];
+  totalChamadosPeriodo: number;
+  chamadosAbertos: number;
+  chamadosSimultaneos: number;
+  reaberturas: number;
+  transferencias: number;
+  slaExcedidos: number;
+  csatMedio: number | null;
+  tempoEsperaMin: number;
+  assuntosMaisFrequentes: Array<{ assunto: string; total: number }>;
+  recomendacoes: RecomendacaoCliente[];
+}
+
+export interface ProgressoChamado {
+  ticketId: string;
+  protocolo: string | null;
+  contactName: string | null;
+  etapa: string;
+  status: string;
+  nivelSuporte: string | null;
+  assigneeNome: string | null;
+  clienteNome: string | null;
+  progresso: 'em_progresso' | 'atencao' | 'parado' | 'critico';
+  ultimaAtividadeRelevante: string | null;
+  tempoSemProgressoMin: number;
+  slaRestanteMin: number | null;
+  slaStatus: string | null;
+  fatores: string[];
+}
+
+export interface EscalonamentoNiveis {
+  total: number;
+  n1ParaN2: number;
+  n2ParaN3: number;
+  n1ParaN3: number;
+  taxaN1ParaN2: number;
+  taxaN2ParaN3: number;
+  taxaN1ParaN3: number;
+  porAssunto: Array<{
+    assunto: string;
+    total: number;
+    n1ParaN2: number;
+    n2ParaN3: number;
+    taxaEscalonamento: number;
+  }>;
+}
+
+export interface OportunidadeAutomacao {
+  assunto: string;
+  tipo: 'chatbot' | 'macro' | 'resposta_pronta' | 'base_conhecimento' | 'automacao' | 'procedimento_n1';
+  motivo: string;
+  volumePotencial: number;
+  tempoEconomizadoMin: number;
+  confianca: 'alta' | 'media' | 'baixa';
+}
+
+export interface PossivelBug {
+  assunto: string;
+  clientesAfetados: number;
+  totalChamados: number;
+  crescimentoPct: number;
+  nivelN2N3: number;
+  reaberturas: number;
+  evidencias: string[];
+  confianca: 'alta' | 'media' | 'baixa';
+}
+
+export interface ResumoExecutivo {
+  totalChamados: number;
+  abertos: number;
+  resolvidos: number;
+  reabertos: number;
+  n1: number;
+  n2: number;
+  n3: number;
+  parados: number;
+  slaEmRisco: number;
+  clientesEmRisco: number;
+  principaisAssuntos: Array<{ assunto: string; total: number; variacao: number }>;
+  principaisAlertas: Array<{ nivel: string; titulo: string; descricao: string }>;
+  decisoesRecomendadas: RecomendacaoAssunto[];
+}
+
+export interface InteligenciaCompleta {
+  atualizadoEm: string;
+  periodo: { inicio: string; fim: string; label: string; dias: number };
+  resumoExecutivo: ResumoExecutivo;
+  analiseAssuntos: AnaliseAssunto[];
+  rankingAssuntos: Array<{ posicao: number; assunto: string; total: number; score: number }>;
+  clientesEmRisco: AnaliseCliente[];
+  chamadosParados: ProgressoChamado[];
+  escalonamento: EscalonamentoNiveis;
+  oportunidadesAutomacao: OportunidadeAutomacao[];
+  possiveisBugs: PossivelBug[];
 }

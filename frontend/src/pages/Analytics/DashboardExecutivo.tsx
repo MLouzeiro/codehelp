@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
+import { formatDuration } from '../../lib/formatDuration';
 import {
   RefreshCw, TrendingUp, TrendingDown, Clock, CheckCircle, Star, Zap,
   MessageSquare, Building2, FolderOpen, Users, Loader2, BarChart3, AlertTriangle, Activity,
@@ -47,11 +48,7 @@ const ETAPA_CORES: Record<string, string> = {
 };
 
 function formatarTempoMin(min: number): string {
-  if (min < 60) return `${min}min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h < 24) return m === 0 ? `${h}h` : `${h}h${m}m`;
-  return `${Math.floor(h / 24)}d ${h % 24}h`;
+  return formatDuration(min);
 }
 
 function DeltaPill({ valor, sufixo, invertido }: { valor: number; sufixo?: string; invertido?: boolean }) {

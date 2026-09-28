@@ -40,7 +40,15 @@ frontend/.env.local
 *.pem
 *.cert
 **/service-account*.json
+docs/KOYEB_ENV_VARS.txt
 backups/
+
+# -----------------------------------------------------------------------------
+# Scripts de debug e logs temporÃ¡rios
+# -----------------------------------------------------------------------------
+backend/cleanup-log-*.json
+backend/_diag_ig.ts
+backend/inspect-data.js
 
 # -----------------------------------------------------------------------------
 # Banco de dados local
@@ -118,14 +126,14 @@ backend/check_stages.js
 # -----------------------------------------------------------------------------
 backend/dist/
 
-# Arquivos locais e sensíveis
+# Arquivos locais e sensï¿½veis
 .neon
 *.sql
 .next/
 backend/.next/
 backend/storage/
 
-# Arquivos locais e sensíveis
+# Arquivos locais e sensï¿½veis
 .neon
 *.sql
 .next/

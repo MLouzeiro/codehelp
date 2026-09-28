@@ -18,6 +18,91 @@ const DEFAULT_COLORS = {
   accent: '#84cc16',
 };
 
+// ── Dimensões padrão do timbrado (fallback) ──────────────────────────
+// Estes valores são usados APENAS quando não é possível detectar as
+// dimensões reais do timbrado importado. O código detecta automaticamente
+// a área do header/footer do PDF importado.
+const TIMBRADO_DEFAULTS = {
+  headerHeight: 74,   // pt (26.2mm)
+  footerHeight: 98,   // pt (34.4mm)
+  safeContentTop: 84,  // margem de segurança abaixo do header (header 74 + 10px breathing)
+  safeContentBottom: 108, // margem de segurança acima do footer (footer 98 + 10px breathing)
+};
+
+/**
+ * Detecta as dimensões reais do header/footer de um timbrado PDF.
+ * Analisa a primeira página e tenta identificar áreas de cabeçalho/rodapé
+ * baseadas na distribuição vertical do conteúdo.
+ */
+async function detectTimbradoDimensions(timbradoBytes: Buffer): Promise<{ headerHeight: number; footerHeight: number; safeContentTop: number; safeContentBottom: number }> {
+  try {
+    const pdfDoc = await PDFLibDocument.load(timbradoBytes);
+    const page = pdfDoc.getPage(0);
+    const { height: pageH, width: pageW } = page.getSize();
+
+    // Analisar a primeira página para detectar áreas de header/footer
+    // Heurística: medir a bounding box do conteúdo (operadores de desenho/texto)
+    // O header está no topo, o footer no rodapé
+    const ops = page.node.Contents()?.toString() || '';
+
+    // Detectar header: procurar retângulos ou conteúdo no terço superior
+    // Se o PDF tem conteúdo significativo nos primeiros ~25% da página, é header
+    const headerThreshold = pageH * 0.25;
+    const footerThreshold = pageH * 0.75;
+
+    // Heurística baseada na presença de operadores de desenho em zonas específicas
+    let headerHeight = TIMBRADO_DEFAULTS.headerHeight;
+    let footerHeight = TIMBRADO_DEFAULTS.footerHeight;
+
+    // Se o stream tem operações de retângulo (re/w) no terço superior → header detectado
+    // Procurar por padrões como "0 0 0 re f" ou "x y w h re f" que indicam retângulos
+    const rectMatches = ops.match(/[\d.\-]+\s+[\d.\-]+\s+[\d.\-]+\s+[\d.\-]+\s+re\s+[fFsS]/gi);
+    if (rectMatches && rectMatches.length > 0) {
+      // Encontrar a maior dimensão vertical no topo (header) e no fundo (footer)
+      let maxHeaderY = 0;
+      let minFooterY = pageH;
+
+      for (const match of rectMatches) {
+        const parts = match.split(/\s+/);
+        if (parts.length >= 4) {
+          const y = parseFloat(parts[1]);
+          const h = parseFloat(parts[3]);
+          if (y + h > headerThreshold && y < minFooterY) {
+            // Retângulo na parte inferior pode ser footer
+            if (y > footerThreshold) {
+              minFooterY = y;
+            }
+          }
+          if (y + h > headerHeight && y < headerThreshold) {
+            maxHeaderY = Math.max(maxHeaderY, y + h);
+          }
+        }
+      }
+
+      // Se detectamos retângulos significativos, usar dimensões detectadas
+      if (maxHeaderY > 30) {
+        headerHeight = maxHeaderY;
+      }
+      if (minFooterY < pageH - 30) {
+        footerHeight = pageH - minFooterY;
+      }
+    }
+
+    // Adicionar margem de segurança (10pt abaixo do header, 10pt acima do footer)
+    const safeContentTop = headerHeight + 10;
+    const safeContentBottom = footerHeight + 10;
+
+    return {
+      headerHeight,
+      footerHeight,
+      safeContentTop: Math.min(safeContentTop, pageH * 0.4), // nunca ocupar mais que 40% da página
+      safeContentBottom: Math.min(safeContentBottom, pageH * 0.4),
+    };
+  } catch {
+    return { ...TIMBRADO_DEFAULTS };
+  }
+}
+
 // ── Public API ────────────────────────────────────────────────────────
 
 export async function generatePdf(orderId: string, layoutId?: string): Promise<string> {
@@ -119,6 +204,18 @@ function getColors(layout: any) {
 function getMargins(layout: any) {
   const def = { top: 50, bottom: 70, left: 50, right: 50 };
   if (!layout) return def;
+
+  // Para layout pdf_importado, usar margens baseadas no timbrado (defaults)
+  // As dimensões reais são detectadas no momento da geração do PDF
+  if (layout.tipo === 'pdf_importado') {
+    return {
+      top: TIMBRADO_DEFAULTS.safeContentTop,
+      bottom: TIMBRADO_DEFAULTS.safeContentBottom,
+      left: 50,
+      right: 50,
+    };
+  }
+
   const config = getConfig(layout);
   const m = config.margens || {};
   const topo = (layout.margemTopo || 0) * 2.835 + (m.topo || 0);
@@ -173,19 +270,33 @@ async function removeTrailingBlankPages(filepath: string): Promise<void> {
 
     if (pageCount <= 1) return;
 
-    // Verificar últimas páginas: se tiverem pouca ou nenhuma conteúdo, remover
+    // Verificar últimas páginas: se tiverem pouca ou nenhuma conteúdo significativo, remover
     let lastContentPage = pageCount - 1;
     for (let i = pageCount - 1; i >= 1; i--) {
       const page = pdf.getPage(i);
-      // Verificar se a página tem conteúdo significativo
-      // Se a página foi criada apenas para o footer, ela terá pouco conteúdo
       const contentStream = page.node.Contents();
-      if (contentStream && contentStream.toString().length > 100) {
+      if (!contentStream) {
+        lastContentPage = i - 1;
+        continue;
+      }
+
+      const streamStr = contentStream.toString();
+      // Heurística: página com < 300 bytes de stream provavelmente só tem footer ou está vazia
+      // Páginas com conteúdo real tipicamente têm > 500 bytes (texto, retangulos, imagens)
+      // Além disso, verificar se a stream não é apenas uma operação de página em branco
+      const hasSignificantContent = streamStr.length > 300 &&
+        !streamStr.match(/^\s*$/) && // não é só whitespace
+        (streamStr.includes('Tj') || streamStr.includes('TJ') || streamStr.includes('re') || streamStr.includes('Do')); // tem texto, retângulos ou imagens
+
+      if (hasSignificantContent) {
         lastContentPage = i;
         break;
       }
       lastContentPage = i - 1;
     }
+
+    // Garantir que pelo menos 1 página permaneça
+    if (lastContentPage < 0) lastContentPage = 0;
 
     // Remover páginas vazias do final
     const pagesToRemove = pageCount - 1 - lastContentPage;
@@ -195,6 +306,7 @@ async function removeTrailingBlankPages(filepath: string): Promise<void> {
       }
       const newBytes = await pdf.save();
       fs.writeFileSync(filepath, Buffer.from(newBytes));
+      console.log(`[PDF] Removidas ${pagesToRemove} página(s) em branco do final`);
     }
   } catch (err) {
     console.warn('[PDF] removeTrailingBlankPages falhou, mantendo original:', err);
@@ -327,11 +439,21 @@ async function buildPdfWithTimbrado(
   timbradoBytes: Buffer,
 ): Promise<string> {
   const colors = getColors(layout);
-  const margins = getMargins(layout);
+
+  // Detectar dimensões reais do timbrado (ou usar defaults)
+  const timbradoDims = await detectTimbradoDimensions(timbradoBytes);
+
+  // Margens que respeitam o header/footer do timbrado importado
+  const timbradoMargins = {
+    top: timbradoDims.safeContentTop,
+    bottom: timbradoDims.safeContentBottom,
+    left: 50,
+    right: 50,
+  };
 
   const contentDoc = new PDFDocument({
     size: 'A4',
-    margins,
+    margins: timbradoMargins,
     bufferPages: true,
   });
 
@@ -341,13 +463,9 @@ async function buildPdfWithTimbrado(
   const tempStream = fs.createWriteStream(tempFilepath);
   contentDoc.pipe(tempStream);
 
+  // Desenhar APENAS o conteúdo (NÃO header/footer — virão do timbrado)
+  // O header do timbrado já contém logo, nome da empresa, etc.
   drawContentOnly(contentDoc, order, colors);
-
-  const totalPages = contentDoc.bufferedPageRange().count;
-  for (let i = 0; i < totalPages; i++) {
-    contentDoc.switchToPage(i);
-    drawMinimalFooter(contentDoc, i + 1, totalPages, colors);
-  }
 
   contentDoc.end();
 
@@ -367,16 +485,13 @@ async function buildPdfWithTimbrado(
     const contentPages = contentPdf.getPageCount();
     const applyToAll = layout.timbradoApply === 'todas_paginas';
 
-    // Gerar uma página para cada página de conteúdo (sem páginas em branco)
     for (let i = 0; i < contentPages; i++) {
       const contentPage = contentPdf.getPage(i);
       const contentSize = contentPage.getSize();
 
-      // Determinar se aplicar timbrado nesta página
       const shouldApplyTimbrado = applyToAll || i === 0;
 
       if (shouldApplyTimbrado && timbradoPages > 0) {
-        // Usar timbrado como fundo (ciclar se timbrado tem menos páginas)
         const timbradoIndex = applyToAll ? (i % timbradoPages) : 0;
         const timbradoPage = timbradoPdf.getPage(timbradoIndex);
         const timbradoSize = timbradoPage.getSize();
@@ -385,26 +500,37 @@ async function buildPdfWithTimbrado(
         const page = mergedPdf.addPage([timbradoSize.width, timbradoSize.height]);
         page.drawPage(embeddedTimbrado);
 
-        // Sobrepor conteúdo na página
+        // O conteúdo é gerado com top margin = safeContentTop (84pt),
+        // então ao embeddar em y=0, o conteúdo aparece exatamente
+        // na posição correta abaixo do header do timbrado.
         const [embeddedContent] = await mergedPdf.embedPages([contentPage]);
         page.drawPage(embeddedContent);
       } else {
-        // Sem timbrado: apenas conteúdo
         const [embeddedContent] = await mergedPdf.embedPages([contentPage]);
         const page = mergedPdf.addPage([contentSize.width, contentSize.height]);
         page.drawPage(embeddedContent);
       }
     }
 
+    // ── Sobrescrever INFO do PDF (título, autor, etc) ──────────────
+    mergedPdf.setTitle(`Ordem de Serviço ${order.numeroOs}`);
+    mergedPdf.setAuthor(org?.nome || 'Codemed');
+    mergedPdf.setSubject('Ordem de Serviço');
+    mergedPdf.setCreator('CodeHelp CRM/Helpdesk');
+
     const mergedBytes = await mergedPdf.save();
     fs.writeFileSync(filepath, Buffer.from(mergedBytes));
 
     try { fs.unlinkSync(tempFilepath); } catch {}
 
+    // Remover páginas em branco que possam ter sido geradas
+    await removeTrailingBlankPages(filepath);
+
     return filepath;
   } catch (error: any) {
     console.error('Erro ao mesclar PDFs:', error);
     try { fs.unlinkSync(tempFilepath); } catch {}
+    // Fallback: gerar PDF sem timbrado
     return buildPdfWithLayout(order, null, org, logoBuffer, filepath);
   }
 }
@@ -452,6 +578,14 @@ function drawContentOnly(doc: PDFKit.PDFDocument, order: any, colors: typeof DEF
     doc.fontSize(10).font('Helvetica').fillColor(colors.text).text(order.observacoes);
     doc.moveDown(0.5);
     drawSeparator(doc, colors);
+  }
+
+  // Verificar espaço restante antes da seção de assinatura
+  // Se não houver espaço suficiente (~180pt), criar nova página
+  const spaceNeeded = 180;
+  const spaceAvailable = doc.page.height - doc.page.margins.bottom - doc.y;
+  if (spaceAvailable < spaceNeeded) {
+    doc.addPage();
   }
 
   const hasSignature = order.signature && order.signature.assinadoEm;

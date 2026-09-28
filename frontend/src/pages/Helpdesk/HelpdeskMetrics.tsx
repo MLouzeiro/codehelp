@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
+import { formatDuration } from '../../lib/formatDuration';
 import {
   RefreshCw, BarChart3, Target, Clock, Zap, Star, AlertTriangle,
   Inbox, CheckCircle, TrendingUp, Activity, Users, Tag, Calendar,
@@ -33,12 +34,8 @@ const ETAPA_CORES: Record<string, string> = {
 const FILA_CORES = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#84cc16'];
 
 function formatarMinutos(min: number): string {
-  if (!min || min <= 0) return '—';
-  if (min < 60) return `${min}min`;
-  const horas = Math.floor(min / 60);
-  const mins = min % 60;
-  if (horas < 24) return mins === 0 ? `${horas}h` : `${horas}h${mins}m`;
-  return `${Math.floor(horas / 24)}d ${horas % 24}h`;
+  if (!min || min <= 0) return '-';
+  return formatDuration(min);
 }
 
 function formatarNumero(n: number): string {

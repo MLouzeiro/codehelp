@@ -31,6 +31,8 @@ export async function callClaude(
   modulo?: string,
 ): Promise<string> {
   if (!hasClaude()) throw new Error('Chave Anthropic não configurada');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -43,7 +45,8 @@ export async function callClaude(
       max_tokens: maxTokens,
       messages: [{ role: 'user', content: prompt }],
     }),
-  });
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timeout));
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`Claude API error ${res.status}: ${err}`);

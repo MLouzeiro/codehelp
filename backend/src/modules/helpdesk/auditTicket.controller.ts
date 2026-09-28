@@ -325,7 +325,7 @@ export async function exportData(req: AuthRequest, res: Response) {
     const data = await exportTicketData(ticketId, (format as 'json' | 'csv') || 'json');
 
     if (format === 'csv') {
-      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="ticket-${ticketId}.csv"`);
     } else {
       res.setHeader('Content-Type', 'application/json');

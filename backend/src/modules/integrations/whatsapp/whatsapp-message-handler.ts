@@ -846,7 +846,7 @@ export async function processIncomingMessageHandler(
             data: { clientId: client.id },
           });
 
-          const msgConfirmacao = `${ticket!.contactName || 'Cliente'}, empresa vinculada!\n\n*Laboratorio:* ${client.razaoSocial}`;
+          const msgConfirmacao = `${ticket!.contactName || 'Cliente'}, empresa vinculada!\n\n*Laboratório:* ${client.razaoSocial}`;
           const result = await sendMessage(chatId, msgConfirmacao);
           if (result?.success) {
             await prisma.message.create({
@@ -870,7 +870,7 @@ export async function processIncomingMessageHandler(
 
       // Detect LABORATORY by pattern
       if (!ticket!.clientId) {
-        const labMatch = text.match(/(?:lab(?:orat[oó]rio)?|empresa|company|clinica|unidade)\s*:\s*(.+)/i);
+        const labMatch = text.match(/(?:lab(?:orat[oó]rio)?|empresa|company|clínica|unidade)\s*:\s*(.+)/i);
         if (labMatch) {
           const labNome = labMatch[1].trim();
           let client = await prisma.client.findFirst({
@@ -897,7 +897,7 @@ export async function processIncomingMessageHandler(
             data: { clientId: client.id },
           });
 
-          const msgConfirmacao = `${ticket!.contactName || 'Cliente'}, empresa vinculada!\n\n*Laboratorio:* ${client.razaoSocial}`;
+          const msgConfirmacao = `${ticket!.contactName || 'Cliente'}, empresa vinculada!\n\n*Laboratório:* ${client.razaoSocial}`;
           const result = await sendMessage(chatId, msgConfirmacao);
           if (result?.success) {
             await prisma.message.create({
@@ -932,7 +932,7 @@ export async function processIncomingMessageHandler(
           }
 
           if (!resultado.empresa) {
-            const msgEmpresa = `${ticket!.contactName || 'Cliente'}, de qual laboratorio, clinica ou hospital voce esta entrando em contato?`;
+            const msgEmpresa = `${ticket!.contactName || 'Cliente'}, de qual laboratório, clínica ou hospital você está entrando em contato?`;
             const empresaResult = await sendMessage(chatId, msgEmpresa);
             if (empresaResult?.success) {
               await prisma.message.create({
@@ -996,7 +996,7 @@ export async function processIncomingMessageHandler(
             data: updateData,
           });
 
-          const msgConfirmacao = `${ticket!.contactName || 'Cliente'}, informacoes recebidas!\n\n*Assunto:* ${updateData.assunto}`;
+          const msgConfirmacao = `${ticket!.contactName || 'Cliente'}, informações recebidas!\n\n*Assunto:* ${updateData.assunto}`;
           const result = await sendMessage(chatId, msgConfirmacao);
           if (result?.success) {
             await prisma.message.create({

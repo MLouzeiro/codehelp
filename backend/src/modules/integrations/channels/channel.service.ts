@@ -1,4 +1,5 @@
 import prisma from '../../../config/database';
+import { toKebabCase } from '../../../shared/utils/normalize';
 
 const CHANNEL_TYPES = [
   { tipo: 'whatsapp', label: 'WhatsApp', icon: 'MessageCircle', color: '#25d366', providers: ['evolution', 'baileys', 'cloud'] },
@@ -58,11 +59,7 @@ export async function createChannel(data: {
   metadata?: string;
 }) {
   // Auto-generate slug if not provided
-  const slug = data.slug || data.nome
-    .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
+  const slug = data.slug || toKebabCase(data.nome);
 
   return prisma.channel.create({
     data: {

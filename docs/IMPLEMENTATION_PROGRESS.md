@@ -324,3 +324,59 @@ Legenda status: ⏳ pendente · 🔧 em andamento · ✅ concluído · ⛔ bloqu
 ### OBSERVAÇÕES
 - Detecção reaproveita `auditarEncerramento` (IA + fallback local por regras) — nenhuma regra de negócio de encerramento/avaliação foi alterada.
 - Background nunca é aguardado pelo fluxo principal; falhas viram apenas log.
+
+
+## FASE 21 — Tempo Total de Atendimento: apresentacao humana (sem alterar calculo)
+
+### OBJETIVO
+- Card "Tempo Total de Atendimento" passa a exibir valor humano como principal (ex.: "8 dias 22h") e o valor original em minutos + horas decimais como secundario, com tooltip explicativo. Calculo, API e banco permanecem em minutos (BANCO -> API -> CALCULO -> FORMATAÇÃO -> DASHBOARD -> INDICADORES -> RELATORIOS).
+
+### FUNÇÕES CENTRAIS (paridade frontend/backend)
+- `frontend/src/lib/formatDuration.ts` (novo) e `backend/src/shared/utils/duration.ts` (novo):
+  `formatDuration` ("5 min" | "1h 30min" | "8 dias 22h"), `formatDurationLong` ("8 dias e 22 horas"), `formatDurationCompact` ("3d 7h 45min"), `formatMinutesOriginal` ("12.840 minutos", pt-BR), `formatDecimalHours` ("214 horas"), `buildDuracaoTooltip`.
+- Regras: 60 min = 1h; 1440 min = 1 dia (cronologico, 1 dia = 24h, nunca 8h uteis); 0 => "0 min"; NaN/Infinity/undefined => "Não informado"; nunca arredondar alterando o valor real.
+- Correcao de aritmetica: 4785 min = 3d 7h **45min** (o enunciado dizia 25min).
+
+### ALTERAÇÕES (backend)
+- `indicadores.service.ts`: `CardIndicador.formato?: 'duracao'`, card `tempoTotal` com `formato:'duracao'` + `deltaLabel` em formato humano, `AnalistaIndicador.tempoTotalMin` (acumulo por analista, fechado = abertura - pausa, aberto = ate agora, Math.round) e CSV com valor humano + original + coluna "Tempo total (min)".
+- `htmlExport.service.ts`: `fmtMinutos` delega a `formatDuration`, novo `fmtDuracao` = "humano (minutos)"; tabelas de tempo em duracao; charts com "(minutos)".
+- `relatorios.service.ts`: tabela PDF "Tempo por tipo" em duracao humana.
+- Corrigido import ausente de `formatDuration`/`formatMinutesOriginal` em `htmlExport.service.ts`.
+
+### ALTERAÇÕES (frontend)
+- `types/index.ts`: `CardIndicador.formato?: string`; `AnalistaIndicador.tempoTotalMin?: number`.
+- `IndicadoresAtendimentoPage.tsx`: `CardIndicadorView` com `isDuracao` (principal `formatDurationLong`, secundario "minutos . horas decimais", tooltip `buildDuracaoTooltip`, icone Info); coluna "Tempo total" (`formatDurationCompact` + title com minutos originais) na tabela por analista; headers TMR/TME/1aResp com title diferenciando medio vs total.
+- `DashboardIA.tsx`: card tempo total em destaque humano + secundario + tooltip; coluna "Tempo total" na tabela Performance por Analista.
+- `Dashboard.tsx`: `formatarTempo` delega a `formatDuration` + fix de 4 erros TS7053 pre-existentes (array `as const`).
+- Delegação da função central em 16 arquivos (mantidos guards 'agora'/'-'/'—'): TicketHistoryDashboard, TicketMetricsPanel, TemporalBarChart, HelpdeskMetrics, QualidadeOperacionalPage, InteligenciaOperacionalPage, HelpdeskDashboard, HelpdeskStatusBoard, TicketAIPanel, TicketTimeline (alias), TicketTimelineExpandida, TimelineExpandida, RelatorioGerencial, RelatorioAnalitico, DashboardExecutivo, RelatoriosConsolidadosPage.
+
+### TESTES
+- Novos: `frontend/src/test/formatDuration.test.ts` 36/36; `backend/src/__tests__/duration.test.ts` 32/32.
+- Frontend: tsc 0 erros; vitest 41/41; `npm run build:frontend` OK (24s).
+- Backend: tsc 13 erros pre-existentes em `desempenhoAnalista.service.ts` (0 novos). Suíte focada (duration, indicadores, relatorios, accent-encoding, alertas-operacionais, metrics) 134/134 com `--hookTimeout=60000 --testTimeout=60000`.
+- Ambiente: `ensureHelpdeskEntities()` leva ~12,4s (Neon remoto) > hookTimeout padrao 10s — com timeouts padrao 29 suítes falham por timeout (ambiental, não regressao).
+- Falhas determinísticas pré-existentes/não relacionadas (falham também isoladas): closure-audit, expediente-return, tasks-module (RBAC), ticket-closure-regression, ticket-lifecycle-e2e (`evaluationStatus`) — nenhum desses módulos foi tocado nesta fase.
+
+## FASE 22 — Correção dos bugs críticos de indicadores (Seção 3.2 do MAPA-DO-SISTEMA)
+
+### OBJETIVO
+- Corrigir os 6 bugs de métricas: SLA sempre 100%, visão-geral zerada, SLA violado = `>60min`, FCR com definição errada, métricas sobre amostras (`take: 50`/`take: 200`) e metas conflitantes entre telas.
+
+### ALTERAÇÕES (backend)
+- `helpdesk/sla.service.ts`: novo helper `calcularSlaDoPeriodo(where, riscoPct = 80)` (total/cumprido/emRisco/violado/percentual; finalizado usa `['fechado','cancelado','concluido']` status OU `['concluido','descartado']` etapa). `getSlaInfoFromTicket` agora usa referência `dataFechamento` para tickets finalizados (bug 1) — corrige "SLA sempre 100%".
+- `helpdesk/indicadores.service.ts`: mesma referência `dataFechamento` em `computarMetricas`, `coletarPorAnalista` e `getSlaTicketIndicador` (select + calc).
+- `analytics/dashboardExecutivo.service.ts` (bugs 1+4): `taxaSla` via helper do período (não mais 100% fixo); FCR = `fcrData/ticketsFechados*100` com query `AND: [WHERE_TICKET_RESOLVIDO, { OR: [{resolvidoSemAjuda:true},{resolvidoSemAjuda:null}] }]`; payload de alertas usa `slaPeriodo`.
+- `analytics/relatorios.service.ts` e `analytics/weeklyReport.service.ts` (bugs 3+4): helper substitui `slaData`/`slaViolado` (`gt:60` removido) e FCR com denom `ticketsFechados` — alinhado ao canônico `fcr.service.ts`.
+- `analytics/analytics.controller.ts` (bug 2): `getVisaoGeral` calcula `tempoMedioRespostaMin` real (findMany + reduce) e `slaPeriodo` via helper — visão deixa de vir zerada.
+- `analytics/alertasOperacionais.service.ts` (bug 6): thresholds/mensagens de `resposta_acima_meta` e `taxa_sla_baixa` agora usam `getMetasIndicadores()` (PR 15min, SLA 95%) em vez de 360min/80% hardcoded.
+- `helpdesk/helpdesk.controller.ts` (bug 5): `getDashboard` sem `take: 50` no tempo médio; `getDetailedDashboard` retorna `total` real via `prisma.ticket.count({ where })` (lista segue `take: 200`).
+- `__tests__/alertas-operacionais.test.ts`: fixture `resumoOk` atualizada (PR 10min, SLA 95/100) — testes de disparo continuam disparando.
+
+### ALTERAÇÕES (frontend)
+- `Dashboard.tsx` (bugs 4+6): FCR exibe `${fcr.toFixed(0)}%` (escala 0–100, não `*100` sobre 0–1) com meta ≥60% (60/40) e guard `ticketsFechados`; CSAT meta 3.5 (3.5/2.5); card "Resposta média" renomeado para "1ª resposta" com meta ≤15min (15/30) — alinhado ao glossário (PR, não TMR).
+- `metricGlossary.ts`: conferido, sem alteração (CSAT 3.5, FCR 60%, SLA 95%, TMR 360, TME 30, PR 15 já corretos).
+
+### TESTES
+- Backend: tsc 0 erros (corrigido non-null `dataPrimeiraResposta` em `analytics.controller.ts`). Suíte focada com `--hookTimeout=60000 --testTimeout=60000`: alertas-operacionais 12/12, alertas-visao-geral 7/7, indicadores 17/17, dashboard-executivo 3/3, relatorios + weekly-report 10/10 → **49/49**.
+- Frontend: tsc 0 erros; vitest **41/41**.
+- Verificação de consumidores: `total` do dashboard detalhado só é consumido como `data.tickets` (nenhum uso de `.total` quebrado); demais telas FCR (`DashboardExecutivo`, `RelatorioGerencial`, `RelatorioAnalitico`) já usavam `${fcr}%` corretamente.

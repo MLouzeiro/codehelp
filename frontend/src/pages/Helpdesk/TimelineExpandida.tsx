@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Clock, Bot, ArrowRight, Loader2 } from 'lucide-react';
 import api from '../../services/api';
+import { formatDuration } from '../../lib/formatDuration';
 import type { TicketEvent, TicketTimelineEntry } from '../../types';
 
 interface TimelineExpandidaProps {
@@ -29,10 +30,7 @@ function formatHorario(iso: string): string {
 }
 
 function formatDuracao(minutos: number): string {
-  if (minutos < 60) return `${minutos}min`;
-  const h = Math.floor(minutos / 60);
-  const m = minutos % 60;
-  return `${h}h ${m}min`;
+  return formatDuration(minutos);
 }
 
 function parseDados(dados?: string): Record<string, any> {

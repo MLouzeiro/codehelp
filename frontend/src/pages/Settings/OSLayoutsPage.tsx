@@ -78,6 +78,34 @@ export default function OSLayoutsPage() {
     setShowEditor(true);
   };
 
+  const handleImportFromCreate = async (tipo: 'personalizado' | 'pdf_importado') => {
+    if (!uploadNome.trim()) return alert('Preencha o nome do layout');
+    if (!uploadFile) return alert('Selecione um arquivo');
+    setUploading(true);
+    try {
+      const { data: newLayout } = await api.post('/orders/layouts', { nome: uploadNome, tipo });
+      const endpoint = tipo === 'personalizado' ? 'logo' : 'timbrado';
+      const fd = new FormData();
+      fd.append('file', uploadFile);
+      try {
+        await api.post(`/orders/layouts/${newLayout.id}/${endpoint}`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        alert(`${tipo === 'personalizado' ? 'Logo' : 'Timbrado'} importado com sucesso!`);
+        setShowUpload(false);
+        setUploadFile(null);
+        setUploadNome('');
+        loadLayouts();
+      } catch (uploadErr: any) {
+        await api.delete(`/orders/layouts/${newLayout.id}`).catch(() => {});
+        throw uploadErr;
+      }
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao importar');
+    }
+    setUploading(false);
+  };
+
   const handleEdit = (layout: OSLayout) => {
     setEditingLayout(layout);
     setForm({
@@ -110,12 +138,26 @@ export default function OSLayoutsPage() {
       if (editingLayout) {
         await api.put(`/orders/layouts/${editingLayout.id}`, payload);
       } else {
-        await api.post('/orders/layouts', payload);
+        const { data: newLayout } = await api.post('/orders/layouts', payload);
+        // Se há logo no preview (upload via editor), enviar agora
+        if (logoPreview && config.logo?.base64) {
+          const fd = new FormData();
+          const byteString = atob(config.logo.base64);
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+          const blob = new Blob([ab], { type: config.logo.mimeType || 'image/png' });
+          fd.append('file', blob, config.logo.nome || 'logo.png');
+          await api.post(`/orders/layouts/${newLayout.id}/logo`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+        }
       }
       setShowEditor(false);
       loadLayouts();
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Erro ao salvar layout');
+      const msg = err?.response?.data?.error || err.message || 'Erro ao salvar layout';
+      alert(msg);
     }
     setSaving(false);
   };
@@ -161,7 +203,9 @@ export default function OSLayoutsPage() {
         await api.post(`/orders/layouts/${newLayout.id}/${endpoint}`, fd, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
+        alert(`${uploadType === 'logo' ? 'Logo' : 'Timbrado'} importado com sucesso!`);
       } catch (uploadErr: any) {
+        // Se o upload falhar, remover o layout criado
         await api.delete(`/orders/layouts/${newLayout.id}`).catch(() => {});
         throw uploadErr;
       }
@@ -171,7 +215,8 @@ export default function OSLayoutsPage() {
       setUploadNome('');
       loadLayouts();
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Erro ao fazer upload');
+      const msg = err?.response?.data?.error || err.message || 'Erro ao importar';
+      alert(msg);
     }
     setUploading(false);
   };

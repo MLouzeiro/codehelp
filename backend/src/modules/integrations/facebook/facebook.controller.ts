@@ -72,6 +72,6 @@ export async function getPageInfo(req: AuthRequest, res: Response) {
     }
     return res.json(info);
   } catch (err: any) {
-    return res.status(500).json({ error: 'Erro ao buscar informacoes da pagina' });
+    return res.status(500).json({ error: 'Erro ao buscar informações da página' });
   }
 }

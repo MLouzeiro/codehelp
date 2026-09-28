@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { slugify } from '../../shared/utils/normalize';
 
 export interface KbCreateInput {
   slug?: string;
@@ -24,16 +25,6 @@ export interface KbUpdateInput {
   ordem?: number;
   passos?: string | null;
   imagens?: string | null;
-}
-
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
 }
 
 export async function slugUnico(base: string, ignoreId?: string): Promise<string> {

@@ -131,7 +131,7 @@ export default function ChannelsPage() {
           endpoint = `/telegram/test/${channel.id}`;
           break;
         default:
-          setFeedback({ type: 'err', msg: 'Teste de conexao nao disponivel para este tipo de canal' });
+          setFeedback({ type: 'err', msg: 'Teste de conexão não disponível para este tipo de canal' });
           return;
       }
       const { data } = await api.post(endpoint);

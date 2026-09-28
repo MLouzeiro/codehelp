@@ -6,6 +6,14 @@ import { normalizePhone } from './whatsapp-utils';
 // ── Evolution API Integration Service ──────────────────────────────────
 // Replaces whatsapp-web.js with Evolution API (Docker-based)
 
+const FETCH_TIMEOUT_MS = 10_000;
+
+function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 interface EvolutionConfig {
   baseUrl: string;
   apiKey: string;
@@ -164,7 +172,7 @@ class EvolutionAPIService {
     const phone = normalizePhone(to);
 
     try {
-      const response = await fetch(`${this.config.baseUrl}/message/sendText/${instance}`, {
+      const response = await fetchWithTimeout(`${this.config.baseUrl}/message/sendText/${instance}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -199,7 +207,7 @@ class EvolutionAPIService {
     const phone = normalizePhone(to);
 
     try {
-      const response = await fetch(`${this.config.baseUrl}/message/sendList/${instance}`, {
+      const response = await fetchWithTimeout(`${this.config.baseUrl}/message/sendList/${instance}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -235,7 +243,7 @@ class EvolutionAPIService {
     const phone = normalizePhone(to);
 
     try {
-      const response = await fetch(`${this.config.baseUrl}/message/sendMedia/${instance}`, {
+      const response = await fetchWithTimeout(`${this.config.baseUrl}/message/sendMedia/${instance}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -255,7 +255,7 @@ export default function AuditoriaAnalistaPage() {
       if (colunaOrdenacao === 'agenteNome') {
         const na = String(a.agenteNome || '').toLowerCase();
         const nb = String(b.agenteNome || '').toLowerCase();
-        return ordemAsc ? na.localeCompare(nb) : nb.localeCompare(na);
+        return ordemAsc ? na.localeCompare(nb, 'pt-BR') : nb.localeCompare(na, 'pt-BR');
       }
       const na = Number(a[colunaOrdenacao]) || 0;
       const nb = Number(b[colunaOrdenacao]) || 0;

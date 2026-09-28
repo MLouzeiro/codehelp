@@ -76,21 +76,21 @@ export default function WhatsAppPage() {
   useEffect(() => { initAudioContext(); }, []);
 
   const CATEGORIAS = [
-    { value: 'suporte_tecnico', label: 'Suporte Tecnico' },
-    { value: 'duvida_faturamento', label: 'Duvida de Faturamento' },
-    { value: 'solicitacao_mudanca', label: 'Solicitacao de Mudanca' },
+    { value: 'suporte_tecnico', label: 'Suporte Técnico' },
+    { value: 'duvida_faturamento', label: 'Dúvida de Faturamento' },
+    { value: 'solicitacao_mudanca', label: 'Solicitação de Mudança' },
     { value: 'treinamento', label: 'Treinamento' },
-    { value: 'reclamacao', label: 'Reclamacao' },
-    { value: 'orcamento', label: 'Orcamento / Comercial' },
+    { value: 'reclamacao', label: 'Reclamação' },
+    { value: 'orcamento', label: 'Orçamento / Comercial' },
     { value: 'agendamento', label: 'Agendamento' },
     { value: 'outro', label: 'Outro' },
   ];
 
   const TIPOS = [
     { value: 'bug', label: 'Bug' },
-    { value: 'duvida', label: 'Duvida' },
-    { value: 'solicitacao', label: 'Solicitacao' },
-    { value: 'reclamacao', label: 'Reclamacao' },
+    { value: 'duvida', label: 'Dúvida' },
+    { value: 'solicitacao', label: 'Solicitação' },
+    { value: 'reclamacao', label: 'Reclamação' },
   ];
 
   const PRIORIDADES = [
@@ -1097,10 +1097,10 @@ export default function WhatsAppPage() {
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 flex-wrap">
                   <span className={`badge text-[10px] sm:text-xs ${statusStyles[selectedTicket.status] || ''}`}>{selectedTicket.status?.replace('_', ' ')}</span>
                   {!selectedTicket.protocolo && (
-                    <span className="hidden sm:flex badge text-xs bg-amber-100 text-amber-700 items-center gap-1"><ClipboardList size={10} /> Aguardando decisao</span>
+                    <span className="hidden sm:flex badge text-xs bg-amber-100 text-amber-700 items-center gap-1"><ClipboardList size={10} /> Aguardando decisão</span>
                   )}
                   {!selectedTicket.protocolo && (
-                    <button onClick={abrirModalAbrirChamado} className="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-1 min-h-[36px]" title="Abrir chamado (gerar protocolo + atribuir a voce)">
+                    <button onClick={abrirModalAbrirChamado} className="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-1 min-h-[36px]" title="Abrir chamado (gerar protocolo + atribuir a você)">
                       <ClipboardList size={12} /> <span className="hidden sm:inline">Abrir Chamado</span>
                     </button>
                   )}
@@ -1284,8 +1284,8 @@ export default function WhatsAppPage() {
               </div>
               <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                 {selectedTicket.protocolo
-                  ? 'Editando informacoes do chamado.'
-                  : 'Defina os dados do chamado. Sera gerado protocolo e o ticket ira para "Em Atendimento" atribuido a voce.'}
+                  ? 'Editando informações do chamado.'
+                  : 'Defina os dados do chamado. Será gerado protocolo e o ticket irá para "Em Atendimento" atribuído a você.'}
               </p>
             </div>
 
@@ -1378,7 +1378,7 @@ export default function WhatsAppPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5 block">Tipo de solicitacao</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5 block">Tipo de solicitação</label>
                 <select value={abrirChamado.tipo} onChange={(e) => setAbrirChamado({ ...abrirChamado, tipo: e.target.value })} className="w-full px-3 py-2.5 min-h-[44px] text-sm border border-neutral-200 rounded-lg">
                   <option value="">Selecione...</option>
                   {TIPOS.map((t) => (<option key={t.value} value={t.value}>{t.label}</option>))}

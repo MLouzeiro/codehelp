@@ -162,7 +162,7 @@ export default function WhatsAppConnectionsPage() {
       if (qrPollingRef.current === connId) {
         stopQrPolling();
         setQrStatus('error');
-        setQrError('Tempo esgotado. O QR Code nao foi gerado em 60s. Verifique a conexao e tente novamente.');
+        setQrError('Tempo esgotado. O QR Code não foi gerado em 60s. Verifique a conexão e tente novamente.');
       }
     }, 60_000);
 
@@ -213,7 +213,7 @@ export default function WhatsAppConnectionsPage() {
           if (err?.response?.status === 404) {
             stopQrPolling();
             setQrStatus('error');
-            setQrError('Conexao nao encontrada.');
+            setQrError('Conexão não encontrada.');
           }
         }
       }, 3000);

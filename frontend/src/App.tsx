@@ -24,6 +24,7 @@ const RelatorioGerencial = lazy(() => import('./pages/Analytics/RelatorioGerenci
 const DashboardExecutivo = lazy(() => import('./pages/Analytics/DashboardExecutivo'));
 const DashboardIA = lazy(() => import('./pages/Analytics/DashboardIA'));
 const RelatorioAnalitico = lazy(() => import('./pages/Analytics/RelatorioAnalitico'));
+const IndicadoresGerenciais = lazy(() => import('./pages/Analytics/IndicadoresGerenciaisPage'));
 const WhatsAppPage = lazy(() => import('./pages/WhatsApp/WhatsAppPage'));
 const ContatosIgnoradosPage = lazy(() => import('./pages/WhatsApp/ContatosIgnoradosPage'));
 const TicketDetail = lazy(() => import('./pages/WhatsApp/TicketDetail'));
@@ -77,6 +78,8 @@ const OSLayoutsPage = lazy(() => import('./pages/Settings/OSLayoutsPage'));
 const TimeTrackingPage = lazy(() => import('./pages/TimeTracking/TimeTrackingPage'));
 const CentralOperacaoPage = lazy(() => import('./pages/Helpdesk/CentralOperacaoPage'));
 const DecisaoAuditPage = lazy(() => import('./pages/Helpdesk/DecisaoAuditPage'));
+const InteligenciaOperacionalPage = lazy(() => import('./pages/Helpdesk/InteligenciaOperacionalPage'));
+const RelatoriosConsolidados = lazy(() => import('./pages/Analytics/RelatoriosConsolidadosPage'));
 
 function PageLoader() {
   return (
@@ -147,11 +150,14 @@ export default function App() {
             <Route path="helpdesk/qualidade" element={<QualidadeOperacionalPage />} />
             <Route path="helpdesk/tomada-decisao" element={<TomadaDecisaoPage />} />
             <Route path="helpdesk/decisao-audit" element={<DecisaoAuditPage />} />
+            <Route path="helpdesk/inteligencia" element={<InteligenciaOperacionalPage />} />
             <Route path="helpdesk/aprovacoes" element={<Aprovacoes />} />
             <Route path="relatorios/gerencial" element={<RelatorioGerencial />} />
             <Route path="relatorios/executivo" element={<DashboardExecutivo />} />
             <Route path="relatorios/ia" element={<DashboardIA />} />
+            <Route path="relatorios/indicadores" element={<IndicadoresGerenciais />} />
             <Route path="relatorios/analitico" element={<RelatorioAnalitico />} />
+            <Route path="relatorios/consolidados" element={<RelatoriosConsolidados />} />
             <Route path="kb" element={<KBList />} />
             <Route path="automations" element={<AutomationsPage />} />
             <Route path="automations/flow-builder" element={<FlowBuilderPage />} />

@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../../config/database';
 import { buildWhere, RelatorioFiltros } from '../analytics/relatorios.service';
 import { calcularSlaRestanteMinutos } from './sla.service';
+import { formatDuration, formatMinutesOriginal } from '../../shared/utils/duration';
 
 // ── Tipos ──────────────────────────────────────────────────────────────
 
@@ -34,6 +35,8 @@ export interface CardIndicador {
   delta: number | null;
   deltaLabel: string;
   evolucao: 'melhorou' | 'piorou' | 'estavel';
+  /** Como o frontend deve apresentar o valor. 'duracao' = soma de minutos (ex.: tempo total) */
+  formato?: 'duracao' | 'media' | 'percentual' | 'contagem';
 }
 
 export interface IndicadoresAtendimento {
@@ -98,6 +101,8 @@ export interface AnalistaIndicador {
   fcr: number;
   reaberturas: number;
   retrabalho: number;
+  /** Soma do tempo de atendimento dos tickets do analista no período (minutos) */
+  tempoTotalMin: number;
 }
 
 export interface AlertaIndicador {
@@ -392,7 +397,7 @@ function computarMetricas(
           slaTotalMinutos: t.slaTotalMinutos,
           slaPausadoEm: t.slaPausadoEm,
           slaPausadoTotalMin: t.slaPausadoTotalMin,
-          agora,
+          agora: finalizado && t.dataFechamento ? t.dataFechamento : agora,
         })
       : null;
 
@@ -470,6 +475,7 @@ interface AnalistaAcc {
   fcrDentro: number;
   reaberturas: number;
   retrabalho: number;
+  tempoTotalMin: number;
 }
 
 function coletarPorAnalista(
@@ -509,11 +515,20 @@ function coletarPorAnalista(
       fcrDentro: 0,
       reaberturas: 0,
       retrabalho: 0,
+      tempoTotalMin: 0,
     };
     a.tickets++;
 
     const finalizado = isFinalizado(t);
     if (finalizado) a.resolvidos++;
+
+    // Tempo total de atendimento (mesma regra do consolidado: fechado − abertura − pausa; aberto = até agora)
+    if (t.dataFechamento) {
+      const pausaTotalMs = (t.slaPausadoTotalMin || 0) * 60 * 1000;
+      a.tempoTotalMin += Math.max(0, (t.dataFechamento.getTime() - t.dataAbertura.getTime() - pausaTotalMs) / 60000);
+    } else {
+      a.tempoTotalMin += Math.max(0, (agora.getTime() - t.dataAbertura.getTime()) / 60000);
+    }
 
     if (t.dataFechamento) {
       const pausaMs = (t.slaPausadoTotalMin || 0) * 60 * 1000;
@@ -540,7 +555,7 @@ function coletarPorAnalista(
         slaTotalMinutos: t.slaTotalMinutos,
         slaPausadoEm: t.slaPausadoEm,
         slaPausadoTotalMin: t.slaPausadoTotalMin,
-        agora,
+        agora: finalizado && t.dataFechamento ? t.dataFechamento : agora,
       });
       if (finalizado ? slaInfo.percentual <= 100 : slaInfo.percentual < metas.slaRiscoPct) a.slaCumprido++;
     }
@@ -577,6 +592,7 @@ function coletarPorAnalista(
       fcr: a.tickets > 0 ? Math.round((a.fcrDentro / a.tickets) * 100) : 0,
       reaberturas: a.reaberturas,
       retrabalho: a.retrabalho,
+      tempoTotalMin: Math.round(a.tempoTotalMin),
     });
   }
 
@@ -725,8 +741,9 @@ export async function getIndicadoresAtendimento(filtros: FiltrosIndicadores = {}
         meta: 0,
         classificacao: { estado: 'dentro', icone: '🟢', texto: 'Somado do período' },
         delta: null,
-        deltaLabel: `${Math.round(mCur.tempoTotalMin / 60)}h somadas`,
+        deltaLabel: `${formatDuration(Math.round(mCur.tempoTotalMin))} somados no período`,
         evolucao: 'estavel',
+        formato: 'duracao',
       },
     },
     sla: {
@@ -776,6 +793,7 @@ export async function getSlaTicketIndicador(ticketId: string): Promise<SlaTicket
       slaPausadoEm: true,
       slaPausadoTotalMin: true,
       dataAbertura: true,
+      dataFechamento: true,
       prioridade: true,
       idFila: true,
     },
@@ -790,6 +808,7 @@ export async function getSlaTicketIndicador(ticketId: string): Promise<SlaTicket
     slaTotalMinutos: slaTotal,
     slaPausadoEm: ticket.slaPausadoEm,
     slaPausadoTotalMin: ticket.slaPausadoTotalMin,
+    agora: finalizado && ticket.dataFechamento ? ticket.dataFechamento : undefined,
   });
 
   let classificacao: ClassificacaoIndicador;
@@ -981,7 +1000,11 @@ export async function exportarIndicadoresCsv(filtros: FiltrosIndicadores = {}): 
   const cards = dados.cards as Record<string, CardIndicador>;
   for (const key of Object.keys(cards)) {
     const c = cards[key];
-    linhas.push(`${c.label};${c.valor} ${c.unidade};${c.meta ? `${c.meta} ${c.unidade}` : '-'};${c.classificacao.icone} ${c.classificacao.texto}`);
+    // Duração somada: apresenta valor humano + valor técnico original em minutos
+    const valorTexto = c.formato === 'duracao'
+      ? `${formatDuration(c.valor)} (${formatMinutesOriginal(c.valor)})`
+      : `${c.valor} ${c.unidade}`;
+    linhas.push(`${c.label};${valorTexto};${c.meta ? `${c.meta} ${c.unidade}` : '-'};${c.classificacao.icone} ${c.classificacao.texto}`);
   }
   linhas.push('');
   linhas.push('SLA;Total;Cumprido;Em risco;Violado;Cumprimento %');
@@ -990,9 +1013,9 @@ export async function exportarIndicadoresCsv(filtros: FiltrosIndicadores = {}): 
   linhas.push('Primeira resposta;Total;Dentro da meta;% dentro');
   linhas.push(`Primeira resposta;${dados.primeiraResposta.total};${dados.primeiraResposta.dentroMeta};${dados.primeiraResposta.percentualDentro}`);
   linhas.push('');
-  linhas.push('Analista;Tickets;Resolvidos;TMR (min);TME (min);Primeira resposta (min);SLA cumprido;SLA total;Taxa SLA %;CSAT;FCR %;Reaberturas;Retrabalho');
+  linhas.push('Analista;Tickets;Resolvidos;Tempo total (min);TMR (min);TME (min);Primeira resposta (min);SLA cumprido;SLA total;Taxa SLA %;CSAT;FCR %;Reaberturas;Retrabalho');
   for (const a of dados.porAnalista) {
-    linhas.push(`${a.agenteNome};${a.tickets};${a.resolvidos};${a.tmrMin};${a.tmeMin};${a.primeiraRespostaMin};${a.slaCumprido};${a.slaTotal};${a.taxaSla};${a.csatMedia};${a.fcr};${a.reaberturas};${a.retrabalho}`);
+    linhas.push(`${a.agenteNome};${a.tickets};${a.resolvidos};${a.tempoTotalMin ?? 0};${a.tmrMin};${a.tmeMin};${a.primeiraRespostaMin};${a.slaCumprido};${a.slaTotal};${a.taxaSla};${a.csatMedia};${a.fcr};${a.reaberturas};${a.retrabalho}`);
   }
   return linhas.join('\n');
 }

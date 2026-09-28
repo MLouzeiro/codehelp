@@ -17,14 +17,7 @@ function badRequest(message: string, field?: string) {
   return err;
 }
 
-function toKebabCase(str: string): string {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-}
+import { toKebabCase } from '../../shared/utils/normalize';
 
 export async function listFilas(departamentoId?: string) {
   const where: any = {};

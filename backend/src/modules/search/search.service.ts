@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { normalizeText, tokenize } from '../../shared/utils/normalize';
 
 export interface SearchFilters {
   q: string;
@@ -17,21 +18,9 @@ export interface SearchResult {
   icone: string;
 }
 
-function tokenize(query: string): string[] {
-  return query
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .split(/\s+/)
-    .filter(t => t.length >= 2);
-}
-
 function scoreMatch(text: string, terms: string[]): number {
   if (!text) return 0;
-  const normalized = text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+  const normalized = normalizeText(text);
   let score = 0;
   for (const term of terms) {
     if (normalized.includes(term)) {

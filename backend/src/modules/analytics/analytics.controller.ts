@@ -7,7 +7,9 @@ import { gerarDashboardExecutivo } from './dashboardExecutivo.service';
 import { getDashboardIa } from './dashboardIa.service';
 import { gerarAlertasVisaoGeral } from './alertasVisaoGeral.service';
 import { getAlertDetail } from './alertDetail.service';
+import { getIndicadoresGerenciais } from './indicadores-gerenciais.service';
 import { STATUS_ABERTO } from '../helpdesk/constants';
+import { calcularSlaDoPeriodo } from '../helpdesk/sla.service';
 
 // ── Visão Geral — Alertas e Atenção ─────────────────────────────────────
 // Endpoint: GET /api/analytics/visao-geral?dias=7|30|90
@@ -22,7 +24,7 @@ export async function getVisaoGeral(req: AuthRequest, res: Response) {
     inicio.setDate(fim.getDate() - (dias - 1));
     inicio.setHours(0, 0, 0, 0);
 
-    const [totalTickets, ticketsFechados, ticketsAbertos, csatData] = await Promise.all([
+    const [totalTickets, ticketsFechados, ticketsAbertos, csatData, respostas, slaPeriodo] = await Promise.all([
       prisma.ticket.count({ where: { createdAt: { gte: inicio, lte: fim } } }),
       prisma.ticket.count({ where: { createdAt: { gte: inicio, lte: fim }, OR: [{ status: 'fechado' }, { etapa: 'concluido' }] } }),
       prisma.ticket.count({ where: { status: { in: [...STATUS_ABERTO] } } }),
@@ -31,17 +33,25 @@ export async function getVisaoGeral(req: AuthRequest, res: Response) {
         _avg: { nota: true },
         _count: { id: true },
       }),
+      prisma.ticket.findMany({
+        where: { createdAt: { gte: inicio, lte: fim }, dataPrimeiraResposta: { not: null } },
+        select: { dataAbertura: true, dataPrimeiraResposta: true },
+      }),
+      calcularSlaDoPeriodo({ createdAt: { gte: inicio, lte: fim } }),
     ]);
+
+    const somaResp = respostas.reduce((acc, t) => acc + Math.max(0, (t.dataPrimeiraResposta!.getTime() - t.dataAbertura.getTime()) / 60000), 0);
+    const tempoMedioRespostaMin = respostas.length > 0 ? Math.round(somaResp / respostas.length) : 0;
 
     const alertas = await gerarAlertasVisaoGeral(dias, {
       totalTickets,
       taxaResolucao: totalTickets > 0 ? Math.round((ticketsFechados / totalTickets) * 100) : 0,
-      tempoMedioRespostaMin: 0,
+      tempoMedioRespostaMin,
       csatMedio: csatData._avg.nota ? Math.round(csatData._avg.nota * 100) / 100 : 0,
       ticketsAbertos,
-      slaCumprido: 0,
-      slaTotal: 0,
-      taxaSla: 0,
+      slaCumprido: slaPeriodo.cumprido,
+      slaTotal: slaPeriodo.total,
+      taxaSla: slaPeriodo.percentual,
     });
 
     res.json({
@@ -687,4 +697,19 @@ const [
     },
     charts: { ticketsByCategory },
   };
+}
+
+// ── Indicadores Gerenciais ────────────────────────────────────────────
+// Endpoint: GET /api/analytics/indicadores-gerenciais?dias=30
+// 8 indicadores gerais + performance por analista com análise qualitativa
+export async function getIndicadoresGerenciaisHandler(req: AuthRequest, res: Response) {
+  try {
+    const dias = Math.min(Math.max(parseInt(String(req.query.dias || '30'), 10) || 30, 1), 90);
+    const orgId = (req as any).user?.organizationId;
+    const result = await getIndicadoresGerenciais(dias, orgId || undefined);
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Erro ao buscar indicadores gerenciais:', error);
+    return res.status(500).json({ error: 'Erro ao buscar indicadores gerenciais' });
+  }
 }

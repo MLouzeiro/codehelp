@@ -43,12 +43,12 @@ async function criarTicket(overrides: Record<string, any> = {}, comMetrics: Reco
 const resumoOk = {
   totalTickets: 10,
   taxaResolucao: 80,
-  tempoMedioRespostaMin: 120,
+  tempoMedioRespostaMin: 10,
   csatMedio: 4.2,
   ticketsAbertos: 5,
-  slaCumprido: 8,
-  slaTotal: 10,
-  taxaSla: 80,
+  slaCumprido: 95,
+  slaTotal: 100,
+  taxaSla: 95,
 };
 
 describe('Alertas Operacionais (dashboard executivo)', () => {

@@ -1,5 +1,5 @@
 import prisma from '../../config/database';
-import { generateOsNumber } from '../../shared/utils/helpers';
+import { generateOsNumber, getAtomicOsNumber } from '../../shared/utils/helpers';
 import crypto from 'crypto';
 
 // ── Timeline de status (tempo por status + auditoria) ─────────────────
@@ -82,20 +82,26 @@ export async function createOrderFromTicket(ticketId: string, usuarioId: string)
     where: { id: ticketId },
     include: { client: { select: { id: true, nomeFantasia: true, razaoSocial: true } } },
   });
-  if (!ticket) throw new Error('Ticket não encontrado');
-  if (!ticket.clientId) throw new Error('O ticket não possui cliente vinculado. Vincule o cliente ao ticket antes de criar a OS.');
+  if (!ticket) throw new Error(`Ticket não encontrado (ID: ${ticketId.slice(0, 8)})`);
+  if (!ticket.clientId) {
+    throw new Error(
+      `Ticket sem cliente vinculado. ` +
+      `Protocolo: ${ticket.protocolo || 'N/A'}. ` +
+      `Vincule um cliente ao ticket antes de criar a OS.`
+    );
+  }
 
   const tecnicoResponsavelId = ticket.assigneeId || usuarioId;
 
-  const year = new Date().getFullYear();
   let numeroOs = '';
   for (let attempt = 0; attempt < 5; attempt++) {
-    const count = await prisma.serviceOrder.count({
-      where: { numeroOs: { startsWith: `OS-${year}-` } },
-    });
-    numeroOs = generateOsNumber(year, count + 1);
-    const existing = await prisma.serviceOrder.findUnique({ where: { numeroOs } });
-    if (!existing) break;
+    try {
+      numeroOs = await getAtomicOsNumber(prisma);
+      break;
+    } catch (e: any) {
+      if (attempt === 4) throw e;
+      await new Promise(r => setTimeout(r, 50));
+    }
   }
 
   const categoria = ticket.categoria || '';

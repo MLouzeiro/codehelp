@@ -9,14 +9,7 @@ export interface WhatsAppConnectionInput {
   ativo?: boolean;
 }
 
-function toKebabCase(str: string): string {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-}
+import { toKebabCase } from '../../../shared/utils/normalize';
 
 export async function listConnections(includeInativos = false) {
   const where: any = {};

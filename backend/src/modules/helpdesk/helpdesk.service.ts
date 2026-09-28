@@ -32,7 +32,7 @@ const MENSAGEM_BOAS_VINDAS_PADRAO =
 // Versões anteriores (apenas saudação ou formato antigo) — usadas para migrar
 // bancos existentes para o novo layout sem quebrar customizações do admin.
 const MENSAGEM_BOAS_VINDAS_ANTERIOR =
-  'Ola!! {{nome}} {{saudacao}} 👋\n\nQue bom ter voce por aqui!\n\nComo podemos te ajudar hoje? Descreva por aqui mesmo que um de nossos analistas te atendera em instantes.';
+  'Olá!! {{nome}} {{saudacao}} 👋\n\nQue bom ter você por aqui!\n\nComo podemos te ajudar hoje? Descreva por aqui mesmo que um de nossos analistas te atenderá em instantes.';
 const MENSAGEM_BOAS_VINDAS_PADRAO_ANTERIOR =
   'Olá, {{nome}}! 👋\n{{saudacao}}!\n\nQue bom ter você por aqui! 😊\n\nComo podemos ajudar?';
 
@@ -40,7 +40,7 @@ const MENSAGEM_OPCAO_INVALIDA_PADRAO =
   '⚠️ Não consegui identificar a opção.\n\nPor favor, escolha uma das opções abaixo:\n\n{{departamentos}}\n\n👉 Digite apenas o *número* da opção desejada.';
 
 const MENSAGEM_OPCAO_INVALIDA_ANTERIOR =
-  'Hmm, nao entendi sua resposta, {{nome}} 😅\n\nPor favor, descreva com mais detalhes o que voce precisa.';
+  'Hmm, não entendi sua resposta, {{nome}} 😅\n\nPor favor, descreva com mais detalhes o que você precisa.';
 const MENSAGEM_OPCAO_INVALIDA_PADRAO_ANTERIOR =
   'Hmm, não entendi sua resposta, {{nome}} 😅\n\nPor favor, digite o *número* da opção desejada:\n\n{{departamentos}}';
 
@@ -52,8 +52,14 @@ const MENSAGEM_FORA_HORARIO_PADRAO =
   'Um atendente humano o responderá assim que o expediente iniciar. 🙏';
 
 export async function ensureHelpdeskConfigs() {
+  // Uma única query para buscar todas as configs existentes (em vez de 8 findFirst)
+  const existingConfigs = await prisma.helpdeskConfig.findMany({
+    where: { slug: { in: ETAPAS_PADRAO.map(e => e.slug) } },
+  });
+  const existingMap = new Map(existingConfigs.map(c => [c.slug, c]));
+
   for (const etapa of ETAPAS_PADRAO) {
-    const existing = await prisma.helpdeskConfig.findFirst({ where: { slug: etapa.slug } });
+    const existing = existingMap.get(etapa.slug);
     if (!existing) {
       const isFila = etapa.slug === 'fila';
       const isAguardandoExpediente = etapa.slug === 'aguardando_expediente';

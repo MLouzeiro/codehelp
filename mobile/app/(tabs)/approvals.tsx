@@ -40,7 +40,7 @@ export default function ApprovalsTabScreen() {
   const handleDecide = async (id: string, decisao: 'aprovada' | 'rejeitada') => {
     Alert.alert(
       decisao === 'aprovada' ? 'Aprovar' : 'Rejeitar',
-      `Deseja ${decisao === 'aprovada' ? 'aprovar' : 'rejeitar'} esta solicitacao?`,
+      `Deseja ${decisao === 'aprovada' ? 'aprovar' : 'rejeitar'} esta solicitação?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -138,7 +138,7 @@ export default function ApprovalsTabScreen() {
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.primary} />}
         ListEmptyComponent={!loading ? (
-          <EmptyState icon="✅" title="Nenhuma aprovacao" description={`Nenhuma aprovacao ${filter}`} />
+          <EmptyState icon="✅" title="Nenhuma aprovação" description={`Nenhuma aprovação ${filter}`} />
         ) : null}
       />
     </View>

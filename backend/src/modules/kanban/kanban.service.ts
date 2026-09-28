@@ -620,7 +620,7 @@ export async function updateTask(taskId: string, data: TaskUpdateInput, usuarioI
     const isAdminOrGerente = usuarioRole === 'admin' || usuarioRole === 'gerente';
     const isAssignee = existing.responsavelId === usuarioId;
     if (!isAdminOrGerente && !isAssignee) {
-      throw new Error('Acesso negado: voce nao e o responsavel por esta tarefa');
+      throw new Error('Acesso negado: você não é o responsável por esta tarefa');
     }
 
     const antes: Record<string, any> = {
@@ -799,7 +799,7 @@ export async function moveTask(taskId: string, targetColumnId: string, targetOrd
     const isAdminOrGerente = usuarioRole === 'admin' || usuarioRole === 'gerente';
     const isAssignee = task.responsavelId === usuarioId;
     if (!isAdminOrGerente && !isAssignee) {
-      throw new Error('Acesso negado: voce nao e o responsavel por esta tarefa');
+      throw new Error('Acesso negado: você não é o responsável por esta tarefa');
     }
 
     const targetColumn = await prisma.kanbanColumn.findUnique({

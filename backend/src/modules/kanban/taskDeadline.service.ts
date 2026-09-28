@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { normalizeText } from '../../shared/utils/normalize';
 
 export type StatusPrazo = 'no_prazo' | 'proxima' | 'atencao' | 'atrasada' | 'concluida';
 
@@ -31,7 +32,7 @@ export function formatarDuracao(ms: number): string {
 const COLUNAS_CONCLUIDA = ['concluido', 'concluida', 'done', 'feito', 'entregue', 'entregue'];
 
 function normalizarTexto(v: string): string {
-  return v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return normalizeText(v);
 }
 
 /**

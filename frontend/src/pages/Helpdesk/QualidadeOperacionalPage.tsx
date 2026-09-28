@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
+import { formatDuration } from '../../lib/formatDuration';
 import {
   RefreshCw, Loader2, RotateCcw, Repeat, RefreshCcw, Target,
   AlertTriangle, TrendingUp, TrendingDown, Lightbulb, GraduationCap,
@@ -230,9 +231,7 @@ export default function QualidadeOperacionalPage() {
   ];
 
   const formatTempo = (min: number) => {
-    const h = Math.floor(min / 60);
-    const m = min % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    return formatDuration(min);
   };
 
   return (

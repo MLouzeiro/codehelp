@@ -65,12 +65,12 @@ export async function generateProtocolo(): Promise<string> {
 
 // ── Message Classification ──────────────────────────────────────────────
 export const SUBJECTS = [
-  { value: 'suporte_tecnico', label: 'Suporte Tecnico' },
-  { value: 'duvida_faturamento', label: 'Duvida/Faturamento' },
-  { value: 'solicitacao_mudanca', label: 'Solicitacao de Mudanca' },
+  { value: 'suporte_tecnico', label: 'Suporte Técnico' },
+  { value: 'duvida_faturamento', label: 'Dúvida/Faturamento' },
+  { value: 'solicitacao_mudanca', label: 'Solicitação de Mudança' },
   { value: 'treinamento', label: 'Treinamento' },
-  { value: 'reclamacao', label: 'Reclamacao' },
-  { value: 'orcamento', label: 'Orcamento' },
+  { value: 'reclamacao', label: 'Reclamação' },
+  { value: 'orcamento', label: 'Orçamento' },
   { value: 'agendamento', label: 'Agendamento' },
   { value: 'outro', label: 'Outro' },
 ];

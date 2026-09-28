@@ -30,7 +30,7 @@ const ROLES = ['admin', 'gerente', 'tecnico', 'comercial', 'vendedor'] as const;
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin',
   gerente: 'Gerente',
-  tecnico: 'Tecnico',
+  tecnico: 'Técnico',
   comercial: 'Comercial',
   vendedor: 'Vendedor',
 };

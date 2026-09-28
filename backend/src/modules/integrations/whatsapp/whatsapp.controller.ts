@@ -247,7 +247,7 @@ export async function getTicket(req: AuthRequest, res: Response) {
 
     // Ownership: technicians can only see their own tickets
     if (req.user?.role === 'tecnico' && ticket.usuarioId !== req.user?.id) {
-      return res.status(403).json({ error: 'Acesso negado: voce nao e o responsavel por este ticket' });
+      return res.status(403).json({ error: 'Acesso negado: você não é o responsável por este ticket' });
     }
 
     const serviceOrders = await prisma.serviceOrder.findMany({
@@ -351,7 +351,7 @@ export async function closeTicket(req: AuthRequest, res: Response) {
 
     // Ownership: technicians can only close their own tickets
     if (req.user?.role === 'tecnico' && ticket.usuarioId !== req.user?.id) {
-      return res.status(403).json({ error: 'Acesso negado: voce nao e o responsavel por este ticket' });
+      return res.status(403).json({ error: 'Acesso negado: você não é o responsável por este ticket' });
     }
 
     const { encerrarTicket } = await import('../../helpdesk/flow.service');
@@ -385,7 +385,7 @@ export async function updateTicket(req: AuthRequest, res: Response) {
 
     // Ownership: technicians can only update their own tickets
     if (req.user?.role === 'tecnico' && ticket.usuarioId !== req.user?.id) {
-      return res.status(403).json({ error: 'Acesso negado: voce nao e o responsavel por este ticket' });
+      return res.status(403).json({ error: 'Acesso negado: você não é o responsável por este ticket' });
     }
 
     const data: any = {};

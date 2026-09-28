@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Maximize2, Minimize2, Send, Loader2, ArrowLeft, Calendar, Clock, AlertTriangle, ToggleLeft, ToggleRight, Building2, Timer, MessageSquare, Star, Paperclip, ShieldCheck, ShieldAlert, User, X, Info, BarChart3, ExternalLink, Hash, UserCheck, ClipboardList, Plus, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Maximize2, Minimize2, Send, Loader2, ArrowLeft, Calendar, Clock, AlertTriangle, ToggleLeft, ToggleRight, Building2, Timer, MessageSquare, Star, Paperclip, ShieldCheck, ShieldAlert, User, X, Info, BarChart3, ExternalLink, Hash, UserCheck, ClipboardList, Plus, FileText, ChevronDown, ChevronUp, Tag } from 'lucide-react';
 import api from '../../services/api';
 import TicketTopo from '../../components/TicketTopo';
 import TicketSidebar from '../../components/TicketSidebar';
@@ -33,7 +33,7 @@ export default function TicketAtendimentoPage() {
   const [cliente, setCliente] = useState<any>(null);
   const [historicoContato, setHistoricoContato] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aba, setAba] = useState<'chat' | 'timeline' | 'checklist' | 'os' | 'indicadores'>('chat');
+  const [aba, setAba] = useState<'chat' | 'classificacao' | 'timeline' | 'checklist' | 'os' | 'indicadores'>('chat');
   const [mensagens, setMensagens] = useState<any[]>([]);
   const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
   const [ordens, setOrdens] = useState<any[]>([]);
@@ -53,6 +53,9 @@ export default function TicketAtendimentoPage() {
   const [timeBlocks, setTimeBlocks] = useState<any[]>([]);
   const [sidebarAberta, setSidebarAberta] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('ticket_sidebar_collapsed') === 'true'; } catch { return false; }
+  });
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
 
@@ -79,6 +82,14 @@ export default function TicketAtendimentoPage() {
     const h = Math.floor(min / 60);
     const m = min % 60;
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem('ticket_sidebar_collapsed', String(next)); } catch {}
+      return next;
+    });
   };
 
   const formatTimeTotal = (blocks: any[]) =>
@@ -386,13 +397,10 @@ export default function TicketAtendimentoPage() {
       {/* === CABECALHO DO TICKET (contexto compacto) === */}
       <div className="flex-shrink-0 px-4 pt-2 space-y-2">
         <TicketTopo ticket={ticket} slaLabel={slaInfo ? (slaInfo.status === 'no_prazo' ? 'Dentro do prazo' : 'Prazo violado') : undefined} slaStatus={slaInfo?.status} />
-        {ticket && (
-          <ClassificationPanel ticketId={ticket.id} ticket={ticket} onClassificada={loadTicket} />
-        )}
       </div>
 
       {/* === WORKSPACE: CONVERSA | CLIENTE === */}
-      <div className={`flex-1 min-h-0 grid grid-cols-1 gap-0 p-4 pb-3 ${focusMode ? '' : 'lg:grid-cols-[minmax(0,1fr)_320px]'}`}>
+      <div className={`flex-1 min-h-0 grid grid-cols-1 gap-0 p-4 pb-3 ${focusMode ? '' : sidebarCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-[minmax(0,1fr)_320px]'}`}>
         {/* === COLUNA ESQUERDA: CHAT / TIMELINE / CHECKLIST === */}
         <div className="flex flex-col min-h-0 relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
           {/* Toggle Chat/Timeline/Checklist */}
@@ -406,6 +414,17 @@ export default function TicketAtendimentoPage() {
               }`}
             >
               {'\uD83D\uDCAC'} Chat
+            </button>
+            <button
+              onClick={() => setAba('classificacao')}
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                aba === 'classificacao'
+                  ? 'text-slate-800 border-b-2 border-blue-500 bg-slate-50 dark:text-slate-100 dark:bg-slate-900'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+              }`}
+            >
+              <Tag size={14} className="inline -mt-0.5 mr-1" />
+              Classificação
             </button>
             <button
               onClick={() => setAba('timeline')}
@@ -572,6 +591,12 @@ export default function TicketAtendimentoPage() {
                   Enviar
                 </button>
               </div>
+            </div>
+          ) : aba === 'classificacao' ? (
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900">
+              {ticket && (
+                <ClassificationPanel ticketId={ticket.id} ticket={ticket} onClassificada={loadTicket} />
+              )}
             </div>
           ) : aba === 'timeline' ? (
             <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900">
@@ -828,7 +853,7 @@ export default function TicketAtendimentoPage() {
           className={`fixed top-0 right-0 bottom-0 z-50 w-[86%] max-w-sm bg-white dark:bg-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
             sidebarAberta ? 'translate-x-0' : 'translate-x-full'
           } lg:static lg:z-auto lg:translate-x-0 lg:shadow-none lg:w-auto lg:max-w-none lg:h-full lg:min-h-0 lg:border-l lg:border-slate-200 lg:dark:border-slate-700 lg:rounded-none ${
-            focusMode ? 'lg:hidden' : ''
+            focusMode || sidebarCollapsed ? 'lg:hidden' : ''
           }`}
         >
           <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700 lg:hidden">
@@ -838,6 +863,17 @@ export default function TicketAtendimentoPage() {
               className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
             >
               <X className="w-4 h-4" />
+            </button>
+          </div>
+          {/* Desktop header with collapse button */}
+          <div className="hidden lg:flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-slate-700">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Detalhes</span>
+            <button
+              onClick={toggleSidebarCollapsed}
+              className="p-1 rounded-md text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              title="Recolher painel"
+            >
+              <ChevronDown className="w-4 h-4" />
             </button>
           </div>
 
@@ -996,6 +1032,17 @@ export default function TicketAtendimentoPage() {
             )}
           </div>
         </aside>
+
+        {/* Expand button when sidebar is collapsed (desktop only) */}
+        {!focusMode && sidebarCollapsed && (
+          <button
+            onClick={toggleSidebarCollapsed}
+            className="hidden lg:flex fixed right-2 top-1/2 -translate-y-1/2 z-30 items-center justify-center w-6 h-16 rounded-l-lg bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600 hover:text-slate-700 dark:hover:text-slate-200 transition-colors shadow-sm"
+            title="Expandir painel de detalhes"
+          >
+            <ChevronDown className="w-4 h-4 rotate-[-90deg]" />
+          </button>
+        )}
       </div>
 
       {/* === ACOES DO TICKET === */}

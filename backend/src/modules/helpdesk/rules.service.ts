@@ -61,11 +61,11 @@ export interface MatchResult {
   prioridade: number;
 }
 
-function _normalizarTexto(texto: string): string {
-  return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-}
+import { normalizeText } from '../../shared/utils/normalize';
 
-export const normalizarTexto = _normalizarTexto;
+export const normalizarTexto = (texto: string): string => {
+  return normalizeText(texto).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+};
 
 export async function classificarPorPalavrasChave(texto: string): Promise<MatchResult | null> {
   if (!texto || texto.trim().length < 3) return null;

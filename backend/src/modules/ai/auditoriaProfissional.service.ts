@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { callClaude, hasClaude, AI_MODEL } from '../../shared/aiClient';
+import { normalizeText } from '../../shared/utils/normalize';
 
 // ── Tipos públicos ──────────────────────────────────────────────
 
@@ -153,12 +154,7 @@ interface MensagemAudit {
 }
 
 function normalizar(texto: string | null | undefined): string {
-  return (texto || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
+  return normalizeText(texto || '').replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
 function rotularAutor(m: MensagemAudit): 'cliente' | 'agente' | 'bot' {

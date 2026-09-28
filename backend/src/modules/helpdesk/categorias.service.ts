@@ -38,24 +38,14 @@ export interface SugestaoClassificacao {
   motivo?: string;
 }
 
+import { slugify as slugifyBase, normalizeText } from '../../shared/utils/normalize';
+
 export function slugify(texto: string): string {
-  return (
-    texto
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .slice(0, 60) || 'outros'
-  );
+  return slugifyBase(texto).replace(/-/g, '_').slice(0, 60) || 'outros';
 }
 
 export function normalizarTexto(texto: string): string {
-  return texto
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
+  return normalizeText(texto);
 }
 
 // ── Categorias ────────────────────────────────────────────────────────

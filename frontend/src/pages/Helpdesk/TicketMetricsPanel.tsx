@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatDuration } from '../../lib/formatDuration';
 import {
   Clock,
   TrendingUp,
@@ -24,13 +25,7 @@ interface TicketMetricsPanelProps {
 }
 
 function formatMinutes(minutes: number): string {
-  if (minutes < 60) return `${minutes}min`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours < 24) return `${hours}h ${mins}min`;
-  const days = Math.floor(hours / 24);
-  const remainHours = hours % 24;
-  return `${days}d ${remainHours}h`;
+  return formatDuration(minutes);
 }
 
 function getSlaColor(percentual: number): string {

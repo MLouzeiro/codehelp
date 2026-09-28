@@ -6,6 +6,14 @@ import { normalizePhone } from './whatsapp-utils';
 // ── WhatsApp Cloud API Integration Service (Meta Official) ────────────
 // Free tier: 1,000 conversations/month
 
+const FETCH_TIMEOUT_MS = 10_000;
+
+function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 interface CloudAPIConfig {
   phoneNumberId: string;
   accessToken: string;
@@ -43,7 +51,7 @@ class WhatsAppCloudAPIService {
     const phone = normalizePhone(to);
 
     try {
-      const response = await fetch(
+      const response = await fetchWithTimeout(
         `${this.baseUrl}/${this.config.phoneNumberId}/messages`,
         {
           method: 'POST',
@@ -91,7 +99,7 @@ class WhatsAppCloudAPIService {
     const phone = normalizePhone(to);
 
     try {
-      const response = await fetch(
+      const response = await fetchWithTimeout(
         `${this.baseUrl}/${this.config.phoneNumberId}/messages`,
         {
           method: 'POST',
@@ -140,7 +148,7 @@ class WhatsAppCloudAPIService {
     const phone = normalizePhone(to);
 
     try {
-      const response = await fetch(
+      const response = await fetchWithTimeout(
         `${this.baseUrl}/${this.config.phoneNumberId}/messages`,
         {
           method: 'POST',
@@ -184,7 +192,7 @@ class WhatsAppCloudAPIService {
     const phone = normalizePhone(to);
 
     try {
-      const response = await fetch(
+      const response = await fetchWithTimeout(
         `${this.baseUrl}/${this.config.phoneNumberId}/messages`,
         {
           method: 'POST',
@@ -304,7 +312,7 @@ class WhatsAppCloudAPIService {
   async downloadMedia(mediaId: string): Promise<string | null> {
     try {
       // Get media URL
-      const urlResponse = await fetch(
+      const urlResponse = await fetchWithTimeout(
         `${this.baseUrl}/${mediaId}`,
         {
           method: 'GET',
@@ -318,12 +326,12 @@ class WhatsAppCloudAPIService {
       const urlData: any = await urlResponse.json();
 
       // Download actual media
-      const mediaResponse = await fetch(urlData.url, {
+      const mediaResponse = await fetchWithTimeout(urlData.url, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.config.accessToken}`,
         },
-      });
+      }, 30_000);
 
       if (!mediaResponse.ok) return null;
 
@@ -343,7 +351,7 @@ class WhatsAppCloudAPIService {
     if (!this.config.phoneNumberId || !this.config.accessToken) return;
 
     try {
-      await fetch(
+      await fetchWithTimeout(
         `${this.baseUrl}/${this.config.phoneNumberId}/messages`,
         {
           method: 'PUT',

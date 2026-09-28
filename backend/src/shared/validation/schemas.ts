@@ -19,6 +19,7 @@ export const createUserSchema = z.object({
   role: z.enum(['tecnico', 'comercial', 'gerente', 'admin']).optional().default('tecnico'),
   isMaster: z.boolean().optional().default(false),
   phone: z.string().max(20).optional(),
+  signature: z.string().max(255).optional(),
   departamentoIds: z.array(z.string().uuid()).optional(),
 });
 

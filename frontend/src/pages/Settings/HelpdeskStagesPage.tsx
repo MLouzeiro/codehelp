@@ -117,7 +117,7 @@ export default function HelpdeskStagesPage() {
 
   const handleToggleAtivo = async (stage: Stage) => {
     if (stage.etapaInicial) {
-      setFeedback({ type: 'err', msg: 'A etapa inicial nao pode ser desativada.' });
+      setFeedback({ type: 'err', msg: 'A etapa inicial não pode ser desativada.' });
       return;
     }
     try {
@@ -352,7 +352,7 @@ function StageEditor({ stage, onClose, onSave, saving }: EditorProps) {
             value={form.autoMessage || ''}
             onChange={(e) => setForm({ ...form, autoMessage: e.target.value })}
             rows={4}
-            placeholder="Ola {{nome_contato}}! Recebemos sua solicitacao..."
+            placeholder="Olá {{nome_contato}}! Recebemos sua solicitação..."
             className="w-full text-xs border border-neutral-200 dark:border-slate-700 rounded-lg px-3 py-2 font-mono"
           />
           <div className="mt-1.5 flex flex-wrap gap-1">

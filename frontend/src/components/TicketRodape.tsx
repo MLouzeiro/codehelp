@@ -46,6 +46,7 @@ export default function TicketRodape({ ticket, ticketId, onFinalizar, onMover }:
   const [selectedBoardId, setSelectedBoardId] = useState('');
   const [kanbanTitulo, setKanbanTitulo] = useState('');
   const [kanbanPrioridade, setKanbanPrioridade] = useState(ticket?.prioridade || 'media');
+  const [kanbanDescricao, setKanbanDescricao] = useState('');
   const [criandoTarefa, setCriandoTarefa] = useState(false);
 
   useEffect(() => {
@@ -104,11 +105,12 @@ export default function TicketRodape({ ticket, ticketId, onFinalizar, onMover }:
       await createTaskFromTicket(selectedBoardId, ticketId, {
         titulo,
         prioridade: kanbanPrioridade,
-        descricao: ticket?.observacoes || ticket?.resumoFinal || null,
+        descricao: kanbanDescricao.trim() || ticket?.observacoes || ticket?.resumoFinal || null,
       });
       setShowKanbanModal(false);
       setSelectedBoardId('');
       setKanbanTitulo('');
+      setKanbanDescricao('');
     } catch (err) {
       console.error('Erro ao criar tarefa kanban:', err);
     } finally {
@@ -167,7 +169,15 @@ export default function TicketRodape({ ticket, ticketId, onFinalizar, onMover }:
 
       {/* Botão Criar Tarefa Kanban */}
       <button
-        onClick={() => setShowKanbanModal(true)}
+        onClick={() => {
+          const parts: string[] = [];
+          if (ticket?.assunto) parts.push(`Assunto: ${ticket.assunto}`);
+          if (ticket?.protocolo) parts.push(`Protocolo: ${ticket.protocolo}`);
+          if (ticket?.resumoFinal) parts.push(`Resumo: ${ticket.resumoFinal}`);
+          else if (ticket?.observacoes) parts.push(`Observações: ${ticket.observacoes}`);
+          setKanbanDescricao(parts.join('\n'));
+          setShowKanbanModal(true);
+        }}
         className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
       >
         {'\uD83D\uDCCB'} Criar Tarefa Kanban
@@ -208,6 +218,16 @@ export default function TicketRodape({ ticket, ticketId, onFinalizar, onMover }:
                   <option value="alta">Alta</option>
                   <option value="urgente">Urgente</option>
                 </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Descrição (histórico do ticket)</label>
+                <textarea
+                  value={kanbanDescricao}
+                  onChange={e => setKanbanDescricao(e.target.value)}
+                  rows={4}
+                  className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 dark:text-slate-200 resize-none"
+                  placeholder="Histórico do ticket será preenchido automaticamente..."
+                />
               </div>
               <button onClick={handleCriarTarefaKanban} disabled={!selectedBoardId || criandoTarefa} className="w-full py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 {criandoTarefa ? 'Criando...' : 'Criar Tarefa'}

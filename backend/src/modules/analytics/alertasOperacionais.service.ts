@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { whatsappProviderFactory } from '../integrations/whatsapp/whatsapp-provider-factory';
+import { getMetasIndicadores } from '../helpdesk/indicadores.service';
 
 // ── Alert Engine (ALERTAS E ATENÇÃO) ──────────────────────────────────
 // Alertas operacionais baseados em dados REAIS (nunca inventados):
@@ -38,6 +39,7 @@ export interface ResumoAlertas {
 export async function getAlertasOperacionais(dias: number, resumo: ResumoAlertas): Promise<AlertOperacional[]> {
   const alertas: AlertOperacional[] = [];
   const agora = new Date();
+  const metas = await getMetasIndicadores();
 
   const statusAbertos = { status: { in: ['aberto', 'em_atendimento', 'pendente'] } };
 
@@ -134,13 +136,13 @@ export async function getAlertasOperacionais(dias: number, resumo: ResumoAlertas
     });
   }
 
-  if (resumo.tempoMedioRespostaMin > 360) {
+  if (resumo.tempoMedioRespostaMin > metas.primeiraRespostaMetaMin) {
     const horas = (resumo.tempoMedioRespostaMin / 60).toFixed(1);
     alertas.push({
       nivel: 'atencao',
       tipo: 'resposta_acima_meta',
       titulo: 'Tempo de resposta acima da meta',
-      mensagem: `Tempo médio de primeira resposta de ${resumo.tempoMedioRespostaMin} min (~${horas}h) — meta ≤ 360 min (6h).`,
+      mensagem: `Tempo médio de primeira resposta de ${resumo.tempoMedioRespostaMin} min (~${horas}h) — meta ≤ ${metas.primeiraRespostaMetaMin} min.`,
       link: '/app/helpdesk/indicadores',
     });
   }
@@ -155,12 +157,12 @@ export async function getAlertasOperacionais(dias: number, resumo: ResumoAlertas
     });
   }
 
-  if (resumo.slaTotal > 0 && resumo.taxaSla < 80) {
+  if (resumo.slaTotal > 0 && resumo.taxaSla < metas.slaMetaPct) {
     alertas.push({
       nivel: 'atencao',
       tipo: 'taxa_sla_baixa',
       titulo: 'Taxa de SLA abaixo da meta',
-      mensagem: `${resumo.taxaSla}% dos atendimentos dentro do SLA (meta ≥ 80%).`,
+      mensagem: `${resumo.taxaSla}% dos atendimentos dentro do SLA (meta ≥ ${metas.slaMetaPct}%).`,
       link: '/app/helpdesk/indicadores',
     });
   }

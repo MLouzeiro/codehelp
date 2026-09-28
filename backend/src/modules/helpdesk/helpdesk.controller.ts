@@ -84,8 +84,8 @@ export async function getKanban(req: AuthRequest, res: Response) {
       if (key === 'dataAbertura_asc') return new Date(a.dataAbertura).getTime() - new Date(b.dataAbertura).getTime();
       if (key === 'dataAbertura_desc') return new Date(b.dataAbertura).getTime() - new Date(a.dataAbertura).getTime();
       if (key === 'updatedAt_asc') return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
-      if (key === 'contactName_asc') return (a.contactName || '').localeCompare(b.contactName || '');
-      if (key === 'contactName_desc') return (b.contactName || '').localeCompare(a.contactName || '');
+      if (key === 'contactName_asc') return (a.contactName || '').localeCompare(b.contactName || '', 'pt-BR');
+      if (key === 'contactName_desc') return (b.contactName || '').localeCompare(a.contactName || '', 'pt-BR');
       if (key === 'lastMessage_desc') {
         const at = a.messages?.[0]?.createdAt ? new Date(a.messages[0].createdAt).getTime() : 0;
         const bt = b.messages?.[0]?.createdAt ? new Date(b.messages[0].createdAt).getTime() : 0;
@@ -710,8 +710,6 @@ export async function getDashboard(req: AuthRequest, res: Response) {
       prisma.ticket.findMany({
         where: { dataInicioAtendimento: { not: null }, dataFechamento: { not: null } },
         select: { dataInicioAtendimento: true, dataFechamento: true },
-        take: 50,
-        orderBy: { dataFechamento: 'desc' },
       }),
     ]);
 
@@ -1210,18 +1208,21 @@ export async function getDetailedDashboard(req: AuthRequest, res: Response) {
     if (status) where.status = status as string;
     if (etapa) where.etapa = etapa as string;
 
-    const tickets = await prisma.ticket.findMany({
-      where,
-      include: {
-        client: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
-        assignee: { select: { id: true, name: true, email: true } },
-        departamento: { select: { id: true, nome: true, cor: true } },
-        messages: { orderBy: { createdAt: 'desc' }, take: 1 },
-        _count: { select: { messages: true, orders: true, checklists: true } },
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: 200,
-    });
+    const [tickets, total] = await Promise.all([
+      prisma.ticket.findMany({
+        where,
+        include: {
+          client: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+          assignee: { select: { id: true, name: true, email: true } },
+          departamento: { select: { id: true, nome: true, cor: true } },
+          messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+          _count: { select: { messages: true, orders: true, checklists: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 200,
+      }),
+      prisma.ticket.count({ where }),
+    ]);
 
     const agora = new Date();
     const result = tickets.map(t => {
@@ -1258,7 +1259,7 @@ export async function getDetailedDashboard(req: AuthRequest, res: Response) {
     }
 
     return res.json({
-      total: result.length,
+      total,
       tickets: result,
       porEtapa,
       porStatus,

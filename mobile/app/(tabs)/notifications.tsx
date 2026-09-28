@@ -71,7 +71,7 @@ export default function NotificationsScreen() {
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={!loading ? (
-          <EmptyState icon="🔔" title="Nenhuma notificacao" description="Tudo em dia!" />
+          <EmptyState icon="🔔" title="Nenhuma notificação" description="Tudo em dia!" />
         ) : null}
       />
     </View>

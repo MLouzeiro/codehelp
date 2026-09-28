@@ -4,7 +4,7 @@ import {
   getDashboard, getInsights, getKpis,
   getTicketsByDepartment, getAvgTimeByQueue, getCsatTrending, getStatusByDay,
   getHelpdeskMetrics, getDashboardExecutivo, getDashboardIaHandler, getVisaoGeral,
-  getAlertDetailHandler,
+  getAlertDetailHandler, getIndicadoresGerenciaisHandler,
 } from './analytics.controller';
 
 const router = Router();
@@ -14,6 +14,7 @@ router.get('/visao-geral', getVisaoGeral);
 router.get('/executivo', getDashboardExecutivo);
 router.get('/dashboard-ia', authorize('admin', 'gerente'), getDashboardIaHandler);
 router.get('/alert-detail', authorize('admin', 'gerente'), getAlertDetailHandler);
+router.get('/indicadores-gerenciais', authorize('admin', 'gerente'), getIndicadoresGerenciaisHandler);
 router.get('/dashboard', getDashboard);
 router.get('/insights', getInsights);
 router.get('/kpis', getKpis);

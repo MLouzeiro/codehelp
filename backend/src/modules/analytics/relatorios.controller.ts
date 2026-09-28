@@ -8,6 +8,7 @@ import {
   obterOpcoesFiltros,
   RelatorioFiltros,
 } from './relatorios.service';
+import { gerarHtmlRelatorio } from './htmlExport.service';
 
 function parseFiltros(query: Record<string, any>): RelatorioFiltros {
   const filtros: RelatorioFiltros = {};
@@ -94,5 +95,21 @@ export async function getOpcoesFiltros(_req: AuthRequest, res: Response) {
   } catch (err: any) {
     console.error('[Relatorios] Erro ao obter opções de filtro:', err?.message || err);
     res.status(500).json({ error: 'Erro ao obter opções de filtro' });
+  }
+}
+
+export async function getRelatorioHtml(req: AuthRequest, res: Response) {
+  try {
+    const filtros = parseFiltros(req.query);
+    const dados = await gerarRelatorioAnalitico(filtros);
+    const nomeRelatorio = (req.query.nome as string) || 'Relatório Analítico';
+    const usuario = (req.user as any)?.name || undefined;
+    const html = gerarHtmlRelatorio(dados, nomeRelatorio, usuario);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="relatorio-${dados.periodo.dias}d.html"`);
+    res.send(html);
+  } catch (err: any) {
+    console.error('[Relatorios] Erro ao exportar HTML:', err?.message || err);
+    res.status(500).json({ error: 'Erro ao exportar HTML' });
   }
 }

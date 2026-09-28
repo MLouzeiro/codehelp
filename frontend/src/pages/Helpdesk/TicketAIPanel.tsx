@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Bot, Brain, AlertTriangle, CheckCircle, MessageSquare, BarChart3, RefreshCw, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import api from '../../services/api';
+import { formatDuration } from '../../lib/formatDuration';
 import type { TicketAnalytics } from '../../types';
 
 interface TicketAIPanelProps {
@@ -59,10 +60,7 @@ export default function TicketAIPanel({ ticketId, ticket }: TicketAIPanelProps) 
   const avaliacao = analytics?.avaliacaoIa || (ticket?.iaAvaliacaoQualidade ? JSON.parse(ticket.iaAvaliacaoQualidade) : null);
 
   const formatarTempo = (min: number) => {
-    if (min < 60) return `${min}min`;
-    const h = Math.floor(min / 60);
-    const m = min % 60;
-    return m > 0 ? `${h}h ${m}min` : `${h}h`;
+    return formatDuration(min);
   };
 
   const getConfiancaCor = (conf: number) => {

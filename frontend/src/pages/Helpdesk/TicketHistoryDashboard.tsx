@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatDuration } from '../../lib/formatDuration';
 import {
   BarChart3,
   Clock,
@@ -58,10 +59,7 @@ const CATEGORY_LABELS: Record<HistoryCategory, string> = {
 };
 
 function formatMinutes(minutes: number): string {
-  if (minutes < 60) return `${minutes}min`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours}h ${mins}min`;
+  return formatDuration(minutes);
 }
 
 export default function TicketHistoryDashboard({ ticketId }: TicketHistoryDashboardProps) {
@@ -96,7 +94,7 @@ export default function TicketHistoryDashboard({ ticketId }: TicketHistoryDashbo
 
       const blob = format === 'json'
         ? new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-        : new Blob([data], { type: 'text/csv' });
+        : new Blob([data], { type: 'text/csv;charset=utf-8' });
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

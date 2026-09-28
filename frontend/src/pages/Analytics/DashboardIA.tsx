@@ -7,6 +7,14 @@ import {
 import DiagnosticoDrawer from '../../components/DiagnosticoDrawer';
 import { AcronymText } from '../../components/AcronymText';
 import {
+  formatDuration,
+  formatDurationLong,
+  formatDurationCompact,
+  formatMinutesOriginal,
+  formatDecimalHours,
+  buildDuracaoTooltip,
+} from '../../lib/formatDuration';
+import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
 
@@ -25,6 +33,7 @@ interface CardIndicador {
   delta: number | null;
   deltaLabel: string;
   evolucao: 'melhorou' | 'piorou' | 'estavel';
+  formato?: string;
 }
 
 interface Alerta {
@@ -62,6 +71,7 @@ interface AnalistaIa {
   notaIa: number | null;
   auditoriasIa: number;
   encerramentos: EncerramentosAnalista;
+  tempoTotalMin?: number;
 }
 
 interface Insight {
@@ -106,11 +116,7 @@ const ALERTA_CORES: Record<Alerta['gravidade'], string> = {
 };
 
 function formatarTempoMin(min: number): string {
-  if (min < 60) return `${min}min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h < 24) return m === 0 ? `${h}h` : `${h}h${m}m`;
-  return `${Math.floor(h / 24)}d ${h % 24}h`;
+  return formatDuration(min);
 }
 
 function DeltaPill({ valor, sufixo, invertido }: { valor: number | null; sufixo?: string; invertido?: boolean }) {
@@ -268,8 +274,10 @@ export default function DashboardIA() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {cards.map(c => {
           const Icon = cardIcon(c.label);
+          const isDuracao = c.formato === 'duracao' || c.label.includes('Tempo Total');
+          const tooltipDuracao = isDuracao ? buildDuracaoTooltip(c.label, c.valor) : undefined;
           return (
-            <div key={c.label} className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+            <div key={c.label} className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700" title={tooltipDuracao}>
               <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400">
                   <Icon size={18} />
@@ -277,9 +285,20 @@ export default function DashboardIA() {
                 <DeltaPill valor={c.delta} sufixo={c.unidade === '%' ? '%' : undefined} invertido={c.label.includes('TMR') || c.label.includes('Espera') || c.label.includes('Primeira Resposta')} />
               </div>
               <div className="mt-3 space-y-1">
-                <div className="text-xl font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>
-                  {c.valor}{c.unidade ? ` ${c.unidade === 'min' ? 'min' : c.unidade === 'tickets' ? '' : c.unidade}` : ''}
-                </div>
+                {isDuracao ? (
+                  <>
+                    <div className="text-xl font-semibold text-slate-800 dark:text-slate-100 leading-tight" style={{ fontFamily: 'Khand, sans-serif' }}>
+                      {formatDurationLong(c.valor)}
+                    </div>
+                    <div className="text-[11px] text-slate-400 dark:text-slate-500" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                      {formatMinutesOriginal(c.valor)} · {formatDecimalHours(c.valor)}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-xl font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Khand, sans-serif' }}>
+                    {c.valor}{c.unidade ? ` ${c.unidade === 'min' ? 'min' : c.unidade === 'tickets' ? '' : c.unidade}` : ''}
+                  </div>
+                )}
                 <div className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text={c.label} /></div>
                 <div className="flex items-center gap-1 flex-wrap">
                   <ClassificacaoPill cls={c.classificacao} />
@@ -381,6 +400,7 @@ export default function DashboardIA() {
               <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700">
                 <th className="py-2 pr-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>Analista</th>
                 <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}>Tickets</th>
+                <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }} title="Soma do tempo de atendimento dos chamados do analista no período">Tempo total</th>
                 <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text="FCR" /></th>
                 <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text="CSAT" /></th>
                 <th className="py-2 px-3 font-medium" style={{ fontFamily: 'Lexend, sans-serif' }}><AcronymText text="TMR" /></th>
@@ -405,6 +425,13 @@ export default function DashboardIA() {
                     </div>
                   </td>
                   <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300" style={{ fontFamily: 'Lexend, sans-serif' }}>{a.tickets}</td>
+                  <td
+                    className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-200"
+                    style={{ fontFamily: 'Lexend, sans-serif' }}
+                    title={a.tempoTotalMin != null ? `Valor original: ${formatMinutesOriginal(a.tempoTotalMin)}` : undefined}
+                  >
+                    {a.tempoTotalMin != null && a.tempoTotalMin > 0 ? formatDurationCompact(a.tempoTotalMin) : '—'}
+                  </td>
                   <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300" style={{ fontFamily: 'Lexend, sans-serif' }}>{a.fcr}%</td>
                   <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300" style={{ fontFamily: 'Lexend, sans-serif' }}>{a.csatMedia ? `${a.csatMedia}/5` : '—'}</td>
                   <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300" style={{ fontFamily: 'Lexend, sans-serif' }}>{a.tmrMin ? formatarTempoMin(a.tmrMin) : '—'}</td>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatDuration as formatDurationHumano } from '../../lib/formatDuration';
 import {
   Clock,
   MessageSquare,
@@ -84,13 +85,7 @@ const ETAPA_LABELS: Record<string, string> = {
 };
 
 function formatDuration(minutes: number): string {
-  if (minutes < 60) return `${minutes}min`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours < 24) return `${hours}h ${mins}min`;
-  const days = Math.floor(hours / 24);
-  const remainHours = hours % 24;
-  return `${days}d ${remainHours}h`;
+  return formatDurationHumano(minutes);
 }
 
 function formatDelta(prev: string, curr: string): string {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart3, RefreshCw } from 'lucide-react';
 import api from '../../services/api';
+import { formatDuration } from '../../lib/formatDuration';
 
 interface TemporalBarChartProps {
   ticketId: string;
@@ -35,13 +36,7 @@ const LABELS = {
 };
 
 function formatMinutes(minutes: number): string {
-  if (minutes < 60) return `${minutes}min`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours < 24) return `${hours}h ${mins}min`;
-  const days = Math.floor(hours / 24);
-  const remainHours = hours % 24;
-  return `${days}d ${remainHours}h`;
+  return formatDuration(minutes);
 }
 
 export default function TemporalBarChart({ ticketId, compact = false }: TemporalBarChartProps) {

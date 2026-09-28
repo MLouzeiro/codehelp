@@ -3,6 +3,7 @@ import {
   WHERE_TICKET_RESOLVIDO,
   STATUS_ABERTO,
 } from '../helpdesk/constants';
+import { calcularSlaDoPeriodo } from '../helpdesk/sla.service';
 import { getAlertasOperacionais, AlertOperacional } from './alertasOperacionais.service';
 
 export interface DashboardExecutivoData {
@@ -73,25 +74,27 @@ export async function gerarDashboardExecutivo(dias = 30): Promise<DashboardExecu
 
   // ── Resumo (período atual + anterior) ───────────────────────────
   const [
-    totalTickets, ticketsFechados, ticketsAbertos, slaData, csatData, fcrData,
-    respostas, resolucoes, fechadosPrev, totalPrev, csatPrev, slaPrev,
+    totalTickets, ticketsFechados, ticketsAbertos, csatData, fcrData,
+    respostas, resolucoes, fechadosPrev, totalPrev, csatPrev, slaPeriodo,
   ] = await Promise.all([
     prisma.ticket.count({ where: { createdAt: { gte: inicio, lte: fim } } }),
     prisma.ticket.count({
       where: { createdAt: { gte: inicio, lte: fim }, ...WHERE_TICKET_RESOLVIDO },
     }),
     prisma.ticket.count({ where: { status: { in: [...STATUS_ABERTO] } } }),
-    prisma.ticket.aggregate({
-      where: { createdAt: { gte: inicio, lte: fim }, slaTotalMinutos: { not: null } },
-      _count: { id: true },
-    }),
     prisma.cSATResposta.aggregate({
       where: { respondidoEm: { gte: inicio, lte: fim }, nota: { not: null } },
       _avg: { nota: true },
       _count: { id: true },
     }),
     prisma.ticket.count({
-      where: { createdAt: { gte: inicio, lte: fim }, ...WHERE_TICKET_RESOLVIDO, dataPrimeiraResposta: { not: null } },
+      where: {
+        createdAt: { gte: inicio, lte: fim },
+        AND: [
+          WHERE_TICKET_RESOLVIDO,
+          { OR: [{ resolvidoSemAjuda: true }, { resolvidoSemAjuda: null }] },
+        ],
+      },
     }),
     prisma.ticket.findMany({
       where: { createdAt: { gte: inicio, lte: fim }, dataPrimeiraResposta: { not: null } },
@@ -109,10 +112,7 @@ export async function gerarDashboardExecutivo(dias = 30): Promise<DashboardExecu
       where: { respondidoEm: { gte: iniPrev, lte: fimPrev }, nota: { not: null } },
       _avg: { nota: true },
     }),
-    prisma.ticket.aggregate({
-      where: { createdAt: { gte: iniPrev, lte: fimPrev }, slaTotalMinutos: { not: null } },
-      _count: { id: true },
-    }),
+    calcularSlaDoPeriodo({ createdAt: { gte: inicio, lte: fim } }),
   ]);
 
   const somaResp = respostas.reduce((acc, t) => acc + Math.max(0, (t.dataPrimeiraResposta!.getTime() - t.dataAbertura.getTime()) / 60000), 0);
@@ -124,9 +124,9 @@ export async function gerarDashboardExecutivo(dias = 30): Promise<DashboardExecu
   }, 0);
   const tempoMedioResolucaoH = resolucoes.length > 0 ? Math.round((somaRes / resolucoes.length) * 10) / 10 : 0;
 
-  const taxaSla = slaData._count.id > 0 ? Math.round((slaData._count.id / slaData._count.id) * 100) : 0;
+  const taxaSla = slaPeriodo.percentual;
   const csatMedio = csatData._avg.nota ? Math.round(csatData._avg.nota * 100) / 100 : 0;
-  const fcr = totalTickets > 0 ? Math.round((fcrData / totalTickets) * 100) : 0;
+  const fcr = ticketsFechados > 0 ? Math.round((fcrData / ticketsFechados) * 100) : 0;
   const taxaResolucao = totalTickets > 0 ? Math.round((ticketsFechados / totalTickets) * 100) : 0;
 
   const csatAnterior = csatPrev._avg.nota ? Math.round(csatPrev._avg.nota * 100) / 100 : 0;
@@ -300,8 +300,8 @@ export async function gerarDashboardExecutivo(dias = 30): Promise<DashboardExecu
       taxaResolucao,
       tempoMedioRespostaMin,
       tempoMedioResolucaoH,
-      slaCumprido: slaData._count.id,
-      slaTotal: slaData._count.id,
+      slaCumprido: slaPeriodo.cumprido,
+      slaTotal: slaPeriodo.total,
       taxaSla,
       csatMedio,
       csatTotal: csatData._count.id,
@@ -349,8 +349,8 @@ export async function gerarDashboardExecutivo(dias = 30): Promise<DashboardExecu
       tempoMedioRespostaMin,
       csatMedio,
       ticketsAbertos,
-      slaCumprido: slaData._count.id,
-      slaTotal: slaData._count.id,
+      slaCumprido: slaPeriodo.cumprido,
+      slaTotal: slaPeriodo.total,
       taxaSla,
     }),
   };

@@ -46,7 +46,7 @@ export async function criarFeriado(input: FeriadoInput): Promise<Feriado> {
       recorrente: input.recorrente ?? false,
       ativo: input.ativo ?? true,
     },
-  });
+  }).then(result => { invalidateFeriadosCache(); return result; });
 }
 
 export async function atualizarFeriado(
@@ -65,7 +65,7 @@ export async function atualizarFeriado(
       ...(patch.recorrente !== undefined ? { recorrente: patch.recorrente } : {}),
       ...(patch.ativo !== undefined ? { ativo: patch.ativo } : {}),
     },
-  }).catch((err: any) => {
+  }).then(result => { invalidateFeriadosCache(); return result; }).catch((err: any) => {
     if (err?.code === 'P2025') throw new Error('feriado não encontrado');
     throw err;
   });
@@ -73,25 +73,45 @@ export async function atualizarFeriado(
 
 export async function deletarFeriado(id: string): Promise<void> {
   await prisma.feriado.delete({ where: { id } });
+  invalidateFeriadosCache();
 }
+
+// ── Cache de feriados (TTL 1h) ────────────────────────────────────────
+// ehFeriado é chamado a cada mensagem inbound — cache evita query ao DB.
+let feriadosCache: { data: Date; ativos: Array<{ dia: number; mes: number; ano: number | null; recorrente: boolean }> } | null = null;
+const FERIADOS_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora
 
 export async function ehFeriado(data: Date): Promise<boolean> {
   const dia = data.getDate();
   const mes = data.getMonth() + 1;
   const ano = data.getFullYear();
 
-  const candidatos = await prisma.feriado.findMany({
-    where: { ativo: true },
-  });
+  const now = Date.now();
+  if (!feriadosCache || now - feriadosCache.data.getTime() > FERIADOS_CACHE_TTL_MS) {
+    const candidatos = await prisma.feriado.findMany({
+      where: { ativo: true },
+    });
+    feriadosCache = {
+      data: new Date(),
+      ativos: candidatos.map(f => ({
+        dia: f.data.getDate(),
+        mes: f.data.getMonth() + 1,
+        ano: f.recorrente ? null : f.data.getFullYear(),
+        recorrente: f.recorrente,
+      })),
+    };
+  }
 
-  return candidatos.some((f) => {
-    const fDia = f.data.getDate();
-    const fMes = f.data.getMonth() + 1;
+  return feriadosCache.ativos.some((f) => {
     if (f.recorrente) {
-      return fDia === dia && fMes === mes;
+      return f.dia === dia && f.mes === mes;
     }
-    return fDia === dia && fMes === mes && f.data.getFullYear() === ano;
+    return f.dia === dia && f.mes === mes && f.ano === ano;
   });
+}
+
+export function invalidateFeriadosCache(): void {
+  feriadosCache = null;
 }
 
 interface FeriadoNacional {

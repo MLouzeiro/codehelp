@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { TrendingUp, Clock, FileText, MessageSquare, Users, AlertTriangle, Lightbulb, Target, BarChart3, Activity, Zap, Building2, Star, Bot, BellRing, ShieldAlert, ShieldCheck, RefreshCw, Circle, ChevronRight } from 'lucide-react';
 import AlertDetailDrawer from '../../components/AlertDetailDrawer';
+import { formatDuration } from '../../lib/formatDuration';
 
 const COLORS = ['#3B82F6', '#60A5FA', '#2563EB', '#93C5FD', '#1D4ED8', '#BFDBFE'];
 
@@ -16,10 +17,7 @@ const NIVEL_ALERTA: Record<string, { label: string; bg: string; border: string; 
 };
 
 function formatarTempo(minutos: number): string {
-  if (minutos < 60) return `${minutos}min`;
-  const h = Math.floor(minutos / 60);
-  const m = minutos % 60;
-  return m > 0 ? `${h}h${m}min` : `${h}h`;
+  return formatDuration(minutos);
 }
 
 function formatarDelta(valor: number, invertido = false): { texto: string; cor: string } | null {
@@ -251,7 +249,7 @@ export default function Dashboard() {
           <span className="text-xs text-slate-400 dark:text-slate-500">Qualidade da operação no período</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {[
+          {([
             {
               label: 'SLA',
               valor: temDados(slaTotal) ? `${(taxaSla * 100).toFixed(0)}%` : '—',
@@ -267,25 +265,25 @@ export default function Dashboard() {
               status: !temDados(resumo.totalTickets) ? 'sem_dados' : taxaResolucao >= 80 ? 'ok' : taxaResolucao >= 60 ? 'atencao' : 'ruim',
             },
             {
-              label: 'Resposta média',
+              label: '1ª resposta',
               valor: tmrMin > 0 ? formatarTempo(tmrMin) : '—',
               sub: tmrMin > 0 ? null : 'Sem atendimentos',
-              meta: 'Meta ≤ 30min',
-              status: tmrMin === 0 ? 'sem_dados' : tmrMin <= 30 ? 'ok' : tmrMin <= 60 ? 'atencao' : 'ruim',
+              meta: 'Meta ≤ 15min',
+              status: tmrMin === 0 ? 'sem_dados' : tmrMin <= 15 ? 'ok' : tmrMin <= 30 ? 'atencao' : 'ruim',
             },
             {
               label: 'CSAT',
               valor: csatMedio > 0 ? csatMedio.toFixed(1) : '—',
               sub: csatMedio > 0 ? null : 'Sem avaliações',
-              meta: 'Meta ≥ 4.0',
-              status: csatMedio === 0 ? 'sem_dados' : csatMedio >= 4 ? 'ok' : csatMedio >= 3.5 ? 'atencao' : 'ruim',
+              meta: 'Meta ≥ 3.5',
+              status: csatMedio === 0 ? 'sem_dados' : csatMedio >= 3.5 ? 'ok' : csatMedio >= 2.5 ? 'atencao' : 'ruim',
             },
             {
               label: '1º contato',
-              valor: temDados(resumo.totalTickets) ? `${(fcr * 100).toFixed(0)}%` : '—',
-              sub: temDados(resumo.totalTickets) ? null : 'Sem dados suficientes',
-              meta: 'Meta ≥ 80%',
-              status: !temDados(resumo.totalTickets) ? 'sem_dados' : fcr >= 0.8 ? 'ok' : fcr >= 0.6 ? 'atencao' : 'ruim',
+              valor: temDados(resumo.ticketsFechados) ? `${fcr.toFixed(0)}%` : '—',
+              sub: temDados(resumo.ticketsFechados) ? null : 'Sem dados suficientes',
+              meta: 'Meta ≥ 60%',
+              status: !temDados(resumo.ticketsFechados) ? 'sem_dados' : fcr >= 60 ? 'ok' : fcr >= 40 ? 'atencao' : 'ruim',
             },
             {
               label: 'Retrabalho',
@@ -294,7 +292,7 @@ export default function Dashboard() {
               meta: 'Meta ≤ 10%',
               status: qualidade?.retrabalho?.percentual == null ? 'sem_dados' : qualidade.retrabalho.percentual <= 5 ? 'ok' : qualidade.retrabalho.percentual <= 10 ? 'atencao' : 'ruim',
             },
-          ].map((item) => {
+          ] as const).map((item) => {
             const statusColors = {
               ok: 'border-emerald-200 dark:border-emerald-900/50',
               atencao: 'border-amber-200 dark:border-amber-900/50',

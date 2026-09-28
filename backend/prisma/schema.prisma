@@ -137,6 +137,7 @@ model User {
    analystOccurrencesCreated   AnalystOccurrence[]       @relation("AnalystOccurrenceCreator")
    decisionAuditsCriados       DecisionAudit[]           @relation("DecisionAuditCriadoPor")
    decisionAuditsRevisados     DecisionAudit[]           @relation("DecisionAuditRevisadoPor")
+   ticketsClassificados       Ticket[]                  @relation("TicketClassificadoPor")
 }
 
 model Client {
@@ -176,7 +177,11 @@ model Client {
    serviceOrders        ServiceOrder[]
    tickets              Ticket[]
    timeEntries          TimeEntry[]
-   clientAlerts         ClientAlert[]
+       clientAlerts         ClientAlert[]
+
+  @@index([telefone])
+  @@index([razaoSocial])
+  @@index([nomeFantasia])
 }
 
 /// Colaborador de um cliente (pessoa que trabalha na empresa cliente)
@@ -281,6 +286,12 @@ model ServiceOrder {
   @@index([createdAt])
   @@index([tipoImplantacao])
   @@index([implantacaoConcluida])
+}
+
+/// Contador sequencial por ano para geração atômica de numeroOs.
+model OrderSequence {
+  year    Int @unique
+  lastNum Int @default(0)
 }
 
 /// Timeline de status da Ordem de Servico (tempo por status, auditoria).
@@ -506,6 +517,16 @@ model Ticket {
   iaMensagensEnviadas     Int                      @default(0)
   iaPrimeiraRespostaEm    DateTime?
   iaUltimaRespostaEm      DateTime?
+  // ── Classificação N1/N2/N3 (Inteligência Operacional) ──────────────
+  nivelSugeridoIa         String?                  // N1, N2, N3 sugerido pela IA
+  nivelConfirmado         Boolean                  @default(false) // confirmado por humano?
+  nivelConfianca          Float?                   // confiança da sugestão IA (0-1)
+  nivelMotivo             String?                  // motivo da classificação
+  classificadoPorId       String?                  // quem classificou (null = IA)
+  classificadoEm          DateTime?                // quando classificado
+  // ── Progresso (Inteligência Operacional) ───────────────────────────
+  ultimaAtividadeRelevante DateTime?               // última atividade não-bot
+  tempoSemProgressoMin    Int?                     // minutos sem progresso relevante
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @default(now())
   tags                    String?
@@ -548,9 +569,10 @@ model Ticket {
   departamento            Departamento?            @relation(fields: [departamentoId], references: [id])
   fila                    Fila?                    @relation(fields: [idFila], references: [id])
   nivelSuporte            NivelSuporte?            @relation(fields: [nivelSuporteId], references: [id])
-  organization            Organization?            @relation(fields: [organizationId], references: [id])
-  primeiroAgente          User?                    @relation("TicketPrimeiroAgente", fields: [primeiroAgenteId], references: [id])
-  usuario                 User?                    @relation(fields: [usuarioId], references: [id])
+   organization            Organization?            @relation(fields: [organizationId], references: [id])
+   primeiroAgente          User?                    @relation("TicketPrimeiroAgente", fields: [primeiroAgenteId], references: [id])
+   classificadoPor         User?                    @relation("TicketClassificadoPor", fields: [classificadoPorId], references: [id])
+   usuario                 User?                    @relation(fields: [usuarioId], references: [id])
   whatsappConnection      WhatsAppConnection?      @relation(fields: [whatsappConnectionId], references: [id])
   activities              TicketActivity[]
   agentInteractions       TicketAgentInteraction[]
@@ -589,6 +611,11 @@ model Ticket {
   @@index([evaluationStatus])
   @@index([dataResolucao])
   @@index([departamentoId, dataAbertura])
+  @@index([nivelSugeridoIa])
+  @@index([ultimaAtividadeRelevante])
+  @@index([status, etapa])
+  @@index([etapa, departamentoId])
+  @@index([prazoEntrega])
 }
 
 /// Classificacao de IA atribuida a um ticket (historico)
@@ -835,6 +862,7 @@ model Message {
   @@index([ticketId])
   @@index([fromMe])
   @@index([status])
+  @@index([ticketId, createdAt])
 }
 
 model Task {
@@ -2390,6 +2418,13 @@ model DecisionAudit {
   revisaoStatus     String    @default("pendente") // pendente, aprovado, rejeitado, reavaliar
   revisaoJustificativa String?
   revisaoEm         DateTime?
+  // ── Medição de resultado (Inteligência Operacional) ────────────────
+  indicadorAnterior  Float?                       // valor do indicador antes da ação
+  indicadorAtual     Float?                       // valor do indicador após ação
+  indicadorMeta      Float?                       // meta almejada
+  dataInicioAcompanhamento DateTime?              // quando começou a acompanhar
+  dataFimAcompanhamento     DateTime?             // quando o acompanhamento terminou
+  resultadoSucesso   Boolean?                     // se a ação funcionou
   criadoEm          DateTime  @default(now())
   atualizadoEm      DateTime  @updatedAt
   organizationId    String?

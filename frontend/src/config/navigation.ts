@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Stethoscope, Activity, ArrowUpDown, LineChart, BarChart3,
   Brain, Shield, Users, TrendingUp, FileText, Timer, BookOpen, Zap, MessageSquare,
   Bot, Settings, Kanban, Gauge, ChevronDown, Ban, Archive, FileSearch, GitBranch,
-  RotateCcw,
+  RotateCcw, Sparkles,
 } from 'lucide-react';
 
 export type Role = string;
@@ -56,6 +56,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: LineChart,
     roles: ['admin', 'gerente'],
     items: [
+      { path: '/app/helpdesk/inteligencia', label: 'Inteligência Operacional', icon: Sparkles, roles: ['admin', 'gerente'] },
       {
         path: '/app/relatorios/executivo',
         label: 'Gestão & Indicadores',
@@ -67,6 +68,7 @@ export const NAV_GROUPS: NavGroup[] = [
           { path: '/app/helpdesk/business-metrics', label: 'Métricas de Negócio', icon: BarChart3, roles: ['admin', 'gerente'] },
           { path: '/app/relatorios/executivo', label: 'Dashboard Executivo', icon: LineChart, roles: ['admin', 'gerente'] },
           { path: '/app/relatorios/ia', label: 'Dashboard IA', icon: Brain, roles: ['admin', 'gerente'] },
+          { path: '/app/relatorios/indicadores', label: 'Indicadores Gerenciais', icon: Gauge, roles: ['admin', 'gerente'] },
           { path: '/app/helpdesk/qualidade', label: 'Qualidade Operacional', icon: RotateCcw, roles: ['admin', 'gerente'] },
         ],
       },
@@ -94,8 +96,10 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: FileText,
     roles: ['admin', 'gerente'],
     items: [
+      { path: '/app/relatorios/consolidados', label: 'Relatórios Consolidados', icon: BarChart3, roles: ['admin', 'gerente'] },
       { path: '/app/relatorios/gerencial', label: 'Relatório Gerencial', icon: FileText, roles: ['admin', 'gerente'] },
       { path: '/app/relatorios/analitico', label: 'Relatório Analítico', icon: BarChart3, roles: ['admin', 'gerente'] },
+      { path: '/app/relatorios/indicadores', label: 'Indicadores Gerenciais', icon: Gauge, roles: ['admin', 'gerente'] },
       { path: '/app/orders/relatorio', label: 'Relatório de OS', icon: FileText, roles: ['admin', 'gerente'] },
     ],
   },

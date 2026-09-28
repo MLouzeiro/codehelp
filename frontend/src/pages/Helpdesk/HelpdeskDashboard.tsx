@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { formatDuration } from '../../lib/formatDuration';
 import {
   RefreshCw, MessageSquare, Clock, CheckCircle, Users,
   ArrowRight, Activity, AlertTriangle, TrendingUp,
@@ -29,11 +30,7 @@ export const ETAPAS: { slug: string; label: string }[] = [
 
 function formatarTempo(minutos: number): string {
   if (minutos < 1) return 'agora';
-  if (minutos < 60) return `${minutos}min`;
-  const horas = Math.floor(minutos / 60);
-  const mins = minutos % 60;
-  if (horas < 24) return mins === 0 ? `${horas}h` : `${horas}h${mins}m`;
-  return `${Math.floor(horas / 24)}d`;
+  return formatDuration(minutos);
 }
 
 interface TicketModalProps {
