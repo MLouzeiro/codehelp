@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../../shared/middleware/auth';
 import {
   listBoards, getBoard, createBoard, updateBoard, deleteBoard,
+  listInactiveBoards, restoreBoard,
   createColumn, updateColumn, deleteColumn, reorderColumns,
   createTask, getTask, updateTask, deleteTask, moveTask, reorderTasks,
   createSubtask, toggleSubtask, deleteSubtask,
@@ -21,10 +22,12 @@ router.use(authenticate);
 
 // Boards
 router.get('/boards', listBoards);
+router.get('/boards/inactive', authorize('admin', 'gerente'), listInactiveBoards);
 router.post('/boards', authorize('admin', 'gerente'), createBoard);
 router.get('/boards/:boardId', getBoard);
 router.patch('/boards/:boardId', authorize('admin', 'gerente'), updateBoard);
 router.delete('/boards/:boardId', authorize('admin'), deleteBoard);
+router.post('/boards/:boardId/restore', authorize('admin', 'gerente'), restoreBoard);
 
 // Columns
 router.post('/boards/:boardId/columns', authorize('admin', 'gerente'), createColumn);

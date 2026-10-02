@@ -20,7 +20,11 @@ export default function Login() {
       await login(email, password);
       navigate('/app/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao fazer login');
+      const data = err.response?.data;
+      const detalhes = Array.isArray(data?.details) && data.details.length
+        ? data.details.map((d: any) => d.message).join(' · ')
+        : null;
+      setError(detalhes || data?.error || 'Erro ao fazer login');
     } finally {
       setLoading(false);
     }

@@ -856,6 +856,7 @@ model Message {
   phone     String?
   provider  String?
   status    String?  @default("sent")
+  remoteId  String?  @unique
   ticket    Ticket   @relation(fields: [ticketId], references: [id])
   usuario   User?    @relation(fields: [usuarioId], references: [id])
 
@@ -1231,12 +1232,14 @@ model SyncLog {
 }
 
 model WhatsAppSession {
-  id        String   @id @default(uuid())
-  session   String
-  connected Boolean  @default(false)
-  qrCode    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  id                String    @id @default(uuid())
+  session           String
+  connected         Boolean   @default(false)
+  qrCode            String?
+  lastConnectedAt   DateTime?
+  lastDisconnectedAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @default(now())
 }
 
 model HelpdeskConfig {

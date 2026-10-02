@@ -12,8 +12,9 @@ services:
     image: postgres:16-alpine
     container_name: codemed-postgres-dev
     restart: unless-stopped
+    # 5437: 5432/5435 ja estao ocupados pelo PostgreSQL NATIVO do Windows
     ports:
-      - '5432:5432'
+      - '5437:5432'
     environment:
       POSTGRES_USER: codemed
       POSTGRES_PASSWORD: codemed123
@@ -30,8 +31,9 @@ services:
     image: redis:7-alpine
     container_name: codemed-redis-dev
     restart: unless-stopped
+    # 6381: 6379 (evolution-redis) e 6380 (lead-system) ja estao em uso
     ports:
-      - '6379:6379'
+      - '6381:6379'
     volumes:
       - redis_data_dev:/data
     healthcheck:

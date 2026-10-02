@@ -99,7 +99,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/app/relatorios/consolidados', label: 'Relatórios Consolidados', icon: BarChart3, roles: ['admin', 'gerente'] },
       { path: '/app/relatorios/gerencial', label: 'Relatório Gerencial', icon: FileText, roles: ['admin', 'gerente'] },
       { path: '/app/relatorios/analitico', label: 'Relatório Analítico', icon: BarChart3, roles: ['admin', 'gerente'] },
-      { path: '/app/relatorios/indicadores', label: 'Indicadores Gerenciais', icon: Gauge, roles: ['admin', 'gerente'] },
       { path: '/app/orders/relatorio', label: 'Relatório de OS', icon: FileText, roles: ['admin', 'gerente'] },
     ],
   },

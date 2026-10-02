@@ -380,3 +380,91 @@ Legenda status: ⏳ pendente · 🔧 em andamento · ✅ concluído · ⛔ bloqu
 - Backend: tsc 0 erros (corrigido non-null `dataPrimeiraResposta` em `analytics.controller.ts`). Suíte focada com `--hookTimeout=60000 --testTimeout=60000`: alertas-operacionais 12/12, alertas-visao-geral 7/7, indicadores 17/17, dashboard-executivo 3/3, relatorios + weekly-report 10/10 → **49/49**.
 - Frontend: tsc 0 erros; vitest **41/41**.
 - Verificação de consumidores: `total` do dashboard detalhado só é consumido como `data.tickets` (nenhum uso de `.total` quebrado); demais telas FCR (`DashboardExecutivo`, `RelatorioGerencial`, `RelatorioAnalitico`) já usavam `${fcr}%` corretamente.
+
+## Correção — Menu de 3 pontos dos Chamados no Dark Mode
+
+### CAUSA RAIZ
+- Os itens do menu herdam `text-slate-800` do `<body>` (`index.html:59`) sobre fundo `dark:bg-slate-800` (contraste 1.00:1) + cabeçalho com `dark:text-slate-500` (2.57:1).
+
+### ALTERAÇÕES (frontend)
+- `HelpdeskKanban.tsx`: linhas do cabeçalho do menu (`text-neutral-500 dark:text-slate-400`) e dos 2 itens (`text-neutral-700 dark:text-slate-300`) — apenas classes de cor; nenhuma ação/onClick alterada.
+- Validação: frontend tsc 0 erros, vitest 41/41.
+
+## Recuperação de mensagens WhatsApp perdidas (Baileys)
+
+### CAUSA RAIZ (verificada na lib instalada)
+- `@whiskeysockets/baileys/lib/Socket/messages-recv.js:699`: mensagens offline chegam com `upsert type 'append'` (`node.attrs.offline ? 'append' : 'notify'`) e o provider descartava tudo que não fosse `'notify'` → mensagens enviadas durante a desconexão eram perdidas.
+- Dedupe era só in-memory (`recentMessageIds`, TTL 5min) → sem idempotência persistente; `Message` não tinha ID remoto.
+- Status de conexão só em memória (sem histórico de conexão/desconexão).
+
+### ALTERAÇÕES (schema + banco — `npx prisma db push --accept-data-loss`, diff 100% aditivo)
+- `Message.remoteId String? @unique` + índice `Message_remoteId_key`.
+- `WhatsAppSession.lastConnectedAt DateTime?` / `lastDisconnectedAt DateTime?`.
+- Verificado no Neon: 3 colunas + índice existentes; nada apagado.
+
+### ALTERAÇÕES (backend)
+- `whatsapp-recovery.service.ts` (novo): `marcarReconectado`, `decidirProcessamento` (notify/append, janela máx. `WHATSAPP_RECOVERY_MAX_AGE_HOURS` default 168h, idade mínima 60s para não confundir skew com recuperado), `ordenarCronologicamente`, `registrarEventoConexao` (upsert WhatsAppSession + logAudit `conexao_desconectada`/`conexao_reconectada` com downtime), `iniciarJanelaRecuperacao`/`finalizarJanelaRecuperacao` (grace 5min, auditoria `recuperacao_iniciada`/`recuperacao_concluida` com contadores), `notaRecuperada`/`notaDuplicada`/`notaErro`.
+- `baileys-provider.service.ts`: aceita `type 'append'` (mesma lógica de classificação), pula `historySyncNotification`, ordena lote cronologicamente, `close`/`open` registram eventos de conexão e janela, flag `recovered` + timestamp no payload, log com `origem=RECOVERED|REAL_TIME`, `syncFullHistory` configurável.
+- `whatsapp-message-handler.ts`: dedupe persistente por `remoteId` (DB + in-memory, catch `P2002`), guards `isRecovered` em interceptores (aprovação não responde, CSAT/confirmacao não re-perguntam, `avaliarRegras` e `cancelarAvaliacoesNaoEnviadas` pulados), insert com `remoteId`, log `[WhatsAppRecovery]` — recuperadas criam/salvam mas NÃO disparam bot/automações; `getConversationState` exportada.
+- `env.ts` + `.env.example`: `WHATSAPP_RECOVERY_ENABLED` (default true), `WHATSAPP_RECOVERY_MAX_AGE_HOURS` (168), `WHATSAPP_SYNC_FULL_HISTORY` (false).
+
+### TESTES
+- Novo `whatsapp-recovery.test.ts` **22/22** (7 cenários: tempo real, classificação recovered, ordenação, bot suprimido em recuperada, dedupe persistente, conexão/janelas, tempo real durante janela).
+- Regressão focada: smoke 4/4 + flow-pos-departamento/utils/descartar/aprovacoes 20/20 → **46/46**.
+- Backend tsc 0 erros.
+
+### PRODUÇÃO (passos)
+1. `npm run db:push -- --accept-data-loss` (aditivo, seguro).
+2. Definir env vars no Koyeb (opcionais — defaults OK): `WHATSAPP_RECOVERY_ENABLED=true`, `WHATSAPP_RECOVERY_MAX_AGE_HOURS=168`, `WHATSAPP_SYNC_FULL_HISTORY=false`.
+3. Restart do backend (Baileys reconecta e reprocessa o lote offline).
+
+### LIMITAÇÕES
+- Recuperação depende do que o Baileys repassa após reconexão (janela de 7 dias padrão do WhatsApp); mensagens mais antigas que `MAX_AGE_HOURS` são ignoradas por segurança.
+- Recuperadas não disparam bot/automações (regras, respostas automáticas) — intencional: histórico, não conversa nova.
+- Retry real = reconexão automática do Baileys (MAX_RECONNECT 10); janela reinicia a cada nova conexão sem vazar timers.
+
+## Ambiente dev, seed, perfis e usabilidade (lote operacional)
+
+### ALTERAÇÕES (backend / infra)
+- `server.ts`: detecção de **erros permanentes de banco** (`quota`/`402`/auth falhou/DB ou role inexistente/`permission denied`/`too many connections`) → interrompe os 10 retries em vez de esgotá-los; `logDbTarget()` imprime host/porta/database (apenas dev, sem credenciais); `reportDbUnavailable()` com mensagens diferenciadas dev (Docker) × prod.
+- `package.json` + `backend/scripts/assert-local-db.cjs` (novo): guard nos scripts `db:migrate`/`db:push`/`db:seed`/`db:studio` — bloqueia `DATABASE_URL` remota (Neon/prod) a menos que `ALLOW_REMOTE_DB=1`; `postinstall` sempre instala backend+frontend; `engines.node` fixado em `24.x`.
+- `docker-compose.dev.yml`: Postgres `5437:5432` e Redis `6381:6379` — 5432/6379 ocupados pelo PostgreSQL nativo do Windows e por outros projetos (evolution-redis, lead-system).
+- `shared/validation/schemas.ts`: `ROLES_SISTEMA` (8 perfis: solicitante, agente, supervisor, tecnico, comercial, vendedor, gerente, admin) em `createUserSchema`/`updateUserSchema` — alinhado ao `ROLES` do `rbac.ts` (antes só 4 e qualquer valor novo era rejeitado); `loginSchema.password` com mín. 1 (login de contas legadas; **criação de usuário continua ≥8**).
+- `prisma/seed.ts`: helper `upsertBySlug` (findFirst + create) para `Departamento`/`NivelSuporte`/`Robot` — esses models têm `slug String` **sem `@unique`**, então `upsert({ where: { slug } })` era rejeitado pela validação do Prisma.
+
+### ALTERAÇÕES (frontend)
+- `config/navigation.ts`: removido item duplicado "Indicadores Gerenciais" do grupo Relatórios (permanece em Gestão & Indicadores; rota `/app/relatorios/indicadores` intacta no `App.tsx`).
+- `IndicadoresGerenciaisPage.tsx`: tempos exibidos via `formatDuration`/`formatDurationLong` + tooltip com valor original em horas/min nos cards e na tabela por analista.
+- `Login.tsx` e `Settings/UsersPage.tsx`: exibição dos `details` do Zod (mensagens de validação em vez de "Erro ao fazer login"); validação cliente de senha ≥8; perfis `agente`/`supervisor` no `ROLE_CONFIG`; placeholder "Mínimo 8 caracteres".
+
+### TESTES / VALIDAÇÃO
+- Backend `tsc --noEmit` **0 erros**; frontend `tsc --noEmit` **0 erros**; frontend vitest **41/41**.
+- Backend suíte completa **706/713** — 7 falhas em 4 arquivos **pré-existentes e não relacionados** (`expediente-return` TESTE #31 flaky de horário, `tasks-module`, `ticket-closure-regression`, `ticket-lifecycle-e2e` com `evaluationStatus`); suíte focada de recuperação WhatsApp **46/46**.
+- `npm run db:push` → "database is already in sync" (guard OK, banco local 5437); `npm run db:seed` → OK e idempotente (confirma o fix do `upsertBySlug`).
+
+## Migração Neon → local — CONCLUÍDA (2026-09-30)
+
+**Objetivo**: trazer para o banco local (Docker `localhost:5437/codemed_hub`) os dados que estavam no Neon.
+
+### RESULTADO
+- **Cópia executada com sucesso** (script temporário `backend/_copy_neon.js`, já removido):
+  - `users`: 30 criados + 3 já existiam (33 referenciados de 372 — só os usados por tickets/clients)
+  - `clients`: 65 criados + 3 já existiam (68)
+  - `tickets`: **170 criados, 0 falhas** (total local agora 177) — `protocolo` 84/84 preservados, `externalId`/FKs remapeados
+  - `messages`: **1552 criadas, 0 falhas** (total 1554)
+  - Filhos: `TicketStageEvent` 690, `TicketHistory` 127, `TicketAgentInteraction` 39, `TicketEvent` 4, `CSATResposta` **100/100** (50 reais + 50 substituídos)
+  - Tabelas com 0 linhas na fonte: `TicketMetrics`, `TicketWaitTime`, `TicketDepartmentTime`, `TicketSlaLog`, `TicketActivity`, `TicketTimeline`, `TicketChecklist`, `TicketAiLog`, `TicketPerformance`
+- **Leitura da fonte via SQL bruto** (`$queryRawUnsafe`) + filtro de colunas pelo DMMF (`kind === 'scalar'`) — necessário porque o Neon CodeHelp tem schema mais antigo (`Ticket.nivelSugeridoIa`, `Message.remoteId` inexistentes lá).
+- **CSAT**: o backend local estava rodando (portas 3001/3010) e o scheduler criou 50 CSAT pendentes durante a cópia → substituídos pelos reais do Neon (unique `ticketId`).
+- **Verificação**: 33 tickets sem mensagem = mesmo nº da fonte (fiel); orphans nenhum.
+
+### PENDENTE
+1. ~~Validar no app + apagar `backend/_copy_neon.js`~~ **OK (2026-09-30)** — usuário confirmou histórico completo de volta; script temporário removido.
+2. `ALLOW_REMOTE_DB=1 npm run db:push` no Neon CodeHelp (colunas da recuperação WhatsApp — push remoto pendente).
+3. Produção `codemed-help` (Neon twilight-hat): **HTTP 402 quota estourada, reset 01/10**.
+4. Pareamento Baileys local: escanear QR (credenciais ficam em `whatsapp-session/`, não no banco).
+
+### CONTEXTO ÚTIL
+- **Fontes são diferentes**: `backend/.env.web` → Neon **CodeHelp** (super-lake, us-east-2, acessível, foi a fonte); `backend/.env.production` + `docs/KOYEB_ENV_VARS.txt` → **codemed-help** (twilight-hat, us-east-1) = produção Koyeb (bloqueada).
+- Neon CodeHelp: 372 users, 68 clients, 170 tickets, 1552 messages (último ticket 01/09), 3 conexões, 0 sessões.
+- Testes/typecheck antes da migração: backend tsc 0, frontend tsc 0, frontend 41/41, backend 706/713 (7 falhas = 4 arquivos pré-existentes). Migração só mexeu em dados (nenhum teste de código afetado).

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
+import { formatDuration, formatDurationLong } from '../../lib/formatDuration';
 import {
   RefreshCw, TrendingUp, TrendingDown, Clock, CheckCircle, Users, Loader2,
   BarChart3, AlertTriangle, Target, DollarSign, MessageSquare, Award,
@@ -46,8 +47,17 @@ function formatCurrency(val: number): string {
 }
 
 function formatHours(h: number): string {
-  if (h < 1) return `${Math.round(h * 60)}min`;
-  return `${h}h`;
+  if (!Number.isFinite(h)) return 'Não informado';
+  return formatDuration(h * 60);
+}
+
+function hintHoras(h: number): string {
+  if (!Number.isFinite(h)) return 'Não informado';
+  const brl = h.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+  return [
+    `Valor original: ${brl} ${h === 1 ? 'hora' : 'horas'} (${Math.round(h * 60)} min)`,
+    `Conversão: ${formatDurationLong(h * 60)}`,
+  ].join('\n');
 }
 
 function StatusBadge({ value, thresholds }: { value: number; thresholds: [number, number] }) {
@@ -158,6 +168,7 @@ export default function IndicadoresGerenciaisPage() {
           icon={<Clock size={20} />}
           label="Tempo Resolução"
           value={formatHours(indicadores.tempoMedioResolucaoHoras)}
+          hint={hintHoras(indicadores.tempoMedioResolucaoHoras)}
           sub={<StatusBadge value={indicadores.tempoMedioResolucaoHoras} thresholds={[4, 24]} />}
           color="amber"
         />
@@ -269,7 +280,7 @@ export default function IndicadoresGerenciaisPage() {
                     <p className="text-xs text-gray-500 dark:text-slate-400">Taxa Resolução</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-gray-900 dark:text-slate-100">{formatHours(a.tempoMedioResolucaoMin / 60)}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-slate-100" title={hintHoras(a.tempoMedioResolucaoMin / 60)}>{formatHours(a.tempoMedioResolucaoMin / 60)}</p>
                     <p className="text-xs text-gray-500 dark:text-slate-400">Tempo Médio</p>
                   </div>
                   <div className="text-center">
@@ -311,9 +322,9 @@ export default function IndicadoresGerenciaisPage() {
 }
 
 function CardIndicador({
-  icon, label, value, sub, color,
+  icon, label, value, sub, color, hint,
 }: {
-  icon: React.ReactNode; label: string; value: string; sub: React.ReactNode; color: string;
+  icon: React.ReactNode; label: string; value: string; sub: React.ReactNode; color: string; hint?: string;
 }) {
   const colorMap: Record<string, string> = {
     blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
@@ -330,7 +341,7 @@ function CardIndicador({
         </div>
         <span className="text-sm text-gray-500 dark:text-slate-400">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{value}</p>
+      <p className="text-2xl font-bold text-gray-900 dark:text-slate-100" title={hint}>{value}</p>
       <div className="mt-1">{typeof sub === 'string' ? <p className="text-xs text-gray-500 dark:text-slate-400">{sub}</p> : sub}</div>
     </div>
   );

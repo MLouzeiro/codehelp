@@ -19,6 +19,16 @@ import fs from 'fs';
 import { env } from '../../../config/env';
 import { processIncomingMessageHandler } from './whatsapp-message-handler';
 import { normalizePhone } from './whatsapp-utils';
+import {
+  decidirProcessamento,
+  finalizarJanelaRecuperacao,
+  iniciarJanelaRecuperacao,
+  marcarReconectado,
+  notaErro,
+  obterReconexao,
+  ordenarCronologicamente,
+  registrarEventoConexao,
+} from './whatsapp-recovery.service';
 
 const SESSION_BASE_DIR = path.resolve(env.whatsappSessionPath || './whatsapp-session', 'baileys');
 const MAX_RECONNECT = 10;
@@ -326,7 +336,7 @@ class BaileysProviderService {
       logger,
       browser: ['CodeHelp', 'Chrome', '4.0.0'],
       generateHighQualityLinkPreview: false,
-      syncFullHistory: false,
+      syncFullHistory: env.whatsappSyncFullHistory,
       qrTimeout: 120_000,
       connectTimeoutMs: 60_000,
       markOnlineOnConnect: true,
@@ -353,8 +363,10 @@ class BaileysProviderService {
         const isLoggedOut = statusCode === DisconnectReason.loggedOut;
         const isRestartRequired = statusCode === DisconnectReason.restartRequired;
 
-        console.log(`[Baileys ${sessionId}] Conexao fechada. Status: ${statusCode}`);
-        this.stopHeartbeat(state);
+      console.log(`[Baileys ${sessionId}] Conexao fechada. Status: ${statusCode}`);
+      registrarEventoConexao(sessionId, 'disconnected', statusCode ? String(statusCode) : 'desconhecido').catch(() => {});
+      finalizarJanelaRecuperacao(sessionId);
+      this.stopHeartbeat(state);
 
         if (state.manualDisconnect) {
           console.log(`[Baileys ${sessionId}] Desconectado manualmente`);
@@ -398,6 +410,10 @@ class BaileysProviderService {
         state.error = null;
         state.reconnectAttempts = 0;
         state.lastMessageAt = new Date();
+        marcarReconectado(sessionId);
+        registrarEventoConexao(sessionId, 'connected')
+          .then((downtimeMs) => iniciarJanelaRecuperacao(sessionId, downtimeMs))
+          .catch(() => {});
         this.stopPeriodicRetry(state);
         console.log(`[Baileys ${sessionId}] Conectado com sucesso!`);
         this.startHeartbeat(sessionId, state);
@@ -408,15 +424,13 @@ class BaileysProviderService {
     // Handle incoming messages
     socket.ev.on('messages.upsert', async ({ messages, type }) => {
       console.log(`[Baileys ${sessionId}] messages.upsert: type=${type}, count=${messages.length}`);
-      if (type !== 'notify') {
-        console.log(`[Baileys ${sessionId}] type="${type}" ignorado (so notify)`);
-        return;
-      }
 
       const st = this.connections.get(sessionId) || (sessionId === 'legacy' ? this.legacyState : undefined);
       if (st) st.lastMessageAt = new Date();
 
-      for (const msg of messages) {
+      const ordenadas = ordenarCronologicamente(messages, (m) => Number(m.messageTimestamp || 0));
+
+      for (const msg of ordenadas) {
         try {
           const fromMe = msg.key?.fromMe;
           const remoteJid = msg.key?.remoteJid;
@@ -432,10 +446,26 @@ class BaileysProviderService {
             continue;
           }
 
-          console.log(`[Baileys ${sessionId}] Msg recebida: fromMe=${fromMe}, jid=${remoteJid}, hasMsg=${hasMsg}, pushName=${msg.pushName}`);
-          await this.processIncomingMessage(msg, sessionId);
+          if ((contentType as string) === 'historySyncNotification') {
+            console.log(`[Baileys ${sessionId}] historySyncNotification ignorada messageId=${msg.key?.id}`);
+            continue;
+          }
+
+          const decisao = decidirProcessamento({
+            type,
+            messageTimestampSec: Number(msg.messageTimestamp || 0),
+            reconnectedAtMs: obterReconexao(sessionId),
+          });
+          if (!decisao.processar) {
+            console.log(`[Baileys ${sessionId}] Mensagem ignorada messageId=${msg.key?.id} motivo=${decisao.motivo}`);
+            continue;
+          }
+
+          console.log(`[Baileys ${sessionId}] Msg recebida: fromMe=${fromMe}, jid=${remoteJid}, hasMsg=${hasMsg}, pushName=${msg.pushName}, origem=${decisao.recovered ? 'RECOVERED' : 'REAL_TIME'}`);
+          await this.processIncomingMessage(msg, sessionId, decisao.recovered, Number(msg.messageTimestamp || 0));
         } catch (err) {
           console.error(`[Baileys ${sessionId}] Erro processando mensagem:`, err);
+          notaErro(sessionId, msg.key?.id || undefined, err);
         }
       }
     });
@@ -468,6 +498,8 @@ class BaileysProviderService {
   private async processIncomingMessage(
     msg: proto.IWebMessageInfo,
     sessionId: string,
+    recovered: boolean = false,
+    timestampSec?: number,
   ): Promise<void> {
     const remoteJid = msg.key?.remoteJid;
     if (!msg.message) {
@@ -576,6 +608,8 @@ class BaileysProviderService {
           jid: remoteJid || undefined,
           interactiveId: isInteractive ? messageText : undefined,
           messageId: msg.key?.id || undefined,
+          recovered,
+          timestamp: timestampSec,
         },
         sendFn,
       );
@@ -667,6 +701,8 @@ class BaileysProviderService {
         jid: remoteJid || undefined,
         interactiveId: isInteractive ? messageText : undefined,
         messageId: msg.key?.id || undefined,
+        recovered,
+        timestamp: timestampSec,
       },
       sendFn,
     );

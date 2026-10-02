@@ -155,7 +155,7 @@ const KanbanCard = memo(function KanbanCard({
               <>
                 <div className="fixed inset-0 z-30" onClick={() => onOpenMenu(null)} />
                 <div className="absolute right-0 top-6 z-40 bg-white dark:bg-slate-800 border border-neutral-200 dark:border-slate-700 rounded-lg shadow-lg w-52 py-1 text-xs">
-                  <div className="px-2.5 py-1.5 text-[10px] font-bold text-neutral-400 dark:text-slate-500 uppercase border-b border-neutral-100 dark:border-slate-700/50">
+                  <div className="px-2.5 py-1.5 text-[10px] font-bold text-neutral-500 dark:text-slate-400 uppercase border-b border-neutral-100 dark:border-slate-700/50">
                     Mover para
                   </div>
                   {Object.values(board)
@@ -171,7 +171,7 @@ const KanbanCard = memo(function KanbanCard({
                             onMoveTo(ticket.id, c.slug);
                           }
                         }}
-                        className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                        className="w-full text-left px-2.5 py-1.5 text-neutral-700 dark:text-slate-300 hover:bg-neutral-50 dark:hover:bg-slate-700 flex items-center gap-2"
                       >
                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.cor }} />
                         {c.title}
@@ -212,7 +212,7 @@ const KanbanCard = memo(function KanbanCard({
                   )}
                   <button
                     onClick={() => { onViewDetail(ticket.id); onOpenMenu(null); }}
-                    className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                    className="w-full text-left px-2.5 py-1.5 text-neutral-700 dark:text-slate-300 hover:bg-neutral-50 dark:hover:bg-slate-700 flex items-center gap-2"
                   >
                     <FileText size={12} /> Ver detalhes
                   </button>

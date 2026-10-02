@@ -29,6 +29,7 @@ import {
   enviarMensagemObrigadoAvaliacao,
 } from '../../helpdesk/flow.service';
 import { operationalBus } from '../../helpdesk/operacao/eventBus';
+import { notaDuplicada, notaRecuperada } from './whatsapp-recovery.service';
 
 // ── Shared WhatsApp Message Handler ────────────────────────────────────
 // Provider-agnostic bot/triage logic used by all WhatsApp backends.
@@ -70,7 +71,7 @@ const pendingCompanyCandidates = new Map<string, Array<{ id: string; razaoSocial
 const pendingCompanyTimestamps = new Map<string, number>();
 const PENDING_COMPANY_TTL_MS = 10 * 60 * 1000; // 10 minutos
 
-function getConversationState(phoneDigits: string): ConversationState {
+export function getConversationState(phoneDigits: string): ConversationState {
   const key = phoneDigits.slice(-11);
   const state = conversationStates.get(key);
   if (!state) return 'IDLE';
@@ -392,6 +393,8 @@ export interface IncomingMessageData {
   messageId?: string;
   /** TRUE quando o provider detectou mensagem apagada/revogada — NÃO processa. */
   isDeletedMessage?: boolean;
+  recovered?: boolean;
+  timestamp?: number;
 }
 
 export interface SendMessageFn {
@@ -403,6 +406,7 @@ export async function processIncomingMessageHandler(
   sendMessage: SendMessageFn,
 ): Promise<void> {
   const { phone, contactName, mediaUrl, mimeType, connectionId, provider } = data;
+  const isRecovered = data.recovered === true;
 
   if (!phone) return;
 
@@ -425,6 +429,15 @@ export async function processIncomingMessageHandler(
       return;
     }
     recentMessageIds.set(data.messageId, Date.now());
+
+    const existente = await prisma.message.findFirst({
+      where: { remoteId: data.messageId },
+      select: { id: true },
+    });
+    if (existente) {
+      notaDuplicada(connectionId, data.messageId);
+      return;
+    }
   }
 
   // Aguardar lock com timeout
@@ -457,7 +470,7 @@ export async function processIncomingMessageHandler(
             ? '✅ Aprovação registrada com sucesso!'
             : '❌ Aprovação rejeitada.'
         : '';
-      await sendMessage(chatId, msgAprov).catch(() => {});
+      if (!isRecovered) await sendMessage(chatId, msgAprov).catch(() => {});
       console.log(`[APROVACAO] phone=${phoneDigits} event=RESPONDIDA aprovacaoId=${respAprov.aprovacaoId} decidido=${respAprov.decidido} — nenhum ticket criado`);
       return;
     }
@@ -500,7 +513,7 @@ export async function processIncomingMessageHandler(
       // ── 2) Sem ticket ativo → confirmar resolução pendente / avaliação ──
       // Confirmação de resolução (após encerrar, antes da avaliação): interceita
       // a resposta SIM/NÃO/descrição ANTES de criar novo ticket (ZERO ticket novo).
-      const confirmacaoPendente = await buscarConfirmacaoPendente(phoneDigits, jid);
+      const confirmacaoPendente = isRecovered ? null : await buscarConfirmacaoPendente(phoneDigits, jid);
       if (confirmacaoPendente) {
         const r = await processarRespostaEncerramento(phoneDigits, confirmacaoPendente, text);
         console.log(
@@ -511,7 +524,7 @@ export async function processIncomingMessageHandler(
       }
 
       const notaResposta = extrairNotaAvaliacao(text);
-      const csatPendente = await buscarCsatPendente(phoneDigits, jid);
+      const csatPendente = isRecovered ? null : await buscarCsatPendente(phoneDigits, jid);
 
       if (csatPendente) {
         if (notaResposta !== null) {
@@ -531,7 +544,7 @@ export async function processIncomingMessageHandler(
       } else {
         // Retry: CSAT foi criada mas não entregue (enviadoEm=null).
         // Busca CSATs não enviadas e tenta reenviar antes de criar novo ticket.
-        const csatNaoEnviada = await prisma.cSATResposta.findFirst({
+        const csatNaoEnviada = isRecovered ? null : await prisma.cSATResposta.findFirst({
           where: {
             respondidoEm: null,
             enviadoEm: null,
@@ -562,7 +575,7 @@ export async function processIncomingMessageHandler(
       }
 
       // Cancelar avaliações criadas mas nunca enviadas (evita retry tardio de chamado antigo)
-      await cancelarAvaliacoesNaoEnviadas(phoneDigits, jid);
+      if (!isRecovered) await cancelarAvaliacoesNaoEnviadas(phoneDigits, jid);
 
       // ── 3) Criar novo ticket ────────────────────────────────────────
       let client = null;
@@ -631,23 +644,34 @@ export async function processIncomingMessageHandler(
         },
       });
 
-      const { avaliarRegras } = await import('../../automations/automations.service');
-      avaliarRegras('novo_ticket', { ticketId: created.id }).catch((e) =>
-        console.warn(`[${provider}] Falha ao avaliar regras novo_ticket:`, e?.message || e)
-      );
+      if (!isRecovered) {
+        const { avaliarRegras } = await import('../../automations/automations.service');
+        avaliarRegras('novo_ticket', { ticketId: created.id }).catch((e) =>
+          console.warn(`[${provider}] Falha ao avaliar regras novo_ticket:`, e?.message || e)
+        );
+      }
     }
 
     // ── 4) Salvar mensagem recebida ───────────────────────────────────
     if (text || mediaUrl) {
-      await prisma.message.create({
-        data: {
-          ticketId: ticket!.id,
-          fromMe: false,
-          content: text || (mediaUrl ? '(midia)' : ''),
-          mediaUrl: mediaUrl || null,
-          mimeType: mimeType || null,
-        },
-      });
+      try {
+        await prisma.message.create({
+          data: {
+            ticketId: ticket!.id,
+            fromMe: false,
+            content: text || (mediaUrl ? '(midia)' : ''),
+            mediaUrl: mediaUrl || null,
+            mimeType: mimeType || null,
+            remoteId: data.messageId || null,
+          },
+        });
+      } catch (e: any) {
+        if (e?.code === 'P2002') {
+          notaDuplicada(connectionId, data.messageId);
+          return;
+        }
+        throw e;
+      }
       await prisma.ticket.update({
         where: { id: ticket!.id },
         data: { updatedAt: new Date() },
@@ -660,6 +684,14 @@ export async function processIncomingMessageHandler(
         data: { phone: phoneSemSufixo, preview: (text || '').slice(0, 100) },
         timestamp: new Date(),
       });
+    }
+
+    if (isRecovered) {
+      console.log(
+        `[WhatsAppRecovery] Mensagem recuperada message_id=${data.messageId || '-'} contact=${phoneDigits} conversation=${jid || '-'} timestamp=${data.timestamp || '-'} status=RECOVERED ticket=${ticket!.id} salvo=${!!(text || mediaUrl)}`,
+      );
+      notaRecuperada(connectionId);
+      return;
     }
 
     // ── 5) Business hours check ───────────────────────────────────────

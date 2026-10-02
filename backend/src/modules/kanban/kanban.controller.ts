@@ -65,6 +65,29 @@ export async function deleteBoard(req: AuthRequest, res: Response) {
   }
 }
 
+export async function listInactiveBoards(req: AuthRequest, res: Response) {
+  try {
+    const boards = await service.listInactiveBoards();
+    return res.json(boards);
+  } catch (error) {
+    console.error('Erro ao listar boards ocultos:', error);
+    return res.status(500).json({ error: 'Erro ao listar boards ocultos' });
+  }
+}
+
+export async function restoreBoard(req: AuthRequest, res: Response) {
+  try {
+    const board = await service.restoreBoard(req.params.boardId);
+    return res.json(board);
+  } catch (error: any) {
+    if (error.message?.includes('não encontrado') || error.message?.includes('nao encontrado')) {
+      return res.status(404).json({ error: error.message });
+    }
+    console.error('Erro ao restaurar board:', error);
+    return res.status(500).json({ error: 'Erro ao restaurar board' });
+  }
+}
+
 export async function createColumn(req: AuthRequest, res: Response) {
   try {
     const column = await service.createColumn(req.params.boardId, req.body);

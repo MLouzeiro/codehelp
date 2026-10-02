@@ -23,6 +23,26 @@ export function useKanban() {
     }
   }, []);
 
+  const fetchInactiveBoards = useCallback(async () => {
+    try {
+      const response = await api.get('/kanban/boards/inactive');
+      return response.data as KanbanBoard[];
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao buscar quadros ocultos');
+      return [] as KanbanBoard[];
+    }
+  }, []);
+
+  const restoreBoard = useCallback(async (boardId: string) => {
+    try {
+      const response = await api.post(`/kanban/boards/${boardId}/restore`);
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao restaurar quadro');
+      throw err;
+    }
+  }, []);
+
   const fetchBoard = useCallback(async (boardId: string) => {
     setLoading(true);
     setError(null);
@@ -982,6 +1002,8 @@ export function useKanban() {
     loading,
     error,
     fetchBoards,
+    fetchInactiveBoards,
+    restoreBoard,
     fetchBoard,
     createBoard,
     updateBoard,

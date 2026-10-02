@@ -44,6 +44,24 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; permissions: s
       'Visualizar dashboard',
     ],
   },
+  agente: {
+    label: 'Agente',
+    color: 'bg-teal-100 text-teal-700',
+    permissions: [
+      'Atender tickets no helpdesk',
+      'Editar artigos da base de conhecimento',
+      'Visualizar dashboard',
+    ],
+  },
+  supervisor: {
+    label: 'Supervisor',
+    color: 'bg-rose-100 text-rose-700',
+    permissions: [
+      'Acompanhar e revisar atendimentos',
+      'Acessar relatórios e qualidade',
+      'Aprovar ações de equipe',
+    ],
+  },
 };
 
 const INITIAL_FORM = { name: '', email: '', password: '', phone: '', signature: '', role: 'tecnico' };
@@ -129,6 +147,10 @@ export default function UsersPage() {
       setError('Senha é obrigatória para novos usuários');
       return;
     }
+    if (form.password && form.password.length < 8) {
+      setError('Senha deve ter no mínimo 8 caracteres');
+      return;
+    }
     setSaving(true);
     try {
       if (editingId) {
@@ -141,7 +163,11 @@ export default function UsersPage() {
       setShowModal(false);
       loadUsers();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao salvar');
+      const data = err.response?.data;
+      const detalhes = Array.isArray(data?.details) && data.details.length
+        ? data.details.map((d: any) => d.message).join(' · ')
+        : null;
+      setError(detalhes || data?.error || 'Erro ao salvar');
     } finally { setSaving(false); }
   };
 
@@ -604,7 +630,8 @@ export default function UsersPage() {
                 <label className="text-xs font-medium text-neutral-500 dark:text-slate-400 mb-1 block">
                   {editingId ? 'Nova senha (deixe em branco para manter)' : 'Senha'}
                 </label>
-                <input type="password" placeholder={editingId ? 'Nova senha' : 'Mínimo 6 caracteres'} value={form.password}
+                <input type="password" placeholder={editingId ? 'Nova senha' : 'Mínimo 8 caracteres'} value={form.password}
+                  minLength={8}
                   onChange={(e) => setForm({ ...form, password: e.target.value })} className="input" />
               </div>
               <div>

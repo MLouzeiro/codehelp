@@ -308,6 +308,54 @@ export async function deleteBoard(boardId: string) {
   }
 }
 
+export async function listInactiveBoards() {
+  try {
+    const boards = await prisma.kanbanBoard.findMany({
+      where: { ativo: false },
+      include: {
+        _count: {
+          select: { columns: true, tasks: { where: { ativo: true } } },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    return boards.map((b) => ({
+      id: b.id,
+      nome: b.nome,
+      descricao: b.descricao,
+      icone: b.icone,
+      cor: b.cor,
+      ordem: b.ordem,
+      criadorId: b.criadorId,
+      ativo: b.ativo,
+      templateId: b.templateId,
+      columnCount: b._count.columns,
+      taskCount: b._count.tasks,
+      createdAt: b.createdAt,
+      updatedAt: b.updatedAt,
+    }));
+  } catch (error: any) {
+    throw new Error(`Erro ao listar boards ocultos: ${error.message}`);
+  }
+}
+
+export async function restoreBoard(boardId: string) {
+  try {
+    const existing = await prisma.kanbanBoard.findUnique({
+      where: { id: boardId },
+      select: { id: true },
+    });
+    if (!existing) throw new Error('Board nao encontrado');
+
+    return prisma.kanbanBoard.update({
+      where: { id: boardId },
+      data: { ativo: true },
+    });
+  } catch (error: any) {
+    throw new Error(`Erro ao restaurar board: ${error.message}`);
+  }
+}
+
 export async function createColumn(boardId: string, data: ColumnCreateInput) {
   try {
     const board = await prisma.kanbanBoard.findUnique({

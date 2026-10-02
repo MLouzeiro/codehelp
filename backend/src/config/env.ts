@@ -69,6 +69,12 @@ export const env = {
   },
   whatsappSessionPath: process.env.WHATSAPP_SESSION_PATH || './whatsapp-session',
   whatsappChromePath: process.env.WHATSAPP_CHROME_PATH || '',
+  whatsappRecoveryEnabled: process.env.WHATSAPP_RECOVERY_ENABLED !== 'false',
+  whatsappRecoveryMaxAgeHours: (() => {
+    const parsed = parseInt(process.env.WHATSAPP_RECOVERY_MAX_AGE_HOURS || '168', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 168;
+  })(),
+  whatsappSyncFullHistory: process.env.WHATSAPP_SYNC_FULL_HISTORY === 'true',
   // Evolution API (self-hosted Docker) - URL vazia = nao configurado
   evolutionApiUrl: process.env.EVOLUTION_API_URL || '',
   evolutionApiKey: process.env.EVOLUTION_API_KEY || '',

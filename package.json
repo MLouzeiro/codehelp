@@ -11,20 +11,20 @@
     "build:prisma": "cd backend && npx prisma generate",
     "build:frontend": "cd frontend && npx vite build",
     "start": "cd backend && node dist/server.js",
-    "db:migrate": "cd backend && npx prisma migrate dev",
-    "db:push": "cd backend && npx prisma db push",
-    "db:seed": "cd backend && npx tsx prisma/seed.ts",
-    "db:studio": "cd backend && npx prisma studio",
+    "db:migrate": "node backend/scripts/assert-local-db.cjs && cd backend && npx prisma migrate dev",
+    "db:push": "node backend/scripts/assert-local-db.cjs && cd backend && npx prisma db push",
+    "db:seed": "node backend/scripts/assert-local-db.cjs && cd backend && npx tsx prisma/seed.ts",
+    "db:studio": "node backend/scripts/assert-local-db.cjs && cd backend && npx prisma studio",
     "reset": "powershell -ExecutionPolicy Bypass -File ./reset-dev.ps1",
     "reset:keep-session": "powershell -ExecutionPolicy Bypass -File ./reset-dev.ps1 -KeepSession -NoStart -Force",
-    "postinstall": "node -e \"if(!process.env.VERCEL){process.exit(1)}\" || (cd backend && npm install && npx prisma generate && cd ../frontend && npm install)"
+    "postinstall": "cd backend && npm install && npx prisma generate && cd ../frontend && npm install"
   },
   "dependencies": {
     "concurrently": "^9.0.1",
     "pptxgenjs": "^4.0.1"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": "24.x"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1"

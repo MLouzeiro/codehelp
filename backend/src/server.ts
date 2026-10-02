@@ -7,6 +7,52 @@ import { ensureHelpdeskConfigs, migrateLegacyTickets, migrateLegacyTriagemConfig
 const MAX_DB_RETRIES = 10;
 const DB_RETRY_DELAY_MS = 3000;
 
+const PERMANENT_DB_ERROR =
+  /exceeded the quota|exceeded quota|\b402\b|password authentication failed|database "[^"]+" does not exist|role "[^"]+" does not exist|permission denied for|too many connections/i;
+
+function isPermanentDbError(message: string): boolean {
+  return PERMANENT_DB_ERROR.test(message);
+}
+
+function isDevelopment(): boolean {
+  return (process.env.NODE_ENV || 'development') !== 'production';
+}
+
+function logDbTarget(): void {
+  if (!isDevelopment()) return;
+  try {
+    const url = process.env.DATABASE_URL || '';
+    const m = /^postgres(?:ql)?:\/\/(?:[^@/]+)@([^/:]+):(\d+)\/([^?\s]*)/.exec(url);
+    console.log(`[DB] Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    console.log('[DB] Provider: PostgreSQL');
+    if (m) {
+      console.log(`[DB] Host: ${m[1]}`);
+      console.log(`[DB] Porta: ${m[2]}`);
+      console.log(`[DB] Database: ${m[3].split('?')[0]}`);
+    } else {
+      console.log('[DB] Host/Porta/Database: nao reconhecidos na DATABASE_URL');
+    }
+  } catch {
+    /* log nunca pode derrubar o boot */
+  }
+}
+
+function reportDbUnavailable(permanent: boolean): void {
+  if (permanent) {
+    console.error(
+      isDevelopment()
+        ? '[DB] Banco LOCAL indisponivel (erro permanente) — tentativas interrompidas. Verifique backend/.env e o PostgreSQL Docker (docker compose -f docker-compose.dev.yml up -d).'
+        : '[DB] Banco indisponivel (erro permanente) — servidor seguindo sem banco. Algumas rotas retornarao erro.'
+    );
+    return;
+  }
+  console.warn(
+    isDevelopment()
+      ? '[DB] Banco de desenvolvimento indisponivel. Verifique se o PostgreSQL Docker esta em execucao (docker compose -f docker-compose.dev.yml up -d).'
+      : '[DB] Banco indisponivel — servidor rodando sem banco. Algumas rotas retornarao erro.'
+  );
+}
+
 let dbConnected = false;
 let isShuttingDown = false;
 
@@ -19,13 +65,19 @@ async function connectToDatabaseWithRetry(): Promise<void> {
       dbConnected = true;
       return;
     } catch (error: any) {
-      console.error(`[DB] Tentativa ${attempt}/${MAX_DB_RETRIES} falhou: ${error.message || error}`);
+      const message = String(error?.message || error);
+      if (isPermanentDbError(message)) {
+        console.error(`[DB] Erro permanente na tentativa ${attempt}/${MAX_DB_RETRIES}: ${message}`);
+        reportDbUnavailable(true);
+        return;
+      }
+      console.error(`[DB] Tentativa ${attempt}/${MAX_DB_RETRIES} falhou: ${message}`);
       if (attempt < MAX_DB_RETRIES) {
         await new Promise((r) => setTimeout(r, DB_RETRY_DELAY_MS));
       }
     }
   }
-  console.warn('[DB] Banco indisponivel — servidor rodando sem banco. Algumas rotas retornarao erro.');
+  reportDbUnavailable(false);
 }
 
 async function runBackgroundInit() {
@@ -70,6 +122,8 @@ async function runBackgroundInit() {
 }
 
 async function start() {
+  logDbTarget();
+
   // Start DB connection in background (non-blocking)
   connectToDatabaseWithRetry().catch((err) => {
     console.error('[Startup] Falha na conexao com banco de dados:', err?.message || err);

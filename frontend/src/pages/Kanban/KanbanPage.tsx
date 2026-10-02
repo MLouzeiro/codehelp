@@ -22,7 +22,10 @@ export default function KanbanPage() {
     boards, currentBoard, loading, fetchBoards, fetchBoard,
     createBoard, deleteBoard, setCurrentBoard,
     fetchTemplates, createBoardFromTemplate,
+    fetchInactiveBoards, restoreBoard,
   } = useKanban();
+
+  const isAdmin = user?.role === 'admin' || user?.role === 'gerente';
 
   const [showNewBoard, setShowNewBoard] = useState(false);
   const [showTemplateGallery, setShowTemplateGallery] = useState(false);
@@ -34,10 +37,20 @@ export default function KanbanPage() {
   const [templateSearch, setTemplateSearch] = useState('');
   const [creatingFromTemplate, setCreatingFromTemplate] = useState<string | null>(null);
   const [view, setView] = useState<'sidebar' | 'gallery'>('sidebar');
+  const [inactiveBoards, setInactiveBoards] = useState<KanbanBoardType[]>([]);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+
+  const inGallery = !currentBoard || view === 'gallery';
 
   useEffect(() => {
     fetchBoards();
   }, []);
+
+  useEffect(() => {
+    if (inGallery && isAdmin) {
+      fetchInactiveBoards().then(setInactiveBoards).catch(() => {});
+    }
+  }, [inGallery]);
 
   useEffect(() => {
     if (boards.length > 0 && !currentBoard) {
@@ -88,18 +101,27 @@ export default function KanbanPage() {
   };
 
   const handleDeleteBoard = async (board: KanbanBoardType) => {
-    if (!confirm(`Deletar o quadro "${board.nome}"? Todos os dados serão removidos.`)) return;
+    if (!confirm(`Ocultar o quadro "${board.nome}"? Ele deixará de aparecer na lista e poderá ser restaurado depois em "Quadros Ocultos".`)) return;
     await deleteBoard(board.id);
     if (currentBoard?.id === board.id) setCurrentBoard(null);
     fetchBoards();
+    if (isAdmin) fetchInactiveBoards().then(setInactiveBoards).catch(() => {});
+  };
+
+  const handleRestoreBoard = async (board: KanbanBoardType) => {
+    setRestoringId(board.id);
+    try {
+      await restoreBoard(board.id);
+      setInactiveBoards(prev => prev.filter(b => b.id !== board.id));
+      fetchBoards();
+    } catch { /* erro já tratado no hook */ }
+    setRestoringId(null);
   };
 
   const handleRefresh = () => {
     if (currentBoard) fetchBoard(currentBoard.id);
     fetchBoards();
   };
-
-  const isAdmin = user?.role === 'admin' || user?.role === 'gerente';
 
   if (loading && !currentBoard) {
     return (
@@ -110,7 +132,7 @@ export default function KanbanPage() {
   }
 
   // ── Gallery View (when no board is selected or user clicks "Trocar Quadro") ──
-  if (!currentBoard || view === 'gallery') {
+  if (inGallery) {
     return (
       <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900">
         {/* Header */}
@@ -198,6 +220,38 @@ export default function KanbanPage() {
               )}
             </div>
           </div>
+
+          {/* Quadros Ocultos (restaurar) */}
+          {isAdmin && inactiveBoards.length > 0 && (
+            <div className="max-w-6xl mx-auto mb-8">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-1">Quadros Ocultos</h2>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mb-4">Quadros removidos da lista. Restaure para voltar a aparecer.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                {inactiveBoards.map(board => (
+                  <div
+                    key={board.id}
+                    className="relative group flex flex-col items-center p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-gray-300 dark:border-slate-700 opacity-80 hover:opacity-100 transition-opacity"
+                  >
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl mb-2 bg-gray-100 dark:bg-slate-700">
+                      {board.icone || '📋'}
+                    </div>
+                    <span className="text-sm font-medium text-gray-500 dark:text-slate-400 text-center truncate w-full">{board.nome}</span>
+                    <span className="text-[10px] text-gray-400 dark:text-slate-500 mb-2">{board.taskCount ?? 0} tarefa{(board.taskCount ?? 0) === 1 ? '' : 's'}</span>
+                    <button
+                      onClick={() => handleRestoreBoard(board)}
+                      disabled={restoringId === board.id}
+                      className="text-xs font-medium text-codemed-600 dark:text-codemed-400 hover:underline flex items-center gap-1 disabled:opacity-50"
+                    >
+                      {restoringId === board.id
+                        ? <Loader2 size={12} className="animate-spin" />
+                        : <RefreshCw size={12} />}
+                      Restaurar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Importar Template */}
           <div className="max-w-6xl mx-auto">

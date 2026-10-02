@@ -3,6 +3,12 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+async function upsertBySlug(model: any, slug: string, data: Record<string, any>) {
+  const existing = await model.findFirst({ where: { slug } });
+  if (existing) return existing;
+  return model.create({ data: { ...data, slug } });
+}
+
 async function main() {
   console.log('🌱 Seeding database (idempotent — existing data preserved)...');
 
@@ -43,55 +49,39 @@ async function main() {
   // ── Departamentos (upsert — seguro) ──────────────────────────────
   console.log('  ↳ Departamentos...');
 
-  const deptSuporte = await prisma.departamento.upsert({
-    where: { slug: 'suporte-tecnico' },
-    update: {},
-    create: { slug: 'suporte-tecnico', nome: 'Suporte Técnico', descricao: 'Atendimento técnico, dúvidas e correção de bugs', cor: '#3b82f6', icone: 'headphones', ordem: 0 },
+  const deptSuporte = await upsertBySlug(prisma.departamento, 'suporte-tecnico', {
+    nome: 'Suporte Técnico', descricao: 'Atendimento técnico, dúvidas e correção de bugs', cor: '#3b82f6', icone: 'headphones', ordem: 0,
   });
 
-  const deptComercial = await prisma.departamento.upsert({
-    where: { slug: 'comercial' },
-    update: {},
-    create: { slug: 'comercial', nome: 'Comercial', descricao: 'Vendas, orçamentos e pré-vendas', cor: '#10b981', icone: 'trending-up', ordem: 1 },
+  const deptComercial = await upsertBySlug(prisma.departamento, 'comercial', {
+    nome: 'Comercial', descricao: 'Vendas, orçamentos e pré-vendas', cor: '#10b981', icone: 'trending-up', ordem: 1,
   });
 
-  const deptDesenvolvimento = await prisma.departamento.upsert({
-    where: { slug: 'desenvolvimento' },
-    update: {},
-    create: { slug: 'desenvolvimento', nome: 'Desenvolvimento', descricao: 'Demandas de desenvolvimento de software', cor: '#8b5cf6', icone: 'code', ordem: 2 },
+  const deptDesenvolvimento = await upsertBySlug(prisma.departamento, 'desenvolvimento', {
+    nome: 'Desenvolvimento', descricao: 'Demandas de desenvolvimento de software', cor: '#8b5cf6', icone: 'code', ordem: 2,
   });
 
-  const deptDemandasInternas = await prisma.departamento.upsert({
-    where: { slug: 'demandas-internas' },
-    update: {},
-    create: { slug: 'demandas-internas', nome: 'Demandas Internas', descricao: 'Chamados internos (TI, RH, administrativo)', cor: '#f59e0b', icone: 'building', ordem: 3 },
+  const deptDemandasInternas = await upsertBySlug(prisma.departamento, 'demandas-internas', {
+    nome: 'Demandas Internas', descricao: 'Chamados internos (TI, RH, administrativo)', cor: '#f59e0b', icone: 'building', ordem: 3,
   });
 
   // ── Níveis de Suporte (upsert — seguro) ───────────────────────────
   console.log('  ↳ Níveis de suporte...');
 
-  const nivelN1 = await prisma.nivelSuporte.upsert({
-    where: { slug: 'n1' },
-    update: {},
-    create: { slug: 'n1', nome: 'N1 — Primeiro Atendimento', descricao: 'Atendimento inicial, triagem e resolução de questões simples', cor: '#22c55e', icone: 'user', ordem: 0, slaMinutos: 30 },
+  const nivelN1 = await upsertBySlug(prisma.nivelSuporte, 'n1', {
+    nome: 'N1 — Primeiro Atendimento', descricao: 'Atendimento inicial, triagem e resolução de questões simples', cor: '#22c55e', icone: 'user', ordem: 0, slaMinutos: 30,
   });
 
-  const nivelN2 = await prisma.nivelSuporte.upsert({
-    where: { slug: 'n2' },
-    update: {},
-    create: { slug: 'n2', nome: 'N2 — Especialista', descricao: 'Suporte especializado para problemas mais complexos', cor: '#f59e0b', icone: 'user-check', ordem: 1, slaMinutos: 120 },
+  const nivelN2 = await upsertBySlug(prisma.nivelSuporte, 'n2', {
+    nome: 'N2 — Especialista', descricao: 'Suporte especializado para problemas mais complexos', cor: '#f59e0b', icone: 'user-check', ordem: 1, slaMinutos: 120,
   });
 
-  const nivelN3 = await prisma.nivelSuporte.upsert({
-    where: { slug: 'n3' },
-    update: {},
-    create: { slug: 'n3', nome: 'N3 — Engenharia / Crítico', descricao: 'Chamados críticos, bugs de sistema e emergências', cor: '#ef4444', icone: 'shield-alert', ordem: 2, slaMinutos: 240 },
+  const nivelN3 = await upsertBySlug(prisma.nivelSuporte, 'n3', {
+    nome: 'N3 — Engenharia / Crítico', descricao: 'Chamados críticos, bugs de sistema e emergências', cor: '#ef4444', icone: 'shield-alert', ordem: 2, slaMinutos: 240,
   });
 
-  const nivelSupervisor = await prisma.nivelSuporte.upsert({
-    where: { slug: 'supervisor' },
-    update: {},
-    create: { slug: 'supervisor', nome: 'Supervisor', descricao: 'Gestão e supervisão geral do atendimento', cor: '#6366f1', icone: 'crown', ordem: 3, slaMinutos: null },
+  const nivelSupervisor = await upsertBySlug(prisma.nivelSuporte, 'supervisor', {
+    nome: 'Supervisor', descricao: 'Gestão e supervisão geral do atendimento', cor: '#6366f1', icone: 'crown', ordem: 3, slaMinutos: null,
   });
 
   // Vincular filas existentes aos departamentos e níveis
@@ -342,46 +332,30 @@ async function main() {
   // ── Robots (upsert — seguro) ─────────────────────────────────────
   const hasClaude = Boolean(process.env.ANTHROPIC_API_KEY);
 
-  const roboVendas = await prisma.robot.upsert({
-    where: { slug: 'vendas' },
-    update: {},
-    create: {
-      slug: 'vendas', nome: 'Assistente de Vendas', descricao: 'Analisa CRM e sugere ações comerciais',
-      icone: 'trending-up', ativo: true, inteligente: hasClaude, ordem: 1,
-      horarioAtivo: true, diasSemana: '1,2,3,4,5', horaInicio: '08:00', horaFim: '18:00',
-      config: JSON.stringify({ provider: hasClaude ? 'claude' : 'local', daysLookback: 30, minScore: 60 }),
-    },
+  const roboVendas = await upsertBySlug(prisma.robot, 'vendas', {
+    nome: 'Assistente de Vendas', descricao: 'Analisa CRM e sugere ações comerciais',
+    icone: 'trending-up', ativo: true, inteligente: hasClaude, ordem: 1,
+    horarioAtivo: true, diasSemana: '1,2,3,4,5', horaInicio: '08:00', horaFim: '18:00',
+    config: JSON.stringify({ provider: hasClaude ? 'claude' : 'local', daysLookback: 30, minScore: 60 }),
   });
 
-  const roboClass = await prisma.robot.upsert({
-    where: { slug: 'classificador' },
-    update: {},
-    create: {
-      slug: 'classificador', nome: 'Classificador de Tickets', descricao: 'Categoriza automaticamente mensagens do WhatsApp',
-      icone: 'message-square', ativo: true, inteligente: hasClaude, ordem: 2,
-      horarioAtivo: true, diasSemana: '1,2,3,4,5', horaInicio: '08:00', horaFim: '18:00',
-      config: JSON.stringify({ provider: hasClaude ? 'claude' : 'local', categorias: ['suporte_tecnico', 'duvida_faturamento', 'solicitacao_mudanca', 'treinamento', 'reclamacao'] }),
-    },
+  const roboClass = await upsertBySlug(prisma.robot, 'classificador', {
+    nome: 'Classificador de Tickets', descricao: 'Categoriza automaticamente mensagens do WhatsApp',
+    icone: 'message-square', ativo: true, inteligente: hasClaude, ordem: 2,
+    horarioAtivo: true, diasSemana: '1,2,3,4,5', horaInicio: '08:00', horaFim: '18:00',
+    config: JSON.stringify({ provider: hasClaude ? 'claude' : 'local', categorias: ['suporte_tecnico', 'duvida_faturamento', 'solicitacao_mudanca', 'treinamento', 'reclamacao'] }),
   });
 
-  const roboOS = await prisma.robot.upsert({
-    where: { slug: 'os-analyst' },
-    update: {},
-    create: {
-      slug: 'os-analyst', nome: 'Analista de OS', descricao: 'Detecta ordens de serviço atrasadas e em risco',
-      icone: 'file-text', ativo: true, inteligente: false, ordem: 3,
-      horarioAtivo: false, config: JSON.stringify({ maxDiasParada: 5, alertarSe: ['em_andamento', 'aguardando_assinatura'] }),
-    },
+  const roboOS = await upsertBySlug(prisma.robot, 'os-analyst', {
+    nome: 'Analista de OS', descricao: 'Detecta ordens de serviço atrasadas e em risco',
+    icone: 'file-text', ativo: true, inteligente: false, ordem: 3,
+    horarioAtivo: false, config: JSON.stringify({ maxDiasParada: 5, alertarSe: ['em_andamento', 'aguardando_assinatura'] }),
   });
 
-  const roboTarefas = await prisma.robot.upsert({
-    where: { slug: 'tarefas' },
-    update: {},
-    create: {
-      slug: 'tarefas', nome: 'Assistente de Tarefas', descricao: 'Sugere prioridades baseadas em prazos',
-      icone: 'check-circle', ativo: true, inteligente: false, ordem: 4,
-      horarioAtivo: false, config: JSON.stringify({ diasAntecedencia: 3, prioridadeAlta: 1, prioridadeMedia: 3 }),
-    },
+  const roboTarefas = await upsertBySlug(prisma.robot, 'tarefas', {
+    nome: 'Assistente de Tarefas', descricao: 'Sugere prioridades baseadas em prazos',
+    icone: 'check-circle', ativo: true, inteligente: false, ordem: 4,
+    horarioAtivo: false, config: JSON.stringify({ diasAntecedencia: 3, prioridadeAlta: 1, prioridadeMedia: 3 }),
   });
 
   // Regras padrão para o robô de vendas (verificar se já existe)
